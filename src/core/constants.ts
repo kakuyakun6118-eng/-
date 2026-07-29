@@ -12,8 +12,11 @@ export const INITIAL_SENATE_SUPPORT = 60;
 export const INITIAL_EAST_RELATIONS = 60;
 export const INITIAL_FOEDERATI_LOYALTY = 70;
 
-/** 属州収入に対する徴税効率 */
-export const TAX_RATE = 0.6;
+/**
+ * 属州収入に対する徴税効率。
+ * 元老院の非協力による減収（SENATE_INCOME_FLOOR）を織り込んだ値
+ */
+export const TAX_RATE = 0.72;
 
 /** 野戦軍1ユニットあたりの維持費（ソリドゥス/ターン） */
 export const ARMY_UPKEEP_PER_UNIT = 2;
@@ -65,8 +68,139 @@ export const RAID_TREASURY_LOOT = 20;
 /** 戦闘の優劣差に対する守備隊損耗係数 */
 export const GARRISON_LOSS_FACTOR = 0.3;
 
+/** 撃退に成功したターンの守備隊損耗係数（敗北時より軽い） */
+export const GARRISON_LOSS_FACTOR_ON_VICTORY = 0.15;
+
 /** 戦闘の優劣差に対する攻撃側損耗係数 */
 export const ATTACKER_LOSS_FACTOR = 0.4;
 
+/** フォエデラティが駐屯先属州の防衛に加える戦力の割合 */
+export const FOEDERATI_DEFENSE_SHARE = 0.6;
+
 /** Africa 喪失時に Italia の control が受ける恒久ペナルティ（穀物供給途絶） */
 export const ITALIA_GRAIN_LOSS_PENALTY = 20;
+
+// ── パラメータの上下限 ────────────────────────────────
+
+export const MIN_CONTROL = 0;
+export const MAX_CONTROL = 100;
+export const MIN_TAX_BASE = 0;
+export const MAX_TAX_BASE = 100;
+export const MIN_LEGITIMACY = 0;
+export const MAX_LEGITIMACY = 100;
+export const MIN_SENATE_SUPPORT = 0;
+export const MAX_SENATE_SUPPORT = 100;
+export const MIN_EAST_RELATIONS = 0;
+export const MAX_EAST_RELATIONS = 100;
+export const MIN_FOEDERATI_LOYALTY = 0;
+export const MAX_FOEDERATI_LOYALTY = 100;
+
+// ── 支配度・税基盤の更新（コアループ ステップ6） ──────
+
+/** 敵勢力のいない属州が毎ターン回復する control */
+export const CONTROL_RECOVERY_PER_TURN = 4;
+
+/** 略奪1回につき恒久的に失われる taxBase */
+export const RAID_TAX_BASE_LOSS = 0.6;
+
+/** 蛮族1勢力の定住につき恒久的に失われる taxBase */
+export const SETTLE_TAX_BASE_LOSS = 7;
+
+/**
+ * 元老院の非協力が徴税に与える影響の下限。
+ * senateSupport が0でもこの割合の収入は得られる
+ */
+export const SENATE_INCOME_FLOOR = 0.55;
+
+// ── 正統性（コアループ ステップ7） ────────────────────
+
+/** 属州の control が0に落ちた際の正統性低下 */
+export const LEGITIMACY_LOSS_PER_PROVINCE_LOST = 10;
+
+/** 蛮族の定住を許した際の正統性低下 */
+export const LEGITIMACY_LOSS_PER_SETTLEMENT = 5;
+
+/** 侵攻を撃退した際の正統性上昇 */
+export const LEGITIMACY_GAIN_PER_VICTORY = 2;
+
+/** これを下回ると簒奪者イベントの判定が始まる */
+export const USURPER_LEGITIMACY_THRESHOLD = 25;
+
+/** 閾値を下回っているターンに簒奪者が現れる確率 */
+export const USURPER_PROBABILITY = 0.25;
+
+/** 簒奪未遂で失われる野戦軍の割合 */
+export const USURPER_ARMY_LOSS_RATE = 0.15;
+
+/** 簒奪未遂による正統性低下 */
+export const USURPER_LEGITIMACY_LOSS = 8;
+
+// ── フォエデラティの給金と忠誠 ────────────────────────
+
+/** 給金を支払えたターンの忠誠回復 */
+export const FOEDERATI_LOYALTY_RECOVERY = 4;
+
+/** 給金を支払えなかったターンの忠誠低下 */
+export const FOEDERATI_LOYALTY_DECAY_UNPAID = 14;
+
+// ── プレイヤーアクション ──────────────────────────────
+
+/** 1ターンに選べるアクション数の上限 */
+export const MAX_ACTIONS_PER_TURN = 2;
+
+// 交渉
+/** 貢納を受けた勢力の忠誠上昇 */
+export const TRIBUTE_LOYALTY_GAIN = 5;
+export const MARRIAGE_COST = 120;
+export const MARRIAGE_LOYALTY_GAIN = 10;
+export const MARRIAGE_LEGITIMACY_LOSS = 3;
+
+// 雇用（フォエデラティ契約）
+export const FOEDERATI_HIRE_COST = 60;
+/** 給金は勢力の戦力に比例する。強力な勢力を雇えばそれだけ高くつく */
+export const FOEDERATI_DEMAND_PER_STRENGTH = 0.5;
+/**
+ * 契約が続く限り給金の要求は毎ターン膨らむ。
+ * 「今日を凌ぐ判断が、10年後の帝国を殺す」構造の中核。
+ * 複利なので81ターンで約2.6倍に達する（これ以上大きいと発散する）
+ */
+export const FOEDERATI_DEMAND_ESCALATION = 0.012;
+/**
+ * 駐屯するフォエデラティ1勢力が毎ターン恒久的に削る税基盤。
+ * 給金を払い続けても土地は荒れ、税収基盤は戻らない
+ */
+export const FOEDERATI_TAX_BASE_DRAIN = 0.12;
+export const FOEDERATI_HIRE_LEGITIMACY_LOSS = 2;
+
+// 軍事
+/** 派遣先属州の防衛に振り向けられる野戦軍の割合 */
+export const DEPLOY_ARMY_DEFENSE_SHARE = 0.5;
+/** 派遣による野戦軍の損耗率 */
+export const DEPLOY_ATTRITION_RATE = 0.04;
+export const DEFEND_COST = 40;
+export const DEFEND_GARRISON_GAIN = 6;
+export const CONSCRIPT_COST = 150;
+export const CONSCRIPT_ARMY_GAIN = 15;
+export const CONSCRIPT_SENATE_LOSS = 5;
+
+// 内政
+/** 徴税強化で得られる追加収入（通常収入に対する倍率） */
+export const RAISE_TAXES_INCOME_MULTIPLIER = 0.5;
+export const RAISE_TAXES_SENATE_LOSS = 8;
+export const RAISE_TAXES_CONTROL_LOSS = 2;
+export const REORGANIZE_COST = 60;
+export const REORGANIZE_ARMY_GAIN = 8;
+export const APPEASE_SENATE_GAIN = 12;
+export const APPEASE_SENATE_LEGITIMACY_GAIN = 4;
+/** 免税特権の追認による恒久的な税基盤の損失 */
+export const APPEASE_SENATE_TAX_BASE_LOSS = 2;
+
+// 東帝国
+/** 援軍を要請できる最低の eastRelations */
+export const EAST_AID_MIN_RELATIONS = 30;
+export const EAST_AID_TREASURY_GAIN = 200;
+export const EAST_AID_ARMY_GAIN = 10;
+export const EAST_AID_RELATIONS_LOSS = 12;
+export const EAST_TITLE_COST = 80;
+export const EAST_TITLE_LEGITIMACY_GAIN = 10;
+export const EAST_TITLE_RELATIONS_LOSS = 6;

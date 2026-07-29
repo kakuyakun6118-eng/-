@@ -1,6 +1,15 @@
-import type { BarbarianFaction, GameState, Province } from './types';
+import type {
+  BarbarianFaction,
+  GameState,
+  Province,
+  ProvinceId,
+} from './types';
 import {
+  APPEASE_SENATE_GAIN,
+  APPEASE_SENATE_LEGITIMACY_GAIN,
+  APPEASE_SENATE_TAX_BASE_LOSS,
   ARMY_UPKEEP_PER_UNIT,
+  CONTROL_RECOVERY_PER_TURN,
   COURT_UPKEEP,
   INITIAL_EAST_RELATIONS,
   INITIAL_FIELD_ARMY,
@@ -9,9 +18,22 @@ import {
   INITIAL_SENATE_SUPPORT,
   INITIAL_TAX_BASE,
   INITIAL_TREASURY,
+  MAX_CONTROL,
+  MAX_LEGITIMACY,
+  MAX_SENATE_SUPPORT,
+  MAX_TAX_BASE,
+  MIN_CONTROL,
+  MIN_LEGITIMACY,
+  MIN_SENATE_SUPPORT,
+  MIN_TAX_BASE,
+  RAISE_TAXES_CONTROL_LOSS,
+  RAISE_TAXES_INCOME_MULTIPLIER,
+  RAISE_TAXES_SENATE_LOSS,
+  SENATE_INCOME_FLOOR,
   STARTING_YEAR,
   TAX_RATE,
 } from './constants';
+import { clamp } from './util';
 
 export function createInitialState(
   provinces: Province[],
@@ -35,12 +57,26 @@ export function createInitialState(
   };
 }
 
+/**
+ * 元老院の協力度が徴税効率に与える係数。
+ * 支持を失うと属州から実際に吸い上げられる額が減る
+ */
+function senateIncomeFactor(senateSupport: number): number {
+  const ratio = senateSupport / MAX_SENATE_SUPPORT;
+  return SENATE_INCOME_FLOOR + (1 - SENATE_INCOME_FLOOR) * ratio;
+}
+
 export function calculateIncome(state: GameState): number {
   const provinceIncome = Object.values(state.provinces).reduce(
-    (sum, province) => sum + (province.control / 100) * province.baseTax,
+    (sum, province) => sum + (province.control / MAX_CONTROL) * province.baseTax,
     0,
   );
-  return provinceIncome * (state.taxBase / 100) * TAX_RATE;
+  return (
+    provinceIncome *
+    (state.taxBase / MAX_TAX_BASE) *
+    TAX_RATE *
+    senateIncomeFactor(state.senateSupport)
+  );
 }
 
 export function calculateExpenses(state: GameState): number {
@@ -49,4 +85,68 @@ export function calculateExpenses(state: GameState): number {
     .filter((faction) => faction.stance === 'foederati')
     .reduce((sum, faction) => sum + (faction.demand?.amount ?? 0), 0);
   return armyUpkeep + tribute + COURT_UPKEEP;
+}
+
+/** 徴税強化: 目先の収入を増やすが元老院の支持と属州の支配度を削る */
+export function raiseTaxes(state: GameState): GameState {
+  const provinces = { ...state.provinces };
+  for (const id of Object.keys(provinces) as ProvinceId[]) {
+    const province = provinces[id];
+    provinces[id] = {
+      ...province,
+      control: clamp(province.control - RAISE_TAXES_CONTROL_LOSS, MIN_CONTROL, MAX_CONTROL),
+    };
+  }
+  return {
+    ...state,
+    treasury: state.treasury + calculateIncome(state) * RAISE_TAXES_INCOME_MULTIPLIER,
+    senateSupport: clamp(
+      state.senateSupport - RAISE_TAXES_SENATE_LOSS,
+      MIN_SENATE_SUPPORT,
+      MAX_SENATE_SUPPORT,
+    ),
+    provinces,
+  };
+}
+
+/** 元老院への譲歩: 支持と正統性を買う代わりに免税特権で税基盤を恒久的に失う */
+export function appeaseSenate(state: GameState): GameState {
+  return {
+    ...state,
+    senateSupport: clamp(
+      state.senateSupport + APPEASE_SENATE_GAIN,
+      MIN_SENATE_SUPPORT,
+      MAX_SENATE_SUPPORT,
+    ),
+    legitimacy: clamp(
+      state.legitimacy + APPEASE_SENATE_LEGITIMACY_GAIN,
+      MIN_LEGITIMACY,
+      MAX_LEGITIMACY,
+    ),
+    taxBase: clamp(state.taxBase - APPEASE_SENATE_TAX_BASE_LOSS, MIN_TAX_BASE, MAX_TAX_BASE),
+  };
+}
+
+/**
+ * コアループ ステップ6: 支配度の更新。
+ * 敵勢力（hostile / settled）がいない属州は徐々に支配を回復する
+ */
+export function updateControl(state: GameState): GameState {
+  const occupied = new Set(
+    Object.values(state.factions)
+      .filter((faction) => faction.stance !== 'foederati' && faction.location !== 'exterior')
+      .map((faction) => faction.location),
+  );
+
+  const provinces = { ...state.provinces };
+  for (const id of Object.keys(provinces) as ProvinceId[]) {
+    if (occupied.has(id)) continue;
+    const province = provinces[id];
+    if (province.control >= MAX_CONTROL) continue;
+    provinces[id] = {
+      ...province,
+      control: clamp(province.control + CONTROL_RECOVERY_PER_TURN, MIN_CONTROL, MAX_CONTROL),
+    };
+  }
+  return { ...state, provinces };
 }

@@ -168,6 +168,17 @@ export type Seed = number;
 
 export type TickFn = (state: GameState, actions: PlayerActions, seed: Seed) => GameState;
 
+/**
+ * プレイヤー行動がそのターンの蛮族AI・戦闘解決にだけ与える影響。
+ * ターンをまたいで持ち越さないため GameState には保持しない
+ */
+export interface TurnModifiers {
+  /** 貢納で買収済みの勢力。このターンは攻撃してこない */
+  pacified: Set<BarbarianFactionId>;
+  /** 野戦軍を派遣した属州。防衛時の野戦軍寄与が上がる */
+  reinforced: Set<ProvinceId>;
+}
+
 // ── 歴史イベント（data/events.json の型） ────────────
 
 export type ComparisonOperator = 'lt' | 'lte' | 'gt' | 'gte' | 'eq' | 'neq';
