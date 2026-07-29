@@ -3,9 +3,12 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "sim": "tsx src/sim/run.ts"
   },
   "devDependencies": {
+    "@types/node": "^26.1.2",
+    "tsx": "^4.23.1",
     "typescript": "^5.5.4"
   }
 }
