@@ -4,55 +4,71 @@
     "strength": 80,
     "stance": "foederati",
     "location": "Illyricum",
-    "demand": { "type": "gold", "amount": 30 }
+    "demand": { "type": "gold", "amount": 30 },
+    "route": ["Italia", "Gallia", "Hispania"],
+    "routeIndex": 0
   },
   {
     "id": "Vandals",
     "strength": 50,
     "stance": "hostile",
     "location": "exterior",
-    "demand": null
+    "demand": null,
+    "route": ["Gallia", "Hispania", "Africa"],
+    "routeIndex": 0
   },
   {
     "id": "Huns",
     "strength": 90,
     "stance": "hostile",
     "location": "exterior",
-    "demand": null
+    "demand": null,
+    "route": ["Illyricum", "Italia"],
+    "routeIndex": 0
   },
   {
     "id": "Franks",
     "strength": 40,
     "stance": "hostile",
     "location": "exterior",
-    "demand": null
+    "demand": null,
+    "route": ["Gallia"],
+    "routeIndex": 0
   },
   {
     "id": "Burgundians",
     "strength": 35,
     "stance": "hostile",
     "location": "exterior",
-    "demand": null
+    "demand": null,
+    "route": ["Gallia"],
+    "routeIndex": 0
   },
   {
     "id": "Suebi",
     "strength": 25,
     "stance": "hostile",
     "location": "exterior",
-    "demand": null
+    "demand": null,
+    "route": ["Hispania"],
+    "routeIndex": 0
   },
   {
     "id": "Alans",
     "strength": 30,
     "stance": "hostile",
     "location": "exterior",
-    "demand": null
+    "demand": null,
+    "route": ["Gallia", "Hispania"],
+    "routeIndex": 0
   },
   {
     "id": "Saxons",
     "strength": 20,
     "stance": "hostile",
     "location": "exterior",
-    "demand": null
+    "demand": null,
+    "route": ["Britannia"],
+    "routeIndex": 0
   }
 ]

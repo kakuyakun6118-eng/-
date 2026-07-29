@@ -50,6 +50,10 @@ export interface BarbarianFaction {
   stance: BarbarianStance;
   location: BarbarianLocation;
   demand: BarbarianDemand | null;
+  /** 帝国境外から侵入する際にたどる属州の経路（史実の進路を模す） */
+  route: ProvinceId[];
+  /** route 上で次に狙う位置のインデックス */
+  routeIndex: number;
 }
 
 // ── 状態モデル（7パラメータ固定） ────────────────────
@@ -72,6 +76,9 @@ export interface GameState {
 
   /** onceOnly なイベントの再発火防止用 */
   firedEventIds: string[];
+
+  /** Africa の control が一度でも0以下になったか（Italia への恒久ペナルティは一度だけ適用） */
+  africaLost: boolean;
 
   status: GameStatus;
 }

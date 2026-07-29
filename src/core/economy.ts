@@ -30,6 +30,7 @@ export function createInitialState(
     provinces: Object.fromEntries(provinces.map((p) => [p.id, p])) as GameState['provinces'],
     factions: Object.fromEntries(factions.map((f) => [f.id, f])) as GameState['factions'],
     firedEventIds: [],
+    africaLost: false,
     status: 'ongoing',
   };
 }
