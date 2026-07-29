@@ -4,6 +4,7 @@ import {
   COMBAT_RANDOMNESS,
   DEFENSE_MULTIPLIER,
   EXTERIOR_GROWTH_RATE,
+  FIELD_ARMY_DEFENSE_SHARE,
   FOEDERATI_DEFECTION_LOYALTY_THRESHOLD,
   GARRISON_LOSS_FACTOR,
   ITALIA_GRAIN_LOSS_PENALTY,
@@ -67,7 +68,10 @@ export function applyBarbarianActions(state: GameState, rng: () => number): Game
     }
 
     const attackerPower = randomizedPower(faction.strength, rng);
-    const defenderPower = randomizedPower(province.garrison * DEFENSE_MULTIPLIER, rng);
+    const defenderPower = randomizedPower(
+      (province.garrison + state.fieldArmy * FIELD_ARMY_DEFENSE_SHARE) * DEFENSE_MULTIPLIER,
+      rng,
+    );
     const { attackerWins, margin } = resolveCombat(attackerPower, defenderPower);
 
     if (attackerWins) {

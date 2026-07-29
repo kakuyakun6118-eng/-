@@ -32,11 +32,11 @@ export const FIELD_ARMY_COLLAPSE_THRESHOLD = 5;
 /** foederatiLoyalty がこれを下回るとフォエデラティが寝返る */
 export const FOEDERATI_DEFECTION_LOYALTY_THRESHOLD = 20;
 
-/** 境外の勢力がこの戦力未満なら侵入を試みない */
-export const MIN_STRENGTH_TO_ADVANCE = 30;
+/** 境外の勢力がこの戦力未満なら侵入を試みない（初期戦力の差で侵入時期が自然に分散する） */
+export const MIN_STRENGTH_TO_ADVANCE = 55;
 
 /** 境外の勢力が毎ターン帝国領へ侵入を試みる確率 */
-export const ADVANCE_PROBABILITY = 0.35;
+export const ADVANCE_PROBABILITY = 0.3;
 
 /** 境外で待機している勢力の戦力成長率（ターンあたり） */
 export const EXTERIOR_GROWTH_RATE = 0.05;
@@ -50,20 +50,23 @@ export const SETTLE_STRENGTH_MULTIPLIER = 1.5;
 /** 守備側の戦力補正（本国の地の利） */
 export const DEFENSE_MULTIPLIER = 1.2;
 
+/** 野戦軍のうち、1回の戦闘の防衛に振り向けられる戦力の割合 */
+export const FIELD_ARMY_DEFENSE_SHARE = 0.2;
+
 /** 戦闘の乱数幅（±） */
 export const COMBAT_RANDOMNESS = 0.3;
 
 /** 略奪成功時に属州 control が受けるダメージ */
-export const RAID_CONTROL_DAMAGE = 15;
+export const RAID_CONTROL_DAMAGE = 8;
 
 /** 略奪成功時に国庫が失う額 */
-export const RAID_TREASURY_LOOT = 40;
+export const RAID_TREASURY_LOOT = 20;
 
 /** 戦闘の優劣差に対する守備隊損耗係数 */
-export const GARRISON_LOSS_FACTOR = 0.5;
+export const GARRISON_LOSS_FACTOR = 0.3;
 
 /** 戦闘の優劣差に対する攻撃側損耗係数 */
-export const ATTACKER_LOSS_FACTOR = 0.3;
+export const ATTACKER_LOSS_FACTOR = 0.4;
 
 /** Africa 喪失時に Italia の control が受ける恒久ペナルティ（穀物供給途絶） */
 export const ITALIA_GRAIN_LOSS_PENALTY = 20;
