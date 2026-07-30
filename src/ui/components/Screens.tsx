@@ -8,7 +8,15 @@ const DIFFICULTY_DETAIL: Record<Difficulty, string> = {
   veteran: '税収が細り、蛮族は強く、傭兵の要求は速く膨らむ',
 };
 
-export function TitleScreen({ onStart }: { onStart: (difficulty: Difficulty) => void }) {
+export function TitleScreen({
+  onStart,
+  onLoad,
+  loadError,
+}: {
+  onStart: (difficulty: Difficulty) => void;
+  onLoad: (file: File) => void;
+  loadError: string | null;
+}) {
   return (
     <div className="min-h-dvh flex flex-col justify-center px-5 py-10 max-w-lg mx-auto">
       <h1 className="text-2xl font-bold text-slate-100">西ローマ帝国末期</h1>
@@ -34,6 +42,21 @@ export function TitleScreen({ onStart }: { onStart: (difficulty: Difficulty) => 
           </button>
         ))}
       </div>
+
+      <label className="mt-4 block">
+        <span className="text-xs text-slate-400">セーブデータから再開</span>
+        <input
+          type="file"
+          accept="application/json,.json"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) onLoad(file);
+            e.target.value = '';
+          }}
+          className="mt-1 block w-full text-xs text-slate-300 file:mr-3 file:rounded-md file:border-0 file:bg-slate-800 file:px-3 file:py-2 file:text-slate-200"
+        />
+        {loadError && <span className="block text-xs text-red-400 mt-1">{loadError}</span>}
+      </label>
     </div>
   );
 }

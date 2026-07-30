@@ -11,10 +11,11 @@ import { PROVINCE_LABELS } from './catalogue';
 import { useGame } from './useGame';
 
 export function App() {
-  const { state, selected, log, score, start, toggleAction, endTurn, quit } = useGame();
+  const { state, selected, log, score, loadError, start, toggleAction, endTurn, quit, save, load } =
+    useGame();
   const [focused, setFocused] = useState<ProvinceId | null>(null);
 
-  if (state === null) return <TitleScreen onStart={start} />;
+  if (state === null) return <TitleScreen onStart={start} onLoad={load} loadError={loadError} />;
   if (state.status !== 'ongoing' && score !== null) {
     return <ResultScreen score={score} onRestart={quit} />;
   }
@@ -57,6 +58,21 @@ export function App() {
             </span>
           </h2>
           <ActionPanel state={state} selected={selected} onToggle={toggleAction} />
+        </section>
+
+        <section className="flex gap-2">
+          <button
+            onClick={save}
+            className="flex-1 rounded-lg border border-slate-700 bg-slate-900 py-2 text-xs font-medium text-slate-200 active:bg-slate-800"
+          >
+            この時点を保存
+          </button>
+          <button
+            onClick={quit}
+            className="flex-1 rounded-lg border border-slate-700 bg-slate-900 py-2 text-xs font-medium text-slate-400 active:bg-slate-800"
+          >
+            中断してタイトルへ
+          </button>
         </section>
 
         {log.length > 0 && (

@@ -5,6 +5,8 @@ import factionsData from '../data/factions.json';
 import provincesData from '../data/provinces.json';
 import { MAX_ACTIONS_PER_TURN } from '../core/constants';
 import { createInitialState } from '../core/economy';
+import { findEvent } from '../core/events';
+import { deserialize, serialize, suggestFileName } from '../core/save';
 import { evaluateScore, tick } from '../core/tick';
 import type {
   BarbarianFaction,
@@ -15,6 +17,7 @@ import type {
   PlayerActions,
   Province,
 } from '../core/types';
+import { FACTION_LABELS, PROVINCE_LABELS } from './catalogue';
 
 /**
  * 画面の状態と core への橋渡しだけを行う。
@@ -25,6 +28,7 @@ export function useGame() {
   const [runSeed, setRunSeed] = useState(0);
   const [selected, setSelected] = useState<PlayerAction[]>([]);
   const [log, setLog] = useState<string[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const start = useCallback((difficulty: Difficulty) => {
     // 乱数の種はここで一度だけ引く。tick() 自体は seed から決定的に動く
@@ -64,6 +68,27 @@ export function useGame() {
     setSelected([]);
   }, [selected, runSeed]);
 
+  const save = useCallback(() => {
+    setState((current) => {
+      if (current === null) return current;
+      download(serialize(current, new Date().toISOString()), suggestFileName(current));
+      return current;
+    });
+  }, []);
+
+  const load = useCallback(async (file: File) => {
+    const result = deserialize(await file.text());
+    if (!result.ok) {
+      setLoadError(result.error);
+      return;
+    }
+    setLoadError(null);
+    setRunSeed(Math.floor(Math.random() * 1_000_000_000));
+    setState(result.state);
+    setSelected([]);
+    setLog([`${result.state.year}年 — セーブデータを読み込んだ`]);
+  }, []);
+
   const quit = useCallback(() => {
     setState(null);
     setSelected([]);
@@ -72,7 +97,20 @@ export function useGame() {
 
   const score = useMemo(() => (state ? evaluateScore(state) : null), [state]);
 
-  return { state, selected, log, score, start, toggleAction, clearActions, endTurn, quit };
+  return {
+    state,
+    selected,
+    log,
+    score,
+    loadError,
+    start,
+    toggleAction,
+    clearActions,
+    endTurn,
+    quit,
+    save,
+    load,
+  };
 }
 
 /** 選択済み判定のための一意キー。表示用であって計算ではない */
@@ -101,9 +139,15 @@ function describeTurn(before: GameState, after: GameState): string {
     );
   }
 
+  for (const id of after.firedEventIds) {
+    if (before.firedEventIds.includes(id)) continue;
+    const event = findEvent(id);
+    if (event) events.push(`【${event.title}】`);
+  }
+
   for (const id of Object.keys(after.provinces) as (keyof typeof after.provinces)[]) {
     if (before.provinces[id].control > 0 && after.provinces[id].control <= 0) {
-      events.push(`${id} を喪失`);
+      events.push(`${PROVINCE_LABELS[id]} を喪失`);
     }
   }
 
@@ -111,10 +155,20 @@ function describeTurn(before: GameState, after: GameState): string {
     const was = before.factions[id].stance;
     const now = after.factions[id].stance;
     if (was === now) continue;
-    if (now === 'settled') events.push(`${id} が定住`);
-    else if (now === 'foederati') events.push(`${id} と同盟`);
-    else if (was === 'foederati') events.push(`${id} が離反`);
+    if (now === 'settled') events.push(`${FACTION_LABELS[id]} が定住`);
+    else if (now === 'foederati') events.push(`${FACTION_LABELS[id]} と同盟`);
+    else if (was === 'foederati') events.push(`${FACTION_LABELS[id]} が離反`);
   }
 
   return `${after.year}年 — ${events.join(' / ')}`;
+}
+
+/** 文字列をファイルとして保存させる。ブラウザ固有の処理なので ui 側に置く */
+function download(contents: string, fileName: string): void {
+  const url = URL.createObjectURL(new Blob([contents], { type: 'application/json' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  URL.revokeObjectURL(url);
 }
