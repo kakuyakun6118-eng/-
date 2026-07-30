@@ -16,6 +16,7 @@ import {
   updateFoederatiObligations,
 } from './diplomacy';
 import { updateDynasty } from './dynasty';
+import { applyHistoricalEvents } from './events';
 import {
   appeaseSenate,
   applyLegitimacyDecay,
@@ -45,9 +46,9 @@ import type {
 } from './types';
 
 /**
- * Phase 4B: 収入・支出・プレイヤー行動・蛮族AI・戦闘解決・
- * 支配度と税基盤の更新・正統性判定・王朝の更新までを処理する。
- * 歴史イベントの発火判定は Phase 6 で追加する。
+ * コアループ。収入・支出・プレイヤー行動・蛮族AI・戦闘解決・
+ * 支配度と税基盤の更新・正統性判定・王朝の更新・歴史イベントの
+ * 発火判定を、この順で処理する。
  */
 export function tick(state: GameState, actions: PlayerActions, seed: Seed): GameState {
   const rng = createRng(seed);
@@ -88,6 +89,9 @@ export function tick(state: GameState, actions: PlayerActions, seed: Seed): Game
   next = updateDynasty(next, rng);
   // 婚姻のうち、子が生まれて初めて発生する効果を清算する
   next = settlePendingMarriages(next);
+
+  // 9. 歴史イベントテーブルの発火判定
+  next = applyHistoricalEvents(next);
 
   return { ...next, status: determineStatus(next) };
 }
