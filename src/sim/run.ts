@@ -4,9 +4,16 @@ import dynastyData from '../data/dynasty.json';
 import factionsData from '../data/factions.json';
 import provincesData from '../data/provinces.json';
 import { TOTAL_TURNS } from '../core/constants';
+import { adjustRulerAbilities } from '../core/dynasty';
 import { createInitialState } from '../core/economy';
 import { evaluateScore, tick } from '../core/tick';
-import type { BarbarianFaction, Dynasty, GameState, Province } from '../core/types';
+import type {
+  BarbarianFaction,
+  Dynasty,
+  GameState,
+  Province,
+  RulerAbilities,
+} from '../core/types';
 import { strategies } from './strategies';
 
 const CSV_HEADER = [
@@ -55,6 +62,8 @@ interface Options {
   strategy: string;
   trials: number;
   seed: number;
+  /** --adjust 軍事,統治,交渉 で君主能力を上書きする（スコアは調整済みになる） */
+  adjust: Partial<RulerAbilities> | null;
 }
 
 function parseArgs(argv: string[]): Options {
@@ -64,6 +73,7 @@ function parseArgs(argv: string[]): Options {
     strategy: 'passive',
     trials: 1,
     seed: 0,
+    adjust: null,
   };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--turns') options.turns = Number(argv[++i]);
@@ -71,16 +81,21 @@ function parseArgs(argv: string[]): Options {
     else if (argv[i] === '--strategy') options.strategy = argv[++i];
     else if (argv[i] === '--trials') options.trials = Number(argv[++i]);
     else if (argv[i] === '--seed') options.seed = Number(argv[++i]);
+    else if (argv[i] === '--adjust') {
+      const [military, governance, diplomacy] = argv[++i].split(',').map(Number);
+      options.adjust = { military, governance, diplomacy };
+    }
   }
   return options;
 }
 
-function freshState(): GameState {
-  return createInitialState(
+function freshState(options: Options): GameState {
+  const state = createInitialState(
     provincesData as Province[],
     factionsData as BarbarianFaction[],
     dynastyData as Dynasty,
   );
+  return options.adjust ? adjustRulerAbilities(state, options.adjust) : state;
 }
 
 interface TrialOutcome {
@@ -93,7 +108,7 @@ interface TrialOutcome {
 
 function runTrial(options: Options, seedBase: number): TrialOutcome {
   const strategy = strategies[options.strategy];
-  let state = freshState();
+  let state = freshState(options);
   const rows = [CSV_HEADER, toCsvRow(state)];
   let collapseYear: number | null = null;
   let nonFinite = false;
@@ -151,7 +166,10 @@ function reportAggregate(options: Options): void {
   }
 
   const survivalRate = (average(survived) * 100).toFixed(0);
-  console.log(`strategy=${options.strategy} trials=${options.trials}`);
+  console.log(
+    `strategy=${options.strategy} trials=${options.trials}` +
+      (options.adjust ? ' [調整済み: スコアは他と比較できない]' : ''),
+  );
   console.log(`  survival rate      : ${survivalRate}%`);
   console.log(`  non-finite trials  : ${nonFiniteTrials}`);
   console.log(`  avg score          : ${average(scores).toFixed(0)}`);
@@ -188,7 +206,9 @@ function main(): void {
   console.log(
     `status=${score.status} year=${score.finalYear} provinces=${score.provincesHeld} ` +
       `taxBase=${score.taxBase.toFixed(1)} legitimacy=${score.legitimacy.toFixed(1)} ` +
-      `score=${score.score.toFixed(0)}`,
+      `score=${score.score.toFixed(0)} rulers=${score.rulerCount} ` +
+      `crises=${score.successionCrises}` +
+      (score.abilitiesAdjusted ? ' [調整済み]' : ''),
   );
 }
 

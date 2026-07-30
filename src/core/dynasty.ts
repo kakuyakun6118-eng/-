@@ -7,9 +7,11 @@ import {
   ASSASSINATION_BASE_PROBABILITY,
   ASSASSINATION_MAX_BONUS,
   CHILD_BIRTH_PROBABILITY,
+  MAX_ABILITY,
   MAX_DYNASTY_MEMBERS,
   MAX_LEGITIMACY,
   MAX_LIFESPAN,
+  MIN_ABILITY,
   MIN_LEGITIMACY,
   MIN_LIFESPAN,
   MIN_REIGN_YEARS,
@@ -223,6 +225,34 @@ function succeed(
       ],
       crisisYearsRemaining:
         outcome === 'crisis' ? SUCCESSION_CRISIS_DURATION : dynasty.crisisYearsRemaining,
+    },
+  };
+}
+
+// ── Task 4: 能力の変更口 ──────────────────────────────
+
+/**
+ * 設定から現君主の能力を変更する。
+ * 変更したセーブには abilitiesAdjusted が立ち、スコア結果に
+ * 「調整済み」として記録される。記録がないとスコア比較が
+ * 意味を失うため、このフラグは解除できない
+ */
+export function adjustRulerAbilities(
+  state: GameState,
+  abilities: Partial<RulerAbilities>,
+): GameState {
+  const current = state.dynasty.ruler.abilities;
+  const applied: RulerAbilities = {
+    military: clamp(abilities.military ?? current.military, MIN_ABILITY, MAX_ABILITY),
+    governance: clamp(abilities.governance ?? current.governance, MIN_ABILITY, MAX_ABILITY),
+    diplomacy: clamp(abilities.diplomacy ?? current.diplomacy, MIN_ABILITY, MAX_ABILITY),
+  };
+  return {
+    ...state,
+    dynasty: {
+      ...state.dynasty,
+      ruler: { ...state.dynasty.ruler, abilities: applied },
+      abilitiesAdjusted: true,
     },
   };
 }
