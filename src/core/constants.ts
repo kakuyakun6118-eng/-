@@ -249,10 +249,13 @@ export const MAX_ABILITY = 10;
 
 /**
  * 能力の生成範囲。極端な君主が出ないよう MIN/MAX より内側に絞る。
- * 生成される能力はこの範囲、設定からの変更は MIN/MAX まで許す
+ * 生成される能力はこの範囲、設定からの変更は MIN/MAX まで許す。
+ * 3〜8 では君主のガチャ運によるスコアのブレが大きすぎたため
+ * (正攻法の変動係数 1.16) 4〜7 に狭め、プレイヤーの選択で
+ * 勝敗が決まる比率を上げている
  */
-export const ABILITY_ROLL_MIN = 3;
-export const ABILITY_ROLL_MAX = 8;
+export const ABILITY_ROLL_MIN = 4;
+export const ABILITY_ROLL_MAX = 7;
 
 /**
  * 補正倍率の中心となる能力値。この値で倍率が 1.0 になる。
