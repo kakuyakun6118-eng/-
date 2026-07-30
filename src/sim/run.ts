@@ -3,12 +3,18 @@ import { writeFileSync } from 'node:fs';
 import dynastyData from '../data/dynasty.json';
 import factionsData from '../data/factions.json';
 import provincesData from '../data/provinces.json';
-import { FIELD_ARMY_COLLAPSE_THRESHOLD, TOTAL_TURNS } from '../core/constants';
+import {
+  DEFAULT_DIFFICULTY,
+  DIFFICULTY_SETTINGS,
+  FIELD_ARMY_COLLAPSE_THRESHOLD,
+  TOTAL_TURNS,
+} from '../core/constants';
 import { adjustRulerAbilities } from '../core/dynasty';
 import { createInitialState } from '../core/economy';
 import { evaluateScore, tick } from '../core/tick';
 import type {
   BarbarianFaction,
+  Difficulty,
   Dynasty,
   GameState,
   Province,
@@ -64,6 +70,7 @@ interface Options {
   seed: number;
   /** --adjust 軍事,統治,交渉 で君主能力を上書きする（スコアは調整済みになる） */
   adjust: Partial<RulerAbilities> | null;
+  difficulty: Difficulty;
 }
 
 function parseArgs(argv: string[]): Options {
@@ -74,6 +81,7 @@ function parseArgs(argv: string[]): Options {
     trials: 1,
     seed: 0,
     adjust: null,
+    difficulty: DEFAULT_DIFFICULTY,
   };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--turns') options.turns = Number(argv[++i]);
@@ -81,6 +89,7 @@ function parseArgs(argv: string[]): Options {
     else if (argv[i] === '--strategy') options.strategy = argv[++i];
     else if (argv[i] === '--trials') options.trials = Number(argv[++i]);
     else if (argv[i] === '--seed') options.seed = Number(argv[++i]);
+    else if (argv[i] === '--difficulty') options.difficulty = argv[++i] as Difficulty;
     else if (argv[i] === '--adjust') {
       const [military, governance, diplomacy] = argv[++i].split(',').map(Number);
       options.adjust = { military, governance, diplomacy };
@@ -94,6 +103,7 @@ function freshState(options: Options): GameState {
     provincesData as Province[],
     factionsData as BarbarianFaction[],
     dynastyData as Dynasty,
+    options.difficulty,
   );
   return options.adjust ? adjustRulerAbilities(state, options.adjust) : state;
 }
@@ -208,7 +218,8 @@ function reportAggregate(options: Options): void {
 
   const survivalRate = (average(survived) * 100).toFixed(0);
   console.log(
-    `strategy=${options.strategy} trials=${options.trials}` +
+    `strategy=${options.strategy} difficulty=${options.difficulty} ` +
+      `trials=${options.trials}` +
       (options.adjust ? ' [調整済み: スコアは他と比較できない]' : ''),
   );
   console.log(`  survival rate      : ${survivalRate}%`);
@@ -236,6 +247,14 @@ function reportAggregate(options: Options): void {
 function main(): void {
   const options = parseArgs(process.argv.slice(2));
 
+  if (!(options.difficulty in DIFFICULTY_SETTINGS)) {
+    console.error(
+      `unknown difficulty: ${options.difficulty} ` +
+        `(available: ${Object.keys(DIFFICULTY_SETTINGS).join(', ')})`,
+    );
+    process.exit(1);
+  }
+
   if (!strategies[options.strategy]) {
     console.error(
       `unknown strategy: ${options.strategy} (available: ${Object.keys(strategies).join(', ')})`,
@@ -255,7 +274,8 @@ function main(): void {
   }
   const score = evaluateScore(outcome.state);
   console.log(
-    `status=${score.status} year=${score.finalYear} provinces=${score.provincesHeld} ` +
+    `status=${score.status} difficulty=${score.difficulty} ` +
+      `year=${score.finalYear} provinces=${score.provincesHeld} ` +
       `taxBase=${score.taxBase.toFixed(1)} legitimacy=${score.legitimacy.toFixed(1)} ` +
       `score=${score.score.toFixed(0)} rulers=${score.rulerCount} ` +
       `crises=${score.successionCrises}` +

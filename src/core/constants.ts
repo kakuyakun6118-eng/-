@@ -1,5 +1,7 @@
 // 数値定数はすべてここに集約する。
 
+import type { Difficulty, DifficultySettings } from './types';
+
 export const STARTING_YEAR = 395;
 export const ENDING_YEAR = 476;
 export const TOTAL_TURNS = 81;
@@ -194,6 +196,37 @@ export const APPEASE_SENATE_GAIN = 12;
 export const APPEASE_SENATE_LEGITIMACY_GAIN = 4;
 /** 免税特権の追認による恒久的な税基盤の損失 */
 export const APPEASE_SENATE_TAX_BASE_LOSS = 2;
+
+// ── 難易度 ────────────────────────────────────────────
+
+export const DEFAULT_DIFFICULTY: Difficulty = 'standard';
+
+/**
+ * 難易度ごとの補正倍率。
+ * 中級(standard)はすべて 1.0 で、これまで調整してきたバランスが
+ * そのまま中級になる。初級・上級はそこからの差分としてのみ定義する。
+ *
+ * 触る対象は「主題」の2つのジレンマに直結する3点に絞る。
+ * 循環の罠 → 税収と蛮族の圧力
+ * 短期と長期の取引 → フォエデラティの給金要求の膨張率
+ */
+export const DIFFICULTY_SETTINGS: Record<Difficulty, DifficultySettings> = {
+  beginner: {
+    incomeMultiplier: 1.25,
+    barbarianPowerMultiplier: 0.85,
+    foederatiEscalationMultiplier: 0.6,
+  },
+  standard: {
+    incomeMultiplier: 1,
+    barbarianPowerMultiplier: 1,
+    foederatiEscalationMultiplier: 1,
+  },
+  veteran: {
+    incomeMultiplier: 0.85,
+    barbarianPowerMultiplier: 1.15,
+    foederatiEscalationMultiplier: 1.4,
+  },
+};
 
 // ── 王朝システム ──────────────────────────────────────
 

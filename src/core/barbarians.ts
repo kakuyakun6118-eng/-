@@ -4,6 +4,7 @@ import {
   COMBAT_RANDOMNESS,
   DEFENSE_MULTIPLIER,
   DEPLOY_ARMY_DEFENSE_SHARE,
+  DIFFICULTY_SETTINGS,
   EXTERIOR_GROWTH_RATE,
   FIELD_ARMY_DEFENSE_SHARE,
   FOEDERATI_DEFECTION_LOYALTY_THRESHOLD,
@@ -112,7 +113,10 @@ export function applyBarbarianActions(
     const defenseBase =
       province.garrison + state.fieldArmy * armyShare + foederatiDefenseAt(location);
 
-    const attackerPower = randomizedPower(faction.strength, rng);
+    const attackerPower = randomizedPower(
+      faction.strength * DIFFICULTY_SETTINGS[state.difficulty].barbarianPowerMultiplier,
+      rng,
+    );
     // 君主の軍事能力は防御側戦力の補正としてのみ作用する
     const defenderPower = randomizedPower(
       defenseBase * DEFENSE_MULTIPLIER * militaryModifier(state),

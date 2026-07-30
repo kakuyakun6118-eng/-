@@ -6,6 +6,7 @@ import type {
   Spouse,
 } from './types';
 import {
+  DIFFICULTY_SETTINGS,
   EAST_AID_ARMY_GAIN,
   EAST_AID_MIN_RELATIONS,
   EAST_AID_RELATIONS_LOSS,
@@ -375,7 +376,11 @@ export function updateFoederatiObligations(state: GameState): GameState {
       ...faction,
       demand: {
         ...faction.demand,
-        amount: faction.demand.amount * (1 + FOEDERATI_DEMAND_ESCALATION),
+        amount:
+          faction.demand.amount *
+          (1 +
+            FOEDERATI_DEMAND_ESCALATION *
+              DIFFICULTY_SETTINGS[state.difficulty].foederatiEscalationMultiplier),
       },
     };
   }

@@ -143,6 +143,24 @@ export interface PendingMarriage {
   marriedYear: number;
 }
 
+// ── 難易度 ────────────────────────────────────────────
+
+export type Difficulty = 'beginner' | 'standard' | 'veteran';
+
+/**
+ * 難易度は新しいメカニクスを足さず、既存の計算式に掛ける倍率
+ * としてのみ作用する。中級(standard)はすべて 1.0 で、
+ * 調整済みの基準バランスがそのまま中級になる
+ */
+export interface DifficultySettings {
+  /** 税収にかかる倍率 */
+  incomeMultiplier: number;
+  /** 蛮族の攻撃側戦力にかかる倍率 */
+  barbarianPowerMultiplier: number;
+  /** フォエデラティの給金要求の膨張率にかかる倍率 */
+  foederatiEscalationMultiplier: number;
+}
+
 // ── 状態モデル（7パラメータ固定） ────────────────────
 
 export interface GameState {
@@ -163,6 +181,9 @@ export interface GameState {
 
   /** 君主と王朝。7パラメータには含めない別サブ構造 */
   dynasty: Dynasty;
+
+  /** 難易度。7パラメータではなくプレイ開始時の設定 */
+  difficulty: Difficulty;
 
   /** onceOnly なイベントの再発火防止用 */
   firedEventIds: string[];
@@ -321,6 +342,8 @@ export interface ScoreResult {
   score: number;
   /** 君主能力を設定から変更したプレイ。他のスコアと比較できない */
   abilitiesAdjusted: boolean;
+  /** 難易度。異なる難易度のスコアは比較できない */
+  difficulty: Difficulty;
   /** 歴代君主の数 */
   rulerCount: number;
   /** 継承危機の回数 */

@@ -1,5 +1,6 @@
 import type {
   BarbarianFaction,
+  Difficulty,
   Dynasty,
   GameState,
   Province,
@@ -12,6 +13,8 @@ import {
   ARMY_UPKEEP_PER_UNIT,
   CONTROL_RECOVERY_PER_TURN,
   COURT_UPKEEP,
+  DEFAULT_DIFFICULTY,
+  DIFFICULTY_SETTINGS,
   INITIAL_EAST_RELATIONS,
   INITIAL_FIELD_ARMY,
   INITIAL_FOEDERATI_LOYALTY,
@@ -42,6 +45,7 @@ export function createInitialState(
   provinces: Province[],
   factions: BarbarianFaction[],
   dynasty: Dynasty,
+  difficulty: Difficulty = DEFAULT_DIFFICULTY,
 ): GameState {
   return {
     turn: 0,
@@ -56,6 +60,7 @@ export function createInitialState(
     provinces: Object.fromEntries(provinces.map((p) => [p.id, p])) as GameState['provinces'],
     factions: Object.fromEntries(factions.map((f) => [f.id, f])) as GameState['factions'],
     dynasty,
+    difficulty,
     firedEventIds: [],
     africaLost: false,
     status: 'ongoing',
@@ -82,7 +87,8 @@ export function calculateIncome(state: GameState): number {
     TAX_RATE *
     senateIncomeFactor(state.senateSupport) *
     // 君主の統治能力は税収の補正として作用する
-    governanceModifier(state)
+    governanceModifier(state) *
+    DIFFICULTY_SETTINGS[state.difficulty].incomeMultiplier
   );
 }
 

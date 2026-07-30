@@ -135,6 +135,7 @@ export function evaluateScore(state: GameState): ScoreResult {
     legitimacy: state.legitimacy,
     score: provincesHeld * state.taxBase * state.legitimacy,
     abilitiesAdjusted: state.dynasty.abilitiesAdjusted,
+    difficulty: state.difficulty,
     rulerCount: state.dynasty.history.length + 1,
     successionCrises: state.dynasty.history.filter((d) => d.outcome === 'crisis').length,
   };
