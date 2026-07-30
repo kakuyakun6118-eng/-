@@ -28,6 +28,7 @@ import {
   SETTLE_STRENGTH_MULTIPLIER,
   SETTLE_TAX_BASE_LOSS,
 } from './constants';
+import { militaryModifier } from './dynasty';
 import { resolveCombat } from './military';
 import type { BarbarianFactionId, GameState, ProvinceId, TurnModifiers } from './types';
 import { clamp } from './util';
@@ -112,7 +113,11 @@ export function applyBarbarianActions(
       province.garrison + state.fieldArmy * armyShare + foederatiDefenseAt(location);
 
     const attackerPower = randomizedPower(faction.strength, rng);
-    const defenderPower = randomizedPower(defenseBase * DEFENSE_MULTIPLIER, rng);
+    // 君主の軍事能力は防御側戦力の補正としてのみ作用する
+    const defenderPower = randomizedPower(
+      defenseBase * DEFENSE_MULTIPLIER * militaryModifier(state),
+      rng,
+    );
     const { attackerWins, margin } = resolveCombat(attackerPower, defenderPower);
 
     if (attackerWins) {

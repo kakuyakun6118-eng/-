@@ -19,6 +19,7 @@ import {
   INITIAL_SENATE_SUPPORT,
   INITIAL_TAX_BASE,
   INITIAL_TREASURY,
+  LEGITIMACY_NATURAL_DECAY,
   MAX_CONTROL,
   MAX_LEGITIMACY,
   MAX_SENATE_SUPPORT,
@@ -34,6 +35,7 @@ import {
   STARTING_YEAR,
   TAX_RATE,
 } from './constants';
+import { governanceModifier } from './dynasty';
 import { clamp } from './util';
 
 export function createInitialState(
@@ -78,8 +80,22 @@ export function calculateIncome(state: GameState): number {
     provinceIncome *
     (state.taxBase / MAX_TAX_BASE) *
     TAX_RATE *
-    senateIncomeFactor(state.senateSupport)
+    senateIncomeFactor(state.senateSupport) *
+    // 君主の統治能力は税収の補正として作用する
+    governanceModifier(state)
   );
+}
+
+/**
+ * 正統性の自然減。統治能力が高い君主ほど摩耗を抑えられる。
+ * 能力が高いほど decay を小さくするため補正倍率で割る
+ */
+export function applyLegitimacyDecay(state: GameState): GameState {
+  const decay = LEGITIMACY_NATURAL_DECAY / governanceModifier(state);
+  return {
+    ...state,
+    legitimacy: clamp(state.legitimacy - decay, MIN_LEGITIMACY, MAX_LEGITIMACY),
+  };
 }
 
 export function calculateExpenses(state: GameState): number {

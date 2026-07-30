@@ -244,10 +244,24 @@ export const ASSASSINATION_MAX_BONUS = 0.06;
 export const SUCCESSION_LEGITIMACY_LOSS_HEIR = 3;
 /** 継承危機（継承者がいない）ときの正統性低下 */
 export const SUCCESSION_LEGITIMACY_LOSS_CRISIS = 18;
-/** 継承危機が簒奪者確率を上げている年数 */
+/** 継承危機が簒奪者確率を上げている年数。毎ターン1減って自然に消える */
 export const SUCCESSION_CRISIS_DURATION = 5;
 /** 継承危機中に簒奪者確率へ加算される値 */
 export const SUCCESSION_CRISIS_USURPER_BONUS = 0.2;
+/**
+ * 継承による正統性低下の下限。
+ * 「正統性低下→暗殺→継承危機→さらに低下」の死のスパイラルを
+ * 継承だけで底まで落とさないための減衰装置
+ */
+export const SUCCESSION_LEGITIMACY_FLOOR = 15;
+/** 簒奪者確率の上限。継承危機と低正統性が重なっても発散させない */
+export const USURPER_PROBABILITY_CAP = 0.5;
+
+/**
+ * 正統性の自然減。統治能力が高いほど小さくなる。
+ * 何もしなければ権威は摩耗していく
+ */
+export const LEGITIMACY_NATURAL_DECAY = 0.5;
 /** 君主が子をもうける年あたりの確率 */
 export const CHILD_BIRTH_PROBABILITY = 0.12;
 /** 抱えられる継承候補の上限 */

@@ -10,8 +10,10 @@ import {
   updateFoederatiLoyalty,
   updateFoederatiObligations,
 } from './diplomacy';
+import { updateDynasty } from './dynasty';
 import {
   appeaseSenate,
+  applyLegitimacyDecay,
   calculateExpenses,
   calculateIncome,
   raiseTaxes,
@@ -37,8 +39,8 @@ import type {
 } from './types';
 
 /**
- * Phase 4: 収入・支出・プレイヤー行動・蛮族AI・戦闘解決・
- * 支配度と税基盤の更新・正統性判定までを処理する。
+ * Phase 4B: 収入・支出・プレイヤー行動・蛮族AI・戦闘解決・
+ * 支配度と税基盤の更新・正統性判定・王朝の更新までを処理する。
  * 歴史イベントの発火判定は Phase 6 で追加する。
  */
 export function tick(state: GameState, actions: PlayerActions, seed: Seed): GameState {
@@ -72,7 +74,11 @@ export function tick(state: GameState, actions: PlayerActions, seed: Seed): Game
   next = updateFoederatiObligations(next);
 
   // 7. 正統性判定
+  next = applyLegitimacyDecay(next);
   next = checkUsurper(next, rng);
+
+  // 8. 王朝の更新（加齢・出生・寿命と暗殺の判定・継承）
+  next = updateDynasty(next, rng);
 
   return { ...next, status: determineStatus(next) };
 }

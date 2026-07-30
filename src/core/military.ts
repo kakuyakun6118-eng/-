@@ -13,10 +13,12 @@ import {
   MIN_SENATE_SUPPORT,
   REORGANIZE_ARMY_GAIN,
   REORGANIZE_COST,
+  SUCCESSION_CRISIS_USURPER_BONUS,
   USURPER_ARMY_LOSS_RATE,
   USURPER_LEGITIMACY_LOSS,
   USURPER_LEGITIMACY_THRESHOLD,
   USURPER_PROBABILITY,
+  USURPER_PROBABILITY_CAP,
 } from './constants';
 import { clamp } from './util';
 
@@ -83,11 +85,19 @@ export function applyDeployAttrition(state: GameState): GameState {
 
 /**
  * コアループ ステップ7: 正統性判定。
- * 正統性が閾値を下回ると簒奪者が現れ、野戦軍と正統性を失う
+ * 正統性が閾値を下回ると簒奪者が現れ、野戦軍と正統性を失う。
+ * 継承危機の直後は簒奪者が現れやすい
  */
 export function checkUsurper(state: GameState, rng: () => number): GameState {
-  if (state.legitimacy >= USURPER_LEGITIMACY_THRESHOLD) return state;
-  if (rng() >= USURPER_PROBABILITY) return state;
+  const inCrisis = state.dynasty.crisisYearsRemaining > 0;
+  if (state.legitimacy >= USURPER_LEGITIMACY_THRESHOLD && !inCrisis) return state;
+
+  // 継承危機と低正統性が重なっても発散しないよう上限を設ける
+  const probability = Math.min(
+    USURPER_PROBABILITY + (inCrisis ? SUCCESSION_CRISIS_USURPER_BONUS : 0),
+    USURPER_PROBABILITY_CAP,
+  );
+  if (rng() >= probability) return state;
   return {
     ...state,
     fieldArmy: state.fieldArmy * (1 - USURPER_ARMY_LOSS_RATE),
