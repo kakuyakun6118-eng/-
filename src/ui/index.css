@@ -1,0 +1,11 @@
+@import 'tailwindcss';
+
+html {
+  color-scheme: dark;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  overscroll-behavior-y: none;
+}

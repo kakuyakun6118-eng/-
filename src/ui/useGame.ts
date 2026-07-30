@@ -1,0 +1,120 @@
+import { useCallback, useMemo, useState } from 'react';
+
+import dynastyData from '../data/dynasty.json';
+import factionsData from '../data/factions.json';
+import provincesData from '../data/provinces.json';
+import { MAX_ACTIONS_PER_TURN } from '../core/constants';
+import { createInitialState } from '../core/economy';
+import { evaluateScore, tick } from '../core/tick';
+import type {
+  BarbarianFaction,
+  Difficulty,
+  Dynasty,
+  GameState,
+  PlayerAction,
+  PlayerActions,
+  Province,
+} from '../core/types';
+
+/**
+ * 画面の状態と core への橋渡しだけを行う。
+ * 計算はすべて core/ の関数に任せ、ここには計算式を書かない
+ */
+export function useGame() {
+  const [state, setState] = useState<GameState | null>(null);
+  const [runSeed, setRunSeed] = useState(0);
+  const [selected, setSelected] = useState<PlayerAction[]>([]);
+  const [log, setLog] = useState<string[]>([]);
+
+  const start = useCallback((difficulty: Difficulty) => {
+    // 乱数の種はここで一度だけ引く。tick() 自体は seed から決定的に動く
+    setRunSeed(Math.floor(Math.random() * 1_000_000_000));
+    setState(
+      createInitialState(
+        provincesData as Province[],
+        factionsData as BarbarianFaction[],
+        // JSON をそのまま渡すと複数プレイで共有されるため複製する
+        JSON.parse(JSON.stringify(dynastyData)) as Dynasty,
+        difficulty,
+      ),
+    );
+    setSelected([]);
+    setLog([]);
+  }, []);
+
+  const toggleAction = useCallback((action: PlayerAction, key: string) => {
+    setSelected((current) => {
+      const existing = current.findIndex((a) => actionKey(a) === key);
+      if (existing >= 0) return current.filter((_, i) => i !== existing);
+      if (current.length >= MAX_ACTIONS_PER_TURN) return current;
+      return [...current, action];
+    });
+  }, []);
+
+  const clearActions = useCallback(() => setSelected([]), []);
+
+  const endTurn = useCallback(() => {
+    setState((current) => {
+      if (current === null || current.status !== 'ongoing') return current;
+      const before = current;
+      const next = tick(before, selected.slice(0, MAX_ACTIONS_PER_TURN) as PlayerActions, runSeed + before.turn);
+      setLog((entries) => [describeTurn(before, next), ...entries].slice(0, 40));
+      return next;
+    });
+    setSelected([]);
+  }, [selected, runSeed]);
+
+  const quit = useCallback(() => {
+    setState(null);
+    setSelected([]);
+    setLog([]);
+  }, []);
+
+  const score = useMemo(() => (state ? evaluateScore(state) : null), [state]);
+
+  return { state, selected, log, score, start, toggleAction, clearActions, endTurn, quit };
+}
+
+/** 選択済み判定のための一意キー。表示用であって計算ではない */
+export function actionKey(action: PlayerAction): string {
+  const parts: string[] = [action.type];
+  if ('factionId' in action) parts.push(action.factionId);
+  if ('provinceId' in action) parts.push(action.provinceId);
+  if ('target' in action) {
+    parts.push(action.target.kind === 'east' ? 'east' : action.target.factionId);
+  }
+  return parts.join(':');
+}
+
+/** 1ターンで何が起きたかを日本語にする。差分を読むだけで計算はしない */
+function describeTurn(before: GameState, after: GameState): string {
+  const events: string[] = [];
+
+  const treasuryDelta = Math.round(after.treasury - before.treasury);
+  events.push(`国庫 ${treasuryDelta >= 0 ? '+' : ''}${treasuryDelta}`);
+
+  if (after.dynasty.history.length > before.dynasty.history.length) {
+    const record = after.dynasty.history[after.dynasty.history.length - 1];
+    events.push(
+      record.cause === 'assassination' ? '皇帝が暗殺された' : '皇帝が崩御した',
+      record.outcome === 'crisis' ? '継承危機' : '嫡子が継承',
+    );
+  }
+
+  for (const id of Object.keys(after.provinces) as (keyof typeof after.provinces)[]) {
+    if (before.provinces[id].control > 0 && after.provinces[id].control <= 0) {
+      events.push(`${id} を喪失`);
+    }
+  }
+
+  for (const id of Object.keys(after.factions) as (keyof typeof after.factions)[]) {
+    const was = before.factions[id].stance;
+    const now = after.factions[id].stance;
+    if (was === now) continue;
+    if (now === 'settled') events.push(`${id} が定住`);
+    else if (now === 'foederati') events.push(`${id} と同盟`);
+    else if (was === 'foederati') events.push(`${id} が離反`);
+  }
+
+  return `${after.year}年 — ${events.join(' / ')}`;
+}
