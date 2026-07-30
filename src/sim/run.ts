@@ -3,7 +3,7 @@ import { writeFileSync } from 'node:fs';
 import dynastyData from '../data/dynasty.json';
 import factionsData from '../data/factions.json';
 import provincesData from '../data/provinces.json';
-import { TOTAL_TURNS } from '../core/constants';
+import { FIELD_ARMY_COLLAPSE_THRESHOLD, TOTAL_TURNS } from '../core/constants';
 import { adjustRulerAbilities } from '../core/dynasty';
 import { createInitialState } from '../core/economy';
 import { evaluateScore, tick } from '../core/tick';
@@ -98,12 +98,33 @@ function freshState(options: Options): GameState {
   return options.adjust ? adjustRulerAbilities(state, options.adjust) : state;
 }
 
+/** 崩壊した瞬間に成立していた条件。継承危機が主因かを見るために記録する */
+export type CollapseCause =
+  | 'italia_lost'
+  | 'army_and_treasury'
+  | 'too_few_provinces'
+  | 'none';
+
 interface TrialOutcome {
   state: GameState;
   rows: string[];
   /** 崩壊が確定した年。存続した場合は null */
   collapseYear: number | null;
+  collapseCause: CollapseCause;
+  /** 崩壊時点で継承危機の余韻が残っていたか */
+  collapsedDuringCrisis: boolean;
   nonFinite: boolean;
+}
+
+function diagnoseCollapse(state: GameState): CollapseCause {
+  if (state.provinces.Italia.control <= 0) return 'italia_lost';
+  if (state.fieldArmy <= FIELD_ARMY_COLLAPSE_THRESHOLD && state.treasury <= 0) {
+    return 'army_and_treasury';
+  }
+  if (Object.values(state.provinces).filter((p) => p.control > 0).length < 2) {
+    return 'too_few_provinces';
+  }
+  return 'none';
 }
 
 function runTrial(options: Options, seedBase: number): TrialOutcome {
@@ -111,6 +132,8 @@ function runTrial(options: Options, seedBase: number): TrialOutcome {
   let state = freshState(options);
   const rows = [CSV_HEADER, toCsvRow(state)];
   let collapseYear: number | null = null;
+  let collapseCause: CollapseCause = 'none';
+  let collapsedDuringCrisis = false;
   let nonFinite = false;
 
   for (let i = 0; i < options.turns; i++) {
@@ -123,10 +146,12 @@ function runTrial(options: Options, seedBase: number): TrialOutcome {
     }
     if (state.status === 'collapsed' && collapseYear === null) {
       collapseYear = state.year;
+      collapseCause = diagnoseCollapse(state);
+      collapsedDuringCrisis = state.dynasty.crisisYearsRemaining > 0;
     }
   }
 
-  return { state, rows, collapseYear, nonFinite };
+  return { state, rows, collapseYear, collapseCause, collapsedDuringCrisis, nonFinite };
 }
 
 function isStateFinite(state: GameState): boolean {
@@ -148,12 +173,22 @@ function isStateFinite(state: GameState): boolean {
 const average = (values: number[]): number =>
   values.reduce((sum, value) => sum + value, 0) / values.length;
 
+/** 標準偏差。乱数で勝敗が決まる度合いを測るために出す */
+const stdDev = (values: number[]): number => {
+  const mean = average(values);
+  return Math.sqrt(average(values.map((v) => (v - mean) ** 2)));
+};
+
 function reportAggregate(options: Options): void {
   const survived: number[] = [];
   const collapseYears: number[] = [];
   const scores: number[] = [];
   const taxBases: number[] = [];
+  const rulerCounts: number[] = [];
+  const crisisCounts: number[] = [];
+  const causes = new Map<string, number>();
   let nonFiniteTrials = 0;
+  let crisisAtCollapse = 0;
 
   for (let trial = 0; trial < options.trials; trial++) {
     const outcome = runTrial(options, options.seed + trial * 1000);
@@ -163,6 +198,12 @@ function reportAggregate(options: Options): void {
     const score = evaluateScore(outcome.state);
     scores.push(score.score);
     taxBases.push(score.taxBase);
+    rulerCounts.push(score.rulerCount);
+    crisisCounts.push(score.successionCrises);
+    if (outcome.collapseYear !== null) {
+      causes.set(outcome.collapseCause, (causes.get(outcome.collapseCause) ?? 0) + 1);
+      if (outcome.collapsedDuringCrisis) crisisAtCollapse++;
+    }
   }
 
   const survivalRate = (average(survived) * 100).toFixed(0);
@@ -173,12 +214,22 @@ function reportAggregate(options: Options): void {
   console.log(`  survival rate      : ${survivalRate}%`);
   console.log(`  non-finite trials  : ${nonFiniteTrials}`);
   console.log(`  avg score          : ${average(scores).toFixed(0)}`);
+  console.log(`  score stddev       : ${stdDev(scores).toFixed(0)} ` +
+    `(変動係数 ${average(scores) > 0 ? (stdDev(scores) / average(scores)).toFixed(2) : 'n/a'})`);
   console.log(`  avg final taxBase  : ${average(taxBases).toFixed(1)}`);
+  console.log(`  rulers / crises    : ${average(rulerCounts).toFixed(1)} / ` +
+    `${average(crisisCounts).toFixed(2)}`);
   if (collapseYears.length > 0) {
     console.log(
       `  collapse year      : avg ${average(collapseYears).toFixed(1)} ` +
         `(${Math.min(...collapseYears)}–${Math.max(...collapseYears)}, n=${collapseYears.length})`,
     );
+    const breakdown = [...causes.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([cause, n]) => `${cause}=${n}`)
+      .join(' ');
+    console.log(`  collapse cause     : ${breakdown}`);
+    console.log(`  崩壊時に継承危機中 : ${crisisAtCollapse}/${collapseYears.length}`);
   }
 }
 
