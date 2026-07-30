@@ -312,7 +312,7 @@ export const SUCCESSION_CRISIS_USURPER_BONUS = 0.2;
  * 「正統性低下→暗殺→継承危機→さらに低下」の死のスパイラルを
  * 継承だけで底まで落とさないための減衰装置
  */
-export const SUCCESSION_LEGITIMACY_FLOOR = 30;
+export const SUCCESSION_LEGITIMACY_FLOOR = 15;
 /** 簒奪者確率の上限。継承危機と低正統性が重なっても発散させない */
 export const USURPER_PROBABILITY_CAP = 0.5;
 
