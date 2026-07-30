@@ -15,6 +15,7 @@ import { updateDynasty } from './dynasty';
 import {
   appeaseSenate,
   applyLegitimacyDecay,
+  applySenateDecay,
   calculateExpenses,
   calculateIncome,
   raiseTaxes,
@@ -76,6 +77,7 @@ export function tick(state: GameState, actions: PlayerActions, seed: Seed): Game
 
   // 7. 正統性判定
   next = applyLegitimacyDecay(next);
+  next = applySenateDecay(next);
   next = checkUsurper(next, rng);
 
   // 8. 王朝の更新（加齢・出生・寿命と暗殺の判定・継承）

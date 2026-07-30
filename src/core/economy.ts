@@ -35,6 +35,7 @@ import {
   RAISE_TAXES_INCOME_MULTIPLIER,
   RAISE_TAXES_SENATE_LOSS,
   SENATE_INCOME_FLOOR,
+  SENATE_SUPPORT_NATURAL_DECAY,
   STARTING_YEAR,
   TAX_RATE,
 } from './constants';
@@ -101,6 +102,22 @@ export function applyLegitimacyDecay(state: GameState): GameState {
   return {
     ...state,
     legitimacy: clamp(state.legitimacy - decay, MIN_LEGITIMACY, MAX_LEGITIMACY),
+  };
+}
+
+/**
+ * 元老院支持の自然減。
+ * 統治能力では補正しない。統治が効くのは税収と legitimacy の
+ * 自然減のみで、能力を万能ステータスにしないため
+ */
+export function applySenateDecay(state: GameState): GameState {
+  return {
+    ...state,
+    senateSupport: clamp(
+      state.senateSupport - SENATE_SUPPORT_NATURAL_DECAY,
+      MIN_SENATE_SUPPORT,
+      MAX_SENATE_SUPPORT,
+    ),
   };
 }
 

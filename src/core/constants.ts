@@ -114,6 +114,13 @@ export const SETTLE_TAX_BASE_LOSS = 7;
  */
 export const SENATE_INCOME_FLOOR = 0.55;
 
+/**
+ * 元老院支持の自然減。弱体化する宮廷から貴族が離れていく。
+ * これがないと senateSupport は増税などが発火しない限り不動で、
+ * domestic_appease_senate が発火条件に到達しない死んだ選択肢になる
+ */
+export const SENATE_SUPPORT_NATURAL_DECAY = 0.3;
+
 // ── 正統性（コアループ ステップ7） ────────────────────
 
 /** 属州の control が0に落ちた際の正統性低下 */
@@ -180,7 +187,8 @@ export const DEPLOY_ARMY_DEFENSE_SHARE = 0.5;
 /** 派遣による野戦軍の損耗率 */
 export const DEPLOY_ATTRITION_RATE = 0.04;
 export const DEFEND_COST = 40;
-export const DEFEND_GARRISON_GAIN = 6;
+/** 6 では戦闘損耗ですぐ溶けて元が取れず、入れると生存率が下がっていた */
+export const DEFEND_GARRISON_GAIN = 10;
 export const CONSCRIPT_COST = 150;
 export const CONSCRIPT_ARMY_GAIN = 15;
 export const CONSCRIPT_SENATE_LOSS = 5;
@@ -191,7 +199,13 @@ export const RAISE_TAXES_INCOME_MULTIPLIER = 0.5;
 export const RAISE_TAXES_SENATE_LOSS = 8;
 export const RAISE_TAXES_CONTROL_LOSS = 2;
 export const REORGANIZE_COST = 60;
-export const REORGANIZE_ARMY_GAIN = 8;
+/**
+ * 再編は「金あたり非効率だが副作用なし」、徴募は「金あたり効率的だが
+ * 元老院を削る」という住み分けにする。
+ * 再編 12.0 G/兵 (副作用なし) 対 徴募 10.0 G/兵 (元老院 -5)。
+ * 8 のときは 7.5 G/兵 で徴募を価格・副作用の両面で上位互換していた
+ */
+export const REORGANIZE_ARMY_GAIN = 5;
 export const APPEASE_SENATE_GAIN = 12;
 export const APPEASE_SENATE_LEGITIMACY_GAIN = 4;
 /** 免税特権の追認による恒久的な税基盤の損失 */
