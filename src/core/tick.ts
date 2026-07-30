@@ -7,6 +7,7 @@ import {
   payTribute,
   requestEastAid,
   settleFaction,
+  settlePendingMarriages,
   updateFoederatiLoyalty,
   updateFoederatiObligations,
 } from './diplomacy';
@@ -63,7 +64,7 @@ export function tick(state: GameState, actions: PlayerActions, seed: Seed): Game
   // 3. プレイヤー行動の適用
   const modifiers: TurnModifiers = { pacified: new Set(), reinforced: new Set() };
   for (const action of actions) {
-    next = applyAction(next, action, modifiers);
+    next = applyAction(next, action, modifiers, rng);
   }
 
   // 4. 蛮族AIの行動 / 5. 戦闘解決
@@ -79,6 +80,8 @@ export function tick(state: GameState, actions: PlayerActions, seed: Seed): Game
 
   // 8. 王朝の更新（加齢・出生・寿命と暗殺の判定・継承）
   next = updateDynasty(next, rng);
+  // 婚姻のうち、子が生まれて初めて発生する効果を清算する
+  next = settlePendingMarriages(next);
 
   return { ...next, status: determineStatus(next) };
 }
@@ -87,6 +90,7 @@ function applyAction(
   state: GameState,
   action: PlayerAction,
   modifiers: TurnModifiers,
+  rng: () => number,
 ): GameState {
   switch (action.type) {
     case 'negotiate_tribute': {
@@ -97,7 +101,7 @@ function applyAction(
     case 'negotiate_settle':
       return settleFaction(state, action.factionId, action.provinceId);
     case 'negotiate_marriage':
-      return arrangeMarriage(state, action.factionId);
+      return arrangeMarriage(state, action.target, rng);
     case 'hire_foederati':
       return hireFoederati(state, action.factionId);
     case 'military_deploy':

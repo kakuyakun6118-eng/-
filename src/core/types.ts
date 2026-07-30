@@ -191,9 +191,14 @@ export interface NegotiateSettleAction {
   provinceId: ProvinceId;
 }
 
+/**
+ * 婚姻同盟。相手は蛮族勢力の族長家または東ローマ帝室。
+ * Task B の診断（枠を増やすと生存率が下がる＝枠は不足していない）に
+ * 基づき、無償にせず行動枠を消費させる
+ */
 export interface NegotiateMarriageAction {
   type: 'negotiate_marriage';
-  factionId: BarbarianFactionId;
+  target: MarriageOrigin;
 }
 
 export interface HireFoederatiAction {
