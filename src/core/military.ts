@@ -11,8 +11,9 @@ import {
   MAX_SENATE_SUPPORT,
   MIN_LEGITIMACY,
   MIN_SENATE_SUPPORT,
-  REORGANIZE_ARMY_GAIN,
   REORGANIZE_COST,
+  REORGANIZE_GARRISON_DRAW_RATE,
+  REORGANIZE_TRANSFER_EFFICIENCY,
   SUCCESSION_CRISIS_USURPER_BONUS,
   USURPER_ARMY_LOSS_RATE,
   USURPER_LEGITIMACY_LOSS,
@@ -54,13 +55,32 @@ export function conscript(state: GameState): GameState {
   };
 }
 
-/** 軍の再編: 徴募より安く野戦軍を回復させる */
+/**
+ * 軍の再編。兵を生み出さず、属州の守備隊から野戦軍へ移す再配分。
+ * 機動戦力は厚くなるが属州の守りは薄くなるという取引であり、
+ * 守備隊が尽きれば得られる兵も尽きる
+ */
 export function reorganizeArmy(state: GameState): GameState {
   if (state.treasury < REORGANIZE_COST) return state;
+
+  const provinces = { ...state.provinces };
+  let drawn = 0;
+  for (const id of Object.keys(provinces) as ProvinceId[]) {
+    const province = provinces[id];
+    const taken = province.garrison * REORGANIZE_GARRISON_DRAW_RATE;
+    if (taken <= 0) continue;
+    drawn += taken;
+    provinces[id] = { ...province, garrison: province.garrison - taken };
+  }
+
+  // 引き抜ける守備隊がなければ再編は成立せず、費用も発生しない
+  if (drawn <= 0) return state;
+
   return {
     ...state,
     treasury: state.treasury - REORGANIZE_COST,
-    fieldArmy: state.fieldArmy + REORGANIZE_ARMY_GAIN,
+    fieldArmy: state.fieldArmy + drawn * REORGANIZE_TRANSFER_EFFICIENCY,
+    provinces,
   };
 }
 

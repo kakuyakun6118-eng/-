@@ -132,6 +132,12 @@ export const LEGITIMACY_LOSS_PER_SETTLEMENT = 5;
 /** 侵攻を撃退した際の正統性上昇 */
 export const LEGITIMACY_GAIN_PER_VICTORY = 2;
 
+/**
+ * 476年到達時にこれを下回っていると、軍と属州が残っていても
+ * 「名前だけの傀儡国家」として崩壊扱いにする
+ */
+export const SURVIVAL_MIN_LEGITIMACY = 20;
+
 /** これを下回ると簒奪者イベントの判定が始まる */
 export const USURPER_LEGITIMACY_THRESHOLD = 25;
 
@@ -200,12 +206,14 @@ export const RAISE_TAXES_SENATE_LOSS = 8;
 export const RAISE_TAXES_CONTROL_LOSS = 2;
 export const REORGANIZE_COST = 60;
 /**
- * 再編は「金あたり非効率だが副作用なし」、徴募は「金あたり効率的だが
- * 元老院を削る」という住み分けにする。
- * 再編 12.0 G/兵 (副作用なし) 対 徴募 10.0 G/兵 (元老院 -5)。
- * 8 のときは 7.5 G/兵 で徴募を価格・副作用の両面で上位互換していた
+ * 軍の再編は兵を生み出さず、属州の守備隊から野戦軍へ移すだけの
+ * ゼロサムな再配分にする。各属州の garrison からこの割合を引き抜く。
+ * 守備隊が尽きれば得られる兵も尽きるため、金がある限り毎ターン
+ * 撃ち続けて兵を無限に増やすことができなくなる
  */
-export const REORGANIZE_ARMY_GAIN = 5;
+export const REORGANIZE_GARRISON_DRAW_RATE = 0.2;
+/** 再配分に伴う損失。引き抜いた兵の全部が野戦軍にはならない */
+export const REORGANIZE_TRANSFER_EFFICIENCY = 0.9;
 export const APPEASE_SENATE_GAIN = 12;
 export const APPEASE_SENATE_LEGITIMACY_GAIN = 4;
 /** 免税特権の追認による恒久的な税基盤の損失 */
@@ -250,12 +258,13 @@ export const MAX_ABILITY = 10;
 /**
  * 能力の生成範囲。極端な君主が出ないよう MIN/MAX より内側に絞る。
  * 生成される能力はこの範囲、設定からの変更は MIN/MAX まで許す。
- * 3〜8 では君主のガチャ運によるスコアのブレが大きすぎたため
- * (正攻法の変動係数 1.16) 4〜7 に狭め、プレイヤーの選択で
- * 勝敗が決まる比率を上げている
+ * 「名君と暗君のガチャ」は歴史のダイナミズムとして残す。
+ * 分散の主因は能力ではなく継承イベントであることが計測で判明した
+ * ため (能力を全君主5に固定しても変動係数は 1.01→1.06 と不変)、
+ * 範囲を狭めても再現性は上がらない
  */
-export const ABILITY_ROLL_MIN = 4;
-export const ABILITY_ROLL_MAX = 7;
+export const ABILITY_ROLL_MIN = 3;
+export const ABILITY_ROLL_MAX = 8;
 
 /**
  * 補正倍率の中心となる能力値。この値で倍率が 1.0 になる。
@@ -303,7 +312,7 @@ export const SUCCESSION_CRISIS_USURPER_BONUS = 0.2;
  * 「正統性低下→暗殺→継承危機→さらに低下」の死のスパイラルを
  * 継承だけで底まで落とさないための減衰装置
  */
-export const SUCCESSION_LEGITIMACY_FLOOR = 15;
+export const SUCCESSION_LEGITIMACY_FLOOR = 30;
 /** 簒奪者確率の上限。継承危機と低正統性が重なっても発散させない */
 export const USURPER_PROBABILITY_CAP = 0.5;
 

@@ -1,5 +1,9 @@
 import { applyBarbarianActions } from './barbarians';
-import { ENDING_YEAR, FIELD_ARMY_COLLAPSE_THRESHOLD } from './constants';
+import {
+  ENDING_YEAR,
+  FIELD_ARMY_COLLAPSE_THRESHOLD,
+  SURVIVAL_MIN_LEGITIMACY,
+} from './constants';
 import {
   arrangeMarriage,
   confirmTitle,
@@ -156,6 +160,12 @@ function determineStatus(state: GameState): GameStatus {
 
   if (state.year >= ENDING_YEAR) {
     const provincesHeld = Object.values(state.provinces).filter((p) => p.control > 0).length;
+    /*
+     * 正統性を失ったまま軍と属州だけが残っている状態は
+     * 「名前だけの傀儡国家」であり、帝位が保たれたとは言えない。
+     * 存続にはItaliaに加え1属州以上と、最低限の正統性の両方が要る
+     */
+    if (state.legitimacy < SURVIVAL_MIN_LEGITIMACY) return 'collapsed';
     return provincesHeld >= 2 ? 'survived' : 'collapsed';
   }
 
