@@ -2,6 +2,9 @@
 
 import type { Difficulty, DifficultySettings } from './types';
 
+/** セーブデータの形式版。互換性のない変更をしたら上げる */
+export const SAVE_VERSION = 1;
+
 export const STARTING_YEAR = 395;
 export const ENDING_YEAR = 476;
 export const TOTAL_TURNS = 81;
