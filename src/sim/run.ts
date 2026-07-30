@@ -1,11 +1,12 @@
 import { writeFileSync } from 'node:fs';
 
+import dynastyData from '../data/dynasty.json';
 import factionsData from '../data/factions.json';
 import provincesData from '../data/provinces.json';
 import { TOTAL_TURNS } from '../core/constants';
 import { createInitialState } from '../core/economy';
 import { evaluateScore, tick } from '../core/tick';
-import type { BarbarianFaction, GameState, Province } from '../core/types';
+import type { BarbarianFaction, Dynasty, GameState, Province } from '../core/types';
 import { strategies } from './strategies';
 
 const CSV_HEADER = [
@@ -75,7 +76,11 @@ function parseArgs(argv: string[]): Options {
 }
 
 function freshState(): GameState {
-  return createInitialState(provincesData as Province[], factionsData as BarbarianFaction[]);
+  return createInitialState(
+    provincesData as Province[],
+    factionsData as BarbarianFaction[],
+    dynastyData as Dynasty,
+  );
 }
 
 interface TrialOutcome {

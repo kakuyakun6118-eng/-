@@ -1,5 +1,6 @@
 import type {
   BarbarianFaction,
+  Dynasty,
   GameState,
   Province,
   ProvinceId,
@@ -38,6 +39,7 @@ import { clamp } from './util';
 export function createInitialState(
   provinces: Province[],
   factions: BarbarianFaction[],
+  dynasty: Dynasty,
 ): GameState {
   return {
     turn: 0,
@@ -51,6 +53,7 @@ export function createInitialState(
     foederatiLoyalty: INITIAL_FOEDERATI_LOYALTY,
     provinces: Object.fromEntries(provinces.map((p) => [p.id, p])) as GameState['provinces'],
     factions: Object.fromEntries(factions.map((f) => [f.id, f])) as GameState['factions'],
+    dynasty,
     firedEventIds: [],
     africaLost: false,
     status: 'ongoing',

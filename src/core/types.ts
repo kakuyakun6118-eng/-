@@ -56,6 +56,93 @@ export interface BarbarianFaction {
   routeIndex: number;
 }
 
+// ── 君主と王朝 ────────────────────────────────────────
+
+/**
+ * 君主の能力。3つのみ。増やさない。各1〜10。
+ * これは資源ではなく、既存の計算式に対する補正倍率の元になる値
+ */
+export interface RulerAbilities {
+  /** 軍事 — 戦闘解決の防御側戦力を補正する */
+  military: number;
+  /** 統治 — 税収と legitimacy の自然減を補正する */
+  governance: number;
+  /** 交渉 — 貢納コストと交渉成功率を補正する */
+  diplomacy: number;
+}
+
+/** 婚姻相手の出自 */
+export type MarriageOrigin =
+  | { kind: 'barbarian'; factionId: BarbarianFactionId }
+  | { kind: 'east' };
+
+/** 王朝の血統。ローマ系か、混血の場合はどの勢力の血が入っているか */
+export type Lineage = 'roman' | 'east' | BarbarianFactionId;
+
+export interface Spouse {
+  id: string;
+  origin: MarriageOrigin;
+  marriedYear: number;
+}
+
+/** 継承候補となる王朝の一員 */
+export interface DynastyMember {
+  id: string;
+  birthYear: number;
+  abilities: RulerAbilities;
+  /** 出身家系 */
+  lineage: Lineage;
+  /** 嫡子か（庶子・傍系は継承時の正統性低下が大きい） */
+  legitimate: boolean;
+  /** 混血の後継者は legitimacy に負の補正がつく */
+  mixedBlood: boolean;
+  /** 混血によって得た、その勢力に対する請求権 */
+  claims: BarbarianFactionId[];
+}
+
+export interface Ruler extends DynastyMember {
+  accessionYear: number;
+  /** 天命で定めた没年。暗殺されるとこの年より早く死ぬ */
+  fatedDeathYear: number;
+  deathYear: number | null;
+  spouse: Spouse | null;
+  /** 子の DynastyMember.id */
+  childIds: string[];
+}
+
+export type SuccessionOutcome = 'heir' | 'crisis';
+
+export interface DeathRecord {
+  rulerId: string;
+  year: number;
+  cause: 'natural' | 'assassination';
+  outcome: SuccessionOutcome;
+}
+
+export interface Dynasty {
+  name: string;
+  ruler: Ruler;
+  /** 継承候補（君主の子や傍系） */
+  members: DynastyMember[];
+  /** 成立済みの婚姻のうち、子の誕生を待っている効果 */
+  pendingMarriages: PendingMarriage[];
+  /** 歴代の死と継承の記録 */
+  history: DeathRecord[];
+  /** 継承危機の余韻。0より大きい間は簒奪者の確率が上がる */
+  crisisYearsRemaining: number;
+  /**
+   * 君主能力を設定から変更したセーブに立つフラグ。
+   * スコア比較を無意味にしないため必ず記録に残す
+   */
+  abilitiesAdjusted: boolean;
+}
+
+/** 子が生まれてから発生する婚姻の効果 */
+export interface PendingMarriage {
+  origin: MarriageOrigin;
+  marriedYear: number;
+}
+
 // ── 状態モデル（7パラメータ固定） ────────────────────
 
 export interface GameState {
@@ -73,6 +160,9 @@ export interface GameState {
 
   provinces: Record<ProvinceId, Province>;
   factions: Record<BarbarianFactionId, BarbarianFaction>;
+
+  /** 君主と王朝。7パラメータには含めない別サブ構造 */
+  dynasty: Dynasty;
 
   /** onceOnly なイベントの再発火防止用 */
   firedEventIds: string[];
@@ -224,4 +314,10 @@ export interface ScoreResult {
   taxBase: number;
   legitimacy: number;
   score: number;
+  /** 君主能力を設定から変更したプレイ。他のスコアと比較できない */
+  abilitiesAdjusted: boolean;
+  /** 歴代君主の数 */
+  rulerCount: number;
+  /** 継承危機の回数 */
+  successionCrises: number;
 }

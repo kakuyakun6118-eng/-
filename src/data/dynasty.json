@@ -1,0 +1,22 @@
+{
+  "name": "Theodosian",
+  "ruler": {
+    "id": "honorius",
+    "birthYear": 384,
+    "accessionYear": 395,
+    "fatedDeathYear": 423,
+    "deathYear": null,
+    "abilities": { "military": 3, "governance": 3, "diplomacy": 4 },
+    "lineage": "roman",
+    "legitimate": true,
+    "mixedBlood": false,
+    "claims": [],
+    "spouse": null,
+    "childIds": []
+  },
+  "members": [],
+  "pendingMarriages": [],
+  "history": [],
+  "crisisYearsRemaining": 0,
+  "abilitiesAdjusted": false
+}

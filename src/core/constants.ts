@@ -195,6 +195,83 @@ export const APPEASE_SENATE_LEGITIMACY_GAIN = 4;
 /** 免税特権の追認による恒久的な税基盤の損失 */
 export const APPEASE_SENATE_TAX_BASE_LOSS = 2;
 
+// ── 王朝システム ──────────────────────────────────────
+
+export const MIN_ABILITY = 1;
+export const MAX_ABILITY = 10;
+
+/**
+ * 能力の生成範囲。極端な君主が出ないよう MIN/MAX より内側に絞る。
+ * 生成される能力はこの範囲、設定からの変更は MIN/MAX まで許す
+ */
+export const ABILITY_ROLL_MIN = 3;
+export const ABILITY_ROLL_MAX = 8;
+
+/**
+ * 補正倍率の中心となる能力値。この値で倍率が 1.0 になる。
+ * 平均的な君主のとき既存の数値バランスがそのまま維持される
+ */
+export const ABILITY_NEUTRAL = 5;
+
+/**
+ * 能力1あたりの補正幅。ABILITY_NEUTRAL からの差にこれを掛ける。
+ * 能力1〜10で概ね ±30% の揺れに収まる
+ */
+export const ABILITY_MODIFIER_PER_POINT = 0.06;
+
+// 寿命
+export const MIN_LIFESPAN = 35;
+export const MAX_LIFESPAN = 72;
+/** 即位時の年齢の範囲 */
+export const MIN_ACCESSION_AGE = 16;
+export const MAX_ACCESSION_AGE = 40;
+/** 継承者が成人と見なされる年齢 */
+export const ADULT_AGE = 16;
+/**
+ * 最低在位年数。極端に短い連続交代を避けるため、
+ * 即位からこの年数が経つまでは寿命・暗殺のどちらでも死なない
+ */
+export const MIN_REIGN_YEARS = 4;
+
+// 暗殺
+/** legitimacy が最大のときの暗殺確率 */
+export const ASSASSINATION_BASE_PROBABILITY = 0.005;
+/** legitimacy が0のときに加算される暗殺確率 */
+export const ASSASSINATION_MAX_BONUS = 0.06;
+
+// 継承
+/** 成人した嫡子が継いだときの正統性低下 */
+export const SUCCESSION_LEGITIMACY_LOSS_HEIR = 3;
+/** 継承危機（継承者がいない）ときの正統性低下 */
+export const SUCCESSION_LEGITIMACY_LOSS_CRISIS = 18;
+/** 継承危機が簒奪者確率を上げている年数 */
+export const SUCCESSION_CRISIS_DURATION = 5;
+/** 継承危機中に簒奪者確率へ加算される値 */
+export const SUCCESSION_CRISIS_USURPER_BONUS = 0.2;
+/** 君主が子をもうける年あたりの確率 */
+export const CHILD_BIRTH_PROBABILITY = 0.12;
+/** 抱えられる継承候補の上限 */
+export const MAX_DYNASTY_MEMBERS = 6;
+
+// 婚姻外交
+/** 蛮族との婚姻が成立する確率（交渉能力で補正される） */
+export const MARRIAGE_BARBARIAN_SUCCESS_BASE = 0.75;
+/** 東ローマとの婚姻が成立する確率。帝室との縁組なので難しい */
+export const MARRIAGE_EAST_SUCCESS_BASE = 0.35;
+/** 東ローマとの婚姻を申し込める最低の eastRelations */
+export const MARRIAGE_EAST_MIN_RELATIONS = 50;
+/** 蛮族との婚姻の即時効果 */
+export const MARRIAGE_BARBARIAN_LOYALTY_GAIN = 12;
+export const MARRIAGE_BARBARIAN_SENATE_LOSS = 8;
+/** 東ローマとの婚姻の即時効果 */
+export const MARRIAGE_EAST_RELATIONS_GAIN = 15;
+export const MARRIAGE_EAST_LEGITIMACY_GAIN = 8;
+/** 子が生まれたときに追加で発生する効果 */
+export const MARRIAGE_HEIR_BORN_LOYALTY_GAIN = 10;
+export const MARRIAGE_HEIR_BORN_EAST_RELATIONS_GAIN = 10;
+/** 混血の後継者が即位したときの正統性への負の補正 */
+export const MIXED_BLOOD_LEGITIMACY_PENALTY = 6;
+
 // 東帝国
 /** 援軍を要請できる最低の eastRelations */
 export const EAST_AID_MIN_RELATIONS = 30;
