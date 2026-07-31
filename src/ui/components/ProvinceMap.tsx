@@ -17,6 +17,7 @@ import {
 } from './MapTerrain';
 import {
   BattleSprite,
+  ChiRho,
   FactionToken,
   LegionSprite,
   UnitSpriteDefs,
@@ -410,9 +411,10 @@ function ImperialBanner() {
     <g filter="url(#imperialGlow)">
       {/* 竿 */}
       <rect x={-1.6} y={-32} width={3.2} height={36} fill="#fde68a" />
-      {/* 鷲章 */}
-      <circle cx={0} cy={-34} r={3.6} fill="#fef3c7" stroke="#a16207" strokeWidth={1} />
-      <path d="M-6,-33 L0,-36.5 L6,-33 L0,-30.5 Z" fill="#fef3c7" />
+      {/* 竿頭のラバルム */}
+      <g transform="translate(0,-34) scale(0.34)">
+        <ChiRho color="#fef3c7" strokeWidth={6} />
+      </g>
       {/* 横木 */}
       <rect x={-1} y={-28} width={19} height={2.6} fill="#fde68a" />
       {/* 旗。風になびかせる */}
@@ -423,7 +425,10 @@ function ImperialBanner() {
           stroke="#78350f"
           strokeWidth={1.3}
         />
-        <path d="M4.5,-21.5 L14.5,-21.5 M4.5,-17.5 L14.5,-17.5" stroke="#fef3c7" strokeWidth={1.5} />
+        {/* 布に染めたラバルム。元の図と同じ赤で置く */}
+        <g transform="translate(9.5,-16.5) scale(0.4)">
+          <ChiRho color="#b7281e" strokeWidth={5} />
+        </g>
       </g>
     </g>
   );

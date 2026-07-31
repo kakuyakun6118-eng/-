@@ -56,6 +56,40 @@ export function UnitSpriteDefs() {
 const UNIT_SCALE = 1.0;
 
 /**
+ * キリストのモノグラム（ラバルム）。
+ *
+ * ギリシア語 ΧΡΙΣΤΟΣ の頭2文字 Χ（カイ）と Ρ（ロー）を重ねたもの。
+ * コンスタンティヌス以降ローマ軍の標識になり、この時代の軍旗は
+ * 鷲章ではなくこれを掲げている。
+ *
+ * 画像を貼らず線で描く。地図上では 15px 程度まで縮むので、
+ * 装飾より輪郭の判別を優先し、縦棒にだけ碑文風の横棒（セリフ）を付ける。
+ * 縦 -14〜14 の座標系で描くので、使う側で拡大縮小する
+ */
+export function ChiRho({ color, strokeWidth = 3 }: { color: string; strokeWidth?: number }) {
+  return (
+    <g stroke={color} strokeWidth={strokeWidth} fill="none" strokeLinecap="butt">
+      {/* Χ（カイ）。左右に伸びる二本の斜線 */}
+      <path d="M-11,-3 L11,9 M-11,9 L11,-3" />
+      {/* Ρ（ロー）の縦棒 */}
+      <path d="M0,-14 L0,14" />
+      {/* Ρ の環。上半分を大きく取る */}
+      <path d="M0,-13.5 C9,-13.5 9.5,-4.5 0,-4.5" />
+      {/*
+       * 端の広がり（セリフ）。碑文の彫りに倣って線の先を横に開く。
+       * 斜線の分は線に直交させる。地図の縮尺では潰れるが、
+       * 紋章として大きく出すときに効く
+       */}
+      <g strokeWidth={strokeWidth * 0.72}>
+        <path d="M-3.2,-14 L3.2,-14 M-3.2,14 L3.2,14" />
+        <path d="M-9.6,-5.6 L-12.4,-0.4 M12.4,6.4 L9.6,11.6" />
+        <path d="M-9.6,11.6 L-12.4,6.4 M12.4,-0.4 L9.6,-5.6" />
+      </g>
+    </g>
+  );
+}
+
+/**
  * 兵力を示す軍旗。勢力色を反映する。
  * 隊列のうち先頭にだけ掲げるので、strength を渡さない部隊は旗を持たない
  */
@@ -64,8 +98,12 @@ function Banner({ color, strength }: { color: string; strength: number }) {
     <g transform="translate(10,-26)">
       <rect x={-1.1} y={0} width={2.2} height={32} fill="url(#unitGold)" />
       <path d="M1.1,1 L23,5 L23,19 L1.1,15 Z" fill={color} stroke="#1c1917" strokeWidth={1} />
+      {/* 布に染めたラバルム。兵力の数字と重ならないよう左寄せで小さく */}
+      <g transform="translate(7,10) scale(0.28)" opacity={0.85}>
+        <ChiRho color="#fff7ed" strokeWidth={5} />
+      </g>
       <text
-        x={12}
+        x={15}
         y={14}
         textAnchor="middle"
         fontSize={11}
@@ -104,10 +142,15 @@ export function LegionSprite({
       {/* 盾の金具 */}
       <path d="M-9,-4 L9,-4 M-9,4 L9,4" stroke="#f6d68a" strokeWidth={0.9} opacity={0.85} />
       <ellipse cx={0} cy={0} rx={3.4} ry={3.8} fill="url(#unitGold)" stroke="#3f0d0d" strokeWidth={0.8} />
-      {/* 鷲章 */}
+      {/*
+       * ラバルム。竿の先に掲げる。
+       * この時代の軍の標識は鷲章ではなくキリストのモノグラムだった
+       */}
       <g transform="translate(-11,-15)">
         <rect x={-0.8} y={0} width={1.6} height={20} fill="url(#unitGold)" />
-        <path d="M-4.5,1 L0,-3 L4.5,1 L0,3.5 Z" fill="url(#unitGold)" stroke="#78350f" strokeWidth={0.5} />
+        <g transform="translate(0,-3) scale(0.32)">
+          <ChiRho color="#f6d68a" strokeWidth={6} />
+        </g>
       </g>
       {strength !== undefined && (
         <Banner color={imperial ? '#f59e0b' : '#b91c1c'} strength={strength} />
