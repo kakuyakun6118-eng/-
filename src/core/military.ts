@@ -26,7 +26,11 @@ import { clamp } from './util';
 /** 国庫が負なら野戦軍の一部が脱走する */
 export function applyDesertion(state: GameState): GameState {
   if (state.treasury >= 0) return state;
-  return { ...state, fieldArmy: state.fieldArmy * (1 - DESERTION_RATE) };
+  return {
+    ...state,
+    fieldArmy: state.fieldArmy * (1 - DESERTION_RATE),
+    turnEvents: [...state.turnEvents, 'desertion'],
+  };
 }
 
 export interface CombatResult {
@@ -126,5 +130,6 @@ export function checkUsurper(state: GameState, rng: () => number): GameState {
       MIN_LEGITIMACY,
       MAX_LEGITIMACY,
     ),
+    turnEvents: [...state.turnEvents, 'usurper_attempt'],
   };
 }

@@ -167,6 +167,15 @@ export interface DifficultySettings {
   historicalSeverityMultiplier: number;
 }
 
+/**
+ * その年に起きたが、前後の状態を見比べても復元できない出来事。
+ *
+ * 脱走も簒奪未遂も野戦軍を減らすだけなので、記録しないと
+ * プレイヤーには「理由の説明なく軍が消えた」としか見えない。
+ * 表示する文言は ui 側で当てる。core に画面用の文字列は置かない
+ */
+export type TurnEventId = 'desertion' | 'usurper_attempt';
+
 // ── 状態モデル（7パラメータ固定） ────────────────────
 
 export interface GameState {
@@ -193,6 +202,9 @@ export interface GameState {
 
   /** onceOnly なイベントの再発火防止用 */
   firedEventIds: string[];
+
+  /** その年に起きた、状態の差分からは読み取れない出来事。毎ターン作り直す */
+  turnEvents: TurnEventId[];
 
   /** Africa の control が一度でも0以下になったか（Italia への恒久ペナルティは一度だけ適用） */
   africaLost: boolean;

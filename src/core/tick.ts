@@ -62,6 +62,8 @@ export function tick(state: GameState, actions: PlayerActions, seed: Seed): Game
     turn: state.turn + 1,
     year: state.year + 1,
     treasury: state.treasury + income - expenses,
+    // その年の出来事は毎ターン作り直す。前の年のものを持ち越さない
+    turnEvents: [],
   };
 
   next = applyDesertion(next);

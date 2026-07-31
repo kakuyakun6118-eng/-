@@ -76,6 +76,14 @@ export function deserialize(json: string): LoadResult {
     return { ok: false, error: '状態が壊れています（firedEventIds）' };
   }
 
+  /*
+   * turnEvents はその年のあいだしか意味を持たない一時的な記録なので、
+   * 無ければ空で補う。これだけのために古いセーブを弾かない
+   */
+  if (!Array.isArray(state.turnEvents)) {
+    return { ok: true, state: { ...state, turnEvents: [] } };
+  }
+
   return { ok: true, state };
 }
 

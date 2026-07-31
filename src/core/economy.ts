@@ -63,6 +63,7 @@ export function createInitialState(
     dynasty,
     difficulty,
     firedEventIds: [],
+    turnEvents: [],
     africaLost: false,
     status: 'ongoing',
   };
