@@ -1,9 +1,13 @@
+import { useId } from 'react';
+
 import type { MarriageOrigin, Ruler, Spouse } from '../../core/types';
 
 /**
  * 君主と皇后の肖像。画像素材を持たず、SVG を組み立てて描く。
  * 見た目は id から決定的に決まるので、同じ人物なら常に同じ顔になり、
- * 代替わりすれば顔が変わる
+ * 代替わりすれば顔が変わる。
+ * 意匠は後期ローマ／ビザンティンの帝室肖像に寄せ、
+ * 帝室紫・金の刺繍・宝石・真珠・大理石の壁龕で構成する
  */
 
 function hashString(value: string): number {
@@ -27,19 +31,23 @@ function picker(seed: number): () => number {
 const pick = <T,>(rng: () => number, items: readonly T[]): T =>
   items[Math.floor(rng() * items.length)];
 
-const SKIN = ['#e6b892', '#d9a273', '#c68a5c', '#b0754a'] as const;
-const HAIR = ['#241a12', '#3d2a18', '#5a3d22', '#7a5a30'] as const;
-const GREY = '#c9c3b6';
+const SKIN = ['#f0c9a4', '#e3b088', '#cf9364', '#b87a4e'] as const;
+const HAIR = ['#2a1c12', '#3f2a17', '#5b3d20', '#7d5a2c'] as const;
+const GEMS = ['#c026d3', '#dc2626', '#0ea5e9', '#16a34a'] as const;
+const GREY = '#d8d2c6';
 
 interface Look {
   skin: string;
   hair: string;
-  /** 白髪まじりか */
+  gem: string;
   aged: boolean;
-  /** 髭を蓄えているか */
   beard: boolean;
+  curly: boolean;
   browTilt: number;
 }
+
+/** 髭を蓄えはじめる年齢 */
+const BEARD_MIN_AGE = 20;
 
 function lookOf(id: string, age: number, allowBeard: boolean): Look {
   const rng = picker(hashString(id));
@@ -47,79 +55,171 @@ function lookOf(id: string, age: number, allowBeard: boolean): Look {
   return {
     skin: pick(rng, SKIN),
     hair: aged ? GREY : pick(rng, HAIR),
+    gem: pick(rng, GEMS),
     aged,
-    beard: allowBeard && rng() < 0.55,
+    beard: allowBeard && age >= BEARD_MIN_AGE && rng() < 0.6,
+    curly: rng() < 0.6,
     browTilt: rng() < 0.5 ? -1 : 1,
   };
 }
 
-/** 顔の共通部分。冠や髪型は呼び出し側が重ねる */
-function Face({ look }: { look: Look }) {
+/** 金・紫・大理石・肌の陰影。id が衝突しないよう uid を付ける */
+function Defs({ uid, look, robe }: { uid: string; look: Look; robe: [string, string] }) {
+  return (
+    <defs>
+      <linearGradient id={`gold-${uid}`} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#fde68a" />
+        <stop offset="45%" stopColor="#eab308" />
+        <stop offset="100%" stopColor="#a16207" />
+      </linearGradient>
+      <linearGradient id={`robe-${uid}`} x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor={robe[0]} />
+        <stop offset="100%" stopColor={robe[1]} />
+      </linearGradient>
+      <linearGradient id={`marble-${uid}`} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#5b4a52" />
+        <stop offset="55%" stopColor="#3a2f38" />
+        <stop offset="100%" stopColor="#221b23" />
+      </linearGradient>
+      {/*
+        肌。黒を混ぜると顔が濁るので、外側も肌色のまま止めて
+        陰影は別に薄い影を重ねて付ける
+      */}
+      <radialGradient id={`skin-${uid}`} cx="0.4" cy="0.32" r="0.85">
+        <stop offset="0%" stopColor="#ffffff" stopOpacity={0.3} />
+        <stop offset="60%" stopColor={look.skin} />
+        <stop offset="100%" stopColor={look.skin} />
+      </radialGradient>
+      {/* 金糸の刺繍 */}
+      <pattern
+        id={`emb-${uid}`}
+        width={9}
+        height={11}
+        patternUnits="userSpaceOnUse"
+        patternTransform="rotate(8)"
+      >
+        <path d="M4.5,1.5 Q7,5 4.5,8.5 Q2,5 4.5,1.5 Z" fill="#f0c357" opacity={0.55} />
+        <circle cx={4.5} cy={9.8} r={0.7} fill="#fde68a" opacity={0.45} />
+      </pattern>
+    </defs>
+  );
+}
+
+/** 大理石の壁龕と玉座。人物の背景 */
+function Niche({ uid }: { uid: string }) {
+  return (
+    <g>
+      <path
+        d="M2,128 L2,52 A48,46 0 0 1 98,52 L98,128 Z"
+        fill={`url(#marble-${uid})`}
+        stroke={`url(#gold-${uid})`}
+        strokeWidth={2.2}
+      />
+      {/* 左右の柱 */}
+      <g fill="#6b5a63" opacity={0.55}>
+        <rect x={3} y={54} width={9} height={74} />
+        <rect x={88} y={54} width={9} height={74} />
+      </g>
+      <g fill="#8d7a84" opacity={0.4}>
+        <rect x={5} y={54} width={2.5} height={74} />
+        <rect x={90} y={54} width={2.5} height={74} />
+      </g>
+      {/* 玉座の背もたれ */}
+      <path d="M18,128 L18,60 A32,30 0 0 1 82,60 L82,128 Z" fill="#4a1d2e" opacity={0.85} />
+      <path
+        d="M18,128 L18,60 A32,30 0 0 1 82,60 L82,128"
+        fill="none"
+        stroke={`url(#gold-${uid})`}
+        strokeWidth={1.6}
+        opacity={0.9}
+      />
+    </g>
+  );
+}
+
+/** 顔。冠や髪は呼び出し側が重ねる */
+function Face({ uid, look }: { uid: string; look: Look }) {
   return (
     <g>
       {/* 首 */}
-      <path d="M42,62 L58,62 L58,82 L42,82 Z" fill={look.skin} />
-      <path d="M42,72 Q50,80 58,72 L58,82 L42,82 Z" fill="#00000022" />
+      <path d="M41,64 L59,64 L59,86 L41,86 Z" fill={look.skin} />
+      <path d="M41,74 Q50,83 59,74 L59,86 L41,86 Z" fill="#00000022" />
       {/* 顔 */}
-      <ellipse cx={50} cy={46} rx={20} ry={24} fill={look.skin} />
+      <ellipse cx={50} cy={48} rx={20} ry={24.5} fill={`url(#skin-${uid})`} />
+      {/* 右側の頬に落ちる影 */}
+      <path d="M62,32 A20,24.5 0 0 1 62,64 A24,24 0 0 0 62,32 Z" fill="#00000014" />
       {/* 耳 */}
-      <ellipse cx={29.5} cy={48} rx={4} ry={6} fill={look.skin} />
-      <ellipse cx={70.5} cy={48} rx={4} ry={6} fill={look.skin} />
+      <ellipse cx={29.5} cy={50} rx={4} ry={6} fill={look.skin} />
+      <ellipse cx={70.5} cy={50} rx={4} ry={6} fill={look.skin} />
       {/* 眉 */}
       <path
-        d={`M38,${39 + look.browTilt} Q43,36 47,${39 - look.browTilt}`}
+        d={`M38,${41 + look.browTilt} Q43,37.5 47.5,${41 - look.browTilt}`}
         stroke={look.hair}
-        strokeWidth={2.2}
+        strokeWidth={2.1}
         fill="none"
         strokeLinecap="round"
       />
       <path
-        d={`M53,${39 - look.browTilt} Q57,36 62,${39 + look.browTilt}`}
+        d={`M52.5,${41 - look.browTilt} Q57,37.5 62,${41 + look.browTilt}`}
         stroke={look.hair}
-        strokeWidth={2.2}
+        strokeWidth={2.1}
         fill="none"
         strokeLinecap="round"
       />
       {/* 目 */}
-      <ellipse cx={42.5} cy={45} rx={3.6} ry={2.4} fill="#fdfdfd" />
-      <ellipse cx={57.5} cy={45} rx={3.6} ry={2.4} fill="#fdfdfd" />
-      <circle cx={42.8} cy={45} r={1.7} fill="#2a2118" />
-      <circle cx={57.8} cy={45} r={1.7} fill="#2a2118" />
+      <ellipse cx={42.5} cy={47} rx={3.8} ry={2.5} fill="#fdfdfd" />
+      <ellipse cx={57.5} cy={47} rx={3.8} ry={2.5} fill="#fdfdfd" />
+      <circle cx={42.8} cy={47} r={1.8} fill="#3b2a1a" />
+      <circle cx={57.8} cy={47} r={1.8} fill="#3b2a1a" />
+      <circle cx={43.4} cy={46.3} r={0.6} fill="#ffffff" />
+      <circle cx={58.4} cy={46.3} r={0.6} fill="#ffffff" />
       {/* 鼻 */}
-      <path d="M50,46 L47.5,54 Q50,55.5 52.5,54" stroke="#00000033" strokeWidth={1.6} fill="none" strokeLinecap="round" />
+      <path
+        d="M50,47 L47.5,56 Q50,57.4 52.5,56"
+        stroke="#00000038"
+        strokeWidth={1.5}
+        fill="none"
+        strokeLinecap="round"
+      />
       {/* 口 */}
-      <path d="M45,60 Q50,63 55,60" stroke="#8d4f42" strokeWidth={2} fill="none" strokeLinecap="round" />
-      {/* 加齢の陰影 */}
+      <path d="M45.5,62 Q50,65 54.5,62" stroke="#9c4f45" strokeWidth={2} fill="none" strokeLinecap="round" />
       {look.aged && (
-        <g stroke="#00000022" strokeWidth={1.2} fill="none" strokeLinecap="round">
-          <path d="M34,52 Q36,55 34,58" />
-          <path d="M66,52 Q64,55 66,58" />
+        <g stroke="#00000030" strokeWidth={1.1} fill="none" strokeLinecap="round">
+          <path d="M34,54 Q36,57 34,60" />
+          <path d="M66,54 Q64,57 66,60" />
         </g>
       )}
     </g>
   );
 }
 
-function Frame({ tint }: { tint: string }) {
+/** 帝室紫のローブ。金の縁取りと刺繍を重ねる */
+function Robe({ uid, collar }: { uid: string; collar: React.ReactNode }) {
+  const body = 'M8,128 Q14,94 36,84 L64,84 Q86,94 92,128 Z';
   return (
-    <>
-      <defs>
-        <linearGradient id={`niche-${tint.slice(1)}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={tint} />
-          <stop offset="100%" stopColor="#0f172a" />
-        </linearGradient>
-      </defs>
+    <g>
+      <path d={body} fill={`url(#robe-${uid})`} />
+      <path d={body} fill={`url(#emb-${uid})`} />
+      {/* 前身頃の帯 */}
+      <path d="M42,84 L42,128 L58,128 L58,84 Z" fill="#00000033" />
       <path
-        d="M2,118 L2,50 A48,44 0 0 1 98,50 L98,118 Z"
-        fill={`url(#niche-${tint.slice(1)})`}
-        stroke="#64748b"
-        strokeWidth={2}
+        d="M42,84 L42,128 M58,84 L58,128"
+        stroke={`url(#gold-${uid})`}
+        strokeWidth={2.4}
       />
-    </>
+      {/* 肩の縁取り */}
+      <path
+        d="M36,84 Q50,96 64,84"
+        fill="none"
+        stroke={`url(#gold-${uid})`}
+        strokeWidth={3}
+      />
+      {collar}
+    </g>
   );
 }
 
-/** 皇帝。月桂冠を戴き、紫の縁取りのトガをまとう */
+/** 皇帝。宝石をちりばめた黄金の月桂冠と帝室紫のトガ */
 export function EmperorPortrait({
   ruler,
   year,
@@ -129,62 +229,78 @@ export function EmperorPortrait({
   year: number;
   className?: string;
 }) {
+  const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const look = lookOf(ruler.id, year - ruler.birthYear, true);
 
   return (
-    <svg viewBox="0 0 100 120" className={className} role="img" aria-label="皇帝の肖像">
-      <Frame tint="#3b3054" />
+    <svg viewBox="0 0 100 130" className={className} role="img" aria-label="皇帝の肖像">
+      <Defs uid={uid} look={look} robe={['#6d28d9', '#4c1d95']} />
+      <Niche uid={uid} />
 
-      {/* トガ */}
-      <path d="M10,118 Q16,86 38,78 L62,78 Q84,86 90,118 Z" fill="#f1f5f9" />
-      <path d="M38,78 L50,100 L62,78 Q74,82 80,96 L62,118 L38,118 Z" fill="#7f1d3f" />
-      <path d="M38,78 L50,100 L62,78" stroke="#facc15" strokeWidth={2.4} fill="none" />
+      <Robe
+        uid={uid}
+        collar={
+          <g>
+            {/* 肩留めの黄金のフィブラ */}
+            <circle cx={34} cy={90} r={4.6} fill={`url(#gold-${uid})`} stroke="#78350f" strokeWidth={0.8} />
+            <circle cx={34} cy={90} r={1.9} fill={look.gem} />
+          </g>
+        }
+      />
 
       {/* 髪 */}
-      <path
-        d="M28,44 Q30,20 50,20 Q70,20 72,44 Q68,34 50,32 Q34,32 28,44 Z"
-        fill={look.hair}
-      />
-      <Face look={look} />
-      {look.beard && (
-        <path
-          d="M33,50 Q34,70 50,72 Q66,70 67,50 Q62,62 50,63 Q38,62 33,50 Z"
-          fill={look.hair}
-          opacity={0.95}
-        />
+      <path d="M27,46 Q29,20 50,20 Q71,20 73,46 Q69,34 50,32 Q31,34 27,46 Z" fill={look.hair} />
+      {look.curly && (
+        <g fill={look.hair}>
+          {[32, 39, 46, 54, 61, 68].map((x, i) => (
+            <circle key={x} cx={x} cy={i % 2 === 0 ? 26 : 24} r={5} />
+          ))}
+        </g>
       )}
 
-      {/* 月桂冠 */}
-      <g stroke="#facc15" strokeWidth={2.6} fill="none" strokeLinecap="round">
-        <path d="M28,38 Q50,24 72,38" />
-      </g>
+      <Face uid={uid} look={look} />
+
+      {look.beard && (
+        <g fill={look.hair}>
+          <path d="M32,52 Q33,74 50,76 Q67,74 68,52 Q63,65 50,66 Q37,65 32,52 Z" />
+          <path d="M44,62 Q50,60 56,62 Q50,64 44,62 Z" fill="#00000022" />
+        </g>
+      )}
+
+      {/* 宝石の月桂冠 */}
+      <path d="M27,40 Q50,25 73,40" fill="none" stroke={`url(#gold-${uid})`} strokeWidth={4.4} />
       <g fill="#fde047">
         {[
-          [31, 39],
-          [37, 34],
-          [44, 30.5],
-          [56, 30.5],
-          [63, 34],
-          [69, 39],
+          [30, 41],
+          [36, 35.5],
+          [43, 31.5],
+          [57, 31.5],
+          [64, 35.5],
+          [70, 41],
         ].map(([x, y]) => (
           <ellipse
             key={x}
             cx={x}
             cy={y}
-            rx={3.6}
-            ry={2}
-            transform={`rotate(${x < 50 ? -40 : 40} ${x} ${y})`}
+            rx={4}
+            ry={2.1}
+            transform={`rotate(${x < 50 ? -42 : 42} ${x} ${y})`}
           />
         ))}
       </g>
-      <circle cx={50} cy={26} r={3.2} fill="#fde047" stroke="#a16207" strokeWidth={0.8} />
+      <g>
+        <circle cx={50} cy={28} r={4} fill={`url(#gold-${uid})`} stroke="#78350f" strokeWidth={0.8} />
+        <circle cx={50} cy={28} r={2.1} fill={look.gem} />
+        <circle cx={38} cy={33} r={1.6} fill={look.gem} />
+        <circle cx={62} cy={33} r={1.6} fill={look.gem} />
+      </g>
     </svg>
   );
 }
 
 /**
  * 皇后。出自によって装いが変わる。
- * 東ローマ帝室なら真珠の宝冠、蛮族の族長家なら編み込みと肩留め
+ * 東ローマ帝室なら真珠を垂らした宝冠、蛮族の族長家なら編み込みと金環
  */
 export function ConsortPortrait({
   spouse,
@@ -193,48 +309,84 @@ export function ConsortPortrait({
   spouse: Spouse;
   className?: string;
 }) {
-  const look = lookOf(spouse.id, 30, false);
+  const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
+  const look = lookOf(spouse.id, 28, false);
   const east = spouse.origin.kind === 'east';
 
   return (
-    <svg viewBox="0 0 100 120" className={className} role="img" aria-label="皇后の肖像">
-      <Frame tint={east ? '#1e3a5f' : '#4a3520'} />
+    <svg viewBox="0 0 100 130" className={className} role="img" aria-label="皇后の肖像">
+      <Defs
+        uid={uid}
+        look={look}
+        robe={east ? ['#7e22ce', '#4338ca'] : ['#9a3412', '#7c2d12']}
+      />
+      <Niche uid={uid} />
 
-      {/* ストラ */}
-      <path d="M10,118 Q16,88 38,80 L62,80 Q84,88 90,118 Z" fill={east ? '#c7d2fe' : '#d6c3a5'} />
-      <path
-        d="M38,80 Q50,96 62,80 Q74,86 78,102 L62,118 L38,118 Z"
-        fill={east ? '#4338ca' : '#7c4a2a'}
+      <Robe
+        uid={uid}
+        collar={
+          east ? (
+            // 真珠の連なる首飾り
+            <g>
+              {[92, 98, 104].map((y, i) => (
+                <path
+                  key={y}
+                  d={`M${36 + i * 1.5},86 Q50,${y} ${64 - i * 1.5},86`}
+                  fill="none"
+                  stroke="#f8fafc"
+                  strokeWidth={2.4}
+                  strokeLinecap="round"
+                  strokeDasharray="0.2 3.4"
+                />
+              ))}
+              <circle cx={50} cy={104} r={3.4} fill={`url(#gold-${uid})`} stroke="#78350f" strokeWidth={0.7} />
+              <circle cx={50} cy={104} r={1.7} fill={look.gem} />
+            </g>
+          ) : (
+            // 金の襟飾りと肩留め
+            <g>
+              <path d="M38,88 Q50,98 62,88" fill="none" stroke={`url(#gold-${uid})`} strokeWidth={2.6} />
+              <circle cx={33} cy={92} r={4.4} fill={`url(#gold-${uid})`} stroke="#78350f" strokeWidth={0.8} />
+              <circle cx={33} cy={92} r={1.8} fill={look.gem} />
+            </g>
+          )
+        }
       />
 
-      {/*
-        後ろ髪。顔の外側に広がる形にして、顎の下は塗らない。
-        中央を塗ると髭のように見えてしまうため
-      */}
-      <ellipse cx={50} cy={46} rx={26} ry={29} fill={look.hair} />
-      <path d="M24,50 Q20,78 27,94 L37,94 Q31,74 31,52 Z" fill={look.hair} />
-      <path d="M76,50 Q80,78 73,94 L63,94 Q69,74 69,52 Z" fill={look.hair} />
-      <Face look={look} />
+      {/* 後ろ髪。顔の外側だけに広げ、顎の下は塗らない */}
+      <ellipse cx={50} cy={48} rx={26} ry={29} fill={look.hair} />
+      <path d="M24,52 Q20,80 27,96 L37,96 Q31,76 31,54 Z" fill={look.hair} />
+      <path d="M76,52 Q80,80 73,96 L63,96 Q69,76 69,54 Z" fill={look.hair} />
+
+      <Face uid={uid} look={look} />
 
       {/* 結い上げた髪 */}
-      <path d="M27,46 Q28,18 50,18 Q72,18 73,46 Q68,30 50,28 Q32,30 27,46 Z" fill={look.hair} />
+      <path d="M27,48 Q28,19 50,19 Q72,19 73,48 Q68,31 50,29 Q32,31 27,48 Z" fill={look.hair} />
+
       {east ? (
         <>
-          {/* 束ねた髷 */}
-          <ellipse cx={50} cy={17} rx={13} ry={8} fill={look.hair} />
-          {/* 真珠の宝冠 */}
-          <path d="M28,34 Q50,22 72,34" stroke="#fde68a" strokeWidth={3} fill="none" />
-          <g fill="#f8fafc" stroke="#cbd5e1" strokeWidth={0.6}>
-            {[31, 38, 45, 52, 59, 66, 69].map((x, i) => (
-              <circle key={x} cx={x} cy={i === 3 ? 25 : 30 - Math.abs(3 - i) * 0.6} r={2.4} />
+          <ellipse cx={50} cy={18} rx={14} ry={8.5} fill={look.hair} />
+          {/* 宝石の宝冠 */}
+          <path d="M27,36 Q50,22 73,36" fill="none" stroke={`url(#gold-${uid})`} strokeWidth={4.6} />
+          <g>
+            <circle cx={50} cy={24} r={3.4} fill={`url(#gold-${uid})`} />
+            <circle cx={50} cy={24} r={1.8} fill={look.gem} />
+            <circle cx={40} cy={28} r={1.5} fill={look.gem} />
+            <circle cx={60} cy={28} r={1.5} fill={look.gem} />
+          </g>
+          <g fill="#f8fafc" stroke="#cbd5e1" strokeWidth={0.5}>
+            {[31, 37, 44, 56, 63, 69].map((x, i) => (
+              <circle key={x} cx={x} cy={33 - Math.abs(2.5 - i) * 0.9} r={2.2} />
             ))}
           </g>
-          {/* 垂れ飾り */}
-          <g fill="#f8fafc" stroke="#cbd5e1" strokeWidth={0.5}>
-            <circle cx={27} cy={44} r={2} />
-            <circle cx={27} cy={51} r={2} />
-            <circle cx={73} cy={44} r={2} />
-            <circle cx={73} cy={51} r={2} />
+          {/* 垂れ飾り（ペンディリア） */}
+          <g fill="#f8fafc" stroke="#cbd5e1" strokeWidth={0.4}>
+            {[0, 1, 2, 3].map((i) => (
+              <circle key={`l${i}`} cx={26.5} cy={42 + i * 6} r={2.1} />
+            ))}
+            {[0, 1, 2, 3].map((i) => (
+              <circle key={`r${i}`} cx={73.5} cy={42 + i * 6} r={2.1} />
+            ))}
           </g>
         </>
       ) : (
@@ -242,16 +394,16 @@ export function ConsortPortrait({
           {/* 編み込み */}
           <g fill={look.hair} stroke="#00000033" strokeWidth={0.8}>
             {[0, 1, 2, 3].map((i) => (
-              <ellipse key={i} cx={24} cy={54 + i * 9} rx={5} ry={5.4} />
+              <ellipse key={`l${i}`} cx={24} cy={56 + i * 9} rx={5.2} ry={5.6} />
             ))}
             {[0, 1, 2, 3].map((i) => (
-              <ellipse key={`r${i}`} cx={76} cy={54 + i * 9} rx={5} ry={5.4} />
+              <ellipse key={`r${i}`} cx={76} cy={56 + i * 9} rx={5.2} ry={5.6} />
             ))}
           </g>
-          {/* 金の環 */}
-          <path d="M29,33 Q50,24 71,33" stroke="#eab308" strokeWidth={3.2} fill="none" />
-          {/* 肩留め */}
-          <circle cx={35} cy={92} r={4.2} fill="#eab308" stroke="#78350f" strokeWidth={1} />
+          {/* 金環と額飾り */}
+          <path d="M28,35 Q50,25 72,35" fill="none" stroke={`url(#gold-${uid})`} strokeWidth={4} />
+          <circle cx={50} cy={27.5} r={3} fill={`url(#gold-${uid})`} />
+          <circle cx={50} cy={27.5} r={1.5} fill={look.gem} />
         </>
       )}
     </svg>

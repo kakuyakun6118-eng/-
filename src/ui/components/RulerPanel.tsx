@@ -15,7 +15,7 @@ export function RulerPanel({ state }: { state: GameState }) {
           <EmperorPortrait
             ruler={ruler}
             year={state.year}
-            className="w-16 h-auto rounded-md ring-1 ring-slate-600"
+            className="w-20 h-auto rounded-md ring-1 ring-amber-700/50"
           />
           <figcaption className="text-[10px] text-slate-400 mt-0.5">
             皇帝 {state.year - ruler.birthYear}歳
@@ -26,7 +26,7 @@ export function RulerPanel({ state }: { state: GameState }) {
           <figure className="shrink-0 text-center">
             <ConsortPortrait
               spouse={spouse}
-              className="w-16 h-auto rounded-md ring-1 ring-slate-600"
+              className="w-20 h-auto rounded-md ring-1 ring-amber-700/50"
             />
             <figcaption className="text-[10px] text-slate-400 mt-0.5">皇后</figcaption>
           </figure>
