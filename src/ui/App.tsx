@@ -9,6 +9,7 @@ import { RulerPanel } from './components/RulerPanel';
 import { ResultScreen, TitleScreen } from './components/Screens';
 import { StatusBar } from './components/StatusBar';
 import { DEMAND_DETAILS, DEMAND_LABELS, FACTION_LABELS, PROVINCE_LABELS } from './catalogue';
+import { useMusic } from './music';
 import { useGame } from './useGame';
 
 /**
@@ -78,8 +79,21 @@ export function App() {
     load,
   } = useGame();
   const [focused, setFocused] = useState<ProvinceId | null>(null);
+  const music = useMusic();
 
-  if (state === null) return <TitleScreen onStart={start} onLoad={load} loadError={loadError} />;
+  if (state === null) {
+    return (
+      <TitleScreen
+        onStart={(difficulty, rulerName) => {
+          // 難易度を選ぶ操作をきっかけに鳴らす。操作なしでは再生できない
+          music.startIfAllowed();
+          start(difficulty, rulerName);
+        }}
+        onLoad={load}
+        loadError={loadError}
+      />
+    );
+  }
   if (state.status !== 'ongoing' && score !== null) {
     return <ResultScreen score={score} state={state} onRestart={quit} />;
   }
@@ -88,7 +102,7 @@ export function App() {
 
   return (
     <div className="min-h-dvh pb-28">
-      <StatusBar state={state} />
+      <StatusBar state={state} music={music} />
 
       <main className="max-w-lg mx-auto px-3 py-3 space-y-3">
         <section>

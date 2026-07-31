@@ -1,6 +1,7 @@
 import { ENDING_YEAR } from '../../core/constants';
 import type { GameState } from '../../core/types';
 import { DIFFICULTY_LABELS } from '../catalogue';
+import type { Music } from '../music';
 
 interface Stat {
   label: string;
@@ -15,7 +16,7 @@ function tone(value: number, warn: number, danger: number): string {
   return 'var(--ink)';
 }
 
-export function StatusBar({ state }: { state: GameState }) {
+export function StatusBar({ state, music }: { state: GameState; music: Music }) {
   const stats: Stat[] = [
     { label: '国庫', value: Math.round(state.treasury).toLocaleString(), tone: tone(state.treasury, 200, 0) },
     { label: '税基盤', value: state.taxBase.toFixed(0), tone: tone(state.taxBase, 40, 20) },
@@ -35,9 +36,22 @@ export function StatusBar({ state }: { state: GameState }) {
             年 / {ENDING_YEAR}
           </span>
         </div>
-        <div className="text-xs" style={{ color: 'var(--ink-soft)' }}>
-          {DIFFICULTY_LABELS[state.difficulty]}
-          {state.dynasty.abilitiesAdjusted && ' ・調整済み'}
+        <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--ink-soft)' }}>
+          <span>
+            {DIFFICULTY_LABELS[state.difficulty]}
+            {state.dynasty.abilitiesAdjusted && ' ・調整済み'}
+          </span>
+          {/* 音源が置かれていないときはボタンごと出さない */}
+          {music.available && (
+            <button
+              onClick={music.toggle}
+              aria-label={music.playing ? '音楽を止める' : '音楽を鳴らす'}
+              className="px-1.5 py-0.5 rounded-sm"
+              style={{ border: '1px solid var(--gold)', color: 'var(--ink-soft)' }}
+            >
+              {music.playing ? '♪' : '♪ 切'}
+            </button>
+          )}
         </div>
       </div>
       <div className="grid grid-cols-4 sm:grid-cols-7 gap-x-2 gap-y-1 px-3 py-2">

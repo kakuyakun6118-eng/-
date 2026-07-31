@@ -3,3 +3,6 @@ dist/
 *.log
 *.csv
 .scratch/
+
+# 音源はリポジトリに含めない（src/ui/public/music/README.md）
+*.mp3
