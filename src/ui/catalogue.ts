@@ -9,6 +9,7 @@ import {
   REORGANIZE_COST,
 } from '../core/constants';
 import type {
+  BarbarianDemandType,
   BarbarianFactionId,
   GameState,
   PlayerAction,
@@ -36,6 +37,19 @@ export const FACTION_LABELS: Record<BarbarianFactionId, string> = {
   Suebi: 'スエビ',
   Alans: 'アラン',
   Saxons: 'サクソン',
+};
+
+/** 要求の種類。何を差し出すことになるかを添える */
+export const DEMAND_LABELS: Record<BarbarianDemandType, string> = {
+  gold: '金',
+  land: '土地',
+  title: '称号',
+};
+
+export const DEMAND_DETAILS: Record<BarbarianDemandType, string> = {
+  gold: '国庫で払う。引き揚げさせ、その軍の一部を散らす',
+  land: 'その属州を割譲する。税基盤を永久に失う',
+  title: '官位を与えて味方に付ける。元老院の支持と正統性で払う',
 };
 
 /**
@@ -70,6 +84,11 @@ export interface ActionTemplate {
   target: TargetKind;
   /** 選べない理由。null なら選べる */
   blockedReason: (state: GameState) => string | null;
+  /**
+   * 相手として選べる勢力を絞る。
+   * 省略すると全勢力。要求への応答のように、対象が限られる行動で使う
+   */
+  factionFilter?: (state: GameState, id: BarbarianFactionId) => boolean;
   build: (target: { province?: ProvinceId; faction?: BarbarianFactionId; east?: boolean }) => PlayerAction | null;
 }
 
@@ -87,6 +106,22 @@ export const ACTION_TEMPLATES: ActionTemplate[] = [
     blockedReason: () => null,
     build: ({ faction }) =>
       faction ? { type: 'negotiate_tribute', factionId: faction, amount: 60 } : null,
+  },
+  {
+    id: 'negotiate_accept_demand',
+    category: '交渉',
+    label: '要求を飲む',
+    detail: '突きつけられた要求に応じる。金・土地・称号のどれを払うかは相手が決める（行動枠を消費しない）',
+    cost: null,
+    target: 'faction',
+    blockedReason: (state) =>
+      Object.values(state.factions).some((f) => f.stance === 'hostile' && f.demand !== null)
+        ? null
+        : '要求を受けていない',
+    factionFilter: (state, id) =>
+      state.factions[id].stance === 'hostile' && state.factions[id].demand !== null,
+    build: ({ faction }) =>
+      faction ? { type: 'negotiate_accept_demand', factionId: faction } : null,
   },
   {
     id: 'negotiate_settle',

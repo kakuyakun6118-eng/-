@@ -7,7 +7,7 @@ import { MAX_ACTIONS_PER_TURN } from '../core/constants';
 import { createInitialState } from '../core/economy';
 import { findEvent } from '../core/events';
 import { deserialize, serialize, suggestFileName } from '../core/save';
-import { evaluateScore, tick } from '../core/tick';
+import { consumesActionSlot, evaluateScore, tick } from '../core/tick';
 import type {
   BarbarianFaction,
   Difficulty,
@@ -54,7 +54,13 @@ export function useGame() {
     setSelected((current) => {
       const existing = current.findIndex((a) => actionKey(a) === key);
       if (existing >= 0) return current.filter((_, i) => i !== existing);
-      if (current.length >= MAX_ACTIONS_PER_TURN) return current;
+      // 要求への応答は枠を消費しないので、上限の判定から外す
+      if (
+        consumesActionSlot(action) &&
+        current.filter(consumesActionSlot).length >= MAX_ACTIONS_PER_TURN
+      ) {
+        return current;
+      }
       return [...current, action];
     });
   }, []);

@@ -1,14 +1,58 @@
 import { useState } from 'react';
 
 import { MAX_ACTIONS_PER_TURN } from '../core/constants';
-import type { ProvinceId } from '../core/types';
+import { consumesActionSlot } from '../core/tick';
+import type { GameState, ProvinceId } from '../core/types';
 import { ActionPanel } from './components/ActionPanel';
 import { MapLegend, ProvinceMap, occupierNames } from './components/ProvinceMap';
 import { RulerPanel } from './components/RulerPanel';
 import { ResultScreen, TitleScreen } from './components/Screens';
 import { StatusBar } from './components/StatusBar';
-import { PROVINCE_LABELS } from './catalogue';
+import { DEMAND_DETAILS, DEMAND_LABELS, FACTION_LABELS, PROVINCE_LABELS } from './catalogue';
 import { useGame } from './useGame';
+
+/**
+ * 突きつけられている要求。行動枠を消費せずに答えられるので、
+ * 行動の一覧とは別に、見落とさない場所へ出す
+ */
+function DemandPanel({ state }: { state: GameState }) {
+  const demands = Object.values(state.factions).filter(
+    (faction) => faction.stance === 'hostile' && faction.demand !== null,
+  );
+  if (demands.length === 0) return null;
+
+  return (
+    <section className="rounded-lg border border-red-800/70 bg-red-950/30 px-3 py-2">
+      <h2 className="text-sm font-semibold text-red-200">突きつけられている要求</h2>
+      <ul className="mt-1.5 space-y-1.5">
+        {demands.map((faction) => {
+          const demand = faction.demand;
+          if (demand === null) return null;
+          return (
+            <li key={faction.id} className="text-xs">
+              <span className="font-semibold text-slate-100">{FACTION_LABELS[faction.id]}</span>
+              <span className="text-slate-400">
+                {faction.location !== 'exterior' && `（${PROVINCE_LABELS[faction.location]}）`} —{' '}
+              </span>
+              <span className="text-amber-300">
+                {DEMAND_LABELS[demand.type]}
+                {demand.type === 'gold' && ` ${Math.round(demand.amount)}`}
+                {demand.type === 'land' &&
+                  demand.targetProvince &&
+                  ` （${PROVINCE_LABELS[demand.targetProvince]}）`}
+              </span>
+              <div className="text-slate-400">{DEMAND_DETAILS[demand.type]}</div>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="mt-1.5 text-[11px] text-red-300/80">
+        答えるまで、その勢力は戦いを有利に進め、土地に住み着きやすくなる。
+        「交渉 → 要求を飲む」で応じる（行動枠は消費しない）
+      </p>
+    </section>
+  );
+}
 
 export function App() {
   const {
@@ -64,11 +108,13 @@ export function App() {
 
         <RulerPanel state={state} />
 
+        <DemandPanel state={state} />
+
         <section>
           <h2 className="text-sm font-semibold text-slate-100 mb-2">
             この年の行動
             <span className="ml-2 text-xs font-normal text-slate-400">
-              {selected.length} / {MAX_ACTIONS_PER_TURN}
+              {selected.filter(consumesActionSlot).length} / {MAX_ACTIONS_PER_TURN}
             </span>
           </h2>
           <ActionPanel state={state} selected={selected} onToggle={toggleAction} />

@@ -9,6 +9,7 @@ import {
   PROVINCE_LABELS,
   type ActionTemplate,
 } from '../catalogue';
+import { consumesActionSlot } from '../../core/tick';
 import { actionKey } from '../useGame';
 
 interface Props {
@@ -21,7 +22,8 @@ const CATEGORIES = ['交渉', '雇用', '軍事', '内政', '東帝国'];
 
 export function ActionPanel({ state, selected, onToggle }: Props) {
   const [openCategory, setOpenCategory] = useState<string>('軍事');
-  const full = selected.length >= MAX_ACTIONS_PER_TURN;
+  // 要求への応答は枠を消費しないので、枠の残りには数えない
+  const full = selected.filter(consumesActionSlot).length >= MAX_ACTIONS_PER_TURN;
 
   return (
     <div className="space-y-2">
@@ -71,21 +73,32 @@ function ActionCard({
   onToggle: (action: PlayerAction, key: string) => void;
 }) {
   const provinceIds = Object.keys(state.provinces) as ProvinceId[];
-  const factionIds = Object.keys(state.factions) as BarbarianFactionId[];
+  const allFactionIds = Object.keys(state.factions) as BarbarianFactionId[];
+  const factionIds = template.factionFilter
+    ? allFactionIds.filter((id) => template.factionFilter!(state, id))
+    : allFactionIds;
 
   const [province, setProvince] = useState<ProvinceId>('Italia');
   const [faction, setFaction] = useState<BarbarianFactionId>('Visigoths');
   const [east, setEast] = useState(false);
 
+  /*
+   * 選択中の相手が候補から外れることがある（要求に答えた直後など）。
+   * その場合は先頭の候補に読み替え、無効な相手を掴んだままにしない
+   */
+  const target = factionIds.includes(faction) ? faction : factionIds[0];
+
   const blocked = template.blockedReason(state);
   const action = template.build({
     province,
-    faction,
+    faction: target,
     east: template.target === 'marriage' ? east : undefined,
   });
   const key = action ? actionKey(action) : template.id;
   const isSelected = selected.some((a) => actionKey(a) === key);
-  const disabled = blocked !== null || action === null || (full && !isSelected);
+  // 枠を消費しない行動は、枠が埋まっていても選べる
+  const usesSlot = action === null || consumesActionSlot(action);
+  const disabled = blocked !== null || action === null || (full && usesSlot && !isSelected);
 
   return (
     <div
@@ -143,7 +156,7 @@ function ActionCard({
         {(template.target === 'faction' ||
           template.target === 'faction-province' ||
           (template.target === 'marriage' && !east)) && (
-          <Select value={faction} onChange={(v) => setFaction(v as BarbarianFactionId)}>
+          <Select value={target ?? ''} onChange={(v) => setFaction(v as BarbarianFactionId)}>
             {factionIds.map((id) => (
               <option key={id} value={id}>
                 {FACTION_LABELS[id]}（
