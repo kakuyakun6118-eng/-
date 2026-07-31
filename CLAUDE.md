@@ -210,6 +210,10 @@
 - TypeScript
 - UI は React + Tailwind
 - 地図は SVG で属州を色分け（外部の地図ライブラリは使わない）
+  - 海岸線は Natural Earth 1:50m（属州）/ 1:110m（帝国外の背景陸地）から
+    `scripts/generate-map.ts` で静的な SVG パスに変換し `ui/mapPaths.ts` に書き出す。
+    実行時に地図ライブラリは読み込まない
+  - 属州の領域はローマ期の近似として現代の国境を組み合わせている
 - セーブは state を JSON 化してダウンロード
 - ヘッドレス実行用の CLI を持つ
 
