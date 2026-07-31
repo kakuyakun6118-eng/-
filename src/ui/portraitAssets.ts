@@ -55,6 +55,16 @@ export function consortOriginOf(spouse: Spouse): PortraitOrigin {
   return spouse.origin.kind === 'east' ? 'east' : 'barbarian';
 }
 
+/**
+ * 皇后の年齢は state に持っていないので、婚姻時にこの年齢だったとみなして
+ * 婚姻からの経過年数で老いていく。治世が長引けば皇后も年を取る
+ */
+const CONSORT_AGE_AT_MARRIAGE = 20;
+
+export function consortAgeBandOf(spouse: Spouse, year: number): PortraitAge {
+  return ageBandOf(CONSORT_AGE_AT_MARRIAGE + (year - spouse.marriedYear));
+}
+
 function hashString(value: string): number {
   let hash = 2166136261;
   for (let i = 0; i < value.length; i++) {

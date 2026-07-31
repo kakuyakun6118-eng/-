@@ -26,6 +26,7 @@ export function RulerPanel({ state }: { state: GameState }) {
           <figure className="shrink-0 text-center">
             <ConsortFigure
               spouse={spouse}
+              year={state.year}
               className="w-20 h-auto rounded-md ring-1 ring-amber-700/50"
             />
             <figcaption className="text-[10px] text-slate-400 mt-0.5">皇后</figcaption>

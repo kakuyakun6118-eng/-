@@ -3,6 +3,7 @@ import { useId, useState } from 'react';
 import type { MarriageOrigin, Ruler, Spouse } from '../../core/types';
 import {
   ageBandOf,
+  consortAgeBandOf,
   consortOriginOf,
   emperorOriginOf,
   selectPortrait,
@@ -454,13 +455,20 @@ export function EmperorFigure({
 
 export function ConsortFigure({
   spouse,
+  year,
   className,
 }: {
   spouse: Spouse;
+  year: number;
   className?: string;
 }) {
   const [failed, setFailed] = useState(false);
-  const url = selectPortrait('consort', consortOriginOf(spouse), 'adult', spouse.id);
+  const url = selectPortrait(
+    'consort',
+    consortOriginOf(spouse),
+    consortAgeBandOf(spouse, year),
+    spouse.id,
+  );
 
   if (url !== null && !failed) {
     return (
