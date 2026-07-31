@@ -101,6 +101,11 @@
           "field": "factions.Huns.location",
           "operator": "neq",
           "value": "exterior"
+        },
+        {
+          "field": "general.current.military",
+          "operator": "gte",
+          "value": 1
         }
       ]
     },
@@ -163,6 +168,11 @@
           "field": "provinces.Italia.control",
           "operator": "lte",
           "value": 40
+        },
+        {
+          "field": "taxBase",
+          "operator": "lte",
+          "value": 42
         }
       ]
     },
