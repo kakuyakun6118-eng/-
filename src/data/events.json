@@ -4,10 +4,18 @@
     "year": 406,
     "title": "406年 ライン渡河",
     "description": "ヴァンダル・アラン・スエビがラインを越えてガリアに侵入する。",
-    "condition": { "year": 406 },
+    "condition": {
+      "year": 406
+    },
     "effects": [
-      { "field": "provinces.Gallia.control", "delta": -20 },
-      { "field": "factions.Vandals.location", "set": "Gallia" }
+      {
+        "field": "provinces.Gallia.control",
+        "delta": -20
+      },
+      {
+        "field": "factions.Vandals.location",
+        "set": "Gallia"
+      }
     ],
     "onceOnly": true
   },
@@ -18,11 +26,23 @@
     "description": "アラリック率いる西ゴート族がローマを略奪する。",
     "condition": {
       "year": 410,
-      "stateConditions": [{ "field": "legitimacy", "operator": "lt", "value": 50 }]
+      "stateConditions": [
+        {
+          "field": "legitimacy",
+          "operator": "lt",
+          "value": 50
+        }
+      ]
     },
     "effects": [
-      { "field": "legitimacy", "delta": -20 },
-      { "field": "treasury", "delta": -100 }
+      {
+        "field": "legitimacy",
+        "delta": -20
+      },
+      {
+        "field": "treasury",
+        "delta": -100
+      }
     ],
     "onceOnly": true
   },
@@ -32,12 +52,37 @@
     "title": "429年 ヴァンダルのアフリカ渡海",
     "description": "ヴァンダル族がジブラルタル海峡を渡りアフリカ属州に侵入する。",
     "condition": {
-      "year": 429,
-      "stateConditions": [{ "field": "factions.Vandals.location", "operator": "eq", "value": "Hispania" }]
+      "minYear": 410,
+      "maxYear": 440,
+      "anyOf": [
+        {
+          "field": "factions.Vandals.location",
+          "operator": "eq",
+          "value": "Hispania"
+        },
+        {
+          "field": "factions.Vandals.location",
+          "operator": "eq",
+          "value": "Gallia"
+        }
+      ],
+      "stateConditions": [
+        {
+          "field": "factions.Vandals.stance",
+          "operator": "neq",
+          "value": "settled"
+        }
+      ]
     },
     "effects": [
-      { "field": "factions.Vandals.location", "set": "Africa" },
-      { "field": "provinces.Africa.control", "delta": -40 }
+      {
+        "field": "factions.Vandals.location",
+        "set": "Africa"
+      },
+      {
+        "field": "provinces.Africa.control",
+        "delta": -40
+      }
     ],
     "onceOnly": true
   },
@@ -48,11 +93,23 @@
     "description": "西ローマとゴートの連合軍がフン族を撃退する。",
     "condition": {
       "year": 451,
-      "stateConditions": [{ "field": "factions.Huns.location", "operator": "neq", "value": "exterior" }]
+      "stateConditions": [
+        {
+          "field": "factions.Huns.location",
+          "operator": "neq",
+          "value": "exterior"
+        }
+      ]
     },
     "effects": [
-      { "field": "factions.Huns.strength", "delta": -50 },
-      { "field": "legitimacy", "delta": 15 }
+      {
+        "field": "factions.Huns.strength",
+        "delta": -50
+      },
+      {
+        "field": "legitimacy",
+        "delta": 15
+      }
     ],
     "onceOnly": true
   },
@@ -63,11 +120,23 @@
     "description": "ガイセリック率いるヴァンダル族がローマを略奪する。",
     "condition": {
       "year": 455,
-      "stateConditions": [{ "field": "provinces.Africa.control", "operator": "lt", "value": 30 }]
+      "stateConditions": [
+        {
+          "field": "provinces.Africa.control",
+          "operator": "lt",
+          "value": 30
+        }
+      ]
     },
     "effects": [
-      { "field": "legitimacy", "delta": -15 },
-      { "field": "treasury", "delta": -80 }
+      {
+        "field": "legitimacy",
+        "delta": -15
+      },
+      {
+        "field": "treasury",
+        "delta": -80
+      }
     ],
     "onceOnly": true
   },
@@ -77,10 +146,27 @@
     "title": "476年 オドアケルによる廃位",
     "description": "オドアケルがロムルス・アウグストゥルスを廃位する。",
     "condition": {
-      "year": 476,
-      "stateConditions": [{ "field": "legitimacy", "operator": "lt", "value": 20 }]
+      "minYear": 460,
+      "maxYear": 476,
+      "anyOf": [
+        {
+          "field": "legitimacy",
+          "operator": "lte",
+          "value": 40
+        },
+        {
+          "field": "provinces.Italia.control",
+          "operator": "lte",
+          "value": 40
+        }
+      ]
     },
-    "effects": [{ "field": "status", "set": "collapsed" }],
+    "effects": [
+      {
+        "field": "status",
+        "set": "collapsed"
+      }
+    ],
     "onceOnly": true
   }
 ]
