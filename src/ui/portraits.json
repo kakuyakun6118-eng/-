@@ -247,6 +247,24 @@
       "role": "consort",
       "origin": "east",
       "age": "adult"
+    },
+    {
+      "file": "emperor_east_youth_02.webp",
+      "role": "emperor",
+      "origin": "east",
+      "age": "youth"
+    },
+    {
+      "file": "emperor_east_adult_02.webp",
+      "role": "emperor",
+      "origin": "east",
+      "age": "adult"
+    },
+    {
+      "file": "emperor_east_elder_02.webp",
+      "role": "emperor",
+      "origin": "east",
+      "age": "elder"
     }
   ]
 }
