@@ -27,8 +27,16 @@ async function fetchGeo(name: string): Promise<any> {
   return res.json();
 }
 
-/** 表示範囲（経度・緯度） */
-const LON_MIN = -11, LON_MAX = 31, LAT_MIN = 29, LAT_MAX = 59;
+/**
+ * 表示範囲（経度・緯度）。
+ *
+ * 東は 52°E まで取る。シリア（〜42°E）とメソポタミア、
+ * ザグロス山脈までを収めてサーサーン朝ペルシアを見せるため。
+ * イランの東半分は切れるが、これ以上広げると西ローマの属州が
+ * 画面上で小さくなりすぎる。南は 24°N まで取り、エジプトを
+ * ナイル上流（シエネ 24.1°N）まで収める
+ */
+const LON_MIN = -11, LON_MAX = 52, LAT_MIN = 24, LAT_MAX = 59;
 const WIDTH = 760;
 
 /** 属州に対応する現代の国。ローマ期の領域の近似として使う */
@@ -53,6 +61,18 @@ const PROVINCE_COUNTRIES: Record<string, string[]> = {
 const EAST_ROMAN_COUNTRIES = [
   'Greece', 'Bulgaria', 'Turkey', 'Cyprus', 'N. Cyprus',
   'Egypt', 'Israel', 'Palestine', 'Lebanon', 'Syria', 'Jordan',
+];
+
+/*
+ * サーサーン朝ペルシア。西ローマの敵ではないが、東ローマが
+ * 援軍を出せるかどうかを左右する存在なので地図に置く。
+ * ゲームの状態は持たず、地図上の背景としてのみ描く。
+ *
+ * カフカス（ジョージア）は 4世紀末には東西の緩衝地帯で
+ * 帰属が揺れるため、どちらにも入れず帝国外のままにする
+ */
+const PERSIA_COUNTRIES = [
+  'Iran', 'Iraq', 'Armenia', 'Azerbaijan', 'Kuwait', 'Turkmenistan', 'Afghanistan',
 ];
 
 // メルカトル図法。経度・緯度ともラジアンで扱う
@@ -185,20 +205,27 @@ for (const [province, countries] of Object.entries(PROVINCE_COUNTRIES)) {
   provinceLabels[province] = labelPoint(labelGeom);
 }
 
-// 東ローマ帝国。属州と同じ解像度で描く
-const eastParts: string[] = [];
-let eastLabelGeom: any = null;
-for (const name of EAST_ROMAN_COUNTRIES) {
-  const f = byName.get(name);
-  if (!f) { console.warn(`  見つからない国: ${name}`); continue; }
-  owned.add(name);
-  const d = geometryToPath(f.geometry);
-  if (d) eastParts.push(d);
-  // ラベルはギリシャに置く。表示範囲の中に確実に入る
-  if (name === 'Greece') eastLabelGeom = f.geometry;
+/**
+ * 属州ではない勢力の領域。属州と同じ解像度で描く。
+ * labelCountry はラベルを置く国。表示範囲に確実に入るものを選ぶ
+ */
+function pickCountries(names: string[], labelCountry: string) {
+  const parts: string[] = [];
+  let labelGeom: any = null;
+  for (const name of names) {
+    const f = byName.get(name);
+    if (!f) { console.warn(`  見つからない国: ${name}`); continue; }
+    owned.add(name);
+    const d = geometryToPath(f.geometry);
+    if (d) parts.push(d);
+    if (name === labelCountry) labelGeom = f.geometry;
+  }
+  return { path: parts.join(''), label: labelGeom ? labelPoint(labelGeom) : [0, 0] };
 }
-const eastRomanPath = eastParts.join('');
-const eastLabel = eastLabelGeom ? labelPoint(eastLabelGeom) : [0, 0];
+
+const east = pickCountries(EAST_ROMAN_COUNTRIES, 'Greece');
+// ペルシアのラベルはメソポタミア（クテシフォンのある地）に置く
+const persia = pickCountries(PERSIA_COUNTRIES, 'Iraq');
 
 // 属州に属さない陸地（背景として暗く描く）。粗い解像度で十分
 MIN_POINT_DISTANCE = 3;
@@ -234,13 +261,18 @@ const pickRegions = (classes: string[]): string => {
 };
 
 const mountainPath = pickRegions(['Range/mtn']);
+
+/*
+ * 山脈以外の面は輪郭をそのまま見せず色の帯として敷くだけなので、
+ * 粗く間引いてよい。表示範囲を東へ広げたぶんの頂点を取り戻す
+ */
+MIN_POINT_DISTANCE = 1.8;
 const desertPath = pickRegions(['Desert']);
-// 高原と平原。山と砂漠の中間の色味を与えて、平地を一色にしない
 const plateauPath = pickRegions(['Plateau']);
 const plainPath = pickRegions(['Plain', 'Basin', 'Lowland', 'Valley']);
 
 // 湖。小さいものが多いので最小サイズを緩める
-MIN_POINT_DISTANCE = 0.9;
+MIN_POINT_DISTANCE = 1.2;
 MIN_RING_SIZE = 1.5;
 const lakeParts: string[] = [];
 for (const f of lakes.features) {
@@ -260,7 +292,7 @@ for (const f of rivers.features) {
   const rank = f.properties.scalerank ?? f.properties.SCALERANK ?? 9;
   const major = rank <= MAJOR_RIVER_MAX_RANK;
   // 支流は本数が多いので粗く間引く
-  MIN_POINT_DISTANCE = major ? 1.2 : 2.2;
+  MIN_POINT_DISTANCE = major ? 1.3 : 3;
   const d = linesToPath(f.geometry);
   if (!d) continue;
   (major ? majorParts : minorParts).push(d);
@@ -286,10 +318,31 @@ export const MAP_VIEWBOX = '0 0 ${WIDTH} ${HEIGHT}';
 export const CONTEXT_LAND_PATH = ${JSON.stringify(contextParts.join(''))};
 
 /** 東ローマ帝国の領域。プレイヤーの属州ではないので支配度を持たない */
-export const EAST_ROMAN_PATH = ${JSON.stringify(eastRomanPath)};
+export const EAST_ROMAN_PATH = ${JSON.stringify(east.path)};
 
 /** 東ローマのラベルを置く座標（ギリシャの重心） */
-export const EAST_ROMAN_LABEL_POINT: [number, number] = ${JSON.stringify(eastLabel)};
+export const EAST_ROMAN_LABEL_POINT: [number, number] = ${JSON.stringify(east.label)};
+
+/** サーサーン朝ペルシアの領域。地図上の背景で、ゲームの状態は持たない */
+export const PERSIA_PATH = ${JSON.stringify(persia.path)};
+
+/** ペルシアのラベルを置く座標（メソポタミアの重心） */
+export const PERSIA_LABEL_POINT: [number, number] = ${JSON.stringify(persia.label)};
+
+/**
+ * 経緯度をこの地図の座標へ写す。属州の輪郭と同じ投影を使うので、
+ * 表示範囲を変えてもここを通した座標はずれない。
+ * 手で置いた地点（蛮族の待機位置など）は必ずこれを通すこと
+ */
+const LON_MIN_RAD = ${(rad(LON_MIN)).toFixed(10)};
+const MERC_Y_TOP = ${yTop.toFixed(10)};
+const MAP_SCALE = ${scale.toFixed(6)};
+
+export function projectLonLat(lon: number, lat: number): [number, number] {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const mercator = (deg: number) => Math.log(Math.tan(Math.PI / 4 + toRad(deg) / 2));
+  return [(toRad(lon) - LON_MIN_RAD) * MAP_SCALE, (MERC_Y_TOP - mercator(lat)) * MAP_SCALE];
+}
 
 /** 山脈。起伏の陰影を付ける下地に使う（Natural Earth Range/mtn） */
 export const MOUNTAIN_PATH = ${JSON.stringify(mountainPath)};

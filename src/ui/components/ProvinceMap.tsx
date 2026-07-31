@@ -4,12 +4,15 @@ import { FACTION_LABELS, PROVINCE_LABELS } from '../catalogue';
 import {
   EAST_ROMAN_LABEL_POINT,
   MAP_VIEWBOX,
+  PERSIA_LABEL_POINT,
   PROVINCE_LABEL_POINTS,
   PROVINCE_PATHS,
+  projectLonLat,
 } from '../mapPaths';
 import {
   CoastShadow,
   EastRomanTerritory,
+  PersiaTerritory,
   ProvinceBorders,
   TerrainDefs,
   TerrainLayers,
@@ -24,10 +27,16 @@ import { NO_MOTION, type MapBattle, type MapMarch, type TurnMotion } from '../mo
 
 /**
  * 自動生成した重心では収まりが悪い属州だけ手で置き直す。
- * アフリカはアルジェリアの内陸に寄ってしまうため沿岸へ寄せる
+ * アフリカはアルジェリアの内陸に寄ってしまうため沿岸へ寄せる。
+ * 経緯度で持って projectLonLat を通すので、地図の表示範囲を
+ * 変えても位置がずれない
  */
 const LABEL_OVERRIDES: Partial<Record<ProvinceId, [number, number]>> = {
-  Africa: [360, 655],
+  Africa: projectLonLat(8.89, 34.9),
+  // 地中海の北岸は属州が密集する。重心のままだと名前が重なるので散らす
+  Italia: projectLonLat(12.6, 42.6),
+  Illyricum: projectLonLat(19.8, 43.4),
+  Noricum: projectLonLat(18.4, 47.4),
 };
 
 /** 支配度の帯で塗り分ける。段階なので補間の計算を持たない */
@@ -100,8 +109,9 @@ export function ProvinceMap({ state, selectedProvince, onSelect, motion = NO_MOT
         );
       })}
 
-      {/* 東ローマ。西の属州とは別の塗り分けにする */}
+      {/* 東ローマとペルシア。西の属州とは別の塗り分けにする */}
       <EastRomanTerritory />
+      <PersiaTerritory />
 
       {/* 海岸線の内側の影と、光彩を添えた点線の境界 */}
       <CoastShadow />
@@ -117,21 +127,13 @@ export function ProvinceMap({ state, selectedProvince, onSelect, motion = NO_MOT
         <Battle key={battle.id} battle={battle} />
       ))}
 
-      {/* 東ローマの名。属州ラベルより小さくして主役でないことを示す */}
-      <text
-        x={EAST_ROMAN_LABEL_POINT[0]}
-        y={EAST_ROMAN_LABEL_POINT[1]}
-        textAnchor="middle"
-        fill="#ddd6fe"
-        stroke="#2e1065"
-        strokeWidth={4}
-        paintOrder="stroke"
-        fontSize={18}
-        fontWeight={700}
-        className="pointer-events-none select-none"
-      >
+      {/* 隣国の名。属州ラベルより小さくして主役でないことを示す */}
+      <NeighbourLabel at={EAST_ROMAN_LABEL_POINT} fill="#ddd6fe" outline="#2e1065">
         東ローマ
-      </text>
+      </NeighbourLabel>
+      <NeighbourLabel at={PERSIA_LABEL_POINT} fill="#99f6e4" outline="#042f2e">
+        ペルシア
+      </NeighbourLabel>
 
       {/* ラベルは属州の上に重ねる */}
       {ids.map((id) => {
@@ -150,20 +152,20 @@ export function ProvinceMap({ state, selectedProvince, onSelect, motion = NO_MOT
               stroke="#0f172a"
               strokeWidth={4}
               paintOrder="stroke"
-              fontSize={22}
+              fontSize={17}
               fontWeight={700}
             >
               {PROVINCE_LABELS[id]}
             </text>
             <text
               x={x}
-              y={y + 24}
+              y={y + 18}
               textAnchor="middle"
               fill="#e2e8f0"
               stroke="#0f172a"
               strokeWidth={4}
               paintOrder="stroke"
-              fontSize={20}
+              fontSize={16}
             >
               {Math.round(province.control)}
               {occupiers.length > 0 ? ` ⚔${occupiers.length}` : ''}
@@ -172,6 +174,36 @@ export function ProvinceMap({ state, selectedProvince, onSelect, motion = NO_MOT
         );
       })}
     </svg>
+  );
+}
+
+/** 属州ではない隣国の名。プレイヤーが操作できないので控えめに出す */
+function NeighbourLabel({
+  at,
+  fill,
+  outline,
+  children,
+}: {
+  at: [number, number];
+  fill: string;
+  outline: string;
+  children: string;
+}) {
+  return (
+    <text
+      x={at[0]}
+      y={at[1]}
+      textAnchor="middle"
+      fill={fill}
+      stroke={outline}
+      strokeWidth={4}
+      paintOrder="stroke"
+      fontSize={15}
+      fontWeight={700}
+      className="pointer-events-none select-none"
+    >
+      {children}
+    </text>
   );
 }
 
@@ -247,12 +279,12 @@ function March({ march }: { march: MapMarch }) {
       {/* 到着地点に軍勢の名を出す */}
       <text
         x={x2}
-        y={y2 - 46}
+        y={y2 - 34}
         textAnchor="middle"
         stroke="#0f172a"
         strokeWidth={4}
         paintOrder="stroke"
-        fontSize={march.imperial ? 19 : 17}
+        fontSize={march.imperial ? 15 : 13}
         fontWeight={700}
         fill={march.imperial ? '#fde68a' : '#f8fafc'}
         style={{ animation: `label-appear ${MARCH_SECONDS}s ease-out forwards`, opacity: 0 }}
@@ -287,12 +319,12 @@ function Encampment({ march }: { march: MapMarch }) {
         )}
       </g>
       <text
-        y={-58}
+        y={-44}
         textAnchor="middle"
         stroke="#0f172a"
         strokeWidth={4}
         paintOrder="stroke"
-        fontSize={march.imperial ? 19 : 17}
+        fontSize={march.imperial ? 15 : 13}
         fontWeight={700}
         fill={march.imperial ? '#fde68a' : '#f8fafc'}
         style={{ animation: 'standard-raise 0.7s ease-out forwards', opacity: 0 }}
@@ -335,7 +367,7 @@ function ImperialBanner() {
 function Battle({ battle }: { battle: MapBattle }) {
   const [x, y] = battle.at;
   return (
-    <g className="pointer-events-none" transform={`translate(${x},${y - 40})`}>
+    <g className="pointer-events-none" transform={`translate(${x},${y - 32})`}>
       <g
         className="self-origin"
         style={{ animation: 'battle-pop 0.6s ease-out forwards', opacity: 0 }}
@@ -355,11 +387,12 @@ function Battle({ battle }: { battle: MapBattle }) {
 const CONTROL_LEGEND_STEPS = [1, 0.7, 0.45, 0.2, 0];
 /** 地図で重ねている色。凡例には合成後の見えに近い値を置く */
 const EAST_SWATCH = '#6b52a8';
+const PERSIA_SWATCH = '#2f7d75';
 const OUTSIDE_SWATCH = '#474338';
 
 export function MapLegend() {
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-slate-400">
+    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[10px] text-slate-400">
       <span className="flex items-center gap-1.5">
         <span className="flex overflow-hidden rounded-sm ring-1 ring-slate-600">
           {CONTROL_LEGEND_STEPS.map((ratio) => (
@@ -380,6 +413,13 @@ export function MapLegend() {
           style={{ background: EAST_SWATCH }}
         />
         <span className="text-slate-200 font-medium">東ローマ</span>
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span
+          className="w-4 h-3 rounded-sm ring-1 ring-slate-600"
+          style={{ background: PERSIA_SWATCH }}
+        />
+        <span className="text-slate-200 font-medium">ペルシア</span>
       </span>
       <span className="flex items-center gap-1.5">
         <span

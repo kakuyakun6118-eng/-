@@ -5,6 +5,7 @@ import {
   LAKE_PATH,
   MINOR_RIVER_PATH,
   MOUNTAIN_PATH,
+  PERSIA_PATH,
   PLAIN_PATH,
   PLATEAU_PATH,
   PROVINCE_PATHS,
@@ -22,7 +23,10 @@ import type { ProvinceId } from '../../core/types';
  */
 
 const ALL_LAND =
-  CONTEXT_LAND_PATH + EAST_ROMAN_PATH + Object.values(PROVINCE_PATHS).join('');
+  CONTEXT_LAND_PATH +
+  EAST_ROMAN_PATH +
+  PERSIA_PATH +
+  Object.values(PROVINCE_PATHS).join('');
 
 export function TerrainDefs() {
   return (
@@ -230,6 +234,36 @@ export function EastRomanTerritory() {
         strokeWidth={1.3}
         strokeDasharray="5 4"
         opacity={0.7}
+        filter="url(#borderGlow)"
+      />
+    </g>
+  );
+}
+
+/**
+ * サーサーン朝ペルシア。
+ *
+ * 西ローマの敵ではないが、東ローマが援軍を出せるかどうかを左右する
+ * 存在なので地図に置く。西（緑〜赤）とも東（紫）とも混ざらない
+ * 青緑にして、第三の勢力だと一目で分かるようにする
+ */
+export function PersiaTerritory() {
+  return (
+    <g pointerEvents="none">
+      <path d={PERSIA_PATH} fill="#3f9d94" opacity={0.28} />
+      <path
+        d={PERSIA_PATH}
+        fill="#1f6f68"
+        opacity={0.5}
+        style={{ mixBlendMode: 'multiply' }}
+      />
+      <path
+        d={PERSIA_PATH}
+        fill="none"
+        stroke="#99f6e4"
+        strokeWidth={1.3}
+        strokeDasharray="5 4"
+        opacity={0.65}
         filter="url(#borderGlow)"
       />
     </g>

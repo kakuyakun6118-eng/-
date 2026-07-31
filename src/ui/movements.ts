@@ -5,7 +5,7 @@ import type {
   ProvinceId,
 } from '../core/types';
 import { FACTION_LABELS } from './catalogue';
-import { PROVINCE_LABEL_POINTS } from './mapPaths';
+import { PROVINCE_LABEL_POINTS, projectLonLat } from './mapPaths';
 
 /**
  * 地図上の進軍演出のための座標計算。
@@ -16,23 +16,29 @@ import { PROVINCE_LABEL_POINTS } from './mapPaths';
 
 export type Point = [number, number];
 
+/*
+ * 手で置く地点は経緯度で持ち、地図と同じ投影を通す。
+ * 座標を直に書くと、地図の表示範囲を変えたときに
+ * すべてずれてしまうため
+ */
+
 /** 属州の代表点。ラベル位置を流用する */
 const PROVINCE_POINTS: Record<ProvinceId, Point> = {
   ...PROVINCE_LABEL_POINTS,
   // 内陸に寄る属州は軍の動きが見えるよう手で寄せる
-  Africa: [360, 640],
+  Africa: projectLonLat(8.89, 35.58),
 };
 
 /** 帝国境外にいる勢力の待機位置。史実の進入方向に合わせて置く */
 const EXTERIOR_POINTS: Record<BarbarianFactionId, Point> = {
-  Vandals: [372, 250],
-  Alans: [420, 232],
-  Suebi: [330, 238],
-  Franks: [352, 292],
-  Burgundians: [398, 300],
-  Saxons: [285, 120],
-  Huns: [690, 352],
-  Visigoths: [618, 404],
+  Vandals: projectLonLat(9.56, 51.12),
+  Alans: projectLonLat(12.21, 51.74),
+  Suebi: projectLonLat(7.24, 51.53),
+  Franks: projectLonLat(8.45, 49.64),
+  Burgundians: projectLonLat(10.99, 49.35),
+  Saxons: projectLonLat(4.75, 55.41),
+  Huns: projectLonLat(27.13, 47.44),
+  Visigoths: projectLonLat(23.15, 45.47),
 };
 
 /** 野戦軍が出撃する拠点 */
