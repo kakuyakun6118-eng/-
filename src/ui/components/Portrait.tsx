@@ -1,6 +1,12 @@
-import { useId } from 'react';
+import { useId, useState } from 'react';
 
 import type { MarriageOrigin, Ruler, Spouse } from '../../core/types';
+import {
+  ageBandOf,
+  consortOriginOf,
+  emperorOriginOf,
+  selectPortrait,
+} from '../portraitAssets';
 
 /**
  * 君主と皇后の肖像。画像素材を持たず、SVG を組み立てて描く。
@@ -408,6 +414,67 @@ export function ConsortPortrait({
       )}
     </svg>
   );
+}
+
+/**
+ * 表示用の肖像。事前生成した画像があればそれを、
+ * 無ければ（読み込みに失敗した場合も）SVG の肖像を描く
+ */
+export function EmperorFigure({
+  ruler,
+  year,
+  className,
+}: {
+  ruler: Ruler;
+  year: number;
+  className?: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  const url = selectPortrait(
+    'emperor',
+    emperorOriginOf(ruler),
+    ageBandOf(year - ruler.birthYear),
+    ruler.id,
+  );
+
+  if (url !== null && !failed) {
+    return (
+      <img
+        src={url}
+        className={className}
+        alt="皇帝の肖像"
+        loading="lazy"
+        decoding="async"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return <EmperorPortrait ruler={ruler} year={year} className={className} />;
+}
+
+export function ConsortFigure({
+  spouse,
+  className,
+}: {
+  spouse: Spouse;
+  className?: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  const url = selectPortrait('consort', consortOriginOf(spouse), 'adult', spouse.id);
+
+  if (url !== null && !failed) {
+    return (
+      <img
+        src={url}
+        className={className}
+        alt="皇后の肖像"
+        loading="lazy"
+        decoding="async"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return <ConsortPortrait spouse={spouse} className={className} />;
 }
 
 /** 婚姻相手の呼び名 */

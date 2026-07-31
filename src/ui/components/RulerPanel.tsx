@@ -1,7 +1,7 @@
 import { ADULT_AGE } from '../../core/constants';
 import type { GameState } from '../../core/types';
 import { FACTION_LABELS } from '../catalogue';
-import { ConsortPortrait, EmperorPortrait, consortOriginLabel } from './Portrait';
+import { ConsortFigure, EmperorFigure, consortOriginLabel } from './Portrait';
 
 export function RulerPanel({ state }: { state: GameState }) {
   const { ruler, members, crisisYearsRemaining, history } = state.dynasty;
@@ -12,7 +12,7 @@ export function RulerPanel({ state }: { state: GameState }) {
     <div className="rounded-lg border border-slate-700 bg-slate-900 p-3 space-y-2">
       <div className="flex gap-3">
         <figure className="shrink-0 text-center">
-          <EmperorPortrait
+          <EmperorFigure
             ruler={ruler}
             year={state.year}
             className="w-20 h-auto rounded-md ring-1 ring-amber-700/50"
@@ -24,7 +24,7 @@ export function RulerPanel({ state }: { state: GameState }) {
 
         {spouse && (
           <figure className="shrink-0 text-center">
-            <ConsortPortrait
+            <ConsortFigure
               spouse={spouse}
               className="w-20 h-auto rounded-md ring-1 ring-amber-700/50"
             />
