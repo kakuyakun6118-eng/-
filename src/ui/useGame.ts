@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 
 import dynastyData from '../data/dynasty.json';
+import generalData from '../data/general.json';
 import factionsData from '../data/factions.json';
 import provincesData from '../data/provinces.json';
 import { MAX_ACTIONS_PER_TURN } from '../core/constants';
@@ -13,6 +14,7 @@ import type {
   Difficulty,
   Dynasty,
   GameState,
+  GeneralSeat,
   PlayerAction,
   PlayerActions,
   Province,
@@ -42,6 +44,7 @@ export function useGame() {
         factionsData as BarbarianFaction[],
         // JSON をそのまま渡すと複数プレイで共有されるため複製する
         JSON.parse(JSON.stringify(dynastyData)) as Dynasty,
+        JSON.parse(JSON.stringify(generalData)) as GeneralSeat,
         difficulty,
       ),
     );

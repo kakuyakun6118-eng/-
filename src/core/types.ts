@@ -137,6 +137,44 @@ export interface Dynasty {
   abilitiesAdjusted: boolean;
 }
 
+// ── マギステル・ミリトゥム（軍司令官） ────────────────
+
+/**
+ * 軍司令官。
+ *
+ * 395〜476年の西ローマを実際に動かしていたのは皇帝ではなくこの職で、
+ * スティリコ・アエティウス・リキメルはいずれも皇帝ではない。
+ *
+ * 7パラメータには含めず、王朝と同じく GameState の別サブ構造として持つ。
+ * 新しい資源ではなく、既存の計算式（戦闘の防御側戦力・legitimacy の
+ * 自然減・簒奪者の確率）に対する補正としてのみ作用する
+ */
+export interface General {
+  id: string;
+  /** 軍事。君主の軍事能力と同じ尺度 */
+  military: number;
+  appointedYear: number;
+  /** 天命で定めた退任年。これを過ぎると職を退く */
+  retiresYear: number;
+}
+
+export type GeneralEnd = 'dismissed' | 'retired' | 'usurped';
+
+export interface GeneralRecord {
+  generalId: string;
+  military: number;
+  fromYear: number;
+  toYear: number;
+  end: GeneralEnd;
+}
+
+/** 軍司令官の職。空位でも遊べるが、その間は防衛が弱くなる */
+export interface GeneralSeat {
+  current: General | null;
+  /** 歴代の記録。年代記に出す */
+  history: GeneralRecord[];
+}
+
 /** 子が生まれてから発生する婚姻の効果 */
 export interface PendingMarriage {
   origin: MarriageOrigin;
@@ -174,7 +212,13 @@ export interface DifficultySettings {
  * プレイヤーには「理由の説明なく軍が消えた」としか見えない。
  * 表示する文言は ui 側で当てる。core に画面用の文字列は置かない
  */
-export type TurnEventId = 'desertion' | 'usurper_attempt';
+export type TurnEventId =
+  | 'desertion'
+  | 'usurper_attempt'
+  /** 簒奪を起こしたのが軍司令官だった年 */
+  | 'general_usurped'
+  /** 軍司令官が任期を終えて職を退いた年 */
+  | 'general_retired';
 
 // ── 状態モデル（7パラメータ固定） ────────────────────
 
@@ -196,6 +240,9 @@ export interface GameState {
 
   /** 君主と王朝。7パラメータには含めない別サブ構造 */
   dynasty: Dynasty;
+
+  /** 軍司令官。これも7パラメータには含めない別サブ構造 */
+  general: GeneralSeat;
 
   /** 難易度。7パラメータではなくプレイ開始時の設定 */
   difficulty: Difficulty;
@@ -288,6 +335,19 @@ export interface EastConfirmTitleAction {
   type: 'east_confirm_title';
 }
 
+/** 軍司令官を任命する。空位を埋める */
+export interface MilitaryAppointGeneralAction {
+  type: 'military_appoint_general';
+}
+
+/**
+ * 軍司令官を解任する。
+ * 正統性は戻るが、その将に従っていた兵は離れる
+ */
+export interface MilitaryDismissGeneralAction {
+  type: 'military_dismiss_general';
+}
+
 export type PlayerAction =
   | NegotiateTributeAction
   | NegotiateSettleAction
@@ -297,6 +357,8 @@ export type PlayerAction =
   | MilitaryDeployAction
   | MilitaryDefendAction
   | MilitaryConscriptAction
+  | MilitaryAppointGeneralAction
+  | MilitaryDismissGeneralAction
   | DomesticRaiseTaxesAction
   | DomesticReorganizeArmyAction
   | DomesticAppeaseSenateAction

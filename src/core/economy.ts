@@ -3,6 +3,7 @@ import type {
   Difficulty,
   Dynasty,
   GameState,
+  GeneralSeat,
   Province,
   ProvinceId,
 } from './types';
@@ -40,12 +41,14 @@ import {
   TAX_RATE,
 } from './constants';
 import { governanceModifier } from './dynasty';
+import { generalLegitimacyDrain } from './general';
 import { clamp } from './util';
 
 export function createInitialState(
   provinces: Province[],
   factions: BarbarianFaction[],
   dynasty: Dynasty,
+  general: GeneralSeat,
   difficulty: Difficulty = DEFAULT_DIFFICULTY,
 ): GameState {
   return {
@@ -61,6 +64,7 @@ export function createInitialState(
     provinces: Object.fromEntries(provinces.map((p) => [p.id, p])) as GameState['provinces'],
     factions: Object.fromEntries(factions.map((f) => [f.id, f])) as GameState['factions'],
     dynasty,
+    general,
     difficulty,
     firedEventIds: [],
     turnEvents: [],
@@ -99,7 +103,9 @@ export function calculateIncome(state: GameState): number {
  * 能力が高いほど decay を小さくするため補正倍率で割る
  */
 export function applyLegitimacyDecay(state: GameState): GameState {
-  const decay = LEGITIMACY_NATURAL_DECAY / governanceModifier(state);
+  // 有能な将軍がいる年は、軍が皇帝ではなく将軍に従うぶん余分に減る
+  const decay =
+    LEGITIMACY_NATURAL_DECAY / governanceModifier(state) + generalLegitimacyDrain(state);
   return {
     ...state,
     legitimacy: clamp(state.legitimacy - decay, MIN_LEGITIMACY, MAX_LEGITIMACY),

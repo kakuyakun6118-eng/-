@@ -32,6 +32,7 @@ import {
   SETTLE_TAX_BASE_LOSS,
 } from './constants';
 import { militaryModifier } from './dynasty';
+import { generalDefenseModifier, generalVictoryCreditShare } from './general';
 import { resolveCombat } from './military';
 import type { BarbarianFactionId, GameState, ProvinceId, TurnModifiers } from './types';
 import { clamp } from './util';
@@ -135,7 +136,7 @@ export function applyBarbarianActions(
     );
     // 君主の軍事能力は防御側戦力の補正としてのみ作用する
     const defenderPower = randomizedPower(
-      defenseBase * DEFENSE_MULTIPLIER * militaryModifier(state),
+      defenseBase * DEFENSE_MULTIPLIER * militaryModifier(state) * generalDefenseModifier(state),
       rng,
     );
     const { attackerWins, margin } = resolveCombat(attackerPower, defenderPower);
@@ -188,8 +189,9 @@ export function applyBarbarianActions(
         ...province,
         garrison: Math.max(0, province.garrison - margin * GARRISON_LOSS_FACTOR_ON_VICTORY),
       };
+      // 勝利の名声は、有能な将軍がいるほど皇帝ではなく将軍のものになる
       legitimacy = clamp(
-        legitimacy + LEGITIMACY_GAIN_PER_VICTORY,
+        legitimacy + LEGITIMACY_GAIN_PER_VICTORY * generalVictoryCreditShare(state),
         MIN_LEGITIMACY,
         MAX_LEGITIMACY,
       );

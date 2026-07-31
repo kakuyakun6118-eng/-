@@ -1,6 +1,7 @@
 import { writeFileSync } from 'node:fs';
 
 import dynastyData from '../data/dynasty.json';
+import generalData from '../data/general.json';
 import factionsData from '../data/factions.json';
 import provincesData from '../data/provinces.json';
 import {
@@ -17,6 +18,7 @@ import type {
   Difficulty,
   Dynasty,
   GameState,
+  GeneralSeat,
   Province,
   RulerAbilities,
 } from '../core/types';
@@ -103,6 +105,7 @@ function freshState(options: Options): GameState {
     provincesData as Province[],
     factionsData as BarbarianFaction[],
     dynastyData as Dynasty,
+    structuredClone(generalData) as GeneralSeat,
     options.difficulty,
   );
   return options.adjust ? adjustRulerAbilities(state, options.adjust) : state;

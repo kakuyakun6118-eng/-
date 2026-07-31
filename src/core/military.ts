@@ -7,6 +7,7 @@ import {
   DEFEND_GARRISON_GAIN,
   DEPLOY_ATTRITION_RATE,
   DESERTION_RATE,
+  GENERAL_USURP_EXTRA_ARMY_LOSS,
   MAX_LEGITIMACY,
   MAX_SENATE_SUPPORT,
   MIN_LEGITIMACY,
@@ -21,6 +22,7 @@ import {
   USURPER_PROBABILITY,
   USURPER_PROBABILITY_CAP,
 } from './constants';
+import { generalUsurperBonus, vacateSeat } from './general';
 import { clamp } from './util';
 
 /** 国庫が負なら野戦軍の一部が脱走する */
@@ -118,10 +120,34 @@ export function checkUsurper(state: GameState, rng: () => number): GameState {
 
   // 継承危機と低正統性が重なっても発散しないよう上限を設ける
   const probability = Math.min(
-    USURPER_PROBABILITY + (inCrisis ? SUCCESSION_CRISIS_USURPER_BONUS : 0),
+    USURPER_PROBABILITY +
+      (inCrisis ? SUCCESSION_CRISIS_USURPER_BONUS : 0) +
+      generalUsurperBonus(state),
     USURPER_PROBABILITY_CAP,
   );
   if (rng() >= probability) return state;
+
+  /*
+   * 軍を握っているのは将軍なので、在職していれば簒奪者は将軍本人とみなす。
+   * 無名の反乱よりこの時代の実態に近く、失う軍も大きい。
+   * 蜂起した将軍はその職を離れるため、後任を立て直すことになる
+   */
+  const general = state.general.current;
+  if (general !== null) {
+    const vacated = vacateSeat(state, 'usurped');
+    return {
+      ...vacated,
+      fieldArmy:
+        vacated.fieldArmy * (1 - USURPER_ARMY_LOSS_RATE - GENERAL_USURP_EXTRA_ARMY_LOSS),
+      legitimacy: clamp(
+        vacated.legitimacy - USURPER_LEGITIMACY_LOSS,
+        MIN_LEGITIMACY,
+        MAX_LEGITIMACY,
+      ),
+      turnEvents: [...vacated.turnEvents, 'general_usurped'],
+    };
+  }
+
   return {
     ...state,
     fieldArmy: state.fieldArmy * (1 - USURPER_ARMY_LOSS_RATE),

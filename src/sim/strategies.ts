@@ -2,6 +2,7 @@ import {
   CONSCRIPT_COST,
   DEFEND_COST,
   FOEDERATI_HIRE_COST,
+  GENERAL_APPOINT_COST,
   MARRIAGE_COST,
   MAX_ACTIONS_PER_TURN,
 } from '../core/constants';
@@ -194,10 +195,54 @@ export const appeaser: Strategy = (state) => {
   return pair(actions);
 };
 
+/**
+ * 軍司令官を使う方針。
+ * 空位なら任命し、正統性が簒奪の圏内に落ちたときだけ名将を切る。
+ * 史実の408年（スティリコ）・454年（アエティウス）と同じ形
+ */
+const GENERAL_PURGE_LEGITIMACY = 35;
+const GENERAL_PURGE_MIN_MILITARY = 7;
+
+export const generalMinded: Strategy = (state) => {
+  const actions: PlayerAction[] = [];
+
+  for (const faction of Object.values(state.factions)) {
+    if (faction.stance !== 'hostile' || faction.demand === null) continue;
+    if (faction.demand.type !== 'gold' || state.treasury < faction.demand.amount) continue;
+    actions.push({ type: 'negotiate_accept_demand', factionId: faction.id });
+  }
+
+  const slots = () => actions.filter(consumesActionSlot).length;
+  const general = state.general.current;
+  if (general === null && state.treasury > GENERAL_APPOINT_COST * 2) {
+    actions.push({ type: 'military_appoint_general' });
+  } else if (
+    general !== null &&
+    general.military >= GENERAL_PURGE_MIN_MILITARY &&
+    state.legitimacy < GENERAL_PURGE_LEGITIMACY
+  ) {
+    actions.push({ type: 'military_dismiss_general' });
+  }
+
+  const threatened = mostThreatenedProvince(state);
+  if (slots() < MAX_ACTIONS_PER_TURN && threatened) {
+    actions.push({ type: 'military_deploy', provinceId: threatened });
+  }
+  if (slots() < MAX_ACTIONS_PER_TURN && state.treasury > CONSCRIPT_COST * 2) {
+    actions.push({ type: 'military_conscript' });
+  }
+  if (slots() < MAX_ACTIONS_PER_TURN && state.treasury < CONSCRIPT_COST) {
+    actions.push({ type: 'domestic_raise_taxes' });
+  }
+
+  return pair(actions);
+};
+
 export const strategies: Record<string, Strategy> = {
   passive,
   limited: limitedFoederati,
   defensive,
   foederati: foederatiHeavy,
   appeaser,
+  general: generalMinded,
 };

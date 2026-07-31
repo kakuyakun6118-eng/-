@@ -59,6 +59,8 @@ export const DEMAND_DETAILS: Record<BarbarianDemandType, string> = {
 export const TURN_EVENT_LABELS: Record<TurnEventId, string> = {
   desertion: '給与が尽き兵が脱走',
   usurper_attempt: '僭称者が立ち軍の一部が離反',
+  general_usurped: '軍司令官が帝位を狙って蜂起し、職を離れた',
+  general_retired: '軍司令官が任期を終えて職を退いた',
 };
 
 export const STANCE_LABELS = {

@@ -72,6 +72,9 @@ export function deserialize(json: string): LoadResult {
   ) {
     return { ok: false, error: '状態に不足があります' };
   }
+  if (state.general === undefined || !Array.isArray(state.general.history)) {
+    return { ok: false, error: '状態が壊れています（general）' };
+  }
   if (!Array.isArray(state.firedEventIds)) {
     return { ok: false, error: '状態が壊れています（firedEventIds）' };
   }

@@ -2,8 +2,11 @@
 
 import type { Difficulty, DifficultySettings } from './types';
 
-/** セーブデータの形式版。互換性のない変更をしたら上げる */
-export const SAVE_VERSION = 1;
+/**
+ * セーブデータの形式版。互換性のない変更をしたら上げる。
+ * 2: 軍司令官（general）を追加。空で補える情報ではないため旧版は読めない
+ */
+export const SAVE_VERSION = 2;
 
 export const STARTING_YEAR = 395;
 export const ENDING_YEAR = 476;
@@ -271,6 +274,67 @@ export const APPEASE_SENATE_GAIN = 12;
 export const APPEASE_SENATE_LEGITIMACY_GAIN = 4;
 /** 免税特権の追認による恒久的な税基盤の損失 */
 export const APPEASE_SENATE_TAX_BASE_LOSS = 2;
+
+// ── マギステル・ミリトゥム（軍司令官） ────────────────
+
+/**
+ * 将軍の軍事能力の生成範囲。
+ * 君主より上を広く取る。凡庸な皇帝の下でも名将が出うる、という
+ * この時代の実態（スティリコ・アエティウス）を数値で表す
+ */
+export const GENERAL_ABILITY_ROLL_MIN = 4;
+export const GENERAL_ABILITY_ROLL_MAX = 9;
+
+/** 在職年数の範囲。任期を終えると自ら職を退く */
+export const GENERAL_MIN_TERM = 8;
+export const GENERAL_MAX_TERM = 28;
+
+/**
+ * 将軍の軍事能力1点あたり、戦闘の防御側戦力にかかる補正。
+ * 君主の能力補正（ABILITY_MODIFIER_PER_POINT）と同じ形で、
+ * ABILITY_NEUTRAL を基準に上下する
+ */
+export const GENERAL_DEFENSE_PER_POINT = 0.05;
+
+/** 空位のあいだ防御側戦力にかかる罰。指揮官のいない軍は弱い */
+export const GENERAL_VACANT_DEFENSE_PENALTY = 0.12;
+
+/**
+ * 有能な将軍が毎年削る正統性（ABILITY_NEUTRAL を超えた1点あたり）。
+ *
+ * 軍が皇帝ではなく将軍に従っている、という状態を既存のパラメータで表す。
+ * 「強い将軍は帝国を守るが帝位を痩せさせる」というこの時代の構図が
+ * ここで成立する
+ */
+export const GENERAL_LEGITIMACY_DRAIN_PER_POINT = 0.35;
+
+/**
+ * 将軍が持っていく戦勝の名声（ABILITY_NEUTRAL を超えた1点あたり）。
+ *
+ * 撃退で得られる legitimacy をこの割合だけ削る。名将の下では勝っても
+ * 帝位は輝かない、という形にしないと「強い将軍を置く → 勝つ →
+ * 正統性が回復する」で自己強化してしまい、取引にならなかった
+ * （計測では名将を抱えても最終正統性が空位のときと同じ83だった）
+ */
+export const GENERAL_VICTORY_CREDIT_PER_POINT = 0.12;
+
+/** 将軍の軍事能力1点あたり、簒奪者の確率に加算される値 */
+export const GENERAL_USURPER_BONUS_PER_POINT = 0.02;
+
+/** 任命の費用 */
+export const GENERAL_APPOINT_COST = 80;
+
+/**
+ * 解任で失う野戦軍の割合。その将に従っていた兵が離れる。
+ * スティリコ408年、アエティウス454年——除いた側が軍を失う
+ */
+export const GENERAL_DISMISS_ARMY_LOSS_RATE = 0.15;
+
+/** 解任で回復する正統性 */
+export const GENERAL_DISMISS_LEGITIMACY_GAIN = 8;
+
+/** 将軍が簒奪を起こしたときに追加で失う野戦軍の割合 */
+export const GENERAL_USURP_EXTRA_ARMY_LOSS = 0.1;
 
 // ── 難易度 ────────────────────────────────────────────
 

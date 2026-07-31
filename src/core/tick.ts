@@ -19,6 +19,7 @@ import {
   updateFoederatiObligations,
 } from './diplomacy';
 import { updateDynasty } from './dynasty';
+import { appointGeneral, dismissGeneral, updateGeneral } from './general';
 import { applyHistoricalEvents } from './events';
 import {
   appeaseSenate,
@@ -117,6 +118,8 @@ export function tick(state: GameState, actions: PlayerActions, seed: Seed): Game
 
   // 8. 王朝の更新（加齢・出生・寿命と暗殺の判定・継承）
   next = updateDynasty(next, rng);
+  // 軍司令官の任期。退任しても後任は自動では決まらない
+  next = updateGeneral(next);
   // 婚姻のうち、子が生まれて初めて発生する効果を清算する
   next = settlePendingMarriages(next);
 
@@ -157,6 +160,10 @@ function applyAction(
       return reinforceGarrison(state, action.provinceId);
     case 'military_conscript':
       return conscript(state);
+    case 'military_appoint_general':
+      return appointGeneral(state, rng);
+    case 'military_dismiss_general':
+      return dismissGeneral(state);
     case 'domestic_raise_taxes':
       return raiseTaxes(state);
     case 'domestic_reorganize_army':
