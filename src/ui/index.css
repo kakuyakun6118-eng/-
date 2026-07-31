@@ -9,3 +9,118 @@ body {
   margin: 0;
   overscroll-behavior-y: none;
 }
+
+/*
+ * 地図上の進軍演出。
+ * SMIL の begin="0s" は SVG 文書の読み込み時点を起点にするため、
+ * ターン進行後に挿入される要素では再生済みになってしまう。
+ * CSS アニメーションは要素が現れた時点から始まるのでこちらを使う
+ */
+@keyframes march-advance {
+  from {
+    transform: translate(0px, 0px);
+  }
+  to {
+    transform: translate(var(--march-dx), var(--march-dy));
+  }
+}
+
+@keyframes march-fade {
+  0% {
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes route-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.55;
+  }
+}
+
+@keyframes route-flow {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+@keyframes banner-wave {
+  0%,
+  100% {
+    transform: skewY(0deg);
+  }
+  50% {
+    transform: skewY(7deg);
+  }
+}
+
+@keyframes standard-raise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0px);
+  }
+}
+
+@keyframes label-appear {
+  0%,
+  45% {
+    opacity: 0;
+  }
+  70%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes battle-pop {
+  0% {
+    r: 6px;
+    opacity: 0;
+  }
+  60% {
+    r: 18px;
+    opacity: 0.95;
+  }
+  100% {
+    r: 16px;
+    opacity: 0.9;
+  }
+}
+
+@keyframes battle-ring {
+  0% {
+    r: 16px;
+    opacity: 0.8;
+  }
+  100% {
+    r: 36px;
+    opacity: 0;
+  }
+}
+
+/* 平行移動する要素は利用者座標系のまま動かす */
+.march-mover {
+  transform-box: view-box;
+  transform-origin: 0 0;
+}
+
+/* 自分の中心を軸に変形する要素 */
+.self-origin {
+  transform-box: fill-box;
+  transform-origin: center;
+}

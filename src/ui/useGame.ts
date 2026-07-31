@@ -18,6 +18,7 @@ import type {
   Province,
 } from '../core/types';
 import { FACTION_LABELS, PROVINCE_LABELS } from './catalogue';
+import { deriveTurnMotion, NO_MOTION, type TurnMotion } from './movements';
 
 /**
  * 画面の状態と core への橋渡しだけを行う。
@@ -29,6 +30,8 @@ export function useGame() {
   const [selected, setSelected] = useState<PlayerAction[]>([]);
   const [log, setLog] = useState<string[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  /** 直前のターンに地図上で起きた進軍と戦闘。表示のためだけの派生値 */
+  const [motion, setMotion] = useState<TurnMotion>(NO_MOTION);
 
   const start = useCallback((difficulty: Difficulty) => {
     // 乱数の種はここで一度だけ引く。tick() 自体は seed から決定的に動く
@@ -44,6 +47,7 @@ export function useGame() {
     );
     setSelected([]);
     setLog([]);
+    setMotion(NO_MOTION);
   }, []);
 
   const toggleAction = useCallback((action: PlayerAction, key: string) => {
@@ -61,8 +65,10 @@ export function useGame() {
     setState((current) => {
       if (current === null || current.status !== 'ongoing') return current;
       const before = current;
-      const next = tick(before, selected.slice(0, MAX_ACTIONS_PER_TURN) as PlayerActions, runSeed + before.turn);
+      const applied = selected.slice(0, MAX_ACTIONS_PER_TURN);
+      const next = tick(before, applied as PlayerActions, runSeed + before.turn);
       setLog((entries) => [describeTurn(before, next), ...entries].slice(0, 40));
+      setMotion(deriveTurnMotion(before, next, applied));
       return next;
     });
     setSelected([]);
@@ -87,12 +93,14 @@ export function useGame() {
     setState(result.state);
     setSelected([]);
     setLog([`${result.state.year}年 — セーブデータを読み込んだ`]);
+    setMotion(NO_MOTION);
   }, []);
 
   const quit = useCallback(() => {
     setState(null);
     setSelected([]);
     setLog([]);
+    setMotion(NO_MOTION);
   }, []);
 
   const score = useMemo(() => (state ? evaluateScore(state) : null), [state]);
@@ -103,6 +111,7 @@ export function useGame() {
     log,
     score,
     loadError,
+    motion,
     start,
     toggleAction,
     clearActions,

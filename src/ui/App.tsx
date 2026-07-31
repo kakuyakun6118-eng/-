@@ -11,8 +11,20 @@ import { PROVINCE_LABELS } from './catalogue';
 import { useGame } from './useGame';
 
 export function App() {
-  const { state, selected, log, score, loadError, start, toggleAction, endTurn, quit, save, load } =
-    useGame();
+  const {
+    state,
+    selected,
+    log,
+    score,
+    loadError,
+    motion,
+    start,
+    toggleAction,
+    endTurn,
+    quit,
+    save,
+    load,
+  } = useGame();
   const [focused, setFocused] = useState<ProvinceId | null>(null);
 
   if (state === null) return <TitleScreen onStart={start} onLoad={load} loadError={loadError} />;
@@ -30,6 +42,7 @@ export function App() {
         <section>
           <ProvinceMap
             state={state}
+            motion={motion}
             selectedProvince={focused}
             onSelect={(id) => setFocused((current) => (current === id ? null : id))}
           />

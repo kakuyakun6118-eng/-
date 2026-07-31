@@ -7,6 +7,7 @@ import {
   PROVINCE_LABEL_POINTS,
   PROVINCE_PATHS,
 } from '../mapPaths';
+import { NO_MOTION, type MapBattle, type MapMarch, type TurnMotion } from '../movements';
 
 /**
  * 自動生成した重心では収まりが悪い属州だけ手で置き直す。
@@ -25,13 +26,19 @@ function fillFor(control: number): string {
   return '#15803d';
 }
 
+/** 進軍にかける時間（秒） */
+const MARCH_SECONDS = 2.2;
+/** 隊列に見せるため、後続をこの秒数ずつ遅らせる */
+const COLUMN_STAGGER = 0.22;
+
 interface Props {
   state: GameState;
   selectedProvince: ProvinceId | null;
   onSelect: (id: ProvinceId) => void;
+  motion?: TurnMotion;
 }
 
-export function ProvinceMap({ state, selectedProvince, onSelect }: Props) {
+export function ProvinceMap({ state, selectedProvince, onSelect, motion = NO_MOTION }: Props) {
   const ids = Object.keys(PROVINCE_PATHS) as ProvinceId[];
 
   return (
@@ -46,6 +53,14 @@ export function ProvinceMap({ state, selectedProvince, onSelect }: Props) {
           <stop offset="0%" stopColor="#31506f" />
           <stop offset="100%" stopColor="#22384f" />
         </linearGradient>
+        {/* 親征の軍旗を光らせる */}
+        <filter id="imperialGlow" x="-80%" y="-80%" width="260%" height="260%">
+          <feGaussianBlur stdDeviation="3" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
       </defs>
 
       {/* 海 */}
@@ -71,6 +86,16 @@ export function ProvinceMap({ state, selectedProvince, onSelect }: Props) {
           />
         );
       })}
+
+      {/* 進軍。前ターンとの差分から復元した動きを描く */}
+      {motion.marches.map((march) => (
+        <March key={march.id} march={march} />
+      ))}
+
+      {/* 戦闘のあった属州 */}
+      {motion.battles.map((battle) => (
+        <Battle key={battle.id} battle={battle} />
+      ))}
 
       {/* ラベルは属州の上に重ねる */}
       {ids.map((id) => {
@@ -111,6 +136,184 @@ export function ProvinceMap({ state, selectedProvince, onSelect }: Props) {
         );
       })}
     </svg>
+  );
+}
+
+/** 進軍する軍勢。行軍路と、隊列に見えるよう時間差で進む部隊を描く */
+function March({ march }: { march: MapMarch }) {
+  const [x1, y1] = march.from;
+  const [x2, y2] = march.to;
+  const isLegion = march.kind === 'legion';
+  const color = isLegion ? '#fbbf24' : '#dc2626';
+  // 親征は隊列を長くして、軍旗を掲げた行列に見せる
+  const columnSize = march.imperial ? 4 : 3;
+
+  /*
+   * 首都と同じ属州へ派遣した場合は距離がゼロになる。
+   * 行軍ではなくその場での布陣として、旗を立てて示す
+   */
+  if (Math.hypot(x2 - x1, y2 - y1) < 4) {
+    return <Encampment march={march} />;
+  }
+
+  const angle = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
+
+  return (
+    <g className="pointer-events-none">
+      {/* 行軍路。破線を流して進行方向を示す */}
+      <path
+        d={`M${x1},${y1} L${x2},${y2}`}
+        fill="none"
+        stroke={color}
+        strokeWidth={3}
+        strokeDasharray="10 10"
+        style={{
+          animation: `route-appear 0.5s ease-out forwards, route-flow 0.8s linear infinite`,
+        }}
+      />
+
+      {Array.from({ length: columnSize }, (_, index) => {
+        const delay = index * COLUMN_STAGGER;
+        return (
+          <g key={index} transform={`translate(${x1},${y1})`}>
+            <g
+              className="march-mover"
+              style={{
+                ['--march-dx' as string]: `${x2 - x1}px`,
+                ['--march-dy' as string]: `${y2 - y1}px`,
+                animation:
+                  `march-advance ${MARCH_SECONDS}s linear ${delay}s forwards, ` +
+                  `march-fade ${MARCH_SECONDS}s linear ${delay}s forwards`,
+                opacity: 0,
+              }}
+            >
+              {isLegion ? (
+                march.imperial && index === 0 ? (
+                  <ImperialBanner />
+                ) : (
+                  // ローマ軍。鷲章を掲げた縦隊
+                  <g>
+                    <rect x={-7} y={-6} width={14} height={12} rx={2} fill={color} stroke="#78350f" strokeWidth={1.5} />
+                    <rect x={-1.5} y={-13} width={3} height={8} fill="#fde68a" />
+                    <circle cx={0} cy={-14} r={2.5} fill="#fde68a" />
+                  </g>
+                )
+              ) : (
+                // 蛮族。矢尻の形で進行方向を示す
+                <g transform={`rotate(${angle})`}>
+                  <path d="M11,0 L-8,-8 L-3,0 L-8,8 Z" fill={color} stroke="#7f1d1d" strokeWidth={1.5} />
+                </g>
+              )}
+            </g>
+          </g>
+        );
+      })}
+
+      {/* 到着地点に軍勢の名を出す */}
+      <text
+        x={x2}
+        y={y2 - 26}
+        textAnchor="middle"
+        stroke="#0f172a"
+        strokeWidth={4}
+        paintOrder="stroke"
+        fontSize={march.imperial ? 19 : 17}
+        fontWeight={700}
+        fill={march.imperial ? '#fde68a' : '#f8fafc'}
+        style={{ animation: `label-appear ${MARCH_SECONDS}s ease-out forwards`, opacity: 0 }}
+      >
+        {march.label}
+      </text>
+    </g>
+  );
+}
+
+/** その場に布陣する軍。旗を立てて留まっていることを示す */
+function Encampment({ march }: { march: MapMarch }) {
+  const [x, y] = march.to;
+  return (
+    <g className="pointer-events-none" transform={`translate(${x},${y - 8})`}>
+      <g
+        className="self-origin"
+        style={{ animation: 'standard-raise 0.6s ease-out forwards', opacity: 0 }}
+      >
+        {march.imperial ? (
+          <ImperialBanner />
+        ) : (
+          <g>
+            <rect x={-1.5} y={-24} width={3} height={26} fill="#fde68a" />
+            <path d="M2,-22 L15,-19 L15,-9 L2,-12 Z" fill="#fbbf24" stroke="#78350f" strokeWidth={1.2} />
+          </g>
+        )}
+      </g>
+      <text
+        y={-38}
+        textAnchor="middle"
+        stroke="#0f172a"
+        strokeWidth={4}
+        paintOrder="stroke"
+        fontSize={march.imperial ? 19 : 17}
+        fontWeight={700}
+        fill={march.imperial ? '#fde68a' : '#f8fafc'}
+        style={{ animation: 'standard-raise 0.7s ease-out forwards', opacity: 0 }}
+      >
+        {march.label}
+      </text>
+    </g>
+  );
+}
+
+/**
+ * 皇帝の親征を示す金色のローマ旗。
+ * 竿の先に鷲章、その下に横木から吊るした旗（ウェクシッルム）を掛ける
+ */
+function ImperialBanner() {
+  return (
+    <g filter="url(#imperialGlow)">
+      {/* 竿 */}
+      <rect x={-1.6} y={-32} width={3.2} height={36} fill="#fde68a" />
+      {/* 鷲章 */}
+      <circle cx={0} cy={-34} r={3.6} fill="#fef3c7" stroke="#a16207" strokeWidth={1} />
+      <path d="M-6,-33 L0,-36.5 L6,-33 L0,-30.5 Z" fill="#fef3c7" />
+      {/* 横木 */}
+      <rect x={-1} y={-28} width={19} height={2.6} fill="#fde68a" />
+      {/* 旗。風になびかせる */}
+      <g style={{ animation: 'banner-wave 1.2s ease-in-out infinite' }}>
+        <path
+          d="M1,-25 L18,-25 L18,-8 L9.5,-11.5 L1,-8 Z"
+          fill="#f59e0b"
+          stroke="#78350f"
+          strokeWidth={1.3}
+        />
+        <path d="M4.5,-21.5 L14.5,-21.5 M4.5,-17.5 L14.5,-17.5" stroke="#fef3c7" strokeWidth={1.5} />
+      </g>
+    </g>
+  );
+}
+
+/** 戦闘のあった属州に交差する剣を出す */
+function Battle({ battle }: { battle: MapBattle }) {
+  const [x, y] = battle.at;
+  return (
+    <g className="pointer-events-none" transform={`translate(${x},${y - 40})`}>
+      <circle
+        r={16}
+        fill="#7f1d1d"
+        stroke="#fca5a5"
+        strokeWidth={2}
+        style={{ animation: 'battle-pop 0.6s ease-out forwards', opacity: 0 }}
+      />
+      <text textAnchor="middle" y={7} fontSize={19} fill="#fee2e2">
+        ⚔
+      </text>
+      <circle
+        r={16}
+        fill="none"
+        stroke="#fca5a5"
+        strokeWidth={2}
+        style={{ animation: 'battle-ring 1.4s ease-out 2 forwards', opacity: 0 }}
+      />
+    </g>
   );
 }
 
