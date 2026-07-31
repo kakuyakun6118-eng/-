@@ -32,11 +32,11 @@ export function ActionPanel({ state, selected, onToggle }: Props) {
           <button
             key={category}
             onClick={() => setOpenCategory(category)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
+            className={
               openCategory === category
-                ? 'bg-amber-500 text-slate-950'
-                : 'bg-slate-800 text-slate-300 active:bg-slate-700'
-            }`}
+                ? 'roman-button px-3 py-1.5 rounded-full text-xs transition'
+                : 'roman-panel px-3 py-1.5 rounded-full text-xs font-medium transition'
+            }
           >
             {category}
           </button>
@@ -102,36 +102,50 @@ function ActionCard({
 
   return (
     <div
-      className={`rounded-lg border p-3 ${
-        isSelected ? 'border-amber-500 bg-amber-500/10' : 'border-slate-700 bg-slate-900'
-      }`}
+      className="roman-panel rounded-sm p-3"
+      style={
+        isSelected
+          ? { borderColor: 'var(--gold-bright)', boxShadow: '0 0 0 2px rgba(216, 171, 60, 0.45)' }
+          : undefined
+      }
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="text-sm font-semibold text-slate-100">
+          <div className="roman-heading text-sm">
             {template.label}
             {template.cost !== null && (
-              <span className="ml-2 text-xs font-normal text-amber-300">{template.cost} ソリドゥス</span>
+              <span className="ml-2 text-xs font-normal" style={{ color: 'var(--gold)' }}>
+                {template.cost} ソリドゥス
+              </span>
             )}
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">{template.detail}</p>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--ink-soft)' }}>
+            {template.detail}
+          </p>
         </div>
         <button
           onClick={() => action && onToggle(action, key)}
           disabled={disabled}
-          className={`shrink-0 px-3 py-1.5 rounded-md text-xs font-semibold transition ${
-            isSelected
-              ? 'bg-amber-500 text-slate-950'
-              : disabled
-                ? 'bg-slate-800 text-slate-600'
-                : 'bg-slate-700 text-slate-100 active:bg-slate-600'
-          }`}
+          className={
+            disabled && !isSelected
+              ? 'shrink-0 px-3 py-1.5 rounded-sm text-xs font-semibold'
+              : 'roman-button shrink-0 px-3 py-1.5 rounded-sm text-xs transition'
+          }
+          style={
+            disabled && !isSelected
+              ? { background: 'var(--parchment-dim)', color: '#9a8a6e' }
+              : undefined
+          }
         >
           {isSelected ? '取消' : '選択'}
         </button>
       </div>
 
-      {blocked && <p className="text-xs text-red-400 mt-2">{blocked}</p>}
+      {blocked && (
+        <p className="text-xs mt-2" style={{ color: 'var(--oxblood)' }}>
+          {blocked}
+        </p>
+      )}
 
       <div className="flex flex-wrap gap-2 mt-2">
         {(template.target === 'province' || template.target === 'faction-province') && (
@@ -188,7 +202,7 @@ function Select({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="flex-1 min-w-0 bg-slate-800 text-slate-100 text-xs rounded-md px-2 py-1.5 border border-slate-700"
+      className="roman-tablet flex-1 min-w-0 text-xs rounded-sm px-2 py-1.5"
     >
       {children}
     </select>

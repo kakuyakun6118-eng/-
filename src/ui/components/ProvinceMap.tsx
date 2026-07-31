@@ -79,7 +79,11 @@ export function ProvinceMap({ state, selectedProvince, onSelect, motion = NO_MOT
   return (
     <svg
       viewBox={MAP_VIEWBOX}
-      className="w-full h-auto rounded-lg ring-1 ring-slate-700"
+      className="w-full h-auto rounded-sm"
+      style={{
+        border: '2px solid var(--gold)',
+        boxShadow: '0 2px 6px rgba(60, 45, 25, 0.35)',
+      }}
       role="img"
       aria-label="属州の支配状況"
     >
@@ -459,9 +463,12 @@ const OUTSIDE_SWATCH = '#474338';
 
 export function MapLegend() {
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[10px] text-slate-400">
+    <div
+      className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[10px]"
+      style={{ color: 'var(--ink-soft)' }}
+    >
       <span className="flex items-center gap-1.5">
-        <span className="flex overflow-hidden rounded-sm ring-1 ring-slate-600">
+        <span className="flex overflow-hidden rounded-sm ">
           {CONTROL_LEGEND_STEPS.map((ratio) => (
             <span
               key={ratio}
@@ -471,26 +478,26 @@ export function MapLegend() {
           ))}
         </span>
         <span>
-          <span className="text-slate-200 font-medium">西ローマ</span> 支配 高→低
+          <span className="roman-heading">西ローマ</span> 支配 高→低
         </span>
       </span>
       <span className="flex items-center gap-1.5">
         <span
-          className="w-4 h-3 rounded-sm ring-1 ring-slate-600"
+          className="w-4 h-3 rounded-sm "
           style={{ background: EAST_SWATCH }}
         />
-        <span className="text-slate-200 font-medium">東ローマ</span>
+        <span className="roman-heading">東ローマ</span>
       </span>
       <span className="flex items-center gap-1.5">
         <span
-          className="w-4 h-3 rounded-sm ring-1 ring-slate-600"
+          className="w-4 h-3 rounded-sm "
           style={{ background: PERSIA_SWATCH }}
         />
-        <span className="text-slate-200 font-medium">ペルシア</span>
+        <span className="roman-heading">ペルシア</span>
       </span>
       <span className="flex items-center gap-1.5">
         <span
-          className="w-4 h-3 rounded-sm ring-1 ring-slate-600"
+          className="w-4 h-3 rounded-sm "
           style={{ background: OUTSIDE_SWATCH }}
         />
         帝国外
@@ -498,7 +505,7 @@ export function MapLegend() {
 
       {/* 蛮族は面ではなく駒で出るので、丸い見本にする */}
       <span className="basis-full h-0" />
-      <span className="text-slate-200 font-medium">蛮族</span>
+      <span className="roman-heading">蛮族</span>
       {(Object.keys(STANCE_COLORS) as BarbarianStance[]).map((stance) => (
         <span key={stance} className="flex items-center gap-1.5">
           <span
@@ -513,7 +520,7 @@ export function MapLegend() {
       ))}
       <span className="flex items-center gap-1.5">
         <span
-          className="w-4 h-3 rounded-sm ring-1 ring-slate-600"
+          className="w-4 h-3 rounded-sm "
           style={{
             backgroundImage:
               'repeating-linear-gradient(45deg,#3f2d1c 0 2px,transparent 2px 5px)',

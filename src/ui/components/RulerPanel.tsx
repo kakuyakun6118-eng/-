@@ -20,7 +20,7 @@ export function RulerPanel({
   const spouse = ruler.spouse;
 
   return (
-    <div className="rounded-lg border border-slate-700 bg-slate-900 p-3 space-y-2">
+    <div className="roman-panel-dark rounded-sm p-3 space-y-2">
       <div className="flex gap-3">
         <figure className="shrink-0 text-center">
           <EmperorFigure
@@ -28,7 +28,7 @@ export function RulerPanel({
             year={state.year}
             className="w-20 h-auto rounded-md ring-1 ring-amber-700/50"
           />
-          <figcaption className="text-[10px] text-slate-400 mt-0.5">
+          <figcaption className="text-[10px] mt-0.5" style={{ color: 'var(--gold-bright)' }}>
             皇帝 {state.year - ruler.birthYear}歳
           </figcaption>
         </figure>
@@ -40,18 +40,20 @@ export function RulerPanel({
               year={state.year}
               className="w-20 h-auto rounded-md ring-1 ring-amber-700/50"
             />
-            <figcaption className="text-[10px] text-slate-400 mt-0.5">皇后</figcaption>
+            <figcaption className="text-[10px] mt-0.5" style={{ color: 'var(--gold-bright)' }}>
+              皇后
+            </figcaption>
           </figure>
         )}
 
         <div className="min-w-0 flex-1">
           <RulerName ruler={ruler} onRename={onRename} />
-          <p className="text-xs text-slate-400">
+          <p className="text-xs" style={{ color: 'var(--gold-bright)' }}>
             {state.dynasty.name}朝 / 在位 {state.year - ruler.accessionYear} 年 /{' '}
             {history.length + 1} 代目
           </p>
           {spouse && (
-            <p className="text-[11px] text-amber-300 mt-1 truncate">
+            <p className="text-[11px] mt-1 truncate" style={{ color: '#e8b06a' }}>
               {consortOriginLabel(
                 spouse.origin,
                 spouse.origin.kind === 'east' ? '' : FACTION_LABELS[spouse.origin.factionId],
@@ -61,7 +63,7 @@ export function RulerPanel({
           )}
           <p className="text-xs mt-1">
             後継者{' '}
-            <span className={heirs.length > 0 ? 'text-slate-200' : 'text-red-400'}>
+            <span style={{ color: heirs.length > 0 ? 'var(--parchment)' : '#f0a0a8' }}>
               {heirs.length > 0 ? `${heirs.length}人` : 'なし'}
             </span>
           </p>
@@ -74,16 +76,16 @@ export function RulerPanel({
         <Ability label="交渉" value={ruler.abilities.diplomacy} hint="貢納・成立率" />
       </div>
 
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
-        {heirs.length === 0 && <span className="text-red-400">継承危機の恐れ</span>}
-        {ruler.mixedBlood && <span className="text-amber-400">混血の君主</span>}
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs" style={{ color: 'var(--gold-bright)' }}>
+        {heirs.length === 0 && <span style={{ color: '#f0a0a8' }}>継承危機の恐れ</span>}
+        {ruler.mixedBlood && <span>混血の君主</span>}
         {ruler.claims.length > 0 && (
-          <span className="text-amber-400">
+          <span>
             請求権: {ruler.claims.map((c) => FACTION_LABELS[c]).join('・')}
           </span>
         )}
         {crisisYearsRemaining > 0 && (
-          <span className="text-red-400">継承危機の余波 残り{crisisYearsRemaining}年</span>
+          <span style={{ color: '#f0a0a8' }}>継承危機の余波 残り{crisisYearsRemaining}年</span>
         )}
       </div>
 
@@ -109,8 +111,12 @@ function RulerName({ ruler, onRename }: { ruler: Ruler; onRename: (name: string)
         }}
         className="flex items-baseline gap-1.5 text-left"
       >
-        <h2 className="text-sm font-semibold text-slate-100">{ruler.name}</h2>
-        <span className="text-[10px] text-slate-500">改名</span>
+        <h2 className="roman-title text-base" style={{ color: 'var(--parchment)' }}>
+          {ruler.name}
+        </h2>
+        <span className="text-[10px]" style={{ color: 'var(--gold)' }}>
+          改名
+        </span>
       </button>
     );
   }
@@ -132,7 +138,12 @@ function RulerName({ ruler, onRename }: { ruler: Ruler; onRename: (name: string)
         if (e.key === 'Enter') commit();
         if (e.key === 'Escape') setEditing(false);
       }}
-      className="w-full rounded border border-amber-600 bg-slate-950 px-1.5 py-0.5 text-sm font-semibold text-slate-100"
+      className="w-full rounded-sm px-1.5 py-0.5 text-sm font-semibold"
+      style={{
+        border: '1px solid var(--gold-bright)',
+        background: 'var(--purple-deep)',
+        color: 'var(--parchment)',
+      }}
     />
   );
 }
@@ -147,25 +158,33 @@ function GeneralRow({ state }: { state: GameState }) {
 
   if (general === null) {
     return (
-      <div className="rounded-md border border-red-800/60 bg-red-950/30 px-2.5 py-1.5 text-xs">
-        <span className="font-semibold text-red-200">軍司令官 空位</span>
-        <span className="text-slate-400"> — 指揮官のいない軍は戦いに弱い</span>
+      <div
+        className="rounded-sm px-2.5 py-1.5 text-xs"
+        style={{ border: '1px solid #a8434f', background: 'rgba(139, 35, 49, 0.28)' }}
+      >
+        <span className="font-semibold" style={{ color: '#f0a0a8' }}>
+          軍司令官 空位
+        </span>
+        <span style={{ color: 'var(--gold-bright)' }}> — 指揮官のいない軍は戦いに弱い</span>
       </div>
     );
   }
 
   const gap = general.military - ABILITY_NEUTRAL;
   return (
-    <div className="rounded-md border border-slate-700 bg-slate-950/60 px-2.5 py-1.5 text-xs">
-      <span className="font-semibold text-slate-100">
-        軍司令官 <span className="text-amber-300">軍事 {general.military}</span>
+    <div
+      className="rounded-sm px-2.5 py-1.5 text-xs"
+      style={{ border: '1px solid var(--gold)', background: 'rgba(20, 8, 15, 0.45)' }}
+    >
+      <span className="font-semibold" style={{ color: 'var(--parchment)' }}>
+        軍司令官 <span style={{ color: 'var(--gold-bright)' }}>軍事 {general.military}</span>
       </span>
-      <span className="text-slate-400">
+      <span style={{ color: 'var(--gold-bright)' }}>
         {' '}— 在職 {state.year - general.appointedYear} 年 / 第
         {state.general.history.length + 1} 代
       </span>
       {gap > 0 && (
-        <div className="text-amber-400 mt-0.5">
+        <div className="mt-0.5" style={{ color: '#e8b06a' }}>
           戦勝の名声が皇帝に入りにくく、正統性が余分に減る
         </div>
       )}
@@ -175,12 +194,18 @@ function GeneralRow({ state }: { state: GameState }) {
 
 function Ability({ label, value, hint }: { label: string; value: number; hint: string }) {
   return (
-    <div className="rounded-md bg-slate-800 px-2 py-1.5">
+    <div className="rounded-sm px-2 py-1.5" style={{ background: 'rgba(20, 8, 15, 0.45)' }}>
       <div className="flex items-baseline justify-between">
-        <span className="text-xs text-slate-400">{label}</span>
-        <span className="text-base font-bold text-slate-100 tabular-nums">{value}</span>
+        <span className="text-xs" style={{ color: 'var(--gold-bright)' }}>
+          {label}
+        </span>
+        <span className="text-base font-bold tabular-nums" style={{ color: 'var(--parchment)' }}>
+          {value}
+        </span>
       </div>
-      <div className="text-[10px] text-slate-500 truncate">{hint}</div>
+      <div className="text-[10px] truncate" style={{ color: '#b08a5e' }}>
+        {hint}
+      </div>
     </div>
   );
 }

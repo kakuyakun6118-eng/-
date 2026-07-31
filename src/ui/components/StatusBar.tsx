@@ -8,10 +8,11 @@ interface Stat {
   tone: string;
 }
 
+/** 危険域は赤、警戒域は錆色、平時は墨色 */
 function tone(value: number, warn: number, danger: number): string {
-  if (value <= danger) return 'text-red-400';
-  if (value <= warn) return 'text-amber-400';
-  return 'text-slate-100';
+  if (value <= danger) return 'var(--oxblood)';
+  if (value <= warn) return '#9a6b12';
+  return 'var(--ink)';
 }
 
 export function StatusBar({ state }: { state: GameState }) {
@@ -26,13 +27,15 @@ export function StatusBar({ state }: { state: GameState }) {
   ];
 
   return (
-    <div className="sticky top-0 z-20 bg-slate-950/95 backdrop-blur border-b border-slate-800">
+    <div className="roman-tablet sticky top-0 z-20">
       <div className="flex items-baseline justify-between px-3 pt-2">
-        <div className="text-lg font-bold text-slate-100">
+        <div className="roman-title text-lg">
           {state.year}
-          <span className="text-xs font-normal text-slate-400 ml-1">年 / {ENDING_YEAR}</span>
+          <span className="text-xs font-normal ml-1" style={{ color: 'var(--ink-soft)' }}>
+            年 / {ENDING_YEAR}
+          </span>
         </div>
-        <div className="text-xs text-slate-400">
+        <div className="text-xs" style={{ color: 'var(--ink-soft)' }}>
           {DIFFICULTY_LABELS[state.difficulty]}
           {state.dynasty.abilitiesAdjusted && ' ・調整済み'}
         </div>
@@ -40,11 +43,19 @@ export function StatusBar({ state }: { state: GameState }) {
       <div className="grid grid-cols-4 sm:grid-cols-7 gap-x-2 gap-y-1 px-3 py-2">
         {stats.map((s) => (
           <div key={s.label} className="min-w-0">
-            <div className="text-[10px] leading-tight text-slate-400 truncate">{s.label}</div>
-            <div className={`text-sm font-semibold tabular-nums ${s.tone}`}>{s.value}</div>
+            <div
+              className="text-[10px] leading-tight truncate tracking-wider"
+              style={{ color: 'var(--ink-soft)' }}
+            >
+              {s.label}
+            </div>
+            <div className="text-sm font-semibold tabular-nums" style={{ color: s.tone }}>
+              {s.value}
+            </div>
           </div>
         ))}
       </div>
+      <div className="roman-meander" />
     </div>
   );
 }

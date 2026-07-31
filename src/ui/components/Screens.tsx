@@ -35,26 +35,31 @@ export function TitleScreen({
   const [rulerName, setRulerName] = useState(DEFAULT_RULER_NAME);
   return (
     <div className="min-h-dvh flex flex-col justify-center px-5 py-10 max-w-lg mx-auto">
-      <h1 className="text-2xl font-bold text-slate-100">西ローマ帝国末期</h1>
-      <p className="text-sm text-slate-400 mt-2">
+      <div className="roman-meander" />
+      <h1 className="roman-title text-2xl mt-5 text-center">西ローマ帝国末期</h1>
+      <p className="text-center text-[11px] tracking-[0.3em] text-[color:var(--gold)] mt-1">
+        S · P · Q · R
+      </p>
+      <div className="roman-rule mt-3" />
+      <p className="text-sm mt-4" style={{ color: 'var(--ink-soft)' }}>
         {STARTING_YEAR}年から{ENDING_YEAR}年まで、全{ENDING_YEAR - STARTING_YEAR}ターン。
         帝国を1年でも長く保たせることが目的で、拡大は目的ではない。
       </p>
-      <p className="text-xs text-slate-500 mt-3">
+      <p className="text-xs mt-3" style={{ color: 'var(--ink-soft)' }}>
         1年に選べる手は2つまで。何を諦めるかを選ぶことになる。
       </p>
 
       <label className="mt-6 block">
-        <span className="text-xs text-slate-400">皇帝の名前</span>
+        <span className="roman-heading text-xs">皇帝の名前</span>
         <input
           type="text"
           value={rulerName}
           maxLength={RULER_NAME_MAX_LENGTH}
           onChange={(e) => setRulerName(e.target.value)}
           placeholder={DEFAULT_RULER_NAME}
-          className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600"
+          className="roman-tablet mt-1 w-full rounded-sm px-3 py-2 text-sm"
         />
-        <span className="mt-1 block text-[11px] text-slate-500">
+        <span className="mt-1 block text-[11px]" style={{ color: 'var(--ink-soft)' }}>
           代替わりした皇帝の名は自動で付く。在位中はいつでも改名できる
         </span>
       </label>
@@ -64,18 +69,18 @@ export function TitleScreen({
           <button
             key={difficulty}
             onClick={() => onStart(difficulty, rulerName.trim() || DEFAULT_RULER_NAME)}
-            className="w-full text-left rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 active:bg-slate-800 transition"
+            className="roman-panel w-full text-left rounded-sm px-4 py-3 transition"
           >
-            <div className="text-base font-semibold text-slate-100">
-              {DIFFICULTY_LABELS[difficulty]}
+            <div className="roman-heading text-base">{DIFFICULTY_LABELS[difficulty]}</div>
+            <div className="text-xs mt-0.5" style={{ color: 'var(--ink-soft)' }}>
+              {DIFFICULTY_DETAIL[difficulty]}
             </div>
-            <div className="text-xs text-slate-400 mt-0.5">{DIFFICULTY_DETAIL[difficulty]}</div>
           </button>
         ))}
       </div>
 
       <label className="mt-4 block">
-        <span className="text-xs text-slate-400">セーブデータから再開</span>
+        <span className="roman-heading text-xs">セーブデータから再開</span>
         <input
           type="file"
           accept="application/json,.json"
@@ -84,10 +89,16 @@ export function TitleScreen({
             if (file) onLoad(file);
             e.target.value = '';
           }}
-          className="mt-1 block w-full text-xs text-slate-300 file:mr-3 file:rounded-md file:border-0 file:bg-slate-800 file:px-3 file:py-2 file:text-slate-200"
+          className="mt-1 block w-full text-xs file:mr-3 file:rounded-sm file:border-0 file:bg-[color:var(--purple)] file:px-3 file:py-2 file:text-[color:var(--parchment)]"
+          style={{ color: 'var(--ink-soft)' }}
         />
-        {loadError && <span className="block text-xs text-red-400 mt-1">{loadError}</span>}
+        {loadError && (
+          <span className="block text-xs mt-1" style={{ color: 'var(--oxblood)' }}>
+            {loadError}
+          </span>
+        )}
       </label>
+      <div className="roman-meander mt-6" />
     </div>
   );
 }
@@ -104,12 +115,19 @@ export function ResultScreen({
   const survived = score.status === 'survived';
   return (
     <div className="min-h-dvh flex flex-col justify-center px-5 py-10 max-w-lg mx-auto">
-      <div className={`text-3xl font-bold ${survived ? 'text-emerald-400' : 'text-red-400'}`}>
+      <div className="roman-meander" />
+      <div
+        className="roman-title text-3xl mt-5 text-center"
+        style={{ color: survived ? 'var(--purple-deep)' : 'var(--oxblood)' }}
+      >
         {survived ? '帝国は存続した' : '帝国は崩壊した'}
       </div>
-      <div className="text-sm text-slate-400 mt-1">{score.finalYear}年まで到達</div>
+      <div className="text-sm mt-1 text-center" style={{ color: 'var(--ink-soft)' }}>
+        {score.finalYear}年まで到達
+      </div>
+      <div className="roman-rule mt-3" />
 
-      <dl className="mt-6 space-y-2">
+      <dl className="roman-panel rounded-sm mt-6 px-3 py-2 space-y-2">
         <Row label="スコア" value={Math.round(score.score).toLocaleString()} strong />
         <Row label="難易度" value={DIFFICULTY_LABELS[score.difficulty]} />
         <Row label="保持属州" value={`${score.provincesHeld}`} />
@@ -126,7 +144,7 @@ export function ResultScreen({
 
       <button
         onClick={onRestart}
-        className="mt-8 w-full rounded-lg bg-amber-500 text-slate-950 font-semibold py-3 active:bg-amber-400"
+        className="roman-button mt-8 w-full rounded-sm py-3"
       >
         もう一度
       </button>
@@ -154,17 +172,18 @@ function Chronicle({ state }: { state: GameState }) {
 
   return (
     <section className="mt-8">
-      <h2 className="text-sm font-semibold text-slate-100">年代記</h2>
+      <h2 className="roman-heading text-sm">年代記</h2>
+      <div className="roman-rule mt-1" />
 
       <ol className="mt-2 space-y-1">
         {reigns.map((reign, index) => (
           <li key={index} className="flex gap-2 text-xs">
-            <span className="tabular-nums text-slate-400 shrink-0">
+            <span className="tabular-nums shrink-0" style={{ color: 'var(--gold)' }}>
               {reign.from}–{reign.to}
             </span>
-            <span className="text-slate-200">
+            <span style={{ color: 'var(--ink)' }}>
               {reign.name}
-              <span className="text-slate-400">（{reign.note}）</span>
+              <span style={{ color: 'var(--ink-soft)' }}>（{reign.note}）</span>
             </span>
           </li>
         ))}
@@ -173,7 +192,7 @@ function Chronicle({ state }: { state: GameState }) {
       {events.length > 0 && (
         <ul className="mt-4 space-y-1">
           {events.map((event) => (
-            <li key={event.id} className="text-xs text-amber-300">
+            <li key={event.id} className="text-xs" style={{ color: 'var(--oxblood)' }}>
               {event.title}
             </li>
           ))}
@@ -184,10 +203,10 @@ function Chronicle({ state }: { state: GameState }) {
         <ol className="mt-4 space-y-1">
           {state.general.history.map((record, index) => (
             <li key={record.generalId} className="flex gap-2 text-xs">
-              <span className="tabular-nums text-slate-400 shrink-0">
+              <span className="tabular-nums shrink-0" style={{ color: 'var(--gold)' }}>
                 {record.fromYear}–{record.toYear}
               </span>
-              <span className="text-slate-300">
+              <span style={{ color: 'var(--ink-soft)' }}>
                 軍司令官 第{index + 1}代（軍事 {record.military}・
                 {GENERAL_END_LABELS[record.end]}）
               </span>
@@ -224,8 +243,10 @@ function Chronicle({ state }: { state: GameState }) {
 function ChronicleRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex gap-2">
-      <dt className="text-slate-400 shrink-0">{label}</dt>
-      <dd className="text-slate-200">{value}</dd>
+      <dt className="shrink-0" style={{ color: 'var(--ink-soft)' }}>
+        {label}
+      </dt>
+      <dd style={{ color: 'var(--ink)' }}>{value}</dd>
     </div>
   );
 }
@@ -271,9 +292,17 @@ function firstYearOf(event: { condition: { year?: number; minYear?: number } }):
 
 function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
-    <div className="flex items-baseline justify-between border-b border-slate-800 pb-1.5">
-      <dt className="text-sm text-slate-400">{label}</dt>
-      <dd className={`tabular-nums ${strong ? 'text-2xl font-bold text-slate-100' : 'text-sm text-slate-200'}`}>
+    <div
+      className="flex items-baseline justify-between pb-1.5"
+      style={{ borderBottom: '1px solid rgba(168, 128, 31, 0.35)' }}
+    >
+      <dt className="text-sm" style={{ color: 'var(--ink-soft)' }}>
+        {label}
+      </dt>
+      <dd
+        className={`tabular-nums ${strong ? 'text-2xl font-bold' : 'text-sm'}`}
+        style={{ color: strong ? 'var(--purple-deep)' : 'var(--ink)' }}
+      >
         {value}
       </dd>
     </div>

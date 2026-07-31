@@ -22,31 +22,38 @@ function DemandPanel({ state }: { state: GameState }) {
   if (demands.length === 0) return null;
 
   return (
-    <section className="rounded-lg border border-red-800/70 bg-red-950/30 px-3 py-2">
-      <h2 className="text-sm font-semibold text-red-200">突きつけられている要求</h2>
+    <section
+      className="roman-panel rounded-sm px-3 py-2"
+      style={{ borderColor: 'var(--oxblood)', backgroundColor: 'rgba(139, 35, 49, 0.09)' }}
+    >
+      <h2 className="roman-heading text-sm" style={{ color: 'var(--oxblood)' }}>
+        突きつけられている要求
+      </h2>
       <ul className="mt-1.5 space-y-1.5">
         {demands.map((faction) => {
           const demand = faction.demand;
           if (demand === null) return null;
           return (
             <li key={faction.id} className="text-xs">
-              <span className="font-semibold text-slate-100">{FACTION_LABELS[faction.id]}</span>
-              <span className="text-slate-400">
+              <span className="font-semibold" style={{ color: 'var(--ink)' }}>
+                {FACTION_LABELS[faction.id]}
+              </span>
+              <span style={{ color: 'var(--ink-soft)' }}>
                 {faction.location !== 'exterior' && `（${PROVINCE_LABELS[faction.location]}）`} —{' '}
               </span>
-              <span className="text-amber-300">
+              <span className="font-semibold" style={{ color: 'var(--purple)' }}>
                 {DEMAND_LABELS[demand.type]}
                 {demand.type === 'gold' && ` ${Math.round(demand.amount)}`}
                 {demand.type === 'land' &&
                   demand.targetProvince &&
                   ` （${PROVINCE_LABELS[demand.targetProvince]}）`}
               </span>
-              <div className="text-slate-400">{DEMAND_DETAILS[demand.type]}</div>
+              <div style={{ color: 'var(--ink-soft)' }}>{DEMAND_DETAILS[demand.type]}</div>
             </li>
           );
         })}
       </ul>
-      <p className="mt-1.5 text-[11px] text-red-300/80">
+      <p className="mt-1.5 text-[11px]" style={{ color: 'var(--oxblood)' }}>
         答えるまで、その勢力は戦いを有利に進め、土地に住み着きやすくなる。
         「交渉 → 要求を飲む」で応じる（行動枠は消費しない）
       </p>
@@ -80,7 +87,7 @@ export function App() {
   const occupiers = focused ? occupierNames(state, focused) : [];
 
   return (
-    <div className="min-h-dvh bg-slate-950 text-slate-100 pb-28">
+    <div className="min-h-dvh pb-28">
       <StatusBar state={state} />
 
       <main className="max-w-lg mx-auto px-3 py-3 space-y-3">
@@ -93,15 +100,17 @@ export function App() {
           />
           <MapLegend />
           {focused && (
-            <div className="mt-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs">
-              <span className="font-semibold text-slate-100">{PROVINCE_LABELS[focused]}</span>
-              <span className="text-slate-400">
+            <div className="roman-panel mt-2 rounded-sm px-3 py-2 text-xs">
+              <span className="roman-heading">{PROVINCE_LABELS[focused]}</span>
+              <span style={{ color: 'var(--ink-soft)' }}>
                 {' '}— 支配 {Math.round(state.provinces[focused].control)} / 税収基礎{' '}
                 {Math.round(state.provinces[focused].baseTax)} / 守備{' '}
                 {Math.round(state.provinces[focused].garrison)}
               </span>
               {occupiers.length > 0 && (
-                <div className="text-slate-400 mt-1">駐留: {occupiers.join('、')}</div>
+                <div className="mt-1" style={{ color: 'var(--ink-soft)' }}>
+                  駐留: {occupiers.join('、')}
+                </div>
               )}
             </div>
           )}
@@ -112,9 +121,9 @@ export function App() {
         <DemandPanel state={state} />
 
         <section>
-          <h2 className="text-sm font-semibold text-slate-100 mb-2">
+          <h2 className="roman-heading text-sm mb-2">
             この年の行動
-            <span className="ml-2 text-xs font-normal text-slate-400">
+            <span className="ml-2 text-xs font-normal" style={{ color: 'var(--ink-soft)' }}>
               {selected.filter(consumesActionSlot).length} / {MAX_ACTIONS_PER_TURN}
             </span>
           </h2>
@@ -124,13 +133,14 @@ export function App() {
         <section className="flex gap-2">
           <button
             onClick={save}
-            className="flex-1 rounded-lg border border-slate-700 bg-slate-900 py-2 text-xs font-medium text-slate-200 active:bg-slate-800"
+            className="roman-panel flex-1 rounded-sm py-2 text-xs font-medium"
           >
             この時点を保存
           </button>
           <button
             onClick={quit}
-            className="flex-1 rounded-lg border border-slate-700 bg-slate-900 py-2 text-xs font-medium text-slate-400 active:bg-slate-800"
+            className="roman-panel flex-1 rounded-sm py-2 text-xs font-medium"
+            style={{ color: 'var(--ink-soft)' }}
           >
             中断してタイトルへ
           </button>
@@ -138,10 +148,14 @@ export function App() {
 
         {log.length > 0 && (
           <section>
-            <h2 className="text-sm font-semibold text-slate-100 mb-2">記録</h2>
+            <h2 className="roman-heading text-sm mb-2">記録</h2>
             <ul className="space-y-1">
               {log.map((entry, i) => (
-                <li key={i} className="text-xs text-slate-400 border-l-2 border-slate-700 pl-2">
+                <li
+                  key={i}
+                  className="text-xs pl-2"
+                  style={{ color: 'var(--ink-soft)', borderLeft: '2px solid var(--gold)' }}
+                >
                   {entry}
                 </li>
               ))}
@@ -150,11 +164,12 @@ export function App() {
         )}
       </main>
 
-      <div className="fixed bottom-0 inset-x-0 z-20 bg-slate-950/95 backdrop-blur border-t border-slate-800 pb-[env(safe-area-inset-bottom)]">
+      <div className="roman-tablet fixed bottom-0 inset-x-0 z-20 pb-[env(safe-area-inset-bottom)]">
+        <div className="roman-meander" />
         <div className="max-w-lg mx-auto px-3 py-3">
           <button
             onClick={endTurn}
-            className="w-full rounded-lg bg-amber-500 text-slate-950 font-bold py-3.5 active:bg-amber-400 transition"
+            className="roman-button w-full rounded-sm py-3.5 transition"
           >
             次の年へ（{state.year + 1}年）
           </button>
