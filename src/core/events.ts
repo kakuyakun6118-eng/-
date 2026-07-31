@@ -85,6 +85,13 @@ function conditionMet(state: GameState, condition: EventCondition): boolean {
   for (const stateCondition of condition.stateConditions ?? []) {
     if (!compare(readPath(state, stateCondition.field), stateCondition)) return false;
   }
+
+  const anyOf = condition.anyOf;
+  if (anyOf !== undefined && anyOf.length > 0) {
+    const satisfied = anyOf.some((c) => compare(readPath(state, c.field), c));
+    if (!satisfied) return false;
+  }
+
   return true;
 }
 

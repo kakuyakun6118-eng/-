@@ -310,7 +310,14 @@ export interface EventCondition {
   year?: number;
   minYear?: number;
   maxYear?: number;
+  /** すべて満たす必要がある条件（AND） */
   stateConditions?: StateCondition[];
+  /**
+   * いずれか1つ満たせばよい条件（OR）。
+   * 「ヒスパニアまたはガリアにいる」のように発火口を複数持たせるために使う。
+   * stateConditions と併用した場合は AND で結ばれる
+   */
+  anyOf?: StateCondition[];
 }
 
 export interface EventEffect {
