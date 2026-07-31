@@ -173,6 +173,56 @@ export const MARRIAGE_COST = 120;
 export const MARRIAGE_LOYALTY_GAIN = 10;
 export const MARRIAGE_LEGITIMACY_LOSS = 3;
 
+// 蛮族の要求（金・土地・称号）
+/**
+ * 属州に入った敵対勢力が、その年に要求を突きつける確率。
+ * 0.3 では要求が絶え間なく、無視する遊び方の生存率が
+ * 49% → 30% まで落ちて単なる難易度上げになっていた
+ */
+export const DEMAND_PROBABILITY = 0.15;
+/** 金の要求額は戦力に比例する。強大な勢力ほど高く付く */
+export const DEMAND_GOLD_PER_STRENGTH = 0.8;
+/** 支配度がこれを下回った属州は、その土地そのものを要求される */
+export const DEMAND_LAND_CONTROL_THRESHOLD = 45;
+/** 土地を要求できない場合に、金ではなく称号を求める確率 */
+export const DEMAND_TITLE_SHARE = 0.35;
+/** 称号を認めた際の元老院支持の低下。蛮族に官位を与えたことへの反発 */
+export const DEMAND_TITLE_SENATE_LOSS = 6;
+/** 称号を認めた際の正統性の低下 */
+export const DEMAND_TITLE_LEGITIMACY_LOSS = 3;
+/**
+ * 要求を突きつけたまま答えを得られない勢力の、攻撃側戦力への補正。
+ *
+ * 拒否の代償は「今年の戦闘が重くなる」で受ける。
+ * 戦力の複利成長で罰する形にすると、飲んでも拒んでも損という
+ * ただの難易度税になり、選択にならなかった（放置の成長率 0.07 で
+ * 生存率が 52% → 29% に落ちた）
+ */
+export const DEMAND_REFUSAL_POWER_BONUS = 0.35;
+/**
+ * 答えを得られない勢力が定住に踏み切る支配度の上乗せ。
+ *
+ * 拒否の代償が「その年の戦闘が重い」だけだと、恒久的に資源を削る
+ * 応諾のほうが常に損になり、拒否一択になる（計測では応諾26〜33%に
+ * 対して拒否35%）。一時的な罰では恒久的な支払いに釣り合わない。
+ * 要求を無視した土地はそのまま奪われうる、という形で釣り合わせる
+ */
+export const DEMAND_REFUSAL_SETTLE_CONTROL_BONUS = 15;
+/**
+ * 称号を認めて味方にした勢力の給金の割引率。
+ * 相手が求めたのは金ではなく地位なので、雇うより安く付く。
+ * これが無いとフォエデラティ契約に完全に劣り、選ぶ理由が消える
+ */
+export const DEMAND_TITLE_WAGE_DISCOUNT = 0.6;
+/**
+ * 金の要求を飲んだ勢力が失う戦力の割合。
+ *
+ * 引き揚げさせるだけでは、境外で毎年成長して数年後に戻ってくるので
+ * 金を払う意味がほとんど無かった。金を受け取った軍は一部が散る、
+ * という形にして、払った分だけ脅威の総量が恒久的に減るようにする
+ */
+export const DEMAND_GOLD_DISPERSAL_RATE = 0.3;
+
 // 雇用（フォエデラティ契約）
 export const FOEDERATI_HIRE_COST = 60;
 /** 給金は勢力の戦力に比例する。強力な勢力を雇えばそれだけ高くつく */

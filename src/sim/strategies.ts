@@ -5,6 +5,7 @@ import {
   MARRIAGE_COST,
   MAX_ACTIONS_PER_TURN,
 } from '../core/constants';
+import { consumesActionSlot } from '../core/tick';
 import type {
   BarbarianFaction,
   GameState,
@@ -42,10 +43,23 @@ function mostThreatenedProvince(state: GameState): ProvinceId | null {
   return invaded[0] ?? null;
 }
 
+/**
+ * 行動枠に収める。要求への応答は枠を消費しないので、
+ * 枠を使う行動だけを MAX_ACTIONS_PER_TURN まで数える
+ */
 function pair(actions: PlayerAction[]): PlayerActions {
-  if (actions.length === 0) return [];
-  if (actions.length === 1) return [actions[0]];
-  return [actions[0], actions[1]];
+  const kept: PlayerAction[] = [];
+  let slots = 0;
+  for (const action of actions) {
+    if (!consumesActionSlot(action)) {
+      kept.push(action);
+      continue;
+    }
+    if (slots >= MAX_ACTIONS_PER_TURN) continue;
+    slots++;
+    kept.push(action);
+  }
+  return kept;
 }
 
 /** 何もしない。受動プレイの基準値 */
@@ -148,9 +162,42 @@ export const limitedFoederati: Strategy = (state) => {
   return pair(actions);
 };
 
+/**
+ * 宥和。突きつけられた要求を最優先で飲み、残った枠で軍を維持する。
+ * 「要求に答える」ことが本当に選択肢として成立しているかを測るための方針
+ */
+export const appeaser: Strategy = (state) => {
+  const actions: PlayerAction[] = [];
+
+  const demanding = Object.values(state.factions).filter(
+    (faction) => faction.stance === 'hostile' && faction.demand !== null,
+  );
+  for (const faction of demanding) {
+    const demand = faction.demand;
+    if (demand === null) continue;
+    // 金の要求は払えるときだけ飲む
+    if (demand.type === 'gold' && state.treasury < demand.amount) continue;
+    actions.push({ type: 'negotiate_accept_demand', factionId: faction.id });
+  }
+
+  const threatened = mostThreatenedProvince(state);
+  if (actions.length < MAX_ACTIONS_PER_TURN && threatened) {
+    actions.push({ type: 'military_deploy', provinceId: threatened });
+  }
+  if (actions.length < MAX_ACTIONS_PER_TURN && state.treasury > CONSCRIPT_COST * 2) {
+    actions.push({ type: 'military_conscript' });
+  }
+  if (actions.length < MAX_ACTIONS_PER_TURN && state.treasury < CONSCRIPT_COST) {
+    actions.push({ type: 'domestic_raise_taxes' });
+  }
+
+  return pair(actions);
+};
+
 export const strategies: Record<string, Strategy> = {
   passive,
   limited: limitedFoederati,
   defensive,
   foederati: foederatiHeavy,
+  appeaser,
 };

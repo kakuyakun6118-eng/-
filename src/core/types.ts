@@ -231,6 +231,15 @@ export interface NegotiateSettleAction {
 }
 
 /**
+ * 突きつけられた要求を飲む。
+ * 何を差し出すかは要求の種類が決めるので、プレイヤーは相手を選ぶだけ
+ */
+export interface NegotiateAcceptDemandAction {
+  type: 'negotiate_accept_demand';
+  factionId: BarbarianFactionId;
+}
+
+/**
  * 婚姻同盟。相手は蛮族勢力の族長家または東ローマ帝室。
  * Task B の診断（枠を増やすと生存率が下がる＝枠は不足していない）に
  * 基づき、無償にせず行動枠を消費させる
@@ -282,6 +291,7 @@ export interface EastConfirmTitleAction {
 export type PlayerAction =
   | NegotiateTributeAction
   | NegotiateSettleAction
+  | NegotiateAcceptDemandAction
   | NegotiateMarriageAction
   | HireFoederatiAction
   | MilitaryDeployAction
@@ -293,8 +303,14 @@ export type PlayerAction =
   | EastRequestAidAction
   | EastConfirmTitleAction;
 
-/** 1ターンに選べるアクションは最大2つ */
-export type PlayerActions = [] | [PlayerAction] | [PlayerAction, PlayerAction];
+/**
+ * 1ターンに渡すアクション。
+ *
+ * 行動枠を消費するものは MAX_ACTIONS_PER_TURN までで、超えた分は
+ * tick が捨てる。突きつけられた要求への応答だけは枠を消費しない
+ * （consumesActionSlot を参照）ので、要素数は固定にできない
+ */
+export type PlayerActions = readonly PlayerAction[];
 
 // ── 乱数・コアループ ──────────────────────────────────
 

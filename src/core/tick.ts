@@ -2,9 +2,11 @@ import { applyBarbarianActions } from './barbarians';
 import {
   ENDING_YEAR,
   FIELD_ARMY_COLLAPSE_THRESHOLD,
+  MAX_ACTIONS_PER_TURN,
   SURVIVAL_MIN_LEGITIMACY,
 } from './constants';
 import {
+  acceptDemand,
   arrangeMarriage,
   confirmTitle,
   hireFoederati,
@@ -12,6 +14,7 @@ import {
   requestEastAid,
   settleFaction,
   settlePendingMarriages,
+  updateBarbarianDemands,
   updateFoederatiLoyalty,
   updateFoederatiObligations,
 } from './diplomacy';
@@ -46,6 +49,24 @@ import type {
 } from './types';
 
 /**
+ * 行動枠を消費するか。
+ *
+ * 突きつけられた要求への応答だけは消費しない。相手が始めたことへの
+ * 返事であって、こちらが1年を費やして起こす行動ではないため。
+ *
+ * 枠を消費させると、応答は毎年 military_deploy と競合して常に負ける。
+ * それでは「金・土地・正統性のどれを差し出すか」ではなく
+ * 「軍を動かすか要求に答えるか」を選ばせることになり、主題からずれる。
+ * 無償にはしない。応答は必ず国庫・税基盤・正統性のいずれかを削る。
+ *
+ * この判断はヘッドレス計測では裏を取れない。方針AIは枠を平均1.5/2
+ * しか使っておらず、枠の逼迫そのものを再現できていないため
+ */
+export function consumesActionSlot(action: PlayerAction): boolean {
+  return action.type !== 'negotiate_accept_demand';
+}
+
+/**
  * コアループ。収入・支出・プレイヤー行動・蛮族AI・戦闘解決・
  * 支配度と税基盤の更新・正統性判定・王朝の更新・歴史イベントの
  * 発火判定を、この順で処理する。
@@ -71,12 +92,19 @@ export function tick(state: GameState, actions: PlayerActions, seed: Seed): Game
 
   // 3. プレイヤー行動の適用
   const modifiers: TurnModifiers = { pacified: new Set(), reinforced: new Set() };
+  let slotsUsed = 0;
   for (const action of actions) {
+    if (consumesActionSlot(action)) {
+      if (slotsUsed >= MAX_ACTIONS_PER_TURN) continue;
+      slotsUsed++;
+    }
     next = applyAction(next, action, modifiers, rng);
   }
 
   // 4. 蛮族AIの行動 / 5. 戦闘解決
   next = applyBarbarianActions(next, rng, modifiers);
+  // 属州に居座る勢力は要求を突きつける。答えられるのは翌年になる
+  next = updateBarbarianDemands(next, rng);
 
   // 6. 支配度と税基盤の更新
   next = updateControl(next);
@@ -112,6 +140,12 @@ function applyAction(
     }
     case 'negotiate_settle':
       return settleFaction(state, action.factionId, action.provinceId);
+    case 'negotiate_accept_demand': {
+      const answered = acceptDemand(state, action.factionId);
+      // 金で要求を満たしたなら、その年の侵攻も止まる
+      if (answered !== state) modifiers.pacified.add(action.factionId);
+      return answered;
+    }
     case 'negotiate_marriage':
       return arrangeMarriage(state, action.target, rng);
     case 'hire_foederati':

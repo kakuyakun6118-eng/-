@@ -1,4 +1,5 @@
 import type {
+  BarbarianDemand,
   BarbarianFactionId,
   GameState,
   MarriageOrigin,
@@ -6,6 +7,14 @@ import type {
   Spouse,
 } from './types';
 import {
+  DEMAND_GOLD_DISPERSAL_RATE,
+  DEMAND_GOLD_PER_STRENGTH,
+  DEMAND_LAND_CONTROL_THRESHOLD,
+  DEMAND_PROBABILITY,
+  DEMAND_TITLE_WAGE_DISCOUNT,
+  DEMAND_TITLE_LEGITIMACY_LOSS,
+  DEMAND_TITLE_SENATE_LOSS,
+  DEMAND_TITLE_SHARE,
   DIFFICULTY_SETTINGS,
   EAST_AID_ARMY_GAIN,
   EAST_AID_MIN_RELATIONS,
@@ -52,6 +61,123 @@ import { clamp } from './util';
 /** 契約時の給金。強力な勢力ほど高い */
 export function foederatiDemandFor(strength: number): number {
   return strength * FOEDERATI_DEMAND_PER_STRENGTH;
+}
+
+/**
+ * 敵対勢力が突きつける要求を更新する。
+ *
+ * 属州に入り込んだ勢力は、その年に金・土地・称号のいずれかを要求する。
+ * 要求は蛮族AIの行動として起こるので、プレイヤーが答えられるのは翌年。
+ * 答えずに放置している間、その勢力は戦闘で強くなる（barbarians.ts）
+ */
+export function updateBarbarianDemands(state: GameState, rng: () => number): GameState {
+  const factions = { ...state.factions };
+  let changed = false;
+
+  for (const factionId of Object.keys(factions) as BarbarianFactionId[]) {
+    const faction = factions[factionId];
+    if (faction.stance !== 'hostile' || faction.location === 'exterior') continue;
+
+    // 答えを待っている要求はそのまま残す。代償は戦闘の重さで受ける
+    if (faction.demand !== null) continue;
+
+    if (rng() >= DEMAND_PROBABILITY) continue;
+    factions[factionId] = { ...faction, demand: demandFor(state, faction.location, faction.strength, rng) };
+    changed = true;
+  }
+
+  return changed ? { ...state, factions } : state;
+}
+
+/**
+ * 要求の中身を決める。
+ * 支配の緩んだ属州にいるならその土地そのものを、
+ * そうでなければ金か称号を求める
+ */
+function demandFor(
+  state: GameState,
+  location: ProvinceId,
+  strength: number,
+  rng: () => number,
+): BarbarianDemand {
+  if (state.provinces[location].control < DEMAND_LAND_CONTROL_THRESHOLD) {
+    return { type: 'land', amount: 0, targetProvince: location };
+  }
+  if (rng() < DEMAND_TITLE_SHARE) {
+    return { type: 'title', amount: 0 };
+  }
+  return { type: 'gold', amount: strength * DEMAND_GOLD_PER_STRENGTH };
+}
+
+/**
+ * 突きつけられた要求を飲む。
+ *
+ * 金は国庫、土地は税基盤、称号は正統性と元老院の支持で払う。
+ * どれを差し出すかがこの行動の中身なので、要求の種類ごとに
+ * 減る資源を変えている
+ */
+export function acceptDemand(state: GameState, factionId: BarbarianFactionId): GameState {
+  const faction = state.factions[factionId];
+  const demand = faction.demand;
+  if (demand === null || faction.stance !== 'hostile') return state;
+
+  if (demand.type === 'land') {
+    if (demand.targetProvince === undefined) return state;
+    return settleFaction(state, factionId, demand.targetProvince);
+  }
+
+  if (demand.type === 'title') {
+    /*
+     * 官位を与えて味方に付ける。金も土地も減らないが、
+     * 蛮族を帝国の職に就けたことで元老院と正統性を失い、
+     * 以後は給金を払い続ける相手になる。
+     * 求められたのは地位なので、給金そのものは雇うより安い
+     */
+    return {
+      ...state,
+      senateSupport: clamp(
+        state.senateSupport - DEMAND_TITLE_SENATE_LOSS,
+        MIN_SENATE_SUPPORT,
+        MAX_SENATE_SUPPORT,
+      ),
+      legitimacy: clamp(
+        state.legitimacy - DEMAND_TITLE_LEGITIMACY_LOSS,
+        MIN_LEGITIMACY,
+        MAX_LEGITIMACY,
+      ),
+      factions: {
+        ...state.factions,
+        [factionId]: {
+          ...faction,
+          stance: 'foederati',
+          demand: {
+            type: 'gold',
+            amount: foederatiDemandFor(faction.strength) * DEMAND_TITLE_WAGE_DISCOUNT,
+          },
+        },
+      },
+    };
+  }
+
+  /*
+   * 金。貢納（その年の侵攻を止めるだけ）と違い、
+   * 要求どおりの額を払えば相手は属州から引き揚げる。
+   * 額は相手の戦力に比例するので、大勢力ほど高く付く
+   */
+  if (state.treasury < demand.amount) return state;
+  return {
+    ...state,
+    treasury: state.treasury - demand.amount,
+    factions: {
+      ...state.factions,
+      [factionId]: {
+        ...faction,
+        location: 'exterior',
+        strength: faction.strength * (1 - DEMAND_GOLD_DISPERSAL_RATE),
+        demand: null,
+      },
+    },
+  };
 }
 
 /** 貢納で和平を買う。その勢力はこのターン攻撃してこない */

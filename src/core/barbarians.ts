@@ -4,6 +4,8 @@ import {
   COMBAT_RANDOMNESS,
   DEFENSE_MULTIPLIER,
   DEPLOY_ARMY_DEFENSE_SHARE,
+  DEMAND_REFUSAL_POWER_BONUS,
+  DEMAND_REFUSAL_SETTLE_CONTROL_BONUS,
   DIFFICULTY_SETTINGS,
   EXTERIOR_GROWTH_RATE,
   FIELD_ARMY_DEFENSE_SHARE,
@@ -91,8 +93,15 @@ export function applyBarbarianActions(
     }
 
     const province = provinces[location];
+    /*
+     * 突きつけた要求を無視されている勢力は、返事を待たずに
+     * その土地に住み着こうとする。拒否の代償を恒久的なものにする
+     */
+    const settleThreshold =
+      SETTLE_CONTROL_THRESHOLD +
+      (faction.demand !== null ? DEMAND_REFUSAL_SETTLE_CONTROL_BONUS : 0);
     const canSettle =
-      province.control < SETTLE_CONTROL_THRESHOLD &&
+      province.control < settleThreshold &&
       faction.strength > province.garrison * SETTLE_STRENGTH_MULTIPLIER;
 
     if (canSettle) {
@@ -113,8 +122,15 @@ export function applyBarbarianActions(
     const defenseBase =
       province.garrison + state.fieldArmy * armyShare + foederatiDefenseAt(location);
 
+    /*
+     * 突きつけた要求に答えを得られていない勢力は、その年の攻撃が重くなる。
+     * 拒否の代償をここで受けるので、放置した年数で複利に膨らむことはない
+     */
+    const refusalBonus = faction.demand !== null ? 1 + DEMAND_REFUSAL_POWER_BONUS : 1;
     const attackerPower = randomizedPower(
-      faction.strength * DIFFICULTY_SETTINGS[state.difficulty].barbarianPowerMultiplier,
+      faction.strength *
+        DIFFICULTY_SETTINGS[state.difficulty].barbarianPowerMultiplier *
+        refusalBonus,
       rng,
     );
     // 君主の軍事能力は防御側戦力の補正としてのみ作用する
