@@ -1,12 +1,13 @@
 import { MAX_CONTROL } from '../../core/constants';
 import type { GameState, ProvinceId } from '../../core/types';
 import { FACTION_LABELS, PROVINCE_LABELS } from '../catalogue';
+import { MAP_VIEWBOX, PROVINCE_LABEL_POINTS, PROVINCE_PATHS } from '../mapPaths';
 import {
-  CONTEXT_LAND_PATH,
-  MAP_VIEWBOX,
-  PROVINCE_LABEL_POINTS,
-  PROVINCE_PATHS,
-} from '../mapPaths';
+  CoastShadow,
+  ProvinceBorders,
+  TerrainDefs,
+  TerrainLayers,
+} from './MapTerrain';
 import { NO_MOTION, type MapBattle, type MapMarch, type TurnMotion } from '../movements';
 
 /**
@@ -19,12 +20,19 @@ const LABEL_OVERRIDES: Partial<Record<ProvinceId, [number, number]>> = {
 
 /** 支配度の帯で塗り分ける。段階なので補間の計算を持たない */
 function fillFor(control: number): string {
-  if (control <= 0) return '#4b5563';
-  if (control < MAX_CONTROL * 0.25) return '#9f1239';
-  if (control < MAX_CONTROL * 0.5) return '#b45309';
-  if (control < MAX_CONTROL * 0.75) return '#ca8a04';
-  return '#15803d';
+  if (control <= 0) return '#6b7280';
+  if (control < MAX_CONTROL * 0.25) return '#c81e3c';
+  if (control < MAX_CONTROL * 0.5) return '#e06617';
+  if (control < MAX_CONTROL * 0.75) return '#e0a80c';
+  return '#1f9d4d';
 }
+
+/**
+ * 勢力色の不透明度。下地の山脈・河川・砂漠が透けて見える濃さにする。
+ * 失った属州はさらに薄くして色を主張させない
+ */
+const CONTROL_FILL_OPACITY = 0.55;
+const LOST_FILL_OPACITY = 0.3;
 
 /** 進軍にかける時間（秒） */
 const MARCH_SECONDS = 2.2;
@@ -49,10 +57,7 @@ export function ProvinceMap({ state, selectedProvince, onSelect, motion = NO_MOT
       aria-label="属州の支配状況"
     >
       <defs>
-        <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#31506f" />
-          <stop offset="100%" stopColor="#22384f" />
-        </linearGradient>
+        <TerrainDefs />
         {/* 親征の軍旗を光らせる */}
         <filter id="imperialGlow" x="-80%" y="-80%" width="260%" height="260%">
           <feGaussianBlur stdDeviation="3" result="blur" />
@@ -63,29 +68,28 @@ export function ProvinceMap({ state, selectedProvince, onSelect, motion = NO_MOT
         </filter>
       </defs>
 
-      {/* 海 */}
-      <rect x="0" y="0" width="100%" height="100%" fill="url(#sea)" />
+      {/* 海・陸の下地・山脈の陰影・砂漠・河川 */}
+      <TerrainLayers />
 
-      {/* 帝国外の陸地。背景として暗く敷く */}
-      <path d={CONTEXT_LAND_PATH} fill="#3f4655" stroke="#2b3140" strokeWidth={0.8} />
-
-      {/* 属州 */}
+      {/* 属州の勢力色。下地の地形が透けるよう不透明度を落とす */}
       {ids.map((id) => {
         const province = state.provinces[id];
-        const isSelected = selectedProvince === id;
         return (
           <path
             key={id}
             d={PROVINCE_PATHS[id]}
             fill={fillFor(province.control)}
-            stroke={isSelected ? '#facc15' : '#1e293b'}
-            strokeWidth={isSelected ? 3 : 1}
-            opacity={province.control <= 0 ? 0.55 : 0.92}
+            opacity={province.control <= 0 ? LOST_FILL_OPACITY : CONTROL_FILL_OPACITY}
+            style={{ mixBlendMode: 'multiply' }}
             onClick={() => onSelect(id)}
             className="cursor-pointer"
           />
         );
       })}
+
+      {/* 海岸線の内側の影と、光彩を添えた点線の境界 */}
+      <CoastShadow />
+      <ProvinceBorders selected={selectedProvince} />
 
       {/* 進軍。前ターンとの差分から復元した動きを描く */}
       {motion.marches.map((march) => (
