@@ -41,17 +41,14 @@ export function StatusBar({ state, music }: { state: GameState; music: Music }) 
             {DIFFICULTY_LABELS[state.difficulty]}
             {state.dynasty.abilitiesAdjusted && ' ・調整済み'}
           </span>
-          {/* 音源が置かれていないときはボタンごと出さない */}
-          {music.available && (
-            <button
-              onClick={music.toggle}
-              aria-label={music.playing ? '音楽を止める' : '音楽を鳴らす'}
-              className="px-1.5 py-0.5 rounded-sm"
-              style={{ border: '1px solid var(--gold)', color: 'var(--ink-soft)' }}
-            >
-              {music.playing ? '♪' : '♪ 切'}
-            </button>
-          )}
+          <button
+            onClick={music.toggle}
+            aria-label={music.playing ? '音楽を止める' : '音楽を鳴らす'}
+            className="px-1.5 py-0.5 rounded-sm"
+            style={{ border: '1px solid var(--gold)', color: 'var(--ink-soft)' }}
+          >
+            {music.playing ? '♪' : '♪ 切'}
+          </button>
         </div>
       </div>
       <div className="grid grid-cols-4 sm:grid-cols-7 gap-x-2 gap-y-1 px-3 py-2">
