@@ -59,10 +59,14 @@ function ringInView(ring: number[][]): boolean {
     lon >= LON_MIN - 3 && lon <= LON_MAX + 3 && lat >= LAT_MIN - 3 && lat <= LAT_MAX + 3);
 }
 
-/** 投影後の座標で、この距離より近い連続点は間引く（px） */
-let MIN_POINT_DISTANCE = 1.8;
+/**
+ * 投影後の座標で、この距離より近い連続点は間引く（px）。
+ * 属州の輪郭は画面上でそのまま見えるので細かく、
+ * 背景の陸地や支流は粗くと、用途ごとに切り替える
+ */
+let MIN_POINT_DISTANCE = 1.1;
 /** 投影後の外接矩形がこれより小さいリングは捨てる（px） */
-const MIN_RING_SIZE = 4;
+let MIN_RING_SIZE = 3;
 
 function ringToPath(ring: number[][]): string | null {
   const projected = ring.map(project);
@@ -178,15 +182,23 @@ for (const f of fcCoarse.features) {
   if (d) contextParts.push(d);
 }
 
-// ── 地形（山脈・砂漠・河川） ──────────────────────────
-MIN_POINT_DISTANCE = 1.2;
-const regions = await fetchGeo('ne_50m_geography_regions_polys');
-const rivers = await fetchGeo('ne_50m_rivers_lake_centerlines');
+// ── 地形（山脈・高原・平原・砂漠・湖・河川） ──────────────
+/*
+ * 地形は 1:10m を使う。1:50m だと表示範囲内の山脈が15件しか無く、
+ * マッシフ・サントラルやジュラ、リーフ山地といった中規模の山地が
+ * すべて抜け落ちて「アルプスとピレネーだけの地図」になるため。
+ * 1:10m にすると35件になる。頂点は投影後に間引くので描画負荷は
+ * 元データの解像度ではなく下の MIN_POINT_DISTANCE で決まる
+ */
+MIN_POINT_DISTANCE = 1.3;
+const regions = await fetchGeo('ne_10m_geography_regions_polys');
+const lakes = await fetchGeo('ne_50m_lakes');
+const rivers = await fetchGeo('ne_10m_rivers_lake_centerlines');
 
 const pickRegions = (classes: string[]): string => {
   const parts: string[] = [];
   for (const f of regions.features) {
-    if (!classes.includes(f.properties.FEATURECLA)) continue;
+    if (!classes.includes(f.properties.featurecla ?? f.properties.FEATURECLA)) continue;
     const d = geometryToPath(f.geometry);
     if (d) parts.push(d);
   }
@@ -195,15 +207,44 @@ const pickRegions = (classes: string[]): string => {
 
 const mountainPath = pickRegions(['Range/mtn']);
 const desertPath = pickRegions(['Desert']);
+// 高原と平原。山と砂漠の中間の色味を与えて、平地を一色にしない
+const plateauPath = pickRegions(['Plateau']);
+const plainPath = pickRegions(['Plain', 'Basin', 'Lowland', 'Valley']);
 
-MIN_POINT_DISTANCE = 1.6;
-const riverParts: string[] = [];
-for (const f of rivers.features) {
-  const d = linesToPath(f.geometry);
-  if (d) riverParts.push(d);
+// 湖。小さいものが多いので最小サイズを緩める
+MIN_POINT_DISTANCE = 0.9;
+MIN_RING_SIZE = 1.5;
+const lakeParts: string[] = [];
+for (const f of lakes.features) {
+  const d = geometryToPath(f.geometry);
+  if (d) lakeParts.push(d);
 }
-const riverPath = riverParts.join('');
-console.log(`山脈 ${(mountainPath.length/1024).toFixed(0)}KB / 砂漠 ${(desertPath.length/1024).toFixed(0)}KB / 河川 ${(riverPath.length/1024).toFixed(0)}KB`);
+const lakePath = lakeParts.join('');
+
+/*
+ * 河川は主流と支流に分ける。太さと不透明度を変えて描くと
+ * 水系の広がりが出る。scalerank が小さいほど大きな川
+ */
+const MAJOR_RIVER_MAX_RANK = 5;
+const majorParts: string[] = [];
+const minorParts: string[] = [];
+for (const f of rivers.features) {
+  const rank = f.properties.scalerank ?? f.properties.SCALERANK ?? 9;
+  const major = rank <= MAJOR_RIVER_MAX_RANK;
+  // 支流は本数が多いので粗く間引く
+  MIN_POINT_DISTANCE = major ? 1.2 : 2.2;
+  const d = linesToPath(f.geometry);
+  if (!d) continue;
+  (major ? majorParts : minorParts).push(d);
+}
+const riverPath = majorParts.join('');
+const minorRiverPath = minorParts.join('');
+
+const kb = (s: string) => (s.length / 1024).toFixed(0) + 'KB';
+console.log(
+  `山脈 ${kb(mountainPath)} / 高原 ${kb(plateauPath)} / 平原 ${kb(plainPath)} / ` +
+    `砂漠 ${kb(desertPath)} / 湖 ${kb(lakePath)} / 河川 ${kb(riverPath)}+${kb(minorRiverPath)}`,
+);
 
 const out = `// 自動生成。手で編集しない。
 // 生成元: Natural Earth 1:50m (npm world-atlas) / scripts/generate-map.ts
@@ -219,11 +260,23 @@ export const CONTEXT_LAND_PATH = ${JSON.stringify(contextParts.join(''))};
 /** 山脈。起伏の陰影を付ける下地に使う（Natural Earth Range/mtn） */
 export const MOUNTAIN_PATH = ${JSON.stringify(mountainPath)};
 
+/** 高原。山地と平地の中間の色味にする（Natural Earth Plateau） */
+export const PLATEAU_PATH = ${JSON.stringify(plateauPath)};
+
+/** 平原・盆地・低地。緑を強めて肥沃に見せる */
+export const PLAIN_PATH = ${JSON.stringify(plainPath)};
+
 /** 砂漠。地形の色味を変える（Natural Earth Desert） */
 export const DESERT_PATH = ${JSON.stringify(desertPath)};
 
-/** 河川（Natural Earth rivers_lake_centerlines） */
+/** 湖（Natural Earth 1:50m lakes） */
+export const LAKE_PATH = ${JSON.stringify(lakePath)};
+
+/** 主要な河川（scalerank ${MAJOR_RIVER_MAX_RANK} 以下） */
 export const RIVER_PATH = ${JSON.stringify(riverPath)};
+
+/** 支流。細く薄く描いて水系の広がりを出す */
+export const MINOR_RIVER_PATH = ${JSON.stringify(minorRiverPath)};
 
 export const PROVINCE_PATHS: Record<ProvinceId, string> = ${JSON.stringify(provincePaths, null, 2)} as Record<ProvinceId, string>;
 

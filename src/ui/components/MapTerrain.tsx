@@ -1,7 +1,11 @@
 import {
   CONTEXT_LAND_PATH,
   DESERT_PATH,
+  LAKE_PATH,
+  MINOR_RIVER_PATH,
   MOUNTAIN_PATH,
+  PLAIN_PATH,
+  PLATEAU_PATH,
   PROVINCE_PATHS,
   RIVER_PATH,
 } from '../mapPaths';
@@ -25,15 +29,50 @@ export function TerrainDefs() {
       <filter id="hillshade" x="-5%" y="-5%" width="110%" height="110%">
         <feTurbulence
           type="fractalNoise"
-          baseFrequency="0.085"
-          numOctaves={5}
+          baseFrequency="0.17"
+          numOctaves={4}
           seed={7}
           result="noise"
         />
-        <feDiffuseLighting in="noise" lightingColor="#fff8ec" surfaceScale={2.6} result="shade">
-          <feDistantLight azimuth={315} elevation={52} />
+        <feDiffuseLighting in="noise" lightingColor="#fff8ec" surfaceScale={3.4} result="shade">
+          <feDistantLight azimuth={315} elevation={48} />
         </feDiffuseLighting>
         <feComposite in="shade" in2="SourceAlpha" operator="in" />
+      </filter>
+
+      {/*
+       * 稜線。ヒルシェードより細かい周波数でもう一枚重ねる。
+       * 1枚だけだと尾根が塊に見え、山地の向きが出ない。
+       * 1:10m の山脈は小さいものが多く、周波数が低いと
+       * ひとつの山地が一様に塗られて平らに見えてしまう
+       */}
+      <filter id="ridge" x="-5%" y="-5%" width="110%" height="110%">
+        <feTurbulence
+          type="fractalNoise"
+          baseFrequency="0.4"
+          numOctaves={2}
+          seed={11}
+          result="noise"
+        />
+        <feDiffuseLighting in="noise" lightingColor="#fff4e0" surfaceScale={2.2} result="shade">
+          <feDistantLight azimuth={315} elevation={38} />
+        </feDiffuseLighting>
+        <feComposite in="shade" in2="SourceAlpha" operator="in" />
+      </filter>
+
+      {/*
+       * 山裾。Natural Earth の山脈は多角形なので輪郭が直線的に出る。
+       * 太らせてぼかした暖色を下に敷き、地形へなじませる。
+       * 暗くしすぎると山地が黒い蛆のように見えるので薄く抑える
+       */}
+      <filter id="foothill" x="-15%" y="-15%" width="130%" height="130%">
+        <feMorphology in="SourceAlpha" operator="dilate" radius={2} result="grow" />
+        <feGaussianBlur in="grow" stdDeviation={4.5} result="soft" />
+        <feColorMatrix
+          in="soft"
+          type="matrix"
+          values="0 0 0 0 0.31 0 0 0 0 0.26 0 0 0 0 0.17 0 0 0 0.42 0"
+        />
       </filter>
 
       {/* 平野の細かなざらつき */}
@@ -107,39 +146,56 @@ export function TerrainLayers() {
 
       {/* 陸の下地 */}
       <path d={ALL_LAND} fill="url(#landGrad)" />
-      <path d={ALL_LAND} filter="url(#grain)" opacity={0.5} />
 
-      {/* 砂漠 */}
+      {/* 植生の帯。平地を一色にせず、肥沃な平原と乾いた高原を描き分ける */}
+      <path d={PLAIN_PATH} fill="#6b7248" opacity={0.45} />
+      <path d={PLATEAU_PATH} fill="#7d7154" opacity={0.4} />
       <path d={DESERT_PATH} fill="#a2905f" opacity={0.5} />
 
-      {/* 山脈。土色を敷いてから陰影を乗算する */}
-      <path d={MOUNTAIN_PATH} fill="#6b5a44" opacity={0.85} />
+      {/* 山脈。裾をぼかして敷き、土色の本体に陰影と稜線を重ねる */}
+      <path d={MOUNTAIN_PATH} fill="#000" filter="url(#foothill)" />
+      <path d={MOUNTAIN_PATH} fill="#7d6a4d" opacity={0.85} />
       <path
         d={MOUNTAIN_PATH}
         filter="url(#hillshade)"
         style={{ mixBlendMode: 'multiply' }}
         opacity={0.95}
       />
+      {/* 稜線は overlay で重ねる。日の当たる面を明るく、影の面を暗くする */}
       <path
         d={MOUNTAIN_PATH}
-        fill="none"
-        stroke="#efe6d2"
-        strokeWidth={0.6}
-        opacity={0.25}
+        filter="url(#ridge)"
+        style={{ mixBlendMode: 'overlay' }}
+        opacity={0.55}
       />
+
+      {/* 全体のざらつき。山も平地もまとめて紙目を与える */}
+      <path d={ALL_LAND} filter="url(#grain)" opacity={0.45} />
 
       {/* 帝国外の陸地を落として、属州を前に出す */}
       <path d={CONTEXT_LAND_PATH} fill="#111a2b" opacity={0.34} />
 
-      {/* 河川 */}
+      {/* 支流。細く薄く、本数で水系を見せる */}
+      <path
+        d={MINOR_RIVER_PATH}
+        fill="none"
+        stroke="#6ea0c8"
+        strokeWidth={0.55}
+        strokeLinecap="round"
+        opacity={0.45}
+      />
+      {/* 主要な河川 */}
       <path
         d={RIVER_PATH}
         fill="none"
         stroke="#5f93bf"
-        strokeWidth={1.1}
+        strokeWidth={1.3}
         strokeLinecap="round"
-        opacity={0.75}
+        opacity={0.8}
       />
+
+      {/* 湖。海と同じ色で塗り、縁を明るくして水面と分かるようにする */}
+      <path d={LAKE_PATH} fill="#2b4a6b" stroke="#7fb0d4" strokeWidth={0.5} opacity={0.9} />
     </g>
   );
 }
