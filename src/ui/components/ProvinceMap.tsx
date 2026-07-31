@@ -473,7 +473,10 @@ export function MapLegend() {
       style={{ color: 'var(--ink-soft)' }}
     >
       <span className="flex items-center gap-1.5">
-        <span className="flex overflow-hidden rounded-sm ">
+        <span
+          className="flex overflow-hidden rounded-sm"
+          style={{ border: '1px solid var(--bronze)' }}
+        >
           {CONTROL_LEGEND_STEPS.map((ratio) => (
             <span
               key={ratio}
@@ -488,22 +491,22 @@ export function MapLegend() {
       </span>
       <span className="flex items-center gap-1.5">
         <span
-          className="w-4 h-3 rounded-sm "
-          style={{ background: EAST_SWATCH }}
+          className="w-4 h-3 rounded-sm"
+          style={{ background: EAST_SWATCH, border: '1px solid var(--bronze)' }}
         />
         <span className="roman-heading">東ローマ</span>
       </span>
       <span className="flex items-center gap-1.5">
         <span
-          className="w-4 h-3 rounded-sm "
-          style={{ background: PERSIA_SWATCH }}
+          className="w-4 h-3 rounded-sm"
+          style={{ background: PERSIA_SWATCH, border: '1px solid var(--bronze)' }}
         />
         <span className="roman-heading">ペルシア</span>
       </span>
       <span className="flex items-center gap-1.5">
         <span
-          className="w-4 h-3 rounded-sm "
-          style={{ background: OUTSIDE_SWATCH }}
+          className="w-4 h-3 rounded-sm"
+          style={{ background: OUTSIDE_SWATCH, border: '1px solid var(--bronze)' }}
         />
         帝国外
       </span>
@@ -525,11 +528,12 @@ export function MapLegend() {
       ))}
       <span className="flex items-center gap-1.5">
         <span
-          className="w-4 h-3 rounded-sm "
+          className="w-4 h-3 rounded-sm"
           style={{
             backgroundImage:
               'repeating-linear-gradient(45deg,#3f2d1c 0 2px,transparent 2px 5px)',
             backgroundColor: '#6b6450',
+            border: '1px solid var(--bronze)',
           }}
         />
         定住された属州
