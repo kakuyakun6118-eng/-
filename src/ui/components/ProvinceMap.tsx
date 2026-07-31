@@ -8,6 +8,12 @@ import {
   TerrainDefs,
   TerrainLayers,
 } from './MapTerrain';
+import {
+  BattleSprite,
+  LegionSprite,
+  UnitSpriteDefs,
+  WarbandSprite,
+} from './UnitSprite';
 import { NO_MOTION, type MapBattle, type MapMarch, type TurnMotion } from '../movements';
 
 /**
@@ -58,6 +64,7 @@ export function ProvinceMap({ state, selectedProvince, onSelect, motion = NO_MOT
     >
       <defs>
         <TerrainDefs />
+        <UnitSpriteDefs />
         {/* 親征の軍旗を光らせる */}
         <filter id="imperialGlow" x="-80%" y="-80%" width="260%" height="260%">
           <feGaussianBlur stdDeviation="3" result="blur" />
@@ -151,6 +158,11 @@ function March({ march }: { march: MapMarch }) {
   const color = isLegion ? '#fbbf24' : '#dc2626';
   // 親征は隊列を長くして、軍旗を掲げた行列に見せる
   const columnSize = march.imperial ? 4 : 3;
+  /*
+   * 兵力の軍旗を掲げる位置。隊列全体に出すと同じ数字が並ぶので1つに絞る。
+   * 親征のときは先頭が金のローマ旗なので、その次の部隊に持たせる
+   */
+  const bannerIndex = isLegion && march.imperial ? 1 : 0;
 
   /*
    * 首都と同じ属州へ派遣した場合は距離がゼロになる。
@@ -159,8 +171,6 @@ function March({ march }: { march: MapMarch }) {
   if (Math.hypot(x2 - x1, y2 - y1) < 4) {
     return <Encampment march={march} />;
   }
-
-  const angle = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
 
   return (
     <g className="pointer-events-none">
@@ -176,7 +186,8 @@ function March({ march }: { march: MapMarch }) {
         }}
       />
 
-      {Array.from({ length: columnSize }, (_, index) => {
+      {/* 先頭を最後に描く。軍旗が後続の盾に隠れないようにするため */}
+      {Array.from({ length: columnSize }, (_, i) => columnSize - 1 - i).map((index) => {
         const delay = index * COLUMN_STAGGER;
         return (
           <g key={index} transform={`translate(${x1},${y1})`}>
@@ -195,18 +206,13 @@ function March({ march }: { march: MapMarch }) {
                 march.imperial && index === 0 ? (
                   <ImperialBanner />
                 ) : (
-                  // ローマ軍。鷲章を掲げた縦隊
-                  <g>
-                    <rect x={-7} y={-6} width={14} height={12} rx={2} fill={color} stroke="#78350f" strokeWidth={1.5} />
-                    <rect x={-1.5} y={-13} width={3} height={8} fill="#fde68a" />
-                    <circle cx={0} cy={-14} r={2.5} fill="#fde68a" />
-                  </g>
+                  <LegionSprite
+                    strength={index === bannerIndex ? march.strength : undefined}
+                    imperial={march.imperial}
+                  />
                 )
               ) : (
-                // 蛮族。矢尻の形で進行方向を示す
-                <g transform={`rotate(${angle})`}>
-                  <path d="M11,0 L-8,-8 L-3,0 L-8,8 Z" fill={color} stroke="#7f1d1d" strokeWidth={1.5} />
-                </g>
+                <WarbandSprite strength={index === bannerIndex ? march.strength : undefined} />
               )}
             </g>
           </g>
@@ -216,7 +222,7 @@ function March({ march }: { march: MapMarch }) {
       {/* 到着地点に軍勢の名を出す */}
       <text
         x={x2}
-        y={y2 - 26}
+        y={y2 - 46}
         textAnchor="middle"
         stroke="#0f172a"
         strokeWidth={4}
@@ -242,16 +248,21 @@ function Encampment({ march }: { march: MapMarch }) {
         style={{ animation: 'standard-raise 0.6s ease-out forwards', opacity: 0 }}
       >
         {march.imperial ? (
-          <ImperialBanner />
+          <>
+            <ImperialBanner />
+            {/* 金の旗は兵力を示さないので、その脇に部隊を立てる */}
+            <g transform="translate(-16,-8)">
+              <LegionSprite strength={march.strength} imperial />
+            </g>
+          </>
         ) : (
-          <g>
-            <rect x={-1.5} y={-24} width={3} height={26} fill="#fde68a" />
-            <path d="M2,-22 L15,-19 L15,-9 L2,-12 Z" fill="#fbbf24" stroke="#78350f" strokeWidth={1.2} />
+          <g transform="translate(0,-8)">
+            <LegionSprite strength={march.strength} imperial={false} />
           </g>
         )}
       </g>
       <text
-        y={-38}
+        y={-58}
         textAnchor="middle"
         stroke="#0f172a"
         strokeWidth={4}
@@ -295,28 +306,17 @@ function ImperialBanner() {
   );
 }
 
-/** 戦闘のあった属州に交差する剣を出す */
+/** 戦闘のあった属州に、火花と煙を上げる交戦の印を出す */
 function Battle({ battle }: { battle: MapBattle }) {
   const [x, y] = battle.at;
   return (
     <g className="pointer-events-none" transform={`translate(${x},${y - 40})`}>
-      <circle
-        r={16}
-        fill="#7f1d1d"
-        stroke="#fca5a5"
-        strokeWidth={2}
+      <g
+        className="self-origin"
         style={{ animation: 'battle-pop 0.6s ease-out forwards', opacity: 0 }}
-      />
-      <text textAnchor="middle" y={7} fontSize={19} fill="#fee2e2">
-        ⚔
-      </text>
-      <circle
-        r={16}
-        fill="none"
-        stroke="#fca5a5"
-        strokeWidth={2}
-        style={{ animation: 'battle-ring 1.4s ease-out 2 forwards', opacity: 0 }}
-      />
+      >
+        <BattleSprite strength={battle.strength} />
+      </g>
     </g>
   );
 }

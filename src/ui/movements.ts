@@ -57,6 +57,8 @@ export interface MapMarch {
   from: Point;
   to: Point;
   label: string;
+  /** 軍旗に出す兵力。規模を目で見えるようにする */
+  strength: number;
   /** 皇帝の親征。金色のローマ旗を掲げる */
   imperial: boolean;
 }
@@ -65,6 +67,8 @@ export interface MapBattle {
   id: string;
   at: Point;
   label: string;
+  /** 交戦している蛮族の兵力 */
+  strength: number;
 }
 
 export interface TurnMotion {
@@ -99,6 +103,7 @@ export function deriveTurnMotion(
       from: CAPITAL,
       to: PROVINCE_POINTS[action.provinceId],
       label: imperial ? '皇帝親征' : '野戦軍',
+      strength: after.fieldArmy,
       imperial,
     });
   }
@@ -115,6 +120,7 @@ export function deriveTurnMotion(
         from: pointOf(id, was.location),
         to: pointOf(id, now.location),
         label: FACTION_LABELS[id],
+        strength: now.strength,
         imperial: false,
       });
     }
@@ -131,6 +137,7 @@ export function deriveTurnMotion(
         id: `battle-${turn}-${province}`,
         at: PROVINCE_POINTS[province],
         label: province,
+        strength: now.strength,
       });
     }
   }
