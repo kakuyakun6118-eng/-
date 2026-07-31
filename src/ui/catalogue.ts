@@ -72,6 +72,12 @@ export const GENERAL_END_LABELS: Record<GeneralEnd, string> = {
   usurped: '蜂起',
 };
 
+/**
+ * 君主名の長さの上限。画面の収まりのためで、ゲームルールではない。
+ * 開始画面と君主の欄の両方で使うのでここに置く
+ */
+export const RULER_NAME_MAX_LENGTH = 12;
+
 export const STANCE_LABELS = {
   hostile: '敵対',
   foederati: '同盟',

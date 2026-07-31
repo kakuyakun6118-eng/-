@@ -6,6 +6,7 @@ import { findEvent } from '../../core/events';
 import type { Difficulty, GameState, ProvinceId, ScoreResult } from '../../core/types';
 import {
   DIFFICULTY_LABELS,
+  RULER_NAME_MAX_LENGTH,
   FACTION_LABELS,
   GENERAL_END_LABELS,
   PROVINCE_LABELS,
@@ -13,9 +14,6 @@ import {
 
 /** 名前が空のまま始めたときに使う既定名。データ側の初期君主に合わせる */
 const DEFAULT_RULER_NAME = dynastyData.ruler.name;
-/** 画面の収まりのための上限。ゲームルールではないのでここに置く */
-const RULER_NAME_MAX_LENGTH = 12;
-
 const DIFFICULTY_DETAIL: Record<Difficulty, string> = {
   beginner: '税収に余裕があり、蛮族の圧力と傭兵の要求も緩い',
   standard: '基準となるバランス',

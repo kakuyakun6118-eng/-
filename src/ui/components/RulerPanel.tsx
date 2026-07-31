@@ -1,13 +1,10 @@
-import { useState } from "react";
+import { useState } from 'react';
 
-import { ABILITY_NEUTRAL, ADULT_AGE } from "../../core/constants";
-import type { GameState, Ruler } from "../../core/types";
-import { FACTION_LABELS } from "../catalogue";
-import { ChiRho } from "./UnitSprite";
-import { ConsortFigure, EmperorFigure, consortOriginLabel } from "./Portrait";
-
-/** 画面の収まりのための上限。ゲームルールではないのでここに置く */
-const RULER_NAME_MAX_LENGTH = 12;
+import { ABILITY_NEUTRAL, ADULT_AGE } from '../../core/constants';
+import type { GameState, Ruler } from '../../core/types';
+import { FACTION_LABELS, RULER_NAME_MAX_LENGTH } from '../catalogue';
+import { ChiRho } from './UnitSprite';
+import { ConsortFigure, EmperorFigure, consortOriginLabel } from './Portrait';
 
 export function RulerPanel({
   state,
@@ -44,10 +41,7 @@ export function RulerPanel({
               year={state.year}
               className="w-20 h-auto rounded-md ring-1 ring-amber-700/50"
             />
-            <figcaption
-              className="text-[10px] mt-0.5"
-              style={{ color: "var(--gold-bright)" }}
-            >
+            <figcaption className="text-[10px] mt-0.5" style={{ color: 'var(--gold-bright)' }}>
               皇帝 {state.year - ruler.birthYear}歳
             </figcaption>
           </figure>
@@ -59,10 +53,7 @@ export function RulerPanel({
                 year={state.year}
                 className="w-20 h-auto rounded-md ring-1 ring-amber-700/50"
               />
-              <figcaption
-                className="text-[10px] mt-0.5"
-                style={{ color: "var(--gold-bright)" }}
-              >
+              <figcaption className="text-[10px] mt-0.5" style={{ color: 'var(--gold-bright)' }}>
                 皇后
               </figcaption>
             </figure>
@@ -70,72 +61,49 @@ export function RulerPanel({
 
           <div className="min-w-0 flex-1">
             <RulerName ruler={ruler} onRename={onRename} />
-            <p className="text-xs" style={{ color: "var(--gold-bright)" }}>
-              {state.dynasty.name}朝 / 在位 {state.year - ruler.accessionYear}{" "}
-              年 / {history.length + 1} 代目
+            <p className="text-xs" style={{ color: 'var(--gold-bright)' }}>
+              {state.dynasty.name}朝 / 在位 {state.year - ruler.accessionYear} 年 /{' '}
+              {history.length + 1} 代目
             </p>
             {spouse && (
-              <p
-                className="text-[11px] mt-1 truncate"
-                style={{ color: "#e8b06a" }}
-              >
+              <p className="text-[11px] mt-1 truncate" style={{ color: '#e8b06a' }}>
                 {consortOriginLabel(
                   spouse.origin,
-                  spouse.origin.kind === "east"
-                    ? ""
-                    : FACTION_LABELS[spouse.origin.factionId],
+                  spouse.origin.kind === 'east' ? '' : FACTION_LABELS[spouse.origin.factionId],
                 )}
                 と婚姻
               </p>
             )}
             <p className="text-xs mt-1">
-              後継者{" "}
+              後継者{' '}
               <span
                 style={{
-                  color: heirs.length > 0 ? "var(--parchment)" : "#f0a0a8",
+                  color: heirs.length > 0 ? 'var(--parchment)' : '#f0a0a8',
                 }}
               >
-                {heirs.length > 0 ? `${heirs.length}人` : "なし"}
+                {heirs.length > 0 ? `${heirs.length}人` : 'なし'}
               </span>
             </p>
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-2">
-          <Ability
-            label="軍事"
-            value={ruler.abilities.military}
-            hint="戦闘の防御"
-          />
-          <Ability
-            label="統治"
-            value={ruler.abilities.governance}
-            hint="税収・正統性"
-          />
-          <Ability
-            label="交渉"
-            value={ruler.abilities.diplomacy}
-            hint="貢納・成立率"
-          />
+          <Ability label="軍事" value={ruler.abilities.military} hint="戦闘の防御" />
+          <Ability label="統治" value={ruler.abilities.governance} hint="税収・正統性" />
+          <Ability label="交渉" value={ruler.abilities.diplomacy} hint="貢納・成立率" />
         </div>
 
         <div
           className="flex flex-wrap gap-x-4 gap-y-1 text-xs"
-          style={{ color: "var(--gold-bright)" }}
+          style={{ color: 'var(--gold-bright)' }}
         >
-          {heirs.length === 0 && (
-            <span style={{ color: "#f0a0a8" }}>継承危機の恐れ</span>
-          )}
+          {heirs.length === 0 && <span style={{ color: '#f0a0a8' }}>継承危機の恐れ</span>}
           {ruler.mixedBlood && <span>混血の君主</span>}
           {ruler.claims.length > 0 && (
-            <span>
-              請求権: {ruler.claims.map((c) => FACTION_LABELS[c]).join("・")}
-            </span>
+            <span>請求権: {ruler.claims.map((c) => FACTION_LABELS[c]).join('・')}</span>
           )}
           {crisisYearsRemaining > 0 && (
-            <span style={{ color: "#f0a0a8" }}>
-              継承危機の余波 残り{crisisYearsRemaining}年
-            </span>
+            <span style={{ color: '#f0a0a8' }}>継承危機の余波 残り{crisisYearsRemaining}年</span>
           )}
         </div>
 
@@ -149,13 +117,7 @@ export function RulerPanel({
  * 皇帝の名。触ると書き換えられる。
  * 代替わりのたびに名を付け直せるよう、開始時だけでなく在位中も開く
  */
-function RulerName({
-  ruler,
-  onRename,
-}: {
-  ruler: Ruler;
-  onRename: (name: string) => void;
-}) {
+function RulerName({ ruler, onRename }: { ruler: Ruler; onRename: (name: string) => void }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(ruler.name);
 
@@ -168,13 +130,10 @@ function RulerName({
         }}
         className="flex items-baseline gap-1.5 text-left"
       >
-        <h2
-          className="roman-title text-base"
-          style={{ color: "var(--parchment)" }}
-        >
+        <h2 className="roman-title text-base" style={{ color: 'var(--parchment)' }}>
           {ruler.name}
         </h2>
-        <span className="text-[10px]" style={{ color: "var(--gold)" }}>
+        <span className="text-[10px]" style={{ color: 'var(--gold)' }}>
           改名
         </span>
       </button>
@@ -195,14 +154,14 @@ function RulerName({
       onChange={(e) => setDraft(e.target.value)}
       onBlur={commit}
       onKeyDown={(e) => {
-        if (e.key === "Enter") commit();
-        if (e.key === "Escape") setEditing(false);
+        if (e.key === 'Enter') commit();
+        if (e.key === 'Escape') setEditing(false);
       }}
       className="w-full rounded-sm px-1.5 py-0.5 text-sm font-semibold"
       style={{
-        border: "1px solid var(--gold-bright)",
-        background: "var(--purple-deep)",
-        color: "var(--parchment)",
+        border: '1px solid var(--gold-bright)',
+        background: 'var(--purple-deep)',
+        color: 'var(--parchment)',
       }}
     />
   );
@@ -221,17 +180,14 @@ function GeneralRow({ state }: { state: GameState }) {
       <div
         className="rounded-sm px-2.5 py-1.5 text-xs"
         style={{
-          border: "1px solid #a8434f",
-          background: "rgba(139, 35, 49, 0.28)",
+          border: '1px solid #a8434f',
+          background: 'rgba(139, 35, 49, 0.28)',
         }}
       >
-        <span className="font-semibold" style={{ color: "#f0a0a8" }}>
+        <span className="font-semibold" style={{ color: '#f0a0a8' }}>
           軍司令官 空位
         </span>
-        <span style={{ color: "var(--gold-bright)" }}>
-          {" "}
-          — 指揮官のいない軍は戦いに弱い
-        </span>
+        <span style={{ color: 'var(--gold-bright)' }}> — 指揮官のいない軍は戦いに弱い</span>
       </div>
     );
   }
@@ -241,23 +197,19 @@ function GeneralRow({ state }: { state: GameState }) {
     <div
       className="rounded-sm px-2.5 py-1.5 text-xs"
       style={{
-        border: "1px solid var(--gold)",
-        background: "rgba(20, 8, 15, 0.45)",
+        border: '1px solid var(--gold)',
+        background: 'rgba(20, 8, 15, 0.45)',
       }}
     >
-      <span className="font-semibold" style={{ color: "var(--parchment)" }}>
-        軍司令官{" "}
-        <span style={{ color: "var(--gold-bright)" }}>
-          軍事 {general.military}
-        </span>
+      <span className="font-semibold" style={{ color: 'var(--parchment)' }}>
+        軍司令官 <span style={{ color: 'var(--gold-bright)' }}>軍事 {general.military}</span>
       </span>
-      <span style={{ color: "var(--gold-bright)" }}>
-        {" "}
-        — 在職 {state.year - general.appointedYear} 年 / 第
-        {state.general.history.length + 1} 代
+      <span style={{ color: 'var(--gold-bright)' }}>
+        {' '}
+        — 在職 {state.year - general.appointedYear} 年 / 第{state.general.history.length + 1} 代
       </span>
       {gap > 0 && (
-        <div className="mt-0.5" style={{ color: "#e8b06a" }}>
+        <div className="mt-0.5" style={{ color: '#e8b06a' }}>
           戦勝の名声が皇帝に入りにくく、正統性が余分に減る
         </div>
       )}
@@ -265,32 +217,18 @@ function GeneralRow({ state }: { state: GameState }) {
   );
 }
 
-function Ability({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: number;
-  hint: string;
-}) {
+function Ability({ label, value, hint }: { label: string; value: number; hint: string }) {
   return (
-    <div
-      className="rounded-sm px-2 py-1.5"
-      style={{ background: "rgba(20, 8, 15, 0.45)" }}
-    >
+    <div className="rounded-sm px-2 py-1.5" style={{ background: 'rgba(20, 8, 15, 0.45)' }}>
       <div className="flex items-baseline justify-between">
-        <span className="text-xs" style={{ color: "var(--gold-bright)" }}>
+        <span className="text-xs" style={{ color: 'var(--gold-bright)' }}>
           {label}
         </span>
-        <span
-          className="text-base font-bold tabular-nums"
-          style={{ color: "var(--parchment)" }}
-        >
+        <span className="text-base font-bold tabular-nums" style={{ color: 'var(--parchment)' }}>
           {value}
         </span>
       </div>
-      <div className="text-[10px] truncate" style={{ color: "#b08a5e" }}>
+      <div className="text-[10px] truncate" style={{ color: '#b08a5e' }}>
         {hint}
       </div>
     </div>
