@@ -17,7 +17,7 @@ import type {
   PlayerActions,
   Province,
 } from '../core/types';
-import { FACTION_LABELS, PROVINCE_LABELS } from './catalogue';
+import { FACTION_LABELS, PROVINCE_LABELS, TURN_EVENT_LABELS } from './catalogue';
 import { deriveTurnMotion, NO_MOTION, type TurnMotion } from './movements';
 
 /**
@@ -139,6 +139,9 @@ function describeTurn(before: GameState, after: GameState): string {
 
   const treasuryDelta = Math.round(after.treasury - before.treasury);
   events.push(`国庫 ${treasuryDelta >= 0 ? '+' : ''}${treasuryDelta}`);
+
+  // 状態の差分からは読み取れない出来事は core が記録している
+  for (const id of after.turnEvents) events.push(TURN_EVENT_LABELS[id]);
 
   if (after.dynasty.history.length > before.dynasty.history.length) {
     const record = after.dynasty.history[after.dynasty.history.length - 1];

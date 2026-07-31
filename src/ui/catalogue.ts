@@ -13,6 +13,7 @@ import type {
   GameState,
   PlayerAction,
   ProvinceId,
+  TurnEventId,
 } from '../core/types';
 
 /** 表示名。ゲームロジックではなく画面用のラベル */
@@ -35,6 +36,15 @@ export const FACTION_LABELS: Record<BarbarianFactionId, string> = {
   Suebi: 'スエビ',
   Alans: 'アラン',
   Saxons: 'サクソン',
+};
+
+/**
+ * 状態の差分からは読み取れない出来事の文言。
+ * どちらも野戦軍が減るだけなので、書かないと理由が分からない
+ */
+export const TURN_EVENT_LABELS: Record<TurnEventId, string> = {
+  desertion: '給与が尽き兵が脱走',
+  usurper_attempt: '僭称者が立ち軍の一部が離反',
 };
 
 export const STANCE_LABELS = {

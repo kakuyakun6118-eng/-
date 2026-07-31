@@ -29,7 +29,7 @@ export function App() {
 
   if (state === null) return <TitleScreen onStart={start} onLoad={load} loadError={loadError} />;
   if (state.status !== 'ongoing' && score !== null) {
-    return <ResultScreen score={score} onRestart={quit} />;
+    return <ResultScreen score={score} state={state} onRestart={quit} />;
   }
 
   const occupiers = focused ? occupierNames(state, focused) : [];

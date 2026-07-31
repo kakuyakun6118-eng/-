@@ -1,6 +1,7 @@
 import { ENDING_YEAR, STARTING_YEAR } from '../../core/constants';
-import type { Difficulty, ScoreResult } from '../../core/types';
-import { DIFFICULTY_LABELS } from '../catalogue';
+import { findEvent } from '../../core/events';
+import type { Difficulty, GameState, ProvinceId, ScoreResult } from '../../core/types';
+import { DIFFICULTY_LABELS, FACTION_LABELS, PROVINCE_LABELS } from '../catalogue';
 
 const DIFFICULTY_DETAIL: Record<Difficulty, string> = {
   beginner: '税収に余裕があり、蛮族の圧力と傭兵の要求も緩い',
@@ -63,9 +64,11 @@ export function TitleScreen({
 
 export function ResultScreen({
   score,
+  state,
   onRestart,
 }: {
   score: ScoreResult;
+  state: GameState;
   onRestart: () => void;
 }) {
   const survived = score.status === 'survived';
@@ -89,6 +92,8 @@ export function ResultScreen({
         )}
       </dl>
 
+      <Chronicle state={state} />
+
       <button
         onClick={onRestart}
         className="mt-8 w-full rounded-lg bg-amber-500 text-slate-950 font-semibold py-3 active:bg-amber-400"
@@ -97,6 +102,122 @@ export function ResultScreen({
       </button>
     </div>
   );
+}
+
+/**
+ * 年代記。この帝国が何年保ち、誰が死に、何を売り渡したかを並べる。
+ *
+ * 点数はプレイの良し悪しを1つの数にまとめてしまうが、このゲームの
+ * 目的は延命なので「どこまで保ったか」の経過のほうが結果に近い。
+ * state から作るのでセーブを読み直しても同じものが出る
+ */
+function Chronicle({ state }: { state: GameState }) {
+  const reigns = reignsOf(state);
+  const events = state.firedEventIds
+    .map((id) => findEvent(id))
+    .filter((event): event is NonNullable<typeof event> => event !== undefined)
+    .sort((a, b) => firstYearOf(a) - firstYearOf(b));
+  const lost = (Object.keys(state.provinces) as ProvinceId[]).filter(
+    (id) => state.provinces[id].control <= 0,
+  );
+  const settled = Object.values(state.factions).filter((f) => f.stance === 'settled');
+
+  return (
+    <section className="mt-8">
+      <h2 className="text-sm font-semibold text-slate-100">年代記</h2>
+
+      <ol className="mt-2 space-y-1">
+        {reigns.map((reign, index) => (
+          <li key={index} className="flex gap-2 text-xs">
+            <span className="tabular-nums text-slate-400 shrink-0">
+              {reign.from}–{reign.to}
+            </span>
+            <span className="text-slate-200">
+              第{index + 1}代
+              <span className="text-slate-400">（{reign.note}）</span>
+            </span>
+          </li>
+        ))}
+      </ol>
+
+      {events.length > 0 && (
+        <ul className="mt-4 space-y-1">
+          {events.map((event) => (
+            <li key={event.id} className="text-xs text-amber-300">
+              {event.title}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <dl className="mt-4 space-y-1 text-xs">
+        <ChronicleRow
+          label="失った属州"
+          value={lost.length > 0 ? lost.map((id) => PROVINCE_LABELS[id]).join('、') : 'なし'}
+        />
+        <ChronicleRow
+          label="定住を許した勢力"
+          value={
+            settled.length > 0
+              ? settled
+                  .map(
+                    (f) =>
+                      `${FACTION_LABELS[f.id]}${
+                        f.location === 'exterior' ? '' : `（${PROVINCE_LABELS[f.location]}）`
+                      }`,
+                  )
+                  .join('、')
+              : 'なし'
+          }
+        />
+      </dl>
+    </section>
+  );
+}
+
+function ChronicleRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex gap-2">
+      <dt className="text-slate-400 shrink-0">{label}</dt>
+      <dd className="text-slate-200">{value}</dd>
+    </div>
+  );
+}
+
+interface Reign {
+  from: number;
+  to: number;
+  note: string;
+}
+
+/**
+ * 歴代の在位期間。
+ * history には没年しか無いので、前の代の没年を次の代の即位年とみなす
+ */
+function reignsOf(state: GameState): Reign[] {
+  const reigns: Reign[] = [];
+  let from = STARTING_YEAR;
+  for (const record of state.dynasty.history) {
+    reigns.push({
+      from,
+      to: record.year,
+      note: `${record.cause === 'assassination' ? '暗殺' : '崩御'}・${
+        record.outcome === 'crisis' ? '継承危機' : '嫡子が継承'
+      }`,
+    });
+    from = record.year;
+  }
+  reigns.push({
+    from,
+    to: state.year,
+    note: state.status === 'collapsed' ? '帝国の終わり' : '在位のまま',
+  });
+  return reigns;
+}
+
+/** 並べ替え用。年が決まっていないイベントは発火可能になる年で見る */
+function firstYearOf(event: { condition: { year?: number; minYear?: number } }): number {
+  return event.condition.year ?? event.condition.minYear ?? 0;
 }
 
 function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
