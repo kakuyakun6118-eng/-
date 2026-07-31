@@ -15,6 +15,18 @@ const require = createRequire(import.meta.url);
 const topo = require('world-atlas/countries-50m.json');
 const topoCoarse = require('world-atlas/countries-110m.json');
 
+/**
+ * 地形（山脈・砂漠・河川）は Natural Earth の公開データから取る。
+ * 手描きの近似ではなく実地形なので、アルプスやピレネーが実際の位置に出る。
+ * 再生成にはネットワークが要る（生成物は mapPaths.ts に固定される）
+ */
+const NE = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson';
+async function fetchGeo(name: string): Promise<any> {
+  const res = await fetch(`${NE}/${name}.geojson`);
+  if (!res.ok) throw new Error(`${name} の取得に失敗: ${res.status}`);
+  return res.json();
+}
+
 /** 表示範囲（経度・緯度） */
 const LON_MIN = -11, LON_MAX = 31, LAT_MIN = 29, LAT_MAX = 59;
 const WIDTH = 760;
@@ -73,6 +85,29 @@ function ringToPath(ring: number[][]): string | null {
 
   const pts = kept.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`);
   return `M${pts.join('L')}Z`;
+}
+
+/** 線分（河川）用。閉じずに描く */
+function lineToPath(coords: number[][]): string | null {
+  const projected = coords.map(project);
+  const kept: [number, number][] = [projected[0]];
+  for (const point of projected.slice(1)) {
+    const last = kept[kept.length - 1];
+    if (Math.hypot(point[0] - last[0], point[1] - last[1]) >= MIN_POINT_DISTANCE) kept.push(point);
+  }
+  if (kept.length < 2) return null;
+  return `M${kept.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join('L')}`;
+}
+
+function linesToPath(geom: any): string {
+  const lines: number[][][] = geom.type === 'LineString' ? [geom.coordinates] : geom.coordinates;
+  const parts: string[] = [];
+  for (const line of lines) {
+    if (!ringInView(line)) continue;
+    const d = lineToPath(line);
+    if (d) parts.push(d);
+  }
+  return parts.join('');
 }
 
 function geometryToPath(geom: any): string {
@@ -143,6 +178,33 @@ for (const f of fcCoarse.features) {
   if (d) contextParts.push(d);
 }
 
+// ── 地形（山脈・砂漠・河川） ──────────────────────────
+MIN_POINT_DISTANCE = 1.2;
+const regions = await fetchGeo('ne_50m_geography_regions_polys');
+const rivers = await fetchGeo('ne_50m_rivers_lake_centerlines');
+
+const pickRegions = (classes: string[]): string => {
+  const parts: string[] = [];
+  for (const f of regions.features) {
+    if (!classes.includes(f.properties.FEATURECLA)) continue;
+    const d = geometryToPath(f.geometry);
+    if (d) parts.push(d);
+  }
+  return parts.join('');
+};
+
+const mountainPath = pickRegions(['Range/mtn']);
+const desertPath = pickRegions(['Desert']);
+
+MIN_POINT_DISTANCE = 1.6;
+const riverParts: string[] = [];
+for (const f of rivers.features) {
+  const d = linesToPath(f.geometry);
+  if (d) riverParts.push(d);
+}
+const riverPath = riverParts.join('');
+console.log(`山脈 ${(mountainPath.length/1024).toFixed(0)}KB / 砂漠 ${(desertPath.length/1024).toFixed(0)}KB / 河川 ${(riverPath.length/1024).toFixed(0)}KB`);
+
 const out = `// 自動生成。手で編集しない。
 // 生成元: Natural Earth 1:50m (npm world-atlas) / scripts/generate-map.ts
 // 実行時に地図ライブラリは使わず、この静的なパス文字列だけを描画する。
@@ -153,6 +215,15 @@ export const MAP_VIEWBOX = '0 0 ${WIDTH} ${HEIGHT}';
 
 /** 属州に属さない陸地。背景として描く */
 export const CONTEXT_LAND_PATH = ${JSON.stringify(contextParts.join(''))};
+
+/** 山脈。起伏の陰影を付ける下地に使う（Natural Earth Range/mtn） */
+export const MOUNTAIN_PATH = ${JSON.stringify(mountainPath)};
+
+/** 砂漠。地形の色味を変える（Natural Earth Desert） */
+export const DESERT_PATH = ${JSON.stringify(desertPath)};
+
+/** 河川（Natural Earth rivers_lake_centerlines） */
+export const RIVER_PATH = ${JSON.stringify(riverPath)};
 
 export const PROVINCE_PATHS: Record<ProvinceId, string> = ${JSON.stringify(provincePaths, null, 2)} as Record<ProvinceId, string>;
 
