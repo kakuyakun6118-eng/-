@@ -159,6 +159,12 @@ export interface DifficultySettings {
   barbarianPowerMultiplier: number;
   /** フォエデラティの給金要求の膨張率にかかる倍率 */
   foederatiEscalationMultiplier: number;
+  /**
+   * 史実の災厄がどれだけ再現されるか。
+   * 有害な歴史イベントの発火確率と被害量の両方に掛かる。
+   * 1.0 で史実通り、小さいほど西ローマに有利な歴史になる
+   */
+  historicalSeverityMultiplier: number;
 }
 
 // ── 状態モデル（7パラメータ固定） ────────────────────
@@ -336,6 +342,13 @@ export interface HistoricalEvent {
   condition: EventCondition;
   effects: EventEffect[];
   onceOnly: boolean;
+  /**
+   * 帝国にとって不利なイベントか。
+   * 難易度による緩和は有害なイベントにだけ掛ける。
+   * 有益なイベント（カタラウヌムの勝利など）まで弱めると
+   * 初級のほうが不利になってしまうため
+   */
+  harmful: boolean;
 }
 
 // ── 勝敗判定 ──────────────────────────────────────────

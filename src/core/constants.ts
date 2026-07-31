@@ -231,25 +231,33 @@ export const DEFAULT_DIFFICULTY: Difficulty = 'standard';
  * 中級(standard)はすべて 1.0 で、これまで調整してきたバランスが
  * そのまま中級になる。初級・上級はそこからの差分としてのみ定義する。
  *
- * 触る対象は「主題」の2つのジレンマに直結する3点に絞る。
+ * 触る対象は「主題」の2つのジレンマに直結する3点と、
+ * 史実展開の再現度の合計4点に絞る。
  * 循環の罠 → 税収と蛮族の圧力
  * 短期と長期の取引 → フォエデラティの給金要求の膨張率
+ * 史実展開 → 有害な歴史イベントの発火確率と被害量
  */
 export const DIFFICULTY_SETTINGS: Record<Difficulty, DifficultySettings> = {
   beginner: {
     incomeMultiplier: 1.25,
     barbarianPowerMultiplier: 0.85,
     foederatiEscalationMultiplier: 0.6,
+    // 史実よりかなり西ローマ有利。災厄はめったに起きず、起きても軽い
+    historicalSeverityMultiplier: 0.3,
   },
   standard: {
     incomeMultiplier: 1,
     barbarianPowerMultiplier: 1,
     foederatiEscalationMultiplier: 1,
+    // 史実より西ローマ有利
+    historicalSeverityMultiplier: 0.6,
   },
   veteran: {
     incomeMultiplier: 0.85,
     barbarianPowerMultiplier: 1.15,
     foederatiEscalationMultiplier: 1.4,
+    // 史実に近い
+    historicalSeverityMultiplier: 1,
   },
 };
 

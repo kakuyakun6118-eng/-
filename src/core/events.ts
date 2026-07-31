@@ -1,5 +1,6 @@
 import eventsData from '../data/events.json';
 import {
+  DIFFICULTY_SETTINGS,
   MAX_CONTROL,
   MAX_EAST_RELATIONS,
   MAX_FOEDERATI_LOYALTY,
@@ -130,7 +131,7 @@ function clampState(state: GameState): GameState {
   };
 }
 
-function applyEvent(state: GameState, event: HistoricalEvent): GameState {
+function applyEvent(state: GameState, event: HistoricalEvent, severity: number): GameState {
   let next = state;
   for (const effect of event.effects) {
     if (effect.set !== undefined) {
@@ -138,7 +139,12 @@ function applyEvent(state: GameState, event: HistoricalEvent): GameState {
     } else if (effect.delta !== undefined) {
       const current = readPath(next, effect.field);
       if (typeof current !== 'number') continue;
-      next = writePath(next, effect.field, current + effect.delta);
+      /*
+       * 難易度による緩和は有害なイベントの被害にだけ掛ける。
+       * 有益なイベントまで弱めると初級のほうが不利になってしまう
+       */
+      const delta = event.harmful && effect.delta < 0 ? effect.delta * severity : effect.delta;
+      next = writePath(next, effect.field, current + delta);
     }
   }
   return clampState(next);
@@ -148,14 +154,22 @@ function applyEvent(state: GameState, event: HistoricalEvent): GameState {
  * コアループ ステップ9: 歴史イベントテーブルの発火判定。
  * 条件は data/events.json に持ち、コードには埋め込まない
  */
-export function applyHistoricalEvents(state: GameState): GameState {
+export function applyHistoricalEvents(state: GameState, rng: () => number): GameState {
   let next = state;
   const fired: string[] = [];
+  const severity = DIFFICULTY_SETTINGS[state.difficulty].historicalSeverityMultiplier;
 
   for (const event of EVENTS) {
     if (event.onceOnly && next.firedEventIds.includes(event.id)) continue;
     if (!conditionMet(next, event.condition)) continue;
-    next = applyEvent(next, event);
+    /*
+     * 有害なイベントは難易度に応じて「そもそも起きない」ことがある。
+     * 条件を満たしていても史実が回避される余地を難易度で広げる。
+     * 見送った場合は firedEventIds に入れないので、条件を満たす限り
+     * 後の年に改めて判定される
+     */
+    if (event.harmful && rng() >= severity) continue;
+    next = applyEvent(next, event, severity);
     fired.push(event.id);
   }
 

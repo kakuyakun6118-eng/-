@@ -17,7 +17,8 @@
         "set": "Gallia"
       }
     ],
-    "onceOnly": true
+    "onceOnly": true,
+    "harmful": true
   },
   {
     "id": "410_sack_of_rome",
@@ -44,7 +45,8 @@
         "delta": -100
       }
     ],
-    "onceOnly": true
+    "onceOnly": true,
+    "harmful": true
   },
   {
     "id": "429_vandal_africa_crossing",
@@ -84,7 +86,8 @@
         "delta": -40
       }
     ],
-    "onceOnly": true
+    "onceOnly": true,
+    "harmful": true
   },
   {
     "id": "451_catalaunian_fields",
@@ -111,7 +114,8 @@
         "delta": 15
       }
     ],
-    "onceOnly": true
+    "onceOnly": true,
+    "harmful": false
   },
   {
     "id": "455_vandal_sack_of_rome",
@@ -138,7 +142,8 @@
         "delta": -80
       }
     ],
-    "onceOnly": true
+    "onceOnly": true,
+    "harmful": true
   },
   {
     "id": "476_odoacer",
@@ -167,6 +172,7 @@
         "set": "collapsed"
       }
     ],
-    "onceOnly": true
+    "onceOnly": true,
+    "harmful": true
   }
 ]

@@ -91,7 +91,7 @@ export function tick(state: GameState, actions: PlayerActions, seed: Seed): Game
   next = settlePendingMarriages(next);
 
   // 9. 歴史イベントテーブルの発火判定
-  next = applyHistoricalEvents(next);
+  next = applyHistoricalEvents(next, rng);
 
   return { ...next, status: determineStatus(next) };
 }
