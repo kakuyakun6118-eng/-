@@ -136,8 +136,50 @@ export function WarbandSprite({ strength }: { strength?: number }) {
   );
 }
 
-/** 交戦の印。交差した剣に火花と煙を添える */
-export function BattleSprite({ strength }: { strength: number }) {
+/**
+ * 蛮族の駒。地図に常時出すので、行軍の意匠より小さく作る。
+ * 態度で色を変え、敵対・同盟・定住を色で見分けられるようにする
+ */
+export function FactionToken({
+  strength,
+  color,
+  rim,
+}: {
+  strength: number;
+  color: string;
+  rim: string;
+}) {
+  return (
+    <g>
+      {/*
+       * 影はぼかしフィルタではなく単純な楕円で描く。
+       * この駒は毎ターン兵力が変わって描き直しになるので、
+       * 8勢力ぶんのフィルタを毎回ラスタ化させたくない
+       */}
+      <ellipse cx={1} cy={3} rx={9} ry={8} fill="#050810" opacity={0.5} />
+      <circle cx={0} cy={0} r={9} fill={color} stroke={rim} strokeWidth={1.4} />
+      <circle cx={0} cy={0} r={9} fill="none" stroke="#0c0a09" strokeWidth={0.6} opacity={0.6} />
+      <text
+        y={3.4}
+        textAnchor="middle"
+        fontSize={9.5}
+        fontWeight={700}
+        fill="#fff7ed"
+        stroke="#1c1917"
+        strokeWidth={2}
+        paintOrder="stroke"
+      >
+        {Math.round(strength)}
+      </text>
+    </g>
+  );
+}
+
+/**
+ * 交戦の印。交差した剣に火花と煙を添える。
+ * 兵力は下にある蛮族の駒が示すので、ここでは数字を出さない
+ */
+export function BattleSprite() {
   return (
     <g transform={`scale(${UNIT_SCALE})`}>
       {/* 立ち上る煙 */}
@@ -185,18 +227,6 @@ export function BattleSprite({ strength }: { strength: number }) {
         />
       ))}
 
-      <text
-        y={28}
-        textAnchor="middle"
-        fontSize={13}
-        fontWeight={700}
-        fill="#fecaca"
-        stroke="#450a0a"
-        strokeWidth={2.4}
-        paintOrder="stroke"
-      >
-        {Math.round(strength)}
-      </text>
     </g>
   );
 }

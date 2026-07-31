@@ -1,13 +1,11 @@
 import { MAX_CONTROL } from '../../core/constants';
-import type { GameState, ProvinceId } from '../../core/types';
-import { FACTION_LABELS, PROVINCE_LABELS } from '../catalogue';
+import type { BarbarianStance, GameState, ProvinceId } from '../../core/types';
+import { FACTION_LABELS, PROVINCE_LABELS, STANCE_LABELS } from '../catalogue';
 import {
   EAST_ROMAN_LABEL_POINT,
   MAP_VIEWBOX,
   PERSIA_LABEL_POINT,
-  PROVINCE_LABEL_POINTS,
   PROVINCE_PATHS,
-  projectLonLat,
 } from '../mapPaths';
 import {
   CoastShadow,
@@ -19,25 +17,21 @@ import {
 } from './MapTerrain';
 import {
   BattleSprite,
+  FactionToken,
   LegionSprite,
   UnitSpriteDefs,
   WarbandSprite,
 } from './UnitSprite';
-import { NO_MOTION, type MapBattle, type MapMarch, type TurnMotion } from '../movements';
-
-/**
- * 自動生成した重心では収まりが悪い属州だけ手で置き直す。
- * アフリカはアルジェリアの内陸に寄ってしまうため沿岸へ寄せる。
- * 経緯度で持って projectLonLat を通すので、地図の表示範囲を
- * 変えても位置がずれない
- */
-const LABEL_OVERRIDES: Partial<Record<ProvinceId, [number, number]>> = {
-  Africa: projectLonLat(8.89, 34.9),
-  // 地中海の北岸は属州が密集する。重心のままだと名前が重なるので散らす
-  Italia: projectLonLat(12.6, 42.6),
-  Illyricum: projectLonLat(19.8, 43.4),
-  Noricum: projectLonLat(18.4, 47.4),
-};
+import {
+  NO_MOTION,
+  PROVINCE_POINTS,
+  deriveFactionMarkers,
+  settledProvinces,
+  type FactionMarker,
+  type MapBattle,
+  type MapMarch,
+  type TurnMotion,
+} from '../movements';
 
 /** 支配度の帯で塗り分ける。段階なので補間の計算を持たない */
 function fillFor(control: number): string {
@@ -47,6 +41,16 @@ function fillFor(control: number): string {
   if (control < MAX_CONTROL * 0.75) return '#e0a80c';
   return '#1f9d4d';
 }
+
+/**
+ * 蛮族の駒の色。態度で塗り分ける。
+ * 同盟（フォエデラティ）は自軍として戦うので、敵対とは別の色にする
+ */
+const STANCE_COLORS: Record<BarbarianStance, { fill: string; rim: string }> = {
+  hostile: { fill: '#b91c1c', rim: '#fca5a5' },
+  foederati: { fill: '#b45309', rim: '#fcd34d' },
+  settled: { fill: '#5b4636', rim: '#c8b394' },
+};
 
 /**
  * 勢力色の不透明度。下地の山脈・河川・砂漠が透けて見える濃さにする。
@@ -69,6 +73,8 @@ interface Props {
 
 export function ProvinceMap({ state, selectedProvince, onSelect, motion = NO_MOTION }: Props) {
   const ids = Object.keys(PROVINCE_PATHS) as ProvinceId[];
+  const markers = deriveFactionMarkers(state);
+  const settled = settledProvinces(state);
 
   return (
     <svg
@@ -88,6 +94,18 @@ export function ProvinceMap({ state, selectedProvince, onSelect, motion = NO_MOT
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
+
+        {/* 定住された土地の斜線。恒久的に失われた税基盤を示す */}
+        <pattern
+          id="settledHatch"
+          width={8}
+          height={8}
+          patternUnits="userSpaceOnUse"
+          patternTransform="rotate(45)"
+        >
+          <rect width={8} height={8} fill="none" />
+          <rect width={3} height={8} fill="#3f2d1c" />
+        </pattern>
       </defs>
 
       {/* 海・陸の下地・山脈の陰影・砂漠・河川 */}
@@ -109,6 +127,19 @@ export function ProvinceMap({ state, selectedProvince, onSelect, motion = NO_MOT
         );
       })}
 
+      {/* 定住された属州。斜線で「取られた土地」だと示す */}
+      {ids
+        .filter((id) => settled.has(id))
+        .map((id) => (
+          <path
+            key={`${id}-settled`}
+            d={PROVINCE_PATHS[id]}
+            fill="url(#settledHatch)"
+            opacity={0.5}
+            pointerEvents="none"
+          />
+        ))}
+
       {/* 東ローマとペルシア。西の属州とは別の塗り分けにする */}
       <EastRomanTerritory />
       <PersiaTerritory />
@@ -116,6 +147,11 @@ export function ProvinceMap({ state, selectedProvince, onSelect, motion = NO_MOT
       {/* 海岸線の内側の影と、光彩を添えた点線の境界 */}
       <CoastShadow />
       <ProvinceBorders selected={selectedProvince} />
+
+      {/* 蛮族の駒。今どこに誰がいるかを常時出す */}
+      {markers.map((marker) => (
+        <FactionMarkerToken key={marker.id} marker={marker} />
+      ))}
 
       {/* 進軍。前ターンとの差分から復元した動きを描く */}
       {motion.marches.map((march) => (
@@ -138,7 +174,7 @@ export function ProvinceMap({ state, selectedProvince, onSelect, motion = NO_MOT
       {/* ラベルは属州の上に重ねる */}
       {ids.map((id) => {
         const province = state.provinces[id];
-        const [x, y] = LABEL_OVERRIDES[id] ?? PROVINCE_LABEL_POINTS[id];
+        const [x, y] = PROVINCE_POINTS[id];
         const occupiers = Object.values(state.factions).filter(
           (f) => f.location === id && f.stance !== 'foederati',
         );
@@ -174,6 +210,32 @@ export function ProvinceMap({ state, selectedProvince, onSelect, motion = NO_MOT
         );
       })}
     </svg>
+  );
+}
+
+/** 蛮族の駒ひとつ。円章に兵力、その下に勢力名を出す */
+function FactionMarkerToken({ marker }: { marker: FactionMarker }) {
+  const color = STANCE_COLORS[marker.stance];
+  return (
+    <g
+      className="pointer-events-none select-none"
+      transform={`translate(${marker.at[0]},${marker.at[1]})`}
+    >
+      <FactionToken strength={marker.strength} color={color.fill} rim={color.rim} />
+      {/* 名前は駒の上。下に出すと属州の名前とぶつかる */}
+      <text
+        y={-14}
+        textAnchor="middle"
+        fontSize={9.5}
+        fontWeight={700}
+        fill={color.rim}
+        stroke="#1c1917"
+        strokeWidth={2.6}
+        paintOrder="stroke"
+      >
+        {marker.label}
+      </text>
+    </g>
   );
 }
 
@@ -363,16 +425,21 @@ function ImperialBanner() {
   );
 }
 
-/** 戦闘のあった属州に、火花と煙を上げる交戦の印を出す */
+/**
+ * 戦闘のあった属州に、火花と煙を上げる交戦の印を出す。
+ * 蛮族の駒より上に置く。同じ高さだと駒を覆い隠してしまうため
+ */
+const BATTLE_RISE = 64;
+
 function Battle({ battle }: { battle: MapBattle }) {
   const [x, y] = battle.at;
   return (
-    <g className="pointer-events-none" transform={`translate(${x},${y - 32})`}>
+    <g className="pointer-events-none" transform={`translate(${x},${y - BATTLE_RISE})`}>
       <g
         className="self-origin"
         style={{ animation: 'battle-pop 0.6s ease-out forwards', opacity: 0 }}
       >
-        <BattleSprite strength={battle.strength} />
+        <BattleSprite />
       </g>
     </g>
   );
@@ -427,6 +494,33 @@ export function MapLegend() {
           style={{ background: OUTSIDE_SWATCH }}
         />
         帝国外
+      </span>
+
+      {/* 蛮族は面ではなく駒で出るので、丸い見本にする */}
+      <span className="basis-full h-0" />
+      <span className="text-slate-200 font-medium">蛮族</span>
+      {(Object.keys(STANCE_COLORS) as BarbarianStance[]).map((stance) => (
+        <span key={stance} className="flex items-center gap-1.5">
+          <span
+            className="w-3 h-3 rounded-full"
+            style={{
+              background: STANCE_COLORS[stance].fill,
+              boxShadow: `0 0 0 1px ${STANCE_COLORS[stance].rim}`,
+            }}
+          />
+          {STANCE_LABELS[stance]}
+        </span>
+      ))}
+      <span className="flex items-center gap-1.5">
+        <span
+          className="w-4 h-3 rounded-sm ring-1 ring-slate-600"
+          style={{
+            backgroundImage:
+              'repeating-linear-gradient(45deg,#3f2d1c 0 2px,transparent 2px 5px)',
+            backgroundColor: '#6b6450',
+          }}
+        />
+        定住された属州
       </span>
     </div>
   );
