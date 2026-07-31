@@ -1,5 +1,6 @@
 import { ADULT_AGE } from '../../core/constants';
 import type { GameState } from '../../core/types';
+import { ABILITY_NEUTRAL } from '../../core/constants';
 import { FACTION_LABELS } from '../catalogue';
 import { ConsortFigure, EmperorFigure, consortOriginLabel } from './Portrait';
 
@@ -76,6 +77,44 @@ export function RulerPanel({ state }: { state: GameState }) {
           <span className="text-red-400">継承危機の余波 残り{crisisYearsRemaining}年</span>
         )}
       </div>
+
+      <GeneralRow state={state} />
+    </div>
+  );
+}
+
+/**
+ * 軍司令官。皇帝と並べて出す。
+ * この時代の実権は皇帝ではなくこの職にあったので、
+ * 王朝の欄の中に置いて「宮廷の顔ぶれ」として見せる
+ */
+function GeneralRow({ state }: { state: GameState }) {
+  const general = state.general.current;
+
+  if (general === null) {
+    return (
+      <div className="rounded-md border border-red-800/60 bg-red-950/30 px-2.5 py-1.5 text-xs">
+        <span className="font-semibold text-red-200">軍司令官 空位</span>
+        <span className="text-slate-400"> — 指揮官のいない軍は戦いに弱い</span>
+      </div>
+    );
+  }
+
+  const gap = general.military - ABILITY_NEUTRAL;
+  return (
+    <div className="rounded-md border border-slate-700 bg-slate-950/60 px-2.5 py-1.5 text-xs">
+      <span className="font-semibold text-slate-100">
+        軍司令官 <span className="text-amber-300">軍事 {general.military}</span>
+      </span>
+      <span className="text-slate-400">
+        {' '}— 在職 {state.year - general.appointedYear} 年 / 第
+        {state.general.history.length + 1} 代
+      </span>
+      {gap > 0 && (
+        <div className="text-amber-400 mt-0.5">
+          戦勝の名声が皇帝に入りにくく、正統性が余分に減る
+        </div>
+      )}
     </div>
   );
 }

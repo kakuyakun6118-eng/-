@@ -4,6 +4,7 @@ import {
   EAST_AID_MIN_RELATIONS,
   EAST_TITLE_COST,
   FOEDERATI_HIRE_COST,
+  GENERAL_APPOINT_COST,
   MARRIAGE_COST,
   MARRIAGE_EAST_MIN_RELATIONS,
   REORGANIZE_COST,
@@ -12,6 +13,7 @@ import type {
   BarbarianDemandType,
   BarbarianFactionId,
   GameState,
+  GeneralEnd,
   PlayerAction,
   ProvinceId,
   TurnEventId,
@@ -61,6 +63,13 @@ export const TURN_EVENT_LABELS: Record<TurnEventId, string> = {
   usurper_attempt: '僭称者が立ち軍の一部が離反',
   general_usurped: '軍司令官が帝位を狙って蜂起し、職を離れた',
   general_retired: '軍司令官が任期を終えて職を退いた',
+};
+
+/** 軍司令官が職を離れた理由 */
+export const GENERAL_END_LABELS: Record<GeneralEnd, string> = {
+  retired: '任期満了',
+  dismissed: '解任',
+  usurped: '蜂起',
 };
 
 export const STANCE_LABELS = {
@@ -195,6 +204,29 @@ export const ACTION_TEMPLATES: ActionTemplate[] = [
     target: 'none',
     blockedReason: needsGold(CONSCRIPT_COST),
     build: () => ({ type: 'military_conscript' }),
+  },
+  {
+    id: 'military_appoint_general',
+    category: '軍事',
+    label: '軍司令官を任命',
+    detail: '空位を埋める。軍は強くなるが、有能な将ほど戦勝の名声は皇帝ではなく将軍のものになる',
+    cost: GENERAL_APPOINT_COST,
+    target: 'none',
+    blockedReason: (state) =>
+      state.general.current !== null
+        ? '軍司令官は在職中'
+        : needsGold(GENERAL_APPOINT_COST)(state),
+    build: () => ({ type: 'military_appoint_general' }),
+  },
+  {
+    id: 'military_dismiss_general',
+    category: '軍事',
+    label: '軍司令官を解任',
+    detail: '正統性は戻るが、その将に従っていた兵は離れる',
+    cost: null,
+    target: 'none',
+    blockedReason: (state) => (state.general.current === null ? '軍司令官は空位' : null),
+    build: () => ({ type: 'military_dismiss_general' }),
   },
   {
     id: 'domestic_raise_taxes',

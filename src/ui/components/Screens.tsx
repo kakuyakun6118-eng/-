@@ -1,7 +1,12 @@
 import { ENDING_YEAR, STARTING_YEAR } from '../../core/constants';
 import { findEvent } from '../../core/events';
 import type { Difficulty, GameState, ProvinceId, ScoreResult } from '../../core/types';
-import { DIFFICULTY_LABELS, FACTION_LABELS, PROVINCE_LABELS } from '../catalogue';
+import {
+  DIFFICULTY_LABELS,
+  FACTION_LABELS,
+  GENERAL_END_LABELS,
+  PROVINCE_LABELS,
+} from '../catalogue';
 
 const DIFFICULTY_DETAIL: Record<Difficulty, string> = {
   beginner: '税収に余裕があり、蛮族の圧力と傭兵の要求も緩い',
@@ -148,6 +153,22 @@ function Chronicle({ state }: { state: GameState }) {
             </li>
           ))}
         </ul>
+      )}
+
+      {state.general.history.length > 0 && (
+        <ol className="mt-4 space-y-1">
+          {state.general.history.map((record, index) => (
+            <li key={record.generalId} className="flex gap-2 text-xs">
+              <span className="tabular-nums text-slate-400 shrink-0">
+                {record.fromYear}–{record.toYear}
+              </span>
+              <span className="text-slate-300">
+                軍司令官 第{index + 1}代（軍事 {record.military}・
+                {GENERAL_END_LABELS[record.end]}）
+              </span>
+            </li>
+          ))}
+        </ol>
       )}
 
       <dl className="mt-4 space-y-1 text-xs">
