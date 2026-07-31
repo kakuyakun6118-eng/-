@@ -1,9 +1,15 @@
 import { MAX_CONTROL } from '../../core/constants';
 import type { GameState, ProvinceId } from '../../core/types';
 import { FACTION_LABELS, PROVINCE_LABELS } from '../catalogue';
-import { MAP_VIEWBOX, PROVINCE_LABEL_POINTS, PROVINCE_PATHS } from '../mapPaths';
+import {
+  EAST_ROMAN_LABEL_POINT,
+  MAP_VIEWBOX,
+  PROVINCE_LABEL_POINTS,
+  PROVINCE_PATHS,
+} from '../mapPaths';
 import {
   CoastShadow,
+  EastRomanTerritory,
   ProvinceBorders,
   TerrainDefs,
   TerrainLayers,
@@ -94,6 +100,9 @@ export function ProvinceMap({ state, selectedProvince, onSelect, motion = NO_MOT
         );
       })}
 
+      {/* 東ローマ。西の属州とは別の塗り分けにする */}
+      <EastRomanTerritory />
+
       {/* 海岸線の内側の影と、光彩を添えた点線の境界 */}
       <CoastShadow />
       <ProvinceBorders selected={selectedProvince} />
@@ -107,6 +116,22 @@ export function ProvinceMap({ state, selectedProvince, onSelect, motion = NO_MOT
       {motion.battles.map((battle) => (
         <Battle key={battle.id} battle={battle} />
       ))}
+
+      {/* 東ローマの名。属州ラベルより小さくして主役でないことを示す */}
+      <text
+        x={EAST_ROMAN_LABEL_POINT[0]}
+        y={EAST_ROMAN_LABEL_POINT[1]}
+        textAnchor="middle"
+        fill="#ddd6fe"
+        stroke="#2e1065"
+        strokeWidth={4}
+        paintOrder="stroke"
+        fontSize={18}
+        fontWeight={700}
+        className="pointer-events-none select-none"
+      >
+        東ローマ
+      </text>
 
       {/* ラベルは属州の上に重ねる */}
       {ids.map((id) => {
@@ -318,6 +343,52 @@ function Battle({ battle }: { battle: MapBattle }) {
         <BattleSprite strength={battle.strength} />
       </g>
     </g>
+  );
+}
+
+/**
+ * 色の凡例。
+ * 西ローマは支配度で色が変わり、東ローマは紫の一色、
+ * 帝国外は暗く落とす、という3つの塗り分けを言葉で補う。
+ * 見本の色は地図と同じ fillFor から作るので、片方だけずれることがない
+ */
+const CONTROL_LEGEND_STEPS = [1, 0.7, 0.45, 0.2, 0];
+/** 地図で重ねている色。凡例には合成後の見えに近い値を置く */
+const EAST_SWATCH = '#6b52a8';
+const OUTSIDE_SWATCH = '#474338';
+
+export function MapLegend() {
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-slate-400">
+      <span className="flex items-center gap-1.5">
+        <span className="flex overflow-hidden rounded-sm ring-1 ring-slate-600">
+          {CONTROL_LEGEND_STEPS.map((ratio) => (
+            <span
+              key={ratio}
+              className="w-4 h-3"
+              style={{ background: fillFor(ratio * MAX_CONTROL) }}
+            />
+          ))}
+        </span>
+        <span>
+          <span className="text-slate-200 font-medium">西ローマ</span> 支配 高→低
+        </span>
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span
+          className="w-4 h-3 rounded-sm ring-1 ring-slate-600"
+          style={{ background: EAST_SWATCH }}
+        />
+        <span className="text-slate-200 font-medium">東ローマ</span>
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span
+          className="w-4 h-3 rounded-sm ring-1 ring-slate-600"
+          style={{ background: OUTSIDE_SWATCH }}
+        />
+        帝国外
+      </span>
+    </div>
   );
 }
 

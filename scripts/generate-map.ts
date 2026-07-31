@@ -42,6 +42,19 @@ const PROVINCE_COUNTRIES: Record<string, string[]> = {
   Africa: ['Tunisia', 'Algeria', 'Libya', 'Morocco'],
 };
 
+/*
+ * 東ローマ帝国の領域。プレイヤーの属州ではないので支配度を持たず、
+ * 「西の外側にもうひとつのローマがある」ことを示すためだけに描く。
+ *
+ * バルカン半島は 395年の分割では東（ダキア・マケドニア管区）だが、
+ * このゲームは西の属州 Illyricum にまとめているので、ここには含めない。
+ * 地図の色分けと属州データが食い違わないことを優先する
+ */
+const EAST_ROMAN_COUNTRIES = [
+  'Greece', 'Bulgaria', 'Turkey', 'Cyprus', 'N. Cyprus',
+  'Egypt', 'Israel', 'Palestine', 'Lebanon', 'Syria', 'Jordan',
+];
+
 // メルカトル図法。経度・緯度ともラジアンで扱う
 const rad = (deg: number) => (deg * Math.PI) / 180;
 const mercY = (lat: number) => Math.log(Math.tan(Math.PI / 4 + rad(lat) / 2));
@@ -172,6 +185,21 @@ for (const [province, countries] of Object.entries(PROVINCE_COUNTRIES)) {
   provinceLabels[province] = labelPoint(labelGeom);
 }
 
+// 東ローマ帝国。属州と同じ解像度で描く
+const eastParts: string[] = [];
+let eastLabelGeom: any = null;
+for (const name of EAST_ROMAN_COUNTRIES) {
+  const f = byName.get(name);
+  if (!f) { console.warn(`  見つからない国: ${name}`); continue; }
+  owned.add(name);
+  const d = geometryToPath(f.geometry);
+  if (d) eastParts.push(d);
+  // ラベルはギリシャに置く。表示範囲の中に確実に入る
+  if (name === 'Greece') eastLabelGeom = f.geometry;
+}
+const eastRomanPath = eastParts.join('');
+const eastLabel = eastLabelGeom ? labelPoint(eastLabelGeom) : [0, 0];
+
 // 属州に属さない陸地（背景として暗く描く）。粗い解像度で十分
 MIN_POINT_DISTANCE = 3;
 const fcCoarse: any = feature(topoCoarse, topoCoarse.objects.countries);
@@ -256,6 +284,12 @@ export const MAP_VIEWBOX = '0 0 ${WIDTH} ${HEIGHT}';
 
 /** 属州に属さない陸地。背景として描く */
 export const CONTEXT_LAND_PATH = ${JSON.stringify(contextParts.join(''))};
+
+/** 東ローマ帝国の領域。プレイヤーの属州ではないので支配度を持たない */
+export const EAST_ROMAN_PATH = ${JSON.stringify(eastRomanPath)};
+
+/** 東ローマのラベルを置く座標（ギリシャの重心） */
+export const EAST_ROMAN_LABEL_POINT: [number, number] = ${JSON.stringify(eastLabel)};
 
 /** 山脈。起伏の陰影を付ける下地に使う（Natural Earth Range/mtn） */
 export const MOUNTAIN_PATH = ${JSON.stringify(mountainPath)};

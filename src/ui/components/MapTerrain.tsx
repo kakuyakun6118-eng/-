@@ -1,6 +1,7 @@
 import {
   CONTEXT_LAND_PATH,
   DESERT_PATH,
+  EAST_ROMAN_PATH,
   LAKE_PATH,
   MINOR_RIVER_PATH,
   MOUNTAIN_PATH,
@@ -20,7 +21,8 @@ import type { ProvinceId } from '../../core/types';
  * 再利用されるので毎ターンの再描画でも負荷が増えない
  */
 
-const ALL_LAND = CONTEXT_LAND_PATH + Object.values(PROVINCE_PATHS).join('');
+const ALL_LAND =
+  CONTEXT_LAND_PATH + EAST_ROMAN_PATH + Object.values(PROVINCE_PATHS).join('');
 
 export function TerrainDefs() {
   return (
@@ -196,6 +198,40 @@ export function TerrainLayers() {
 
       {/* 湖。海と同じ色で塗り、縁を明るくして水面と分かるようにする */}
       <path d={LAKE_PATH} fill="#2b4a6b" stroke="#7fb0d4" strokeWidth={0.5} opacity={0.9} />
+    </g>
+  );
+}
+
+/**
+ * 東ローマ帝国の領域。
+ *
+ * プレイヤーの属州ではないので支配度の色帯には乗せず、
+ * 帝室の紫で一様に塗る。西（支配度で緑〜赤に変わる）とも、
+ * 帝国外の蛮族の地（暗く落とした背景）とも区別が付くようにする
+ */
+export function EastRomanTerritory() {
+  return (
+    <g pointerEvents="none">
+      {/*
+       * 乗算だけだと山地の陰影に負けて茶色に沈むので、
+       * 先に薄い紫を通常合成で敷いてから乗算を重ねる
+       */}
+      <path d={EAST_ROMAN_PATH} fill="#7b5fc4" opacity={0.3} />
+      <path
+        d={EAST_ROMAN_PATH}
+        fill="#6247b5"
+        opacity={0.5}
+        style={{ mixBlendMode: 'multiply' }}
+      />
+      <path
+        d={EAST_ROMAN_PATH}
+        fill="none"
+        stroke="#c4b5fd"
+        strokeWidth={1.3}
+        strokeDasharray="5 4"
+        opacity={0.7}
+        filter="url(#borderGlow)"
+      />
     </g>
   );
 }

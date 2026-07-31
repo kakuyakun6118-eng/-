@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { MAX_ACTIONS_PER_TURN } from '../core/constants';
 import type { ProvinceId } from '../core/types';
 import { ActionPanel } from './components/ActionPanel';
-import { ProvinceMap, occupierNames } from './components/ProvinceMap';
+import { MapLegend, ProvinceMap, occupierNames } from './components/ProvinceMap';
 import { RulerPanel } from './components/RulerPanel';
 import { ResultScreen, TitleScreen } from './components/Screens';
 import { StatusBar } from './components/StatusBar';
@@ -46,6 +46,7 @@ export function App() {
             selectedProvince={focused}
             onSelect={(id) => setFocused((current) => (current === id ? null : id))}
           />
+          <MapLegend />
           {focused && (
             <div className="mt-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs">
               <span className="font-semibold text-slate-100">{PROVINCE_LABELS[focused]}</span>
