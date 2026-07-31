@@ -16,8 +16,11 @@ import { createRomanScore, type RomanScore } from './romanScore';
  * （難易度の選択、または音のボタン）まで待ってから鳴らす
  */
 
-/** public/ 以下の配信パス。差し替えはファイルを置き換えるだけで済む */
-const TRACK_URL = '/music/theme.mp3';
+/**
+ * public/ 以下の配信パス。差し替えはファイルを置き換えるだけで済む。
+ * サブパスで公開しても届くよう Vite の BASE_URL から組み立てる
+ */
+const TRACK_URL = `${import.meta.env.BASE_URL}music/theme.mp3`;
 
 /** 音量。管弦楽の音源を想定して控えめに始める */
 const DEFAULT_VOLUME = 0.4;

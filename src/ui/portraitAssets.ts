@@ -98,5 +98,10 @@ export function selectPortrait(
           : byRole;
 
   const chosen = candidates[hashString(seedId) % candidates.length];
-  return `${MANIFEST.basePath}${chosen.file}`;
+  /*
+   * manifest の basePath は先頭が "/" の絶対パス。
+   * そのまま使うとサブパスで公開したときに配信元の根を指して 404 になるので、
+   * Vite の BASE_URL を前に付けて公開先に追随させる
+   */
+  return `${import.meta.env.BASE_URL}${MANIFEST.basePath.replace(/^\//, '')}${chosen.file}`;
 }
