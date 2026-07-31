@@ -223,6 +223,30 @@
       "role": "emperor",
       "origin": "east",
       "age": "youth"
+    },
+    {
+      "file": "emperor_barbarian_youth_01.webp",
+      "role": "emperor",
+      "origin": "barbarian",
+      "age": "youth"
+    },
+    {
+      "file": "consort_barbarian_adult_06.webp",
+      "role": "consort",
+      "origin": "barbarian",
+      "age": "adult"
+    },
+    {
+      "file": "consort_east_adult_12.webp",
+      "role": "consort",
+      "origin": "east",
+      "age": "adult"
+    },
+    {
+      "file": "consort_east_adult_13.webp",
+      "role": "consort",
+      "origin": "east",
+      "age": "adult"
     }
   ]
 }
