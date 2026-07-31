@@ -75,26 +75,25 @@ export function useGame() {
     setState((current) => (current === null ? current : renameRuler(current, name)));
   }, []);
 
+  /*
+   * setState の更新関数の中で他の状態を触らない。
+   * React は更新関数を複数回呼ぶことがあり、副作用を持たせると
+   * 記録が二重に積まれる（実際に全行が二重に出ていた）
+   */
   const endTurn = useCallback(() => {
-    setState((current) => {
-      if (current === null || current.status !== 'ongoing') return current;
-      const before = current;
-      const applied = selected.slice(0, MAX_ACTIONS_PER_TURN);
-      const next = tick(before, applied as PlayerActions, runSeed + before.turn);
-      setLog((entries) => [describeTurn(before, next), ...entries].slice(0, 40));
-      setMotion(deriveTurnMotion(before, next, applied));
-      return next;
-    });
+    if (state === null || state.status !== 'ongoing') return;
+    const applied = selected.slice(0, MAX_ACTIONS_PER_TURN);
+    const next = tick(state, applied as PlayerActions, runSeed + state.turn);
+    setState(next);
+    setLog((entries) => [describeTurn(state, next), ...entries].slice(0, 40));
+    setMotion(deriveTurnMotion(state, next, applied));
     setSelected([]);
-  }, [selected, runSeed]);
+  }, [state, selected, runSeed]);
 
   const save = useCallback(() => {
-    setState((current) => {
-      if (current === null) return current;
-      download(serialize(current, new Date().toISOString()), suggestFileName(current));
-      return current;
-    });
-  }, []);
+    if (state === null) return;
+    download(serialize(state, new Date().toISOString()), suggestFileName(state));
+  }, [state]);
 
   const load = useCallback(async (file: File) => {
     const result = deserialize(await file.text());
