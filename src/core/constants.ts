@@ -256,8 +256,12 @@ export const DIFFICULTY_SETTINGS: Record<Difficulty, DifficultySettings> = {
     incomeMultiplier: 0.85,
     barbarianPowerMultiplier: 1.15,
     foederatiEscalationMultiplier: 1.4,
-    // 史実に近い
-    historicalSeverityMultiplier: 1,
+    /*
+     * 史実に近い。ただし 1.0 では史実の災厄が連鎖して生存率が1%まで
+     * 落ち、上達が結果に反映されなくなるため僅かに緩めている。
+     * 「史実通りに崩壊へ向かうが、極めて上手ければ稀に凌げる」水準
+     */
+    historicalSeverityMultiplier: 0.85,
   },
 };
 
