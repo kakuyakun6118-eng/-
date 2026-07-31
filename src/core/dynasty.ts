@@ -81,6 +81,33 @@ function nextMemberId(state: GameState, rng: () => number): string {
   return `p${state.year}_${Math.floor(rng() * 100000)}`;
 }
 
+/**
+ * 後継者の名前を候補から引く。引いた名は候補から取り除く。
+ *
+ * 引きっぱなしにすると1回のプレイで同じ名の皇帝が何人も出て、
+ * 年代記が読めなくなる。候補が尽きた場合でも遊べるよう、
+ * 空なら生年を名にする
+ */
+function drawName(state: GameState, rng: () => number): { name: string; pool: string[] } {
+  const pool = state.dynasty.namePool;
+  if (pool.length === 0) return { name: `${state.year}年生`, pool };
+  const index = Math.floor(rng() * pool.length);
+  return { name: pool[index], pool: pool.filter((_, i) => i !== index) };
+}
+
+/**
+ * 君主の名を付け替える。
+ * 表示だけの変更で、どの計算式にも影響しないためフラグは立てない
+ */
+export function renameRuler(state: GameState, name: string): GameState {
+  const trimmed = name.trim();
+  if (trimmed.length === 0) return state;
+  return {
+    ...state,
+    dynasty: { ...state.dynasty, ruler: { ...state.dynasty.ruler, name: trimmed } },
+  };
+}
+
 // ── 死亡判定 ──────────────────────────────────────────
 
 /** legitimacy が低いほど暗殺されやすい */
@@ -136,8 +163,10 @@ function maybeBearChild(state: GameState, rng: () => number): GameState {
   if (rng() >= CHILD_BIRTH_PROBABILITY) return state;
 
   const spouseOrigin = dynasty.ruler.spouse?.origin ?? null;
+  const drawn = drawName(state, rng);
   const child: DynastyMember = {
     id: nextMemberId(state, rng),
+    name: drawn.name,
     birthYear: state.year,
     abilities: rollAbilities(rng),
     lineage:
@@ -156,6 +185,7 @@ function maybeBearChild(state: GameState, rng: () => number): GameState {
     ...state,
     dynasty: {
       ...dynasty,
+      namePool: drawn.pool,
       members: [...dynasty.members, child],
       ruler: { ...dynasty.ruler, childIds: [...dynasty.ruler.childIds, child.id] },
     },
@@ -176,16 +206,23 @@ function succeed(
   const outcome: SuccessionOutcome = heir ? 'heir' : 'crisis';
   const deadRuler: Ruler = { ...dynasty.ruler, deathYear: state.year };
 
-  const successor: DynastyMember = heir ?? {
-    // 継承者がいない場合は王朝外から担ぎ出される
-    id: nextMemberId(state, rng),
-    birthYear: state.year - ADULT_AGE * 2,
-    abilities: rollAbilities(rng),
-    lineage: 'roman',
-    legitimate: false,
-    mixedBlood: false,
-    claims: [],
-  };
+  /*
+   * 嫡子がいれば生まれたときの名をそのまま使うので候補は消費しない。
+   * いない場合だけ、王朝外から担ぎ出される人物に名を引く
+   */
+  const outsider = heir === undefined ? drawName(state, rng) : null;
+  const successor: DynastyMember =
+    heir ??
+    {
+      id: nextMemberId(state, rng),
+      name: outsider === null ? '' : outsider.name,
+      birthYear: state.year - ADULT_AGE * 2,
+      abilities: rollAbilities(rng),
+      lineage: 'roman',
+      legitimate: false,
+      mixedBlood: false,
+      claims: [],
+    };
 
   const newRuler: Ruler = {
     ...successor,
@@ -217,11 +254,12 @@ function succeed(
     legitimacy: clamp(flooredLegitimacy, MIN_LEGITIMACY, MAX_LEGITIMACY),
     dynasty: {
       ...dynasty,
+      namePool: outsider?.pool ?? dynasty.namePool,
       ruler: newRuler,
       members: dynasty.members.filter((m) => m.id !== successor.id),
       history: [
         ...dynasty.history,
-        { rulerId: deadRuler.id, year: state.year, cause, outcome },
+        { rulerId: deadRuler.id, name: deadRuler.name, year: state.year, cause, outcome },
       ],
       crisisYearsRemaining:
         outcome === 'crisis' ? SUCCESSION_CRISIS_DURATION : dynasty.crisisYearsRemaining,

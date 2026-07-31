@@ -5,8 +5,9 @@ import type { Difficulty, DifficultySettings } from './types';
 /**
  * セーブデータの形式版。互換性のない変更をしたら上げる。
  * 2: 軍司令官（general）を追加。空で補える情報ではないため旧版は読めない
+ * 3: 君主に名前（name）と後継者の名前候補（namePool）を追加
  */
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 export const STARTING_YEAR = 395;
 export const ENDING_YEAR = 476;

@@ -64,6 +64,7 @@ export function App() {
     motion,
     start,
     toggleAction,
+    rename,
     endTurn,
     quit,
     save,
@@ -106,7 +107,7 @@ export function App() {
           )}
         </section>
 
-        <RulerPanel state={state} />
+        <RulerPanel state={state} onRename={rename} />
 
         <DemandPanel state={state} />
 

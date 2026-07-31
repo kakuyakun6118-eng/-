@@ -1,10 +1,20 @@
-import { ADULT_AGE } from '../../core/constants';
-import type { GameState } from '../../core/types';
-import { ABILITY_NEUTRAL } from '../../core/constants';
+import { useState } from 'react';
+
+import { ABILITY_NEUTRAL, ADULT_AGE } from '../../core/constants';
+import type { GameState, Ruler } from '../../core/types';
 import { FACTION_LABELS } from '../catalogue';
 import { ConsortFigure, EmperorFigure, consortOriginLabel } from './Portrait';
 
-export function RulerPanel({ state }: { state: GameState }) {
+/** 画面の収まりのための上限。ゲームルールではないのでここに置く */
+const RULER_NAME_MAX_LENGTH = 12;
+
+export function RulerPanel({
+  state,
+  onRename,
+}: {
+  state: GameState;
+  onRename: (name: string) => void;
+}) {
   const { ruler, members, crisisYearsRemaining, history } = state.dynasty;
   const heirs = members.filter((m) => state.year - m.birthYear >= ADULT_AGE);
   const spouse = ruler.spouse;
@@ -35,11 +45,10 @@ export function RulerPanel({ state }: { state: GameState }) {
         )}
 
         <div className="min-w-0 flex-1">
-          <h2 className="text-sm font-semibold text-slate-100">
-            {state.dynasty.name}朝
-          </h2>
+          <RulerName ruler={ruler} onRename={onRename} />
           <p className="text-xs text-slate-400">
-            在位 {state.year - ruler.accessionYear} 年 / {history.length + 1} 代目
+            {state.dynasty.name}朝 / 在位 {state.year - ruler.accessionYear} 年 /{' '}
+            {history.length + 1} 代目
           </p>
           {spouse && (
             <p className="text-[11px] text-amber-300 mt-1 truncate">
@@ -80,6 +89,51 @@ export function RulerPanel({ state }: { state: GameState }) {
 
       <GeneralRow state={state} />
     </div>
+  );
+}
+
+/**
+ * 皇帝の名。触ると書き換えられる。
+ * 代替わりのたびに名を付け直せるよう、開始時だけでなく在位中も開く
+ */
+function RulerName({ ruler, onRename }: { ruler: Ruler; onRename: (name: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(ruler.name);
+
+  if (!editing) {
+    return (
+      <button
+        onClick={() => {
+          setDraft(ruler.name);
+          setEditing(true);
+        }}
+        className="flex items-baseline gap-1.5 text-left"
+      >
+        <h2 className="text-sm font-semibold text-slate-100">{ruler.name}</h2>
+        <span className="text-[10px] text-slate-500">改名</span>
+      </button>
+    );
+  }
+
+  const commit = () => {
+    onRename(draft);
+    setEditing(false);
+  };
+
+  return (
+    <input
+      autoFocus
+      type="text"
+      value={draft}
+      maxLength={RULER_NAME_MAX_LENGTH}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') commit();
+        if (e.key === 'Escape') setEditing(false);
+      }}
+      className="w-full rounded border border-amber-600 bg-slate-950 px-1.5 py-0.5 text-sm font-semibold text-slate-100"
+    />
   );
 }
 

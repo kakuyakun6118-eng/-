@@ -1,3 +1,6 @@
+import { useState } from 'react';
+
+import dynastyData from '../../data/dynasty.json';
 import { ENDING_YEAR, STARTING_YEAR } from '../../core/constants';
 import { findEvent } from '../../core/events';
 import type { Difficulty, GameState, ProvinceId, ScoreResult } from '../../core/types';
@@ -7,6 +10,11 @@ import {
   GENERAL_END_LABELS,
   PROVINCE_LABELS,
 } from '../catalogue';
+
+/** 名前が空のまま始めたときに使う既定名。データ側の初期君主に合わせる */
+const DEFAULT_RULER_NAME = dynastyData.ruler.name;
+/** 画面の収まりのための上限。ゲームルールではないのでここに置く */
+const RULER_NAME_MAX_LENGTH = 12;
 
 const DIFFICULTY_DETAIL: Record<Difficulty, string> = {
   beginner: '税収に余裕があり、蛮族の圧力と傭兵の要求も緩い',
@@ -19,10 +27,12 @@ export function TitleScreen({
   onLoad,
   loadError,
 }: {
-  onStart: (difficulty: Difficulty) => void;
+  onStart: (difficulty: Difficulty, rulerName: string) => void;
   onLoad: (file: File) => void;
   loadError: string | null;
 }) {
+  // 空のまま始めても遊べるよう、データの既定名を初期値にする
+  const [rulerName, setRulerName] = useState(DEFAULT_RULER_NAME);
   return (
     <div className="min-h-dvh flex flex-col justify-center px-5 py-10 max-w-lg mx-auto">
       <h1 className="text-2xl font-bold text-slate-100">西ローマ帝国末期</h1>
@@ -34,11 +44,26 @@ export function TitleScreen({
         1年に選べる手は2つまで。何を諦めるかを選ぶことになる。
       </p>
 
-      <div className="mt-8 space-y-2">
+      <label className="mt-6 block">
+        <span className="text-xs text-slate-400">皇帝の名前</span>
+        <input
+          type="text"
+          value={rulerName}
+          maxLength={RULER_NAME_MAX_LENGTH}
+          onChange={(e) => setRulerName(e.target.value)}
+          placeholder={DEFAULT_RULER_NAME}
+          className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600"
+        />
+        <span className="mt-1 block text-[11px] text-slate-500">
+          代替わりした皇帝の名は自動で付く。在位中はいつでも改名できる
+        </span>
+      </label>
+
+      <div className="mt-6 space-y-2">
         {(['beginner', 'standard', 'veteran'] as Difficulty[]).map((difficulty) => (
           <button
             key={difficulty}
-            onClick={() => onStart(difficulty)}
+            onClick={() => onStart(difficulty, rulerName.trim() || DEFAULT_RULER_NAME)}
             className="w-full text-left rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 active:bg-slate-800 transition"
           >
             <div className="text-base font-semibold text-slate-100">
@@ -138,7 +163,7 @@ function Chronicle({ state }: { state: GameState }) {
               {reign.from}–{reign.to}
             </span>
             <span className="text-slate-200">
-              第{index + 1}代
+              {reign.name}
               <span className="text-slate-400">（{reign.note}）</span>
             </span>
           </li>
@@ -208,6 +233,7 @@ function ChronicleRow({ label, value }: { label: string; value: string }) {
 interface Reign {
   from: number;
   to: number;
+  name: string;
   note: string;
 }
 
@@ -222,6 +248,7 @@ function reignsOf(state: GameState): Reign[] {
     reigns.push({
       from,
       to: record.year,
+      name: record.name,
       note: `${record.cause === 'assassination' ? '暗殺' : '崩御'}・${
         record.outcome === 'crisis' ? '継承危機' : '嫡子が継承'
       }`,
@@ -231,6 +258,7 @@ function reignsOf(state: GameState): Reign[] {
   reigns.push({
     from,
     to: state.year,
+    name: state.dynasty.ruler.name,
     note: state.status === 'collapsed' ? '帝国の終わり' : '在位のまま',
   });
   return reigns;

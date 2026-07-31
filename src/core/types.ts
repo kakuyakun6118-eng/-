@@ -88,6 +88,8 @@ export interface Spouse {
 /** 継承候補となる王朝の一員 */
 export interface DynastyMember {
   id: string;
+  /** 表示名。プレイヤーが付け替えられる */
+  name: string;
   birthYear: number;
   abilities: RulerAbilities;
   /** 出身家系 */
@@ -114,6 +116,8 @@ export type SuccessionOutcome = 'heir' | 'crisis';
 
 export interface DeathRecord {
   rulerId: string;
+  /** 年代記に出すための名。id からは引けないので記録時に残す */
+  name: string;
   year: number;
   cause: 'natural' | 'assassination';
   outcome: SuccessionOutcome;
@@ -121,6 +125,11 @@ export interface DeathRecord {
 
 export interface Dynasty {
   name: string;
+  /**
+   * 後継者に自動で付ける名前の候補。
+   * データは JSON から読み、コードには書かない
+   */
+  namePool: string[];
   ruler: Ruler;
   /** 継承候補（君主の子や傍系） */
   members: DynastyMember[];

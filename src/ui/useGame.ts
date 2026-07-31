@@ -5,6 +5,7 @@ import generalData from '../data/general.json';
 import factionsData from '../data/factions.json';
 import provincesData from '../data/provinces.json';
 import { MAX_ACTIONS_PER_TURN } from '../core/constants';
+import { renameRuler } from '../core/dynasty';
 import { createInitialState } from '../core/economy';
 import { findEvent } from '../core/events';
 import { deserialize, serialize, suggestFileName } from '../core/save';
@@ -35,19 +36,18 @@ export function useGame() {
   /** 直前のターンに地図上で起きた進軍と戦闘。表示のためだけの派生値 */
   const [motion, setMotion] = useState<TurnMotion>(NO_MOTION);
 
-  const start = useCallback((difficulty: Difficulty) => {
+  const start = useCallback((difficulty: Difficulty, rulerName: string) => {
     // 乱数の種はここで一度だけ引く。tick() 自体は seed から決定的に動く
     setRunSeed(Math.floor(Math.random() * 1_000_000_000));
-    setState(
-      createInitialState(
-        provincesData as Province[],
-        factionsData as BarbarianFaction[],
-        // JSON をそのまま渡すと複数プレイで共有されるため複製する
-        JSON.parse(JSON.stringify(dynastyData)) as Dynasty,
-        JSON.parse(JSON.stringify(generalData)) as GeneralSeat,
-        difficulty,
-      ),
+    const fresh = createInitialState(
+      provincesData as Province[],
+      factionsData as BarbarianFaction[],
+      // JSON をそのまま渡すと複数プレイで共有されるため複製する
+      JSON.parse(JSON.stringify(dynastyData)) as Dynasty,
+      JSON.parse(JSON.stringify(generalData)) as GeneralSeat,
+      difficulty,
     );
+    setState(renameRuler(fresh, rulerName));
     setSelected([]);
     setLog([]);
     setMotion(NO_MOTION);
@@ -69,6 +69,11 @@ export function useGame() {
   }, []);
 
   const clearActions = useCallback(() => setSelected([]), []);
+
+  /** 在位中の皇帝の名を付け替える。表示だけの変更でターンは進まない */
+  const rename = useCallback((name: string) => {
+    setState((current) => (current === null ? current : renameRuler(current, name)));
+  }, []);
 
   const endTurn = useCallback(() => {
     setState((current) => {
@@ -124,6 +129,7 @@ export function useGame() {
     start,
     toggleAction,
     clearActions,
+    rename,
     endTurn,
     quit,
     save,
@@ -155,8 +161,10 @@ function describeTurn(before: GameState, after: GameState): string {
   if (after.dynasty.history.length > before.dynasty.history.length) {
     const record = after.dynasty.history[after.dynasty.history.length - 1];
     events.push(
-      record.cause === 'assassination' ? '皇帝が暗殺された' : '皇帝が崩御した',
-      record.outcome === 'crisis' ? '継承危機' : '嫡子が継承',
+      `${record.name}${record.cause === 'assassination' ? 'が暗殺された' : 'が崩御した'}`,
+      record.outcome === 'crisis'
+        ? '継承危機'
+        : `${after.dynasty.ruler.name}が継承`,
     );
   }
 
