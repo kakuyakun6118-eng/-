@@ -9,8 +9,8 @@
  * 属州行政を統べる文官の筆頭で、軍を率いるのはマギステル・ミリトゥムの
  * ほうである。役割が重ならないよう、長官は税収と元老院支持にだけ効かせる。
  *
- * 反乱は「無条件の追加リスク」にはしない。正統性が閾値を下回っている年に
- * だけ判定するので、低正統性という既存の失敗経路を濃くする形になる。
+ * 反乱は正統性に関わらず毎年判定する。順調な帝国でも属州は離れうる、
+ * という緊張を残すため。正統性の低さは確率を押し上げる要因として効く。
  * 西ローマの崩壊が中央からではなく属州の僭称帝から始まったこと
  * （ガリアのコンスタンティヌス3世、ブリタンニアの相次ぐ僭称）を、
  * 既存の legitimacy を機能させる形で表す。
@@ -23,7 +23,8 @@ import {
   BROTHER_REVOLT_ARMY_LOSS_RATE,
   BROTHER_REVOLT_BASE_PROBABILITY,
   BROTHER_REVOLT_LEGITIMACY_LOSS,
-  BROTHER_REVOLT_LEGITIMACY_THRESHOLD,
+  BROTHER_REVOLT_LEGITIMACY_PRESSURE_FROM,
+  BROTHER_REVOLT_LOW_LEGITIMACY_BONUS,
   BROTHER_REVOLT_PER_ADULT,
   BROTHER_REVOLT_PROBABILITY_CAP,
   GOVERNOR_APPOINT_COST,
@@ -36,8 +37,9 @@ import {
   GOVERNOR_REVOLT_CONTROL_LOSS,
   GOVERNOR_REVOLT_GARRISON_LOSS_RATE,
   GOVERNOR_REVOLT_LEGITIMACY_LOSS,
-  GOVERNOR_REVOLT_LEGITIMACY_THRESHOLD,
+  GOVERNOR_REVOLT_LEGITIMACY_PRESSURE_FROM,
   GOVERNOR_REVOLT_LOW_CONTROL_BONUS,
+  GOVERNOR_REVOLT_LOW_LEGITIMACY_BONUS,
   GOVERNOR_REVOLT_LOW_CONTROL_THRESHOLD,
   GOVERNOR_REVOLT_PROBABILITY_CAP,
   GOVERNOR_VACANT_DEFENSE_PENALTY,
@@ -293,9 +295,8 @@ export function updateOfficials(state: GameState, rng: () => number): GameState 
 /**
  * 属州総督の反乱と、皇帝の兄弟（傍系の一族）の挙兵。
  *
- * どちらも正統性が閾値を下回っている年にだけ判定する。
- * 帝位が揺らいでいるときにだけ人が離れる、という形にすることで、
- * 既存の legitimacy を機能させつつ、無条件の難易度税にならないようにする
+ * どちらも毎年判定する。基礎確率は低く抑えたうえで、
+ * 野心・属州の荒れ具合・正統性の低さが確率を押し上げる
  */
 export function checkRevolts(state: GameState, rng: () => number): GameState {
   let next = checkGovernorRevolt(state, rng);
@@ -303,8 +304,23 @@ export function checkRevolts(state: GameState, rng: () => number): GameState {
   return next;
 }
 
+/**
+ * 正統性の低さによる押し上げ係数。
+ * `from` を上回っていれば 0、0まで落ちれば 1 になる
+ */
+function legitimacyPressure(legitimacy: number, from: number): number {
+  return clamp((from - legitimacy) / from, 0, 1);
+}
+
 function checkGovernorRevolt(state: GameState, rng: () => number): GameState {
-  if (state.legitimacy >= GOVERNOR_REVOLT_LEGITIMACY_THRESHOLD) return state;
+  /*
+   * 正統性に関わらず毎年判定する。順調な帝国でも属州は離れうる、
+   * という緊張を残すため。正統性は確率を押し上げる要因として効く
+   */
+  const pressure = legitimacyPressure(
+    state.legitimacy,
+    GOVERNOR_REVOLT_LEGITIMACY_PRESSURE_FROM,
+  );
 
   for (const id of Object.keys(state.governors) as ProvinceId[]) {
     const governor = state.governors[id].current;
@@ -315,6 +331,7 @@ function checkGovernorRevolt(state: GameState, rng: () => number): GameState {
     const probability = Math.min(
       GOVERNOR_REVOLT_BASE_PROBABILITY +
         Math.max(0, governor.ambition - ABILITY_NEUTRAL) * GOVERNOR_REVOLT_AMBITION_PER_POINT +
+        pressure * GOVERNOR_REVOLT_LOW_LEGITIMACY_BONUS +
         (province.control < GOVERNOR_REVOLT_LOW_CONTROL_THRESHOLD
           ? GOVERNOR_REVOLT_LOW_CONTROL_BONUS
           : 0),
@@ -358,15 +375,20 @@ function checkGovernorRevolt(state: GameState, rng: () => number): GameState {
 }
 
 function checkBrotherRevolt(state: GameState, rng: () => number): GameState {
-  if (state.legitimacy >= BROTHER_REVOLT_LEGITIMACY_THRESHOLD) return state;
-
   const adults = state.dynasty.members.filter(
     (member) => state.year - member.birthYear >= ADULT_AGE,
   );
   if (adults.length === 0) return state;
 
+  // 総督と同じく毎年判定し、正統性の低さは確率を押し上げるだけにする
+  const pressure = legitimacyPressure(
+    state.legitimacy,
+    BROTHER_REVOLT_LEGITIMACY_PRESSURE_FROM,
+  );
   const probability = Math.min(
-    BROTHER_REVOLT_BASE_PROBABILITY + adults.length * BROTHER_REVOLT_PER_ADULT,
+    BROTHER_REVOLT_BASE_PROBABILITY +
+      adults.length * BROTHER_REVOLT_PER_ADULT +
+      pressure * BROTHER_REVOLT_LOW_LEGITIMACY_BONUS,
     BROTHER_REVOLT_PROBABILITY_CAP,
   );
   if (rng() >= probability) return state;

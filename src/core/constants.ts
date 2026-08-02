@@ -390,20 +390,27 @@ export const GOVERNOR_VACANT_DEFENSE_PENALTY = 0.06;
 /**
  * 属州総督の反乱。
  *
- * 簒奪(checkUsurper)とは別口で、正統性が低い年に野心の高い総督が
- * 独立を図る。この時代の西ローマはガリアやブリタンニアで実際に
- * 何度も僭称帝が立っており、崩壊は中央からではなく属州から始まった。
+ * 簒奪(checkUsurper)とは別口で、野心の高い総督が独立を図る。
+ * この時代の西ローマはガリアやブリタンニアで実際に何度も僭称帝が
+ * 立っており、崩壊は中央からではなく属州から始まった。
  *
- * 正統性が閾値を下回っている年にだけ判定する。低正統性という
- * 既存の失敗経路を濃くするもので、無条件の追加リスクにはしない
+ * **正統性に関わらず毎年判定する。** 当初は正統性が閾値を下回った年に
+ * だけ起こしていたが、それだと順調な帝国では一度も起きず、
+ * 「属州はいつ離れてもおかしくない」という緊張が出なかった。
+ * 正統性は確率を押し上げる要因として残す
  */
-export const GOVERNOR_REVOLT_LEGITIMACY_THRESHOLD = 45;
-export const GOVERNOR_REVOLT_BASE_PROBABILITY = 0.01;
+export const GOVERNOR_REVOLT_BASE_PROBABILITY = 0.0007;
 /** 野心が ABILITY_NEUTRAL を超えた1点あたりの上乗せ */
-export const GOVERNOR_REVOLT_AMBITION_PER_POINT = 0.012;
+export const GOVERNOR_REVOLT_AMBITION_PER_POINT = 0.0008;
+/**
+ * 正統性の低さが確率をどれだけ押し上げるか。
+ * この正統性を下回るほど線形に効き、0で最大になる
+ */
+export const GOVERNOR_REVOLT_LEGITIMACY_PRESSURE_FROM = 45;
+export const GOVERNOR_REVOLT_LOW_LEGITIMACY_BONUS = 0.05;
 /** 属州が荒れているほど反乱しやすい。支配度がこれを下回ると上乗せ */
 export const GOVERNOR_REVOLT_LOW_CONTROL_THRESHOLD = 50;
-export const GOVERNOR_REVOLT_LOW_CONTROL_BONUS = 0.03;
+export const GOVERNOR_REVOLT_LOW_CONTROL_BONUS = 0.008;
 /** 1属州あたりの反乱確率の上限 */
 export const GOVERNOR_REVOLT_PROBABILITY_CAP = 0.12;
 /** 反乱でその属州が失う支配度 */
@@ -419,10 +426,13 @@ export const GOVERNOR_REVOLT_LEGITIMACY_LOSS = 6;
  * 後継者がいることは継承危機を防ぐ利点だが、同時に
  * 帝位を狙う者を抱えることでもある、という取引にする
  */
-export const BROTHER_REVOLT_LEGITIMACY_THRESHOLD = 40;
-export const BROTHER_REVOLT_BASE_PROBABILITY = 0.03;
+/** 総督と同じく、正統性に関わらず毎年判定する */
+export const BROTHER_REVOLT_BASE_PROBABILITY = 0.002;
 /** 成人した一族1人あたりの上乗せ */
-export const BROTHER_REVOLT_PER_ADULT = 0.02;
+export const BROTHER_REVOLT_PER_ADULT = 0.002;
+/** 正統性の低さによる上乗せ。この値を下回るほど線形に効く */
+export const BROTHER_REVOLT_LEGITIMACY_PRESSURE_FROM = 40;
+export const BROTHER_REVOLT_LOW_LEGITIMACY_BONUS = 0.08;
 export const BROTHER_REVOLT_PROBABILITY_CAP = 0.15;
 /** 挙兵に付いていく野戦軍の割合 */
 export const BROTHER_REVOLT_ARMY_LOSS_RATE = 0.18;
