@@ -155,7 +155,7 @@ function Figure({
 }: {
   role: 'general' | 'chief' | 'eastemperor' | 'shah';
   origin: 'roman' | 'barbarian' | 'east' | 'persia' | 'hun' | 'mauri';
-  age: 'youth' | 'adult' | 'elder';
+  age: 'child' | 'youth' | 'adult' | 'elder';
   seedId: string;
   title: string;
   name: string;

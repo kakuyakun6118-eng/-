@@ -39,7 +39,11 @@ export type PortraitOrigin =
    * こちらもゲルマン諸族とは風貌が異なるため別の出自として持つ
    */
   | 'mauri';
-export type PortraitAge = 'youth' | 'adult' | 'elder';
+/**
+ * 年代。幼年（child）はこの時代の帝室に実際に多い。
+ * ホノリウスは395年に11歳、テオドシウス2世は408年に7歳で即位している
+ */
+export type PortraitAge = 'child' | 'youth' | 'adult' | 'elder';
 
 export interface PortraitEntry {
   /** basePath からの相対ファイル名 */
@@ -59,10 +63,12 @@ export interface PortraitManifest {
 const MANIFEST = manifest as PortraitManifest;
 
 /** 髭が生え、老いと見なす年齢の境目。SVG 肖像と揃えている */
+const CHILD_MAX_AGE = 13;
 const YOUTH_MAX_AGE = 19;
 const ELDER_MIN_AGE = 50;
 
 export function ageBandOf(age: number): PortraitAge {
+  if (age <= CHILD_MAX_AGE) return 'child';
   if (age <= YOUTH_MAX_AGE) return 'youth';
   if (age < ELDER_MIN_AGE) return 'adult';
   return 'elder';

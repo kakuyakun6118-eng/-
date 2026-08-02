@@ -24,7 +24,7 @@ interface Reign {
    * 在位が長く見た目が変わる者は、同じ名前のまま区間を分けてある
    * （テオドシウス2世は7歳で即位し49歳で没するので若年→壮年）
    */
-  age?: 'youth' | 'adult' | 'elder';
+  age?: 'child' | 'youth' | 'adult' | 'elder';
 }
 
 const DATA = leadersData as {
@@ -36,10 +36,11 @@ const DATA = leadersData as {
   knownGenerals: Record<string, string>;
   /**
    * 勢力ごとに固定する族長の顔。年代の帯ごとに1枚。
-   * フン族は専用の出自（origin: 'hun'）から引くのでここには入れない
+   * フン族とマウリは専用の出自（origin: 'hun' / 'mauri'）から引くのでここには入れない。
+   * 幼年（child）は持たない。族長が幼年になることは無いため
    */
   factionPortraits: Partial<
-    Record<BarbarianFactionId, Record<'youth' | 'adult' | 'elder', string>>
+    Record<BarbarianFactionId, Partial<Record<'child' | 'youth' | 'adult' | 'elder', string>>>
   >;
 };
 
@@ -55,7 +56,7 @@ function nameAt(reigns: Reign[], year: number): string {
   return reignAt(reigns, year)?.name ?? '';
 }
 
-function ageAt(reigns: Reign[], year: number): 'youth' | 'adult' | 'elder' {
+function ageAt(reigns: Reign[], year: number): 'child' | 'youth' | 'adult' | 'elder' {
   return reignAt(reigns, year)?.age ?? 'adult';
 }
 
@@ -70,11 +71,11 @@ export function persianKingName(year: number): string {
 }
 
 /** 肖像に使う年代。即位年齢と在位の長さから決めてある */
-export function eastEmperorAge(year: number): 'youth' | 'adult' | 'elder' {
+export function eastEmperorAge(year: number): 'child' | 'youth' | 'adult' | 'elder' {
   return ageAt(DATA.east, year);
 }
 
-export function persianKingAge(year: number): 'youth' | 'adult' | 'elder' {
+export function persianKingAge(year: number): 'child' | 'youth' | 'adult' | 'elder' {
   return ageAt(DATA.persia, year);
 }
 
@@ -93,7 +94,7 @@ export function factionLeaderName(id: BarbarianFactionId, year: number): string 
  */
 export function factionPortraitFile(
   id: BarbarianFactionId,
-  age: 'youth' | 'adult' | 'elder',
+  age: 'child' | 'youth' | 'adult' | 'elder',
 ): string | null {
   return DATA.factionPortraits[id]?.[age] ?? null;
 }

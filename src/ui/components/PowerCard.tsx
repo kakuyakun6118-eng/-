@@ -129,7 +129,7 @@ interface CardView {
   portrait?: {
     role: 'chief' | 'eastemperor' | 'shah';
     origin: 'barbarian' | 'hun' | 'mauri' | 'east' | 'persia';
-    age: 'youth' | 'adult' | 'elder';
+    age: 'child' | 'youth' | 'adult' | 'elder';
     seedId: string;
     file?: string | null;
   };

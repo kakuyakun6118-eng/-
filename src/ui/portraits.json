@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "basePath": "/portraits/",
   "entries": [
     {
@@ -763,6 +763,204 @@
       "role": "chief",
       "origin": "mauri",
       "age": "elder"
+    },
+    {
+      "file": "chief_barbarian_child_01.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "child"
+    },
+    {
+      "file": "chief_barbarian_youth_03.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "youth"
+    },
+    {
+      "file": "chief_barbarian_adult_07.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "adult"
+    },
+    {
+      "file": "chief_barbarian_elder_07.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "elder"
+    },
+    {
+      "file": "chief_barbarian_adult_08.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "adult"
+    },
+    {
+      "file": "chief_barbarian_elder_08.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "elder"
+    },
+    {
+      "file": "chief_barbarian_child_02.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "child"
+    },
+    {
+      "file": "chief_barbarian_youth_04.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "youth"
+    },
+    {
+      "file": "chief_barbarian_elder_09.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "elder"
+    },
+    {
+      "file": "chief_barbarian_adult_09.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "adult"
+    },
+    {
+      "file": "chief_barbarian_adult_10.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "adult"
+    },
+    {
+      "file": "chief_barbarian_elder_10.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "elder"
+    },
+    {
+      "file": "chief_barbarian_child_03.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "child"
+    },
+    {
+      "file": "chief_barbarian_youth_05.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "youth"
+    },
+    {
+      "file": "chief_barbarian_adult_11.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "adult"
+    },
+    {
+      "file": "chief_barbarian_elder_11.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "elder"
+    },
+    {
+      "file": "chief_barbarian_adult_12.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "adult"
+    },
+    {
+      "file": "chief_barbarian_elder_12.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "elder"
+    },
+    {
+      "file": "emperor_roman_child_01.webp",
+      "role": "emperor",
+      "origin": "roman",
+      "age": "child"
+    },
+    {
+      "file": "emperor_roman_child_02.webp",
+      "role": "emperor",
+      "origin": "roman",
+      "age": "child"
+    },
+    {
+      "file": "emperor_roman_child_03.webp",
+      "role": "emperor",
+      "origin": "roman",
+      "age": "child"
+    },
+    {
+      "file": "shah_persia_child_01.webp",
+      "role": "shah",
+      "origin": "persia",
+      "age": "child"
+    },
+    {
+      "file": "shah_persia_child_02.webp",
+      "role": "shah",
+      "origin": "persia",
+      "age": "child"
+    },
+    {
+      "file": "shah_persia_child_03.webp",
+      "role": "shah",
+      "origin": "persia",
+      "age": "child"
+    },
+    {
+      "file": "emperor_roman_child_04.webp",
+      "role": "emperor",
+      "origin": "roman",
+      "age": "child"
+    },
+    {
+      "file": "emperor_roman_child_05.webp",
+      "role": "emperor",
+      "origin": "roman",
+      "age": "child"
+    },
+    {
+      "file": "eastemperor_east_child_01.webp",
+      "role": "eastemperor",
+      "origin": "east",
+      "age": "child"
+    },
+    {
+      "file": "eastemperor_east_child_02.webp",
+      "role": "eastemperor",
+      "origin": "east",
+      "age": "child"
+    },
+    {
+      "file": "shah_persia_child_04.webp",
+      "role": "shah",
+      "origin": "persia",
+      "age": "child"
+    },
+    {
+      "file": "shah_persia_child_05.webp",
+      "role": "shah",
+      "origin": "persia",
+      "age": "child"
+    },
+    {
+      "file": "chief_barbarian_child_01.webp",
+      "role": "emperor",
+      "origin": "barbarian",
+      "age": "child"
+    },
+    {
+      "file": "chief_barbarian_child_02.webp",
+      "role": "emperor",
+      "origin": "barbarian",
+      "age": "child"
+    },
+    {
+      "file": "chief_barbarian_child_03.webp",
+      "role": "emperor",
+      "origin": "barbarian",
+      "age": "child"
     }
   ]
 }
