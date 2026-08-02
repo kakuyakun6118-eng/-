@@ -1,5 +1,6 @@
 import {
   CONSCRIPT_COST,
+  PERSIA_IMPROVE_COST,
   DEFEND_COST,
   FOEDERATI_HIRE_COST,
   GENERAL_APPOINT_COST,
@@ -321,24 +322,14 @@ export const generalMinded: Strategy = (state) => {
 const UNIFY_ARMY_FLOOR = 110;
 /** 本国にこれ以上の敵がいる年は遠征しない */
 const UNIFY_MAX_HOME_THREATS = 2;
+/** ペルシアへの修好をここまで重ねる */
+const UNIFY_PERSIA_RELATIONS_TARGET = 70;
 /** この正統性を下回ったら宣戦しない（同胞との戦は正統性を食う） */
 const UNIFY_MIN_LEGITIMACY = 45;
 
 export const unifier: Strategy = (state) => {
-  const actions: PlayerAction[] = [];
+  const actions: PlayerAction[] = [...administer(state)];
   const slots = () => actions.filter(consumesActionSlot).length;
-
-  // 金の要求は飲む。枠を使わずに戦線を1つ黙らせられる
-  for (const faction of Object.values(state.factions)) {
-    if (faction.stance !== 'hostile' || faction.demand === null) continue;
-    if (faction.demand.type !== 'gold' || state.treasury < faction.demand.amount) continue;
-    actions.push({ type: 'negotiate_accept_demand', factionId: faction.id });
-  }
-
-  const general = state.general.current;
-  if (general === null && state.treasury > GENERAL_APPOINT_COST * 2) {
-    actions.push({ type: 'military_appoint_general' });
-  }
 
   const homeThreats = hostileInProvinces(state).length;
   const homeQuiet = homeThreats <= UNIFY_MAX_HOME_THREATS;
@@ -372,6 +363,24 @@ export const unifier: Strategy = (state) => {
   }
   if (slots() < MAX_ACTIONS_PER_TURN && state.treasury < CONSCRIPT_COST) {
     actions.push({ type: 'domestic_raise_taxes' });
+  }
+  /*
+   * ペルシアが動き出す前に修好を重ねておく。介入そのものは止められないが、
+   * 動き出す年を遅らせられる。**軍が揃い、枠が余った年にだけ**打つ。
+   * 徴募より先に置いたときは統一率が 4% → 0% に落ちた。
+   * 2つしかない枠を毎年の使節に食われ、東の野戦軍（175）を上回る
+   * 兵力を作れなくなるため。修好が軍備と枠を争うこと自体は
+   * 設計どおりの取引で、方針AIの側で順序を決めている
+   */
+  if (
+    slots() < MAX_ACTIONS_PER_TURN &&
+    !state.persia.intervened &&
+    // 軍が揃ってから。徴募より先に使節へ枠を割くと東へ攻め込めなくなる
+    strongEnough &&
+    state.persia.relations < UNIFY_PERSIA_RELATIONS_TARGET &&
+    state.treasury > PERSIA_IMPROVE_COST * 3
+  ) {
+    actions.push({ type: 'persia_improve_relations' });
   }
 
   return pair(actions);
