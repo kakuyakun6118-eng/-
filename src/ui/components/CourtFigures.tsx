@@ -33,7 +33,7 @@ export function CourtFigures({ state }: { state: GameState }) {
           <Figure
             role="general"
             origin="roman"
-            age={termAge(state.year - general.appointedYear)}
+            age={termAge(state.year - general.appointedYear, general.military)}
             seedId={general.id}
             title="軍司令官"
             name={generalName(general.id)}
@@ -102,11 +102,16 @@ export function CourtFigures({ state }: { state: GameState }) {
 }
 
 /**
- * 在職が長い将軍ほど老いた肖像にする。将軍は年齢を持たないので在職年数で代える。
- * 任命された年から若者の顔になるのは将にそぐわないので、壮年から始める
+ * 将軍の肖像に使う年代。将軍は年齢を持たないので、在職年数と軍事能力で代える。
+ *
+ * 長く在職した将軍は老将になる。それ以外は能力で分け、
+ * 練達しているほど老いた顔にする。3つの帯すべてを使うための割り当てで、
+ * 在職年数だけで決めていたときは若年の絵が一度も出なかった
  */
-function termAge(years: number): 'youth' | 'adult' | 'elder' {
-  return years < 16 ? 'adult' : 'elder';
+function termAge(years: number, military: number): 'youth' | 'adult' | 'elder' {
+  if (years >= 16) return 'elder';
+  if (military <= 5) return 'youth';
+  return military <= 7 ? 'adult' : 'elder';
 }
 
 /**

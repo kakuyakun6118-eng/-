@@ -81,6 +81,14 @@ function hashString(value: string): number {
     hash ^= value.charCodeAt(i);
     hash = Math.imul(hash, 16777619);
   }
+  /*
+   * 撹拌して下位ビットを散らす。FNV だけだと似た文字列の hash が
+   * 近い値になり、候補数で割った余りが偏る。実際、勢力 id と族長名から
+   * 引いた8勢力の族長が5種類の絵に固まっていた
+   */
+  hash ^= hash >>> 15;
+  hash = Math.imul(hash, 2246822507);
+  hash ^= hash >>> 13;
   return hash >>> 0;
 }
 

@@ -285,21 +285,21 @@
       "age": "elder"
     },
     {
-      "file": "general_roman_youth_01.webp",
-      "role": "general",
-      "origin": "roman",
+      "file": "chief_barbarian_youth_02.webp",
+      "role": "chief",
+      "origin": "barbarian",
       "age": "youth"
     },
     {
-      "file": "general_roman_adult_01.webp",
-      "role": "general",
-      "origin": "roman",
+      "file": "chief_barbarian_adult_06.webp",
+      "role": "chief",
+      "origin": "barbarian",
       "age": "adult"
     },
     {
-      "file": "general_roman_elder_01.webp",
-      "role": "general",
-      "origin": "roman",
+      "file": "chief_barbarian_elder_06.webp",
+      "role": "chief",
+      "origin": "barbarian",
       "age": "elder"
     },
     {
@@ -565,6 +565,114 @@
       "role": "chief",
       "origin": "barbarian",
       "age": "elder"
+    },
+    {
+      "file": "general_roman_youth_01.webp",
+      "role": "general",
+      "origin": "roman",
+      "age": "youth"
+    },
+    {
+      "file": "general_roman_adult_01.webp",
+      "role": "general",
+      "origin": "roman",
+      "age": "adult"
+    },
+    {
+      "file": "general_roman_elder_01.webp",
+      "role": "general",
+      "origin": "roman",
+      "age": "elder"
+    },
+    {
+      "file": "eastemperor_east_youth_03.webp",
+      "role": "eastemperor",
+      "origin": "east",
+      "age": "youth"
+    },
+    {
+      "file": "eastemperor_east_adult_03.webp",
+      "role": "eastemperor",
+      "origin": "east",
+      "age": "adult"
+    },
+    {
+      "file": "eastemperor_east_elder_03.webp",
+      "role": "eastemperor",
+      "origin": "east",
+      "age": "elder"
+    },
+    {
+      "file": "general_roman_youth_02.webp",
+      "role": "general",
+      "origin": "roman",
+      "age": "youth"
+    },
+    {
+      "file": "general_roman_adult_02.webp",
+      "role": "general",
+      "origin": "roman",
+      "age": "adult"
+    },
+    {
+      "file": "general_roman_elder_02.webp",
+      "role": "general",
+      "origin": "roman",
+      "age": "elder"
+    },
+    {
+      "file": "eastemperor_east_adult_04.webp",
+      "role": "eastemperor",
+      "origin": "east",
+      "age": "adult"
+    },
+    {
+      "file": "eastemperor_east_adult_05.webp",
+      "role": "eastemperor",
+      "origin": "east",
+      "age": "adult"
+    },
+    {
+      "file": "eastemperor_east_elder_04.webp",
+      "role": "eastemperor",
+      "origin": "east",
+      "age": "elder"
+    },
+    {
+      "file": "consort_east_adult_17.webp",
+      "role": "consort",
+      "origin": "east",
+      "age": "adult"
+    },
+    {
+      "file": "consort_east_adult_18.webp",
+      "role": "consort",
+      "origin": "east",
+      "age": "adult"
+    },
+    {
+      "file": "consort_east_elder_03.webp",
+      "role": "consort",
+      "origin": "east",
+      "age": "elder"
+    },
+    {
+      "file": "consort_east_adult_19.webp",
+      "role": "consort",
+      "origin": "east",
+      "age": "adult"
+    },
+    {
+      "file": "consort_east_elder_04.webp",
+      "role": "consort",
+      "origin": "east",
+      "age": "elder"
+    },
+    {
+      "file": "consort_east_adult_20.webp",
+      "role": "consort",
+      "origin": "east",
+      "age": "adult"
     }
   ]
 }
