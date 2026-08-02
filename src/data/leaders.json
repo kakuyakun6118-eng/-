@@ -117,171 +117,202 @@
       {
         "from": 395,
         "to": 410,
-        "name": "アラリック1世"
+        "name": "アラリック1世",
+        "military": 9
       },
       {
         "from": 410,
         "to": 415,
-        "name": "アタウルフ"
+        "name": "アタウルフ",
+        "military": 6
       },
       {
         "from": 415,
         "to": 418,
-        "name": "ワリア"
+        "name": "ワリア",
+        "military": 6
       },
       {
         "from": 418,
         "to": 451,
-        "name": "テオドリック1世"
+        "name": "テオドリック1世",
+        "military": 7
       },
       {
         "from": 451,
         "to": 453,
-        "name": "トリスムンド"
+        "name": "トリスムンド",
+        "military": 5
       },
       {
         "from": 453,
         "to": 466,
-        "name": "テオドリック2世"
+        "name": "テオドリック2世",
+        "military": 7
       },
       {
         "from": 466,
         "to": 999,
-        "name": "エウリック"
+        "name": "エウリック",
+        "military": 8
       }
     ],
     "Vandals": [
       {
         "from": 395,
         "to": 406,
-        "name": "ゴディギセル"
+        "name": "ゴディギセル",
+        "military": 5
       },
       {
         "from": 406,
         "to": 428,
-        "name": "グンデリック"
+        "name": "グンデリック",
+        "military": 6
       },
       {
         "from": 428,
         "to": 999,
-        "name": "ガイセリック"
+        "name": "ガイセリック",
+        "military": 10
       }
     ],
     "Huns": [
       {
         "from": 395,
         "to": 412,
-        "name": "ウルディン"
+        "name": "ウルディン",
+        "military": 5
       },
       {
         "from": 412,
         "to": 434,
-        "name": "ルーア"
+        "name": "ルーア",
+        "military": 6
       },
       {
         "from": 434,
         "to": 445,
-        "name": "ブレダ"
+        "name": "ブレダ",
+        "military": 5
       },
       {
         "from": 445,
         "to": 453,
-        "name": "アッティラ"
+        "name": "アッティラ",
+        "military": 10
       },
       {
         "from": 453,
         "to": 999,
-        "name": "エラク"
+        "name": "エラク",
+        "military": 4
       }
     ],
     "Franks": [
       {
         "from": 395,
         "to": 428,
-        "name": "マルコメール"
+        "name": "マルコメール",
+        "military": 5
       },
       {
         "from": 428,
         "to": 448,
-        "name": "クロディオ"
+        "name": "クロディオ",
+        "military": 6
       },
       {
         "from": 448,
         "to": 458,
-        "name": "メロヴィク"
+        "name": "メロヴィク",
+        "military": 6
       },
       {
         "from": 458,
         "to": 999,
-        "name": "キルデリック1世"
+        "name": "キルデリック1世",
+        "military": 7
       }
     ],
     "Burgundians": [
       {
         "from": 395,
         "to": 436,
-        "name": "グンダハール"
+        "name": "グンダハール",
+        "military": 5
       },
       {
         "from": 436,
         "to": 473,
-        "name": "グンディオク"
+        "name": "グンディオク",
+        "military": 6
       },
       {
         "from": 473,
         "to": 999,
-        "name": "キルペリク2世"
+        "name": "キルペリク2世",
+        "military": 5
       }
     ],
     "Suebi": [
       {
         "from": 395,
         "to": 438,
-        "name": "ヘルメリック"
+        "name": "ヘルメリック",
+        "military": 5
       },
       {
         "from": 438,
         "to": 448,
-        "name": "レキラ"
+        "name": "レキラ",
+        "military": 6
       },
       {
         "from": 448,
         "to": 456,
-        "name": "レキアリウス"
+        "name": "レキアリウス",
+        "military": 6
       },
       {
         "from": 456,
         "to": 999,
-        "name": "レミスムンド"
+        "name": "レミスムンド",
+        "military": 5
       }
     ],
     "Alans": [
       {
         "from": 395,
         "to": 409,
-        "name": "レスペンディアル"
+        "name": "レスペンディアル",
+        "military": 6
       },
       {
         "from": 409,
         "to": 446,
-        "name": "ゴアル"
+        "name": "ゴアル",
+        "military": 5
       },
       {
         "from": 446,
         "to": 999,
-        "name": "ベオルゴル"
+        "name": "ベオルゴル",
+        "military": 5
       }
     ],
     "Saxons": [
       {
         "from": 395,
         "to": 449,
-        "name": "アエッラ"
+        "name": "アエッラ",
+        "military": 4
       },
       {
         "from": 449,
         "to": 999,
-        "name": "ヘンギスト"
+        "name": "ヘンギスト",
+        "military": 6
       }
     ]
   },
@@ -345,5 +376,70 @@
       "adult": "chief_barbarian_adult_04.webp",
       "elder": "chief_barbarian_elder_04.webp"
     }
-  }
+  },
+  "_militaryNote": "族長の軍事能力（1〜10）。史実の事績に即して付ける。ローマを陥れたアラリック、アフリカを奪い49年統治したガイセリック、カタラウヌムまで攻め上ったアッティラを10前後に、史料の乏しい者や短命だった者を4〜5に置く。戦闘解決の攻撃側戦力を補正するだけで新しい資源ではない",
+  "eastCommanders": [
+    {
+      "from": 395,
+      "to": 399,
+      "name": "ルフィヌス",
+      "military": 5
+    },
+    {
+      "from": 399,
+      "to": 408,
+      "name": "フラウィウス・ガイナス",
+      "military": 6
+    },
+    {
+      "from": 408,
+      "to": 425,
+      "name": "アンテミウス",
+      "military": 6
+    },
+    {
+      "from": 425,
+      "to": 450,
+      "name": "フラウィウス・アスパル",
+      "military": 7
+    },
+    {
+      "from": 450,
+      "to": 471,
+      "name": "アスパル",
+      "military": 7
+    },
+    {
+      "from": 471,
+      "to": 999,
+      "name": "イッルス",
+      "military": 6
+    }
+  ],
+  "persiaCommanders": [
+    {
+      "from": 395,
+      "to": 420,
+      "name": "ナルセフ",
+      "military": 6
+    },
+    {
+      "from": 420,
+      "to": 440,
+      "name": "ミフル・ナルセフ",
+      "military": 7
+    },
+    {
+      "from": 440,
+      "to": 460,
+      "name": "シャープール",
+      "military": 7
+    },
+    {
+      "from": 460,
+      "to": 999,
+      "name": "イズド・グシュナースプ",
+      "military": 8
+    }
+  ]
 }

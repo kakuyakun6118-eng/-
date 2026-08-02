@@ -119,8 +119,8 @@ function freshState(options: Options): GameState {
     options.difficulty,
     options.scenario,
     // 史実シナリオでは既定の空の東ローマのまま。属州も軍も持たせない
-    reunification ? (structuredClone(eastData) as EastEmpire) : undefined,
-    reunification ? (structuredClone(persiaData) as Persia) : undefined,
+    reunification ? (structuredClone(eastData) as unknown as EastEmpire) : undefined,
+    reunification ? (structuredClone(persiaData) as unknown as Persia) : undefined,
   );
   return options.adjust ? adjustRulerAbilities(state, options.adjust) : state;
 }

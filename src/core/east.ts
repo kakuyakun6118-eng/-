@@ -7,7 +7,9 @@
  * 史実側の調整済みバランスには一切影響させない。
  */
 
+import leadersData from '../data/leaders.json';
 import {
+  ABILITY_NEUTRAL,
   COMBAT_RANDOMNESS,
   CONTROL_RECOVERY_PER_TURN,
   DEFENSE_MULTIPLIER,
@@ -26,6 +28,7 @@ import {
   EAST_PEACE_MIN_WAR_YEARS,
   EAST_PEACE_RELATIONS,
   EAST_WAR_LEGITIMACY_DRAIN,
+  FOREIGN_COMMANDER_PER_POINT,
   MAX_CONTROL,
   MAX_EAST_RELATIONS,
   MAX_LEGITIMACY,
@@ -50,11 +53,53 @@ import {
 import { diplomacyModifier, militaryModifier } from './dynasty';
 import { generalDefenseModifier } from './general';
 import { resolveCombat } from './military';
-import type { EastProvince, EastProvinceId, GameState } from './types';
+import type { EastProvince, EastProvinceId, ForeignCommander, GameState } from './types';
 import { clamp } from './util';
 
 function randomizedPower(base: number, rng: () => number): number {
   return base * (1 + (rng() * 2 - 1) * COMBAT_RANDOMNESS);
+}
+
+/**
+ * 東ローマとペルシアの軍司令官。
+ *
+ * 西に軍司令官がいて戦闘解決に効くのに、相手側は皇帝ひとりで
+ * 戦っていた。どちらも実際に軍を率いたのは将であって帝ではないので、
+ * 西と同じ形で置く。**新しい資源ではない。** 西の将軍と同じく、
+ * 既存の戦闘解決の戦力に掛かる補正としてのみ作用させる。
+ *
+ * 名簿は実在の人物を在職年で引く。プレイヤーが任免できる相手ではないので
+ * 乱数で生まれる西の将軍とは違い、年から決まる
+ */
+interface CommanderReign {
+  from: number;
+  name: string;
+  military: number;
+}
+
+const COMMANDERS = leadersData as unknown as {
+  eastCommanders: CommanderReign[];
+  persiaCommanders: CommanderReign[];
+};
+
+function commanderAt(roster: CommanderReign[], year: number): ForeignCommander {
+  for (let i = roster.length - 1; i >= 0; i--) {
+    if (year >= roster[i].from) return { name: roster[i].name, military: roster[i].military };
+  }
+  return { name: roster[0].name, military: roster[0].military };
+}
+
+export function eastCommanderAt(year: number): ForeignCommander {
+  return commanderAt(COMMANDERS.eastCommanders, year);
+}
+
+export function persiaCommanderAt(year: number): ForeignCommander {
+  return commanderAt(COMMANDERS.persiaCommanders, year);
+}
+
+/** 司令官の力量が戦力に掛ける補正。西の generalDefenseModifier と同じ考え方 */
+export function foreignCommanderModifier(commander: ForeignCommander): number {
+  return 1 + (commander.military - ABILITY_NEUTRAL) * FOREIGN_COMMANDER_PER_POINT;
 }
 
 /** 統一シナリオかどうか。史実シナリオではこの系統を丸ごと素通りさせる */
@@ -141,7 +186,13 @@ export function invadeEastProvince(
     target.owner === 'persia'
       ? target.garrison + state.persia.strength * PERSIA_DEFENSE_SHARE
       : target.garrison + east.army * EAST_DEFENSE_ARMY_SHARE;
-  const defender = randomizedPower(defenseBase * DEFENSE_MULTIPLIER, rng);
+  // 守る側の司令官の力量。ペルシアが握る属州はその王の将が守る
+  const defenderCommander =
+    target.owner === 'persia' ? state.persia.commander : east.commander;
+  const defender = randomizedPower(
+    defenseBase * DEFENSE_MULTIPLIER * foreignCommanderModifier(defenderCommander),
+    rng,
+  );
 
   const { attackerWins, margin } = resolveCombat(attacker, defender);
   const provinces = [...east.provinces];
@@ -210,7 +261,10 @@ function eastCounterattack(state: GameState, rng: () => number): GameState {
   if (targets.length === 0) return state;
 
   const { p: target, i: index } = targets[0];
-  const attacker = randomizedPower(east.army * EAST_DEFENSE_ARMY_SHARE, rng);
+  const attacker = randomizedPower(
+    east.army * EAST_DEFENSE_ARMY_SHARE * foreignCommanderModifier(east.commander),
+    rng,
+  );
   const defender = randomizedPower(
     (target.garrison + state.fieldArmy * EAST_INVADE_ARMY_SHARE) *
       DEFENSE_MULTIPLIER *
@@ -318,14 +372,19 @@ function persianTurn(state: GameState, rng: () => number): GameState {
   if (targets.length === 0) return { ...state, persia: { ...persia, strength: grown } };
 
   const { p: target, i: index } = targets[0];
-  const attacker = randomizedPower(grown * PERSIA_ATTACK_SHARE, rng);
+  const attacker = randomizedPower(
+    grown * PERSIA_ATTACK_SHARE * foreignCommanderModifier(persia.commander),
+    rng,
+  );
   // 西が持っている属州は西の野戦軍が、東の属州は東の軍が守る
   const defenseBase =
     target.owner === 'west'
       ? target.garrison + state.fieldArmy * EAST_INVADE_ARMY_SHARE
       : target.garrison + east.army * EAST_DEFENSE_ARMY_SHARE;
   const defenderModifier =
-    target.owner === 'west' ? militaryModifier(state) * generalDefenseModifier(state) : 1;
+    target.owner === 'west'
+      ? militaryModifier(state) * generalDefenseModifier(state)
+      : foreignCommanderModifier(east.commander);
   const defender = randomizedPower(defenseBase * DEFENSE_MULTIPLIER * defenderModifier, rng);
 
   const { attackerWins, margin } = resolveCombat(attacker, defender);
@@ -379,7 +438,15 @@ function persianTurn(state: GameState, rng: () => number): GameState {
 export function updateEasternFront(state: GameState, rng: () => number): GameState {
   if (!isReunification(state)) return state;
 
-  let next = state;
+  /*
+   * 司令官の交代。名簿を年で引くだけなので `tick()` の純粋性を壊さない。
+   * 戦闘の前に済ませ、その年の戦いは新任の将が指揮する形にする
+   */
+  let next: GameState = {
+    ...state,
+    east: { ...state.east, commander: eastCommanderAt(state.year) },
+    persia: { ...state.persia, commander: persiaCommanderAt(state.year) },
+  };
 
   // 同胞と戦い続ける年は正統性が余分に減る
   if (next.east.stance === 'war') {
