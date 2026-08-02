@@ -84,10 +84,15 @@ const EAST_PROVINCE_LABEL_COUNTRY: Record<string, string> = {
 };
 
 /*
- * 蛮族の本拠地。帝国の外にある各勢力の郷里で、征服すると属州になる。
+ * 蛮族の郷里。帝国の外に定住地が特定できる勢力だけが持つ。
  *
  * 395年前後の所在を現代の国で近似している。国境線は分割できないので
- * 1勢力に1つ以上の国を割り当て、領域が重ならないようにした
+ * 1勢力に1つ以上の国を割り当て、領域が重ならないようにした。
+ *
+ * フン・アラン・西ゴート・ヴァンダル・東ゴート・ヘルールはこの時代
+ * ずっと動き続けており、定住地を持たないので面では描かない。
+ * アラマンニの地（アグリ・デクマテス）は国境線そのものと重なっていて、
+ * 国単位ではフランクのゲルマニアと分けられないため同じく面を持たない
  */
 const HOMELAND_COUNTRIES: Record<string, string[]> = {
   // 下ライン。フランク諸部族
@@ -96,31 +101,21 @@ const HOMELAND_COUNTRIES: Record<string, string[]> = {
   Saxons: ['Denmark', 'Sweden'],
   // ボヘミア。マルコマンニ・クアディなどスエビ系
   Suebi: ['Czechia'],
-  // シレジア。ヴァンダルの郷里
-  Vandals: ['Poland'],
-  // ヴィスワ川からバルト海。ブルグントの伝承上の出自
-  Burgundians: ['Lithuania', 'Latvia', 'Belarus'],
-  // ダキア。西ゴートは376年にドナウを渡るまでここにいた
-  Visigoths: ['Romania', 'Moldova'],
-  // ポントス草原。フンの本拠
-  Huns: ['Ukraine'],
-  /*
-   * カフカス。イラン系遊牧民のアラン。
-   * ロシアを充てると領域が表示範囲を大きくはみ出し、
-   * 重心もほとんど地図の外に出てしまうのでカフカス3国に絞る
-   */
-  Alans: ['Georgia', 'Armenia', 'Azerbaijan'],
+  // ヴィスワ川。ブルグントの伝承上の出自
+  Burgundians: ['Poland'],
+  // ダキア。フン崩壊後にこの地を握るゲピード
+  Gepids: ['Romania', 'Moldova'],
+  // ヒベルニア。ブリタンニアを襲うスコティ（アイルランド）
+  Scoti: ['Ireland'],
 };
 
 const HOMELAND_LABEL_COUNTRY: Record<string, string> = {
   Franks: 'Germany',
   Saxons: 'Denmark',
   Suebi: 'Czechia',
-  Vandals: 'Poland',
-  Burgundians: 'Belarus',
-  Visigoths: 'Romania',
-  Huns: 'Ukraine',
-  Alans: 'Georgia',
+  Burgundians: 'Poland',
+  Gepids: 'Romania',
+  Scoti: 'Ireland',
 };
 
 /*
