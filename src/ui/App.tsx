@@ -75,7 +75,9 @@ function DemandPanel({ state }: { state: GameState }) {
 function sameTarget(a: InspectTarget | null, b: InspectTarget): boolean {
   if (a === null) return false;
   if (a.kind !== b.kind) return false;
-  return a.kind === 'faction' && b.kind === 'faction' ? a.id === b.id : true;
+  if (a.kind === 'faction' && b.kind === 'faction') return a.id === b.id;
+  if (a.kind === 'city' && b.kind === 'city') return a.id === b.id;
+  return a.kind !== 'faction' && a.kind !== 'city';
 }
 
 export function App() {

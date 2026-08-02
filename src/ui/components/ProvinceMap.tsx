@@ -20,7 +20,6 @@ import {
   HOMELAND_LABEL_POINTS,
   HOMELAND_PATHS,
   projectLonLat,
-  PERSIA_LABEL_POINT,
   PERSIA_PATH,
   PROVINCE_PATHS,
 } from '../mapPaths';
@@ -42,6 +41,7 @@ import {
   UnitSpriteDefs,
   WarbandSprite,
 } from './UnitSprite';
+import { CITIES, CITY_LABEL_MIN_RANK, cityPoint } from '../cities';
 import {
   NO_MOTION,
   PROVINCE_POINTS,
@@ -92,7 +92,8 @@ const COLUMN_STAGGER = 0.22;
 export type InspectTarget =
   | { kind: 'faction'; id: BarbarianFactionId }
   | { kind: 'east' }
-  | { kind: 'persia' };
+  | { kind: 'persia' }
+  | { kind: 'city'; id: string };
 
 interface Props {
   state: GameState;
@@ -253,6 +254,30 @@ export function ProvinceMap({
               onClick={() => onInspect({ kind: 'faction', id: marker.id })}
             />
           ))}
+          {/*
+            都市。点そのものは小さいので当たり判定は広く取る。
+            名前を出す都市は札のぶんまで含める。札は点の下に出るので、
+            円だけにすると名前を押しても下の領域に抜けてしまう
+          */}
+          {CITIES.map((city) => {
+            const [x, y] = cityPoint(city);
+            const labelled = city.rank >= CITY_LABEL_MIN_RANK;
+            const onTap = () => onInspect({ kind: 'city', id: city.id });
+            return (
+              <g key={`hit-city-${city.id}`} className="cursor-pointer" onClick={onTap}>
+                <circle cx={x} cy={y} r={12} fill="transparent" />
+                {labelled && (
+                  <rect
+                    x={x + (city.labelDx ?? 0) - 46}
+                    y={y + (city.labelDy ?? 0) + 3}
+                    width={92}
+                    height={14}
+                    fill="transparent"
+                  />
+                )}
+              </g>
+            );
+          })}
         </g>
       )}
 
@@ -282,7 +307,7 @@ export function ProvinceMap({
           東ローマ
         </NeighbourLabel>
       )}
-      <NeighbourLabel at={PERSIA_LABEL_POINT} fill="#99f6e4" outline="#042f2e">
+      <NeighbourLabel at={PERSIA_LABEL_OVERRIDE} fill="#99f6e4" outline="#042f2e">
         ペルシア {Math.round(state.persia.strength)}
       </NeighbourLabel>
 
@@ -311,6 +336,9 @@ export function ProvinceMap({
           </g>
         );
       })}
+
+      {/* 首都と主要都市 */}
+      <CityMarks />
 
       {/* 蛮族の郷里の名。郷里の支配度と兵力、そこにいる軍勢の戦力を添える */}
       {homelandIds.map((id) => {
@@ -399,6 +427,12 @@ const EAST_LABEL_OVERRIDES: Record<string, [number, number]> = {
 };
 
 /**
+ * ペルシアの札。生成された重心（イラク）はクテシフォンの真上に来るので、
+ * イラン高原の中ほどへ寄せる
+ */
+const PERSIA_LABEL_OVERRIDE = projectLonLat(50.5, 33.6);
+
+/**
  * 郷里のラベルの逃がし先。
  * 中欧は郷里が3つ密集していて、生成された重心のままだと
  * ゲルマニア・ボイオハエムム・シレジアの札が重なって読めない
@@ -432,6 +466,55 @@ const EAST_LABEL_COLOR = {
   west: '#fde68a',
   persia: '#99f6e4',
 } as const;
+
+/**
+ * 首都と主要都市。
+ *
+ * 属州の色は「どこまでが帝国か」しか伝えず、その中のどこが要衝かは
+ * 読めなかった。持ち主で色を変えた点を置き、規模の大きい都市には
+ * 名前を添える。小さい都市は触れたときに名が出る
+ */
+const CITY_COLORS = {
+  west: { fill: '#fde68a', rim: '#78350f' },
+  east: { fill: '#ddd6fe', rim: '#2e1065' },
+  persia: { fill: '#99f6e4', rim: '#042f2e' },
+} as const;
+
+function CityMarks() {
+  return (
+    <g className="pointer-events-none select-none">
+      {CITIES.map((city) => {
+        const [x, y] = cityPoint(city);
+        const color = CITY_COLORS[city.owner];
+        const capital = city.rank >= 10;
+        return (
+          <g key={`city-${city.id}`}>
+            {/* 都は二重の輪にして、主要都市と一目で区別できるようにする */}
+            {capital && (
+              <circle cx={x} cy={y} r={5.2} fill="none" stroke={color.fill} strokeWidth={1.2} />
+            )}
+            <circle cx={x} cy={y} r={capital ? 2.8 : 2} fill={color.fill} stroke={color.rim} strokeWidth={1} />
+            {city.rank >= CITY_LABEL_MIN_RANK && (
+              <text
+                x={x + (city.labelDx ?? 0)}
+                y={y + 12 + (city.labelDy ?? 0)}
+                textAnchor="middle"
+                fill={color.fill}
+                stroke={color.rim}
+                strokeWidth={3}
+                paintOrder="stroke"
+                fontSize={11}
+                fontWeight={700}
+              >
+                {city.name}
+              </text>
+            )}
+          </g>
+        );
+      })}
+    </g>
+  );
+}
 
 /** 蛮族の駒ひとつ。円章に兵力、その下に勢力名を出す */
 function FactionMarkerToken({ marker }: { marker: FactionMarker }) {

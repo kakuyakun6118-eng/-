@@ -49,6 +49,7 @@ export const FACTION_LABELS: Record<BarbarianFactionId, string> = {
   Ostrogoths: '東ゴート',
   Heruli: 'ヘルール',
   Alemanni: 'アラマンニ',
+  Mauri: 'マウリ',
 };
 
 /** 要求の種類。何を差し出すことになるかを添える */

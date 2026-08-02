@@ -33,8 +33,8 @@ export type Point = [number, number];
 export const PROVINCE_POINTS: Record<ProvinceId, Point> = {
   ...PROVINCE_LABEL_POINTS,
   Africa: projectLonLat(8.89, 35.2),
-  Italia: projectLonLat(12.6, 42.6),
-  Illyricum: projectLonLat(20.2, 42.9),
+  Italia: projectLonLat(12.2, 41.4),
+  Illyricum: projectLonLat(20.8, 43.9),
   Noricum: projectLonLat(18.6, 47.6),
 };
 
@@ -50,20 +50,28 @@ const EXTERIOR_POINTS: Record<BarbarianFactionId, Point> = {
   Franks: projectLonLat(9.0, 51.5),
   Suebi: projectLonLat(15.4, 50.0),
   Burgundians: projectLonLat(19.6, 52.6),
-  Gepids: projectLonLat(25.0, 46.0),
+  Gepids: projectLonLat(25.0, 46.5),
   Scoti: projectLonLat(-8.0, 53.2),
   /*
    * 郷里を持たない勢力。ここが駒の立ち位置になる。
-   * 郷里の面と重ならず、駒どうしの名前もぶつからないよう、
-   * 郷里に割り当てていない土地（ウクライナ・ベラルーシ以東）へ散らす
+   * 395年前後の所在に合わせて置く。
+   *
+   * ゴート族はドナウ下流から黒海北岸に居り、東ゴート（グロイトゥンギ）は
+   * ドニエストル〜ドン川のあいだでフンに服属していた。フン本体は
+   * さらに東のポントス・カスピ海草原、アランは北カフカスにいる。
+   * 以前は東ゴートを 40.5°E に置いていたが、それはドン川より東の
+   * 内陸で、フンの本拠と重なるうえ史実の所在より東に寄りすぎていた
    */
-  Vandals: projectLonLat(25.5, 49.2),
-  Heruli: projectLonLat(26.5, 53.2),
-  Alans: projectLonLat(30.5, 51.4),
-  Huns: projectLonLat(35.0, 48.4),
-  Ostrogoths: projectLonLat(40.5, 46.6),
-  Visigoths: projectLonLat(28.6, 44.6),
+  Visigoths: projectLonLat(27.5, 45.4),
+  Vandals: projectLonLat(21.5, 48.4),
+  Heruli: projectLonLat(31.5, 47.0),
+  Ostrogoths: projectLonLat(34.5, 48.8),
+  Huns: projectLonLat(43.0, 48.2),
+  Alans: projectLonLat(44.0, 44.2),
+  // アグリ・デクマテス。ライン上流の対岸
   Alemanni: projectLonLat(8.6, 47.6),
+  // マウレタニアの内陸。アフリカ属州の南に広がる山地と砂漠
+  Mauri: projectLonLat(2.0, 27.5),
 };
 
 /** 野戦軍が出撃する拠点 */

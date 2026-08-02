@@ -1,6 +1,6 @@
 import { chiefMilitary } from '../../core/homelands';
 import { eastCommanderAt, persiaCommanderAt } from '../../core/east';
-import type { GameState } from '../../core/types';
+import type { EastProvinceId, GameState, ProvinceId } from '../../core/types';
 import {
   EAST_OWNER_LABELS,
   EAST_PROVINCE_LABELS,
@@ -16,6 +16,7 @@ import {
   persianKingAge,
   persianKingName,
 } from '../leaders';
+import { cityById, cityRankLabel } from '../cities';
 import { LeaderFigure } from './Portrait';
 import type { InspectTarget } from './ProvinceMap';
 
@@ -129,6 +130,58 @@ interface CardView {
   };
 }
 
+/**
+ * 都市。
+ *
+ * 都市そのものは状態を持たないので、その土地の今の様子を添えて出す。
+ * 西と東の都市はその属州の支配度と守備隊、ペルシアの都市は
+ * サーサーン朝の戦力を見せる。都市が新しい資源になることはない
+ */
+function describeCity(state: GameState, id: string): CardView {
+  const city = cityById(id);
+  if (city === undefined) {
+    return { title: '都市', name: '—', hostile: false, rows: [] };
+  }
+
+  const rows: [string, string][] = [
+    ['格', cityRankLabel(city.rank)],
+    ['帰属', OWNER_LABELS[city.owner]],
+  ];
+
+  if (city.owner === 'west' && city.province !== null) {
+    const province = state.provinces[city.province as ProvinceId];
+    if (province !== undefined) {
+      rows.push(['属州', PROVINCE_LABELS[city.province as ProvinceId]]);
+      rows.push(['支配', String(Math.round(province.control))]);
+      rows.push(['守備', String(Math.round(province.garrison))]);
+      rows.push(['税収基礎', String(Math.round(province.baseTax))]);
+    }
+  } else if (city.owner === 'east' && city.province !== null) {
+    const province = state.east.provinces.find((p) => p.id === city.province);
+    rows.push(['属州', EAST_PROVINCE_LABELS[city.province as EastProvinceId]]);
+    if (province !== undefined) {
+      rows.push(['持ち主', EAST_OWNER_LABELS[province.owner]]);
+      rows.push(['支配', String(Math.round(province.control))]);
+      rows.push(['守備', String(Math.round(province.garrison))]);
+    } else {
+      // 史実シナリオでは東方属州を状態として持たない
+      rows.push(['持ち主', '東ローマ']);
+    }
+  } else {
+    rows.push(['ペルシアの戦力', state.persia.intervened ? String(Math.round(state.persia.strength)) : '静観']);
+  }
+
+  return {
+    title: `${OWNER_LABELS[city.owner]}の都市`,
+    name: city.name,
+    hostile: false,
+    rows,
+    note: city.role,
+  };
+}
+
+const OWNER_LABELS = { west: '西ローマ', east: '東ローマ', persia: 'ペルシア' } as const;
+
 /** 強大な勢力ほど老練な族長に見せる。「諸国の顔ぶれ」と同じ割り当て */
 function chiefAge(strength: number): 'youth' | 'adult' | 'elder' {
   if (strength < 30) return 'youth';
@@ -136,6 +189,8 @@ function chiefAge(strength: number): 'youth' | 'adult' | 'elder' {
 }
 
 function describe(state: GameState, target: InspectTarget): CardView {
+  if (target.kind === 'city') return describeCity(state, target.id);
+
   if (target.kind === 'faction') {
     const faction = state.factions[target.id];
     const homeland = state.homelands[target.id];
