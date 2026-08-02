@@ -19,6 +19,12 @@ interface Reign {
   /** この年の**手前**まで。次代の from と重ねて書く */
   to: number;
   name: string;
+  /**
+   * その時期の見た目。実際の即位年齢と在位の長さに合わせる。
+   * 在位が長く見た目が変わる者は、同じ名前のまま区間を分けてある
+   * （テオドシウス2世は7歳で即位し49歳で没するので若年→壮年）
+   */
+  age?: 'youth' | 'adult' | 'elder';
 }
 
 const DATA = leadersData as {
@@ -30,12 +36,20 @@ const DATA = leadersData as {
   knownGenerals: Record<string, string>;
 };
 
-function nameAt(reigns: Reign[], year: number): string {
+function reignAt(reigns: Reign[], year: number): Reign | undefined {
   // 後ろから探す。区間が重なっていても最後に始まった者が現職になる
   for (let i = reigns.length - 1; i >= 0; i--) {
-    if (year >= reigns[i].from) return reigns[i].name;
+    if (year >= reigns[i].from) return reigns[i];
   }
-  return reigns[0]?.name ?? '';
+  return reigns[0];
+}
+
+function nameAt(reigns: Reign[], year: number): string {
+  return reignAt(reigns, year)?.name ?? '';
+}
+
+function ageAt(reigns: Reign[], year: number): 'youth' | 'adult' | 'elder' {
+  return reignAt(reigns, year)?.age ?? 'adult';
 }
 
 /** 東ローマ皇帝。395年アルカディウスから476年ゼノンまで */
@@ -46,6 +60,15 @@ export function eastEmperorName(year: number): string {
 /** サーサーン朝の王 */
 export function persianKingName(year: number): string {
   return nameAt(DATA.persia, year);
+}
+
+/** 肖像に使う年代。即位年齢と在位の長さから決めてある */
+export function eastEmperorAge(year: number): 'youth' | 'adult' | 'elder' {
+  return ageAt(DATA.east, year);
+}
+
+export function persianKingAge(year: number): 'youth' | 'adult' | 'elder' {
+  return ageAt(DATA.persia, year);
 }
 
 /** 蛮族の族長 */

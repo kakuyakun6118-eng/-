@@ -1,6 +1,13 @@
 import type { BarbarianFactionId, GameState } from '../../core/types';
 import { FACTION_LABELS, PROVINCE_LABELS, STANCE_LABELS } from '../catalogue';
-import { eastEmperorName, factionLeaderName, generalName, persianKingName } from '../leaders';
+import {
+  eastEmperorAge,
+  eastEmperorName,
+  factionLeaderName,
+  generalName,
+  persianKingAge,
+  persianKingName,
+} from '../leaders';
 import { LeaderFigure } from './Portrait';
 
 /**
@@ -42,7 +49,7 @@ export function CourtFigures({ state }: { state: GameState }) {
         <Figure
           role="eastemperor"
           origin="east"
-          age="adult"
+          age={eastEmperorAge(state.year)}
           seedId={`east${eastEmperorName(state.year)}`}
           title="東ローマ皇帝"
           name={eastEmperorName(state.year)}
@@ -56,7 +63,7 @@ export function CourtFigures({ state }: { state: GameState }) {
           <Figure
             role="shah"
             origin="persia"
-            age="adult"
+            age={persianKingAge(state.year)}
             seedId={`persia${persianKingName(state.year)}`}
             title="ペルシア王"
             name={persianKingName(state.year)}
@@ -110,7 +117,8 @@ function termAge(years: number): 'youth' | 'adult' | 'elder' {
  * 壮年・老年とも複数枚そろったので、戦力との対応に戻してある
  * （同じ年代の中では族長名から1枚が決まるので、顔は勢力ごとに散る）
  */
-function chiefAge(strength: number): 'adult' | 'elder' {
+function chiefAge(strength: number): 'youth' | 'adult' | 'elder' {
+  if (strength < 30) return 'youth';
   return strength >= 60 ? 'elder' : 'adult';
 }
 

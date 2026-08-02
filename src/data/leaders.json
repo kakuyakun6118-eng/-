@@ -3,70 +3,113 @@
   "east": [
     {
       "from": 395,
+      "to": 400,
+      "name": "アルカディウス",
+      "age": "youth",
+      "note": "383年に幼くして即位。395年で18歳"
+    },
+    {
+      "from": 400,
       "to": 408,
-      "name": "アルカディウス"
+      "name": "アルカディウス",
+      "age": "adult"
     },
     {
       "from": 408,
+      "to": 422,
+      "name": "テオドシウス2世",
+      "age": "youth",
+      "note": "7歳で即位"
+    },
+    {
+      "from": 422,
       "to": 450,
-      "name": "テオドシウス2世"
+      "name": "テオドシウス2世",
+      "age": "adult"
     },
     {
       "from": 450,
       "to": 457,
-      "name": "マルキアヌス"
+      "name": "マルキアヌス",
+      "age": "elder",
+      "note": "約58歳で即位"
     },
     {
       "from": 457,
       "to": 474,
-      "name": "レオ1世"
+      "name": "レオ1世",
+      "age": "elder",
+      "note": "約56歳で即位"
     },
     {
       "from": 474,
       "to": 475,
-      "name": "ゼノン"
+      "name": "ゼノン",
+      "age": "adult"
     },
     {
       "from": 475,
       "to": 476,
-      "name": "バシリスクス"
+      "name": "バシリスクス",
+      "age": "elder"
     },
     {
       "from": 476,
       "to": 999,
-      "name": "ゼノン"
+      "name": "ゼノン",
+      "age": "adult"
     }
   ],
   "persia": [
     {
       "from": 395,
       "to": 399,
-      "name": "バハラーム4世"
+      "name": "バハラーム4世",
+      "age": "adult"
     },
     {
       "from": 399,
       "to": 420,
-      "name": "ヤズデギルド1世"
+      "name": "ヤズデギルド1世",
+      "age": "adult"
     },
     {
       "from": 420,
+      "to": 428,
+      "name": "バハラーム5世",
+      "age": "youth",
+      "note": "20代で即位"
+    },
+    {
+      "from": 428,
       "to": 438,
-      "name": "バハラーム5世"
+      "name": "バハラーム5世",
+      "age": "adult"
     },
     {
       "from": 438,
       "to": 457,
-      "name": "ヤズデギルド2世"
+      "name": "ヤズデギルド2世",
+      "age": "adult"
     },
     {
       "from": 457,
       "to": 459,
-      "name": "ホルミズド3世"
+      "name": "ホルミズド3世",
+      "age": "youth",
+      "note": "若くして即位し2年で倒れる"
     },
     {
       "from": 459,
+      "to": 472,
+      "name": "ペーローズ1世",
+      "age": "adult"
+    },
+    {
+      "from": 472,
       "to": 999,
-      "name": "ペーローズ1世"
+      "name": "ペーローズ1世",
+      "age": "elder"
     }
   ],
   "factions": {
