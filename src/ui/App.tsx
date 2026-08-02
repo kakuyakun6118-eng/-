@@ -5,6 +5,7 @@ import { consumesActionSlot } from '../core/tick';
 import type { GameState, ProvinceId } from '../core/types';
 import { ActionPanel } from './components/ActionPanel';
 import { MapLegend, ProvinceMap, occupierNames } from './components/ProvinceMap';
+import { CourtPanel } from './components/CourtPanel';
 import { EastPanel } from './components/EastPanel';
 import { RulerPanel } from './components/RulerPanel';
 import { ResultScreen, TitleScreen } from './components/Screens';
@@ -132,6 +133,8 @@ export function App() {
         </section>
 
         <RulerPanel state={state} onRename={rename} />
+
+        <CourtPanel state={state} selected={selected} onToggle={toggleAction} />
 
         <EastPanel state={state} />
 

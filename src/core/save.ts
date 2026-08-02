@@ -75,6 +75,13 @@ export function deserialize(json: string): LoadResult {
   if (state.general === undefined || !Array.isArray(state.general.history)) {
     return { ok: false, error: '状態が壊れています（general）' };
   }
+  if (
+    state.prefect === undefined ||
+    !Array.isArray(state.prefect.candidates) ||
+    state.governors === undefined
+  ) {
+    return { ok: false, error: '状態が壊れています（官職）' };
+  }
   if (state.scenario === undefined) {
     return { ok: false, error: '状態に不足があります（scenario）' };
   }

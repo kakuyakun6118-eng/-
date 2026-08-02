@@ -8,8 +8,9 @@ import type { Difficulty, DifficultySettings, Scenario } from './types';
  * 3: 君主に名前（name）と後継者の名前候補（namePool）を追加
  * 4: シナリオ（scenario）と東ローマ・ペルシア（east / persia）を追加。
  *    空で補える情報ではないため旧版は読めない
+ * 5: プラエトリア長官（prefect）と属州総督（governors）を追加
  */
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 
 export const STARTING_YEAR = 395;
 export const ENDING_YEAR = 476;

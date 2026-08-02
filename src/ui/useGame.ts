@@ -92,7 +92,12 @@ export function useGame() {
    */
   const endTurn = useCallback(() => {
     if (state === null || state.status !== 'ongoing') return;
-    const applied = selected.slice(0, MAX_ACTIONS_PER_TURN);
+    /*
+     * 枠の勘定は tick() が行う。ここで一律に切ると、枠を消費しない
+     * 行動（要求への応答・官職の任命）が3つめ以降に来たときに
+     * 黙って捨てられる
+     */
+    const applied = selected;
     const next = tick(state, applied as PlayerActions, runSeed + state.turn);
     setState(next);
     setLog((entries) => [describeTurn(state, next), ...entries].slice(0, 40));
@@ -151,6 +156,8 @@ export function actionKey(action: PlayerAction): string {
   const parts: string[] = [action.type];
   if ('factionId' in action) parts.push(action.factionId);
   if ('provinceId' in action) parts.push(action.provinceId);
+  // 同じ官職の候補どうしを区別する。入れないと3人の候補が同じキーになる
+  if ('officialId' in action) parts.push(action.officialId);
   if ('target' in action) {
     parts.push(action.target.kind === 'east' ? 'east' : action.target.factionId);
   }
