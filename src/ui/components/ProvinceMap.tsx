@@ -1,6 +1,11 @@
 import type { ReactNode } from 'react';
 import { MAX_CONTROL } from '../../core/constants';
-import type { BarbarianStance, GameState, ProvinceId } from '../../core/types';
+import type {
+  BarbarianFactionId,
+  BarbarianStance,
+  GameState,
+  ProvinceId,
+} from '../../core/types';
 import {
   EAST_PROVINCE_LABELS,
   FACTION_LABELS,
@@ -9,19 +14,25 @@ import {
 } from '../catalogue';
 import {
   EAST_ROMAN_LABEL_POINT,
+  EAST_ROMAN_PATH,
   MAP_VIEWBOX,
   EAST_PROVINCE_LABEL_POINTS,
+  HOMELAND_LABEL_POINTS,
+  HOMELAND_PATHS,
   projectLonLat,
   PERSIA_LABEL_POINT,
+  PERSIA_PATH,
   PROVINCE_PATHS,
 } from '../mapPaths';
 import {
   CoastShadow,
   EastRomanTerritory,
+  HomelandTerritories,
   PersiaTerritory,
   ProvinceBorders,
   TerrainDefs,
   TerrainLayers,
+  type HomelandTone,
 } from './MapTerrain';
 import {
   BattleSprite,
@@ -73,17 +84,46 @@ const MARCH_SECONDS = 2.2;
 /** 隊列に見せるため、後続をこの秒数ずつ遅らせる */
 const COLUMN_STAGGER = 0.22;
 
+/**
+ * 地図上で触れた相手。
+ * 属州はプレイヤーの持ち物なので従来どおり onSelect、
+ * 自分のものでない勢力は「誰が率いているか」を見るための別口にする
+ */
+export type InspectTarget =
+  | { kind: 'faction'; id: BarbarianFactionId }
+  | { kind: 'east' }
+  | { kind: 'persia' };
+
 interface Props {
   state: GameState;
   selectedProvince: ProvinceId | null;
   onSelect: (id: ProvinceId) => void;
+  /** 蛮族・東ローマ・ペルシアに触れたとき。君主の顔と能力を出す */
+  onInspect?: (target: InspectTarget) => void;
   motion?: TurnMotion;
 }
 
-export function ProvinceMap({ state, selectedProvince, onSelect, motion = NO_MOTION }: Props) {
+export function ProvinceMap({
+  state,
+  selectedProvince,
+  onSelect,
+  onInspect,
+  motion = NO_MOTION,
+}: Props) {
   const ids = Object.keys(PROVINCE_PATHS) as ProvinceId[];
-  const markers = deriveFactionMarkers(state);
+  const factionIds = Object.keys(state.factions) as BarbarianFactionId[];
+  /*
+   * 駒は属州にいる勢力だけに出す。境外にいる勢力は郷里の面で描くので、
+   * 同じものを丸でも描くと二重になる
+   */
+  const markers = deriveFactionMarkers(state).filter(
+    (m) => state.factions[m.id].location !== 'exterior',
+  );
   const settled = settledProvinces(state);
+  const homelandRegions = factionIds.map((id) => ({
+    id,
+    tone: homelandTone(state, id),
+  }));
 
   return (
     <svg
@@ -153,6 +193,9 @@ export function ProvinceMap({ state, selectedProvince, onSelect, motion = NO_MOT
           />
         ))}
 
+      {/* 蛮族の郷里。境外にも面としての領域を持たせる */}
+      <HomelandTerritories regions={homelandRegions} />
+
       {/* 東ローマとペルシア。西の属州とは別の塗り分けにする */}
       <EastRomanTerritory provinces={state.east.provinces} />
       <PersiaTerritory />
@@ -160,6 +203,39 @@ export function ProvinceMap({ state, selectedProvince, onSelect, motion = NO_MOT
       {/* 海岸線の内側の影と、光彩を添えた点線の境界 */}
       <CoastShadow />
       <ProvinceBorders selected={selectedProvince} />
+
+      {/*
+        触れると君主の顔と能力が出る当たり判定。
+        塗りの層は pointerEvents を持たないので、透明な面をここに重ねる。
+        属州の当たり判定より後ろに置き、重なった場合は属州を優先させない
+      */}
+      {onInspect && (
+        <g>
+          {factionIds.map((id) =>
+            HOMELAND_PATHS[id] ? (
+              <path
+                key={`hit-${id}`}
+                d={HOMELAND_PATHS[id]}
+                fill="transparent"
+                className="cursor-pointer"
+                onClick={() => onInspect({ kind: 'faction', id })}
+              />
+            ) : null,
+          )}
+          <path
+            d={EAST_ROMAN_PATH}
+            fill="transparent"
+            className="cursor-pointer"
+            onClick={() => onInspect({ kind: 'east' })}
+          />
+          <path
+            d={PERSIA_PATH}
+            fill="transparent"
+            className="cursor-pointer"
+            onClick={() => onInspect({ kind: 'persia' })}
+          />
+        </g>
+      )}
 
       {/* 蛮族の駒。今どこに誰がいるかを常時出す */}
       {markers.map((marker) => (
@@ -217,6 +293,39 @@ export function ProvinceMap({ state, selectedProvince, onSelect, motion = NO_MOT
         );
       })}
 
+      {/* 蛮族の郷里の名。郷里の支配度と兵力、そこにいる軍勢の戦力を添える */}
+      {factionIds.map((id) => {
+        const at = HOMELAND_LABEL_OVERRIDES[id] ?? HOMELAND_LABEL_POINTS[id];
+        if (!at) return null;
+        const homeland = state.homelands[id];
+        const faction = state.factions[id];
+        const tone = homelandTone(state, id);
+        return (
+          <g key={`homeland-${id}`} className="pointer-events-none select-none">
+            <NeighbourLabel at={at} fill={HOMELAND_LABEL_COLOR[tone]} outline="#1c1917">
+              {homeland.name}
+            </NeighbourLabel>
+            <text
+              x={at[0]}
+              y={at[1] + 13}
+              textAnchor="middle"
+              fill="#e7e5e4"
+              stroke="#1c1917"
+              strokeWidth={3.5}
+              paintOrder="stroke"
+              fontSize={12}
+            >
+              {Math.round(homeland.control)}
+              <tspan fill="#fcd34d"> ⛨{Math.round(homeland.garrison)}</tspan>
+              {/* 境外にいる軍勢はこの土地に集まっているものとして出す */}
+              {faction.location === 'exterior' && (
+                <tspan fill="#fca5a5"> ⚔{Math.round(faction.strength)}</tspan>
+              )}
+            </text>
+          </g>
+        );
+      })}
+
       {/* ラベルは属州の上に重ねる */}
       {ids.map((id) => {
         const province = state.provinces[id];
@@ -268,6 +377,32 @@ export function ProvinceMap({ state, selectedProvince, onSelect, motion = NO_MOT
  */
 const EAST_LABEL_OVERRIDES: Record<string, [number, number]> = {
   Thracia: projectLonLat(27.2, 43.2),
+};
+
+/**
+ * 郷里のラベルの逃がし先。
+ * 中欧は郷里が3つ密集していて、生成された重心のままだと
+ * ゲルマニア・ボイオハエムム・シレジアの札が重なって読めない
+ */
+const HOMELAND_LABEL_OVERRIDES: Record<string, [number, number]> = {
+  Franks: projectLonLat(7.6, 51.6),
+  Suebi: projectLonLat(14.4, 50.2),
+  Vandals: projectLonLat(19.6, 52.6),
+};
+
+/**
+ * 郷里の色分け。西が取った土地は西の色、それ以外はその勢力の態度で決める。
+ * 駒と同じ意味の色を面にも使い、地図の読み方を揃える
+ */
+function homelandTone(state: GameState, id: BarbarianFactionId): HomelandTone {
+  return state.homelands[id]?.owner === 'west' ? 'west' : state.factions[id].stance;
+}
+
+const HOMELAND_LABEL_COLOR: Record<HomelandTone, string> = {
+  hostile: '#fca5a5',
+  foederati: '#fcd34d',
+  settled: '#d6c7ae',
+  west: '#bbf7d0',
 };
 
 /** 東方属州のラベルの色。持ち主で変える */
@@ -570,9 +705,12 @@ export function MapLegend() {
         帝国外
       </span>
 
-      {/* 蛮族は面ではなく駒で出るので、丸い見本にする */}
+      {/*
+        蛮族は郷里を面で持ち、属州へ攻め入った軍勢だけを駒で描く。
+        面と駒で色の意味は同じなので、色見本は一度だけ出す
+      */}
       <span className="basis-full h-0" />
-      <span className="roman-heading">蛮族</span>
+      <span className="roman-heading">蛮族（郷里＝面／軍勢＝駒）</span>
       {(Object.keys(STANCE_COLORS) as BarbarianStance[]).map((stance) => (
         <span key={stance} className="flex items-center gap-1.5">
           <span

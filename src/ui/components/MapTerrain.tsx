@@ -6,6 +6,7 @@ import {
   MINOR_RIVER_PATH,
   MOUNTAIN_PATH,
   EAST_PROVINCE_PATHS,
+  HOMELAND_PATHS,
   PERSIA_PATH,
   PLAIN_PATH,
   PLATEAU_PATH,
@@ -236,6 +237,45 @@ export function EastRomanTerritory({
     </g>
   );
 }
+
+/**
+ * 蛮族の郷里。
+ *
+ * 以前は勢力を丸い駒だけで描いていたが、それでは「境外に住む者」が
+ * どこに住んでいるのかが地図から読めず、遠征して版図に加えられることも
+ * 伝わらなかった。属州と同じく面で描き、態度で色を変える。
+ * 西が併合した郷里は属州と同じ扱いになるので、西の色で塗る
+ */
+export function HomelandTerritories({
+  regions,
+}: {
+  regions: { id: string; tone: HomelandTone }[];
+}) {
+  return (
+    <g pointerEvents="none">
+      {regions.map(({ id, tone }) => {
+        const d = HOMELAND_PATHS[id];
+        if (!d) return null;
+        const c = HOMELAND_COLORS[tone];
+        return <TintedRegion key={id} d={d} base={c.base} shade={c.shade} edge={c.edge} />;
+      })}
+    </g>
+  );
+}
+
+export type HomelandTone = 'hostile' | 'foederati' | 'settled' | 'west';
+
+/**
+ * 郷里の色。蛮族の駒と同じ意味の色を使い、
+ * 地図の中で「赤は敵、琥珀は同盟」という読み方を揃える
+ */
+const HOMELAND_COLORS: Record<HomelandTone, { base: string; shade: string; edge: string }> = {
+  hostile: { base: '#b4453c', shade: '#8c2f28', edge: '#fca5a5' },
+  foederati: { base: '#b57f2a', shade: '#8a5c12', edge: '#fcd34d' },
+  settled: { base: '#7a6350', shade: '#54402f', edge: '#c8b394' },
+  // 併合した郷里は西の属州と同じ緑にする
+  west: { base: '#3f9d55', shade: '#237a3c', edge: '#bbf7d0' },
+};
 
 /** 東方属州の持ち主ごとの色。西＝深紅寄り、東＝帝室の紫、ペルシア＝青緑 */
 const EAST_OWNER_COLORS = {

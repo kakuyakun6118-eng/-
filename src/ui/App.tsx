@@ -4,7 +4,13 @@ import { MAX_ACTIONS_PER_TURN } from '../core/constants';
 import { consumesActionSlot } from '../core/tick';
 import type { GameState, ProvinceId } from '../core/types';
 import { ActionPanel } from './components/ActionPanel';
-import { MapLegend, ProvinceMap, occupierNames } from './components/ProvinceMap';
+import {
+  MapLegend,
+  ProvinceMap,
+  occupierNames,
+  type InspectTarget,
+} from './components/ProvinceMap';
+import { PowerCard } from './components/PowerCard';
 import { CourtFigures } from './components/CourtFigures';
 import { CourtPanel } from './components/CourtPanel';
 import { EastPanel } from './components/EastPanel';
@@ -65,6 +71,13 @@ function DemandPanel({ state }: { state: GameState }) {
   );
 }
 
+/** 同じ相手をもう一度触れたら閉じる。属州の選択と同じ操作感にする */
+function sameTarget(a: InspectTarget | null, b: InspectTarget): boolean {
+  if (a === null) return false;
+  if (a.kind !== b.kind) return false;
+  return a.kind === 'faction' && b.kind === 'faction' ? a.id === b.id : true;
+}
+
 export function App() {
   const {
     state,
@@ -82,6 +95,8 @@ export function App() {
     load,
   } = useGame();
   const [focused, setFocused] = useState<ProvinceId | null>(null);
+  // 地図で触れた他国。属州の選択とは別に持つ
+  const [inspected, setInspected] = useState<InspectTarget | null>(null);
   const music = useMusic();
 
   if (state === null) {
@@ -113,9 +128,19 @@ export function App() {
             state={state}
             motion={motion}
             selectedProvince={focused}
-            onSelect={(id) => setFocused((current) => (current === id ? null : id))}
+            onSelect={(id) => {
+              setInspected(null);
+              setFocused((current) => (current === id ? null : id));
+            }}
+            onInspect={(target) => {
+              setFocused(null);
+              setInspected((current) => (sameTarget(current, target) ? null : target));
+            }}
           />
           <MapLegend />
+          {inspected && (
+            <PowerCard state={state} target={inspected} onClose={() => setInspected(null)} />
+          )}
           {focused && (
             <div className="roman-panel mt-2 rounded-sm px-3 py-2 text-xs">
               <span className="roman-heading">{PROVINCE_LABELS[focused]}</span>

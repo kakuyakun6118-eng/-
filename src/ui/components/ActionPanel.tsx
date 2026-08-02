@@ -87,9 +87,23 @@ function ActionCard({
 }) {
   const provinceIds = Object.keys(state.provinces) as ProvinceId[];
   const allFactionIds = Object.keys(state.factions) as BarbarianFactionId[];
+  /*
+   * 郷里への遠征は、まだ取っていない土地だけが相手になる。
+   * 相手の選び方が「勢力を選ぶ」点では他の交渉と同じなので、
+   * factionFilter と同じ仕組みで候補を絞る
+   */
+  const baseIds =
+    template.target === 'homeland'
+      ? allFactionIds.filter(
+          (id) =>
+            state.homelands[id]?.owner !== 'west' &&
+            // 給金を払っている相手の郷里は攻められない
+            state.factions[id].stance !== 'foederati',
+        )
+      : allFactionIds;
   const factionIds = template.factionFilter
-    ? allFactionIds.filter((id) => template.factionFilter!(state, id))
-    : allFactionIds;
+    ? baseIds.filter((id) => template.factionFilter!(state, id))
+    : baseIds;
 
   const [province, setProvince] = useState<ProvinceId>('Italia');
   const [eastProvince, setEastProvince] = useState<EastProvinceId>('Thracia');
@@ -192,6 +206,20 @@ function ActionCard({
             <option value="east">
               東ローマ帝室（関係 {MARRIAGE_EAST_REQUIREMENT} 以上・成立しにくい）
             </option>
+          </Select>
+        )}
+
+        {template.target === 'homeland' && (
+          <Select value={target ?? ''} onChange={(v) => setFaction(v as BarbarianFactionId)}>
+            {factionIds.map((id) => {
+              const homeland = state.homelands[id];
+              return (
+                <option key={id} value={id}>
+                  {homeland.name}（{FACTION_LABELS[id]}・支配 {Math.round(homeland.control)}・兵{' '}
+                  {Math.round(homeland.garrison)}）
+                </option>
+              );
+            })}
           </Select>
         )}
 

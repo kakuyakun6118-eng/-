@@ -70,6 +70,8 @@ export const TURN_EVENT_LABELS: Record<TurnEventId, string> = {
   general_retired: '軍司令官が任期を終えて職を退いた',
   prefect_retired: 'プラエトリア長官が任期を終えて職を退いた',
   governor_retired: '属州総督が任期を終えて職を退いた',
+  homeland_conquered: '蛮族の郷里を征服し、帝国の版図に加えた',
+  homeland_lost: '征服した郷里を蛮族に取り返された',
   governor_revolt: '属州総督が反旗を翻し、守備隊を連れて独立した',
   brother_revolt: '一族の者が帝位を狙って挙兵し、軍の一部が離れた',
   east_war_declared: '東ローマに宣戦した。ローマ人がローマ人と戦う',
@@ -111,7 +113,8 @@ export type TargetKind =
   | 'faction'
   | 'faction-province'
   | 'marriage'
-  | 'east-province';
+  | 'east-province'
+  | 'homeland';
 
 export interface ActionTemplate {
   id: string;
@@ -261,6 +264,23 @@ export const ACTION_TEMPLATES: ActionTemplate[] = [
     target: 'none',
     blockedReason: (state) => (state.general.current === null ? '軍司令官は空位' : null),
     build: () => ({ type: 'military_dismiss_general' }),
+  },
+  {
+    id: 'conquer_homeland',
+    category: '軍事',
+    label: '蛮族の郷里へ遠征',
+    detail:
+      '境外にあるその勢力の本拠地を攻める。取れば帝国の版図が広がるが、' +
+      '他の敵対勢力が加勢に来るので属州を守るよりはるかに重い',
+    cost: null,
+    target: 'homeland',
+    blockedReason: (state) =>
+      Object.values(state.homelands).every(
+        (h) => h.owner === 'west' || state.factions[h.factionId].stance === 'foederati',
+      )
+        ? '境外に攻める先がない'
+        : null,
+    build: ({ faction }) => (faction ? { type: 'conquer_homeland', factionId: faction } : null),
   },
   {
     id: 'domestic_raise_taxes',
