@@ -29,7 +29,7 @@ export const INITIAL_FOEDERATI_LOYALTY = 70;
  * 属州収入に対する徴税効率。
  * 元老院の非協力による減収（SENATE_INCOME_FLOOR）を織り込んだ値
  */
-export const TAX_RATE = 0.72;
+export const TAX_RATE = 0.8;
 
 /** 野戦軍1ユニットあたりの維持費（ソリドゥス/ターン） */
 export const ARMY_UPKEEP_PER_UNIT = 2;
@@ -283,8 +283,14 @@ export const DEPLOY_ARMY_DEFENSE_SHARE = 0.5;
 /** 派遣による野戦軍の損耗率 */
 export const DEPLOY_ATTRITION_RATE = 0.04;
 export const DEFEND_COST = 40;
-/** 6 では戦闘損耗ですぐ溶けて元が取れず、入れると生存率が下がっていた */
-export const DEFEND_GARRISON_GAIN = 10;
+/**
+ * 6 では戦闘損耗ですぐ溶けて元が取れず、入れると生存率が下がっていた。
+ *
+ * 勢力を14に増やしたあとは 10 でも足りない。戦線が同時に2つ3つ開くと、
+ * 1属州の守備を厚くする手は野戦軍を増やす手に完全に負ける
+ * （`defensive` が中級 0%、`passive` と区別が付かなくなっていた）
+ */
+export const DEFEND_GARRISON_GAIN = 18;
 export const CONSCRIPT_COST = 150;
 export const CONSCRIPT_ARMY_GAIN = 15;
 export const CONSCRIPT_SENATE_LOSS = 5;
