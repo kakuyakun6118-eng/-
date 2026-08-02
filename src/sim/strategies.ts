@@ -65,6 +65,14 @@ function pair(actions: PlayerAction[]): PlayerActions {
   return kept;
 }
 
+/**
+ * 枠を消費した行動の数。官職の任命は枠を消費しないので、
+ * `actions.length` で数えると残り枠を読み違える
+ */
+function slotsUsed(actions: PlayerAction[]): number {
+  return actions.filter(consumesActionSlot).length;
+}
+
 /** 何もしない。受動プレイの基準値 */
 export const passive: Strategy = () => [];
 
@@ -73,7 +81,7 @@ export const passive: Strategy = () => [];
  * 元老院の支持を保ちながら軍を維持する
  */
 export const defensive: Strategy = (state) => {
-  const actions: PlayerAction[] = [];
+  const actions: PlayerAction[] = [...administer(state)];
   const threatened = mostThreatenedProvince(state);
 
   if (threatened) {
@@ -83,13 +91,13 @@ export const defensive: Strategy = (state) => {
     }
   }
 
-  if (actions.length < MAX_ACTIONS_PER_TURN && state.treasury > CONSCRIPT_COST * 2) {
+  if (slotsUsed(actions) < MAX_ACTIONS_PER_TURN && state.treasury > CONSCRIPT_COST * 2) {
     actions.push({ type: 'military_conscript' });
   }
-  if (actions.length < MAX_ACTIONS_PER_TURN && state.senateSupport < SENATE_SUPPORT_FLOOR) {
+  if (slotsUsed(actions) < MAX_ACTIONS_PER_TURN && state.senateSupport < SENATE_SUPPORT_FLOOR) {
     actions.push({ type: 'domestic_appease_senate' });
   }
-  if (actions.length < MAX_ACTIONS_PER_TURN && state.treasury < CONSCRIPT_COST) {
+  if (slotsUsed(actions) < MAX_ACTIONS_PER_TURN && state.treasury < CONSCRIPT_COST) {
     actions.push({ type: 'domestic_raise_taxes' });
   }
 
@@ -108,7 +116,7 @@ export const foederatiHeavy: Strategy = (state) => {
   );
 
   for (const faction of hostileAtBorder) {
-    if (actions.length >= MAX_ACTIONS_PER_TURN) break;
+    if (slotsUsed(actions) >= MAX_ACTIONS_PER_TURN) break;
     if (state.treasury > FOEDERATI_HIRE_COST * 2) {
       actions.push({ type: 'hire_foederati', factionId: faction.id });
     }
@@ -116,7 +124,7 @@ export const foederatiHeavy: Strategy = (state) => {
 
   // 雇えないなら土地を与えて黙らせる
   const invader = hostileInProvinces(state)[0];
-  if (actions.length < MAX_ACTIONS_PER_TURN && invader && invader.location !== 'exterior') {
+  if (slotsUsed(actions) < MAX_ACTIONS_PER_TURN && invader && invader.location !== 'exterior') {
     actions.push({
       type: 'negotiate_settle',
       factionId: invader.id,
@@ -124,7 +132,7 @@ export const foederatiHeavy: Strategy = (state) => {
     });
   }
 
-  if (actions.length < MAX_ACTIONS_PER_TURN && state.treasury < MARRIAGE_COST) {
+  if (slotsUsed(actions) < MAX_ACTIONS_PER_TURN && state.treasury < MARRIAGE_COST) {
     actions.push({ type: 'domestic_raise_taxes' });
   }
 
@@ -136,7 +144,7 @@ export const foederatiHeavy: Strategy = (state) => {
  * 平時は自前の軍で凌ぐ。短期と長期の折衷案
  */
 export const limitedFoederati: Strategy = (state) => {
-  const actions: PlayerAction[] = [];
+  const actions: PlayerAction[] = [...administer(state)];
   const foederatiCount = Object.values(state.factions).filter(
     (faction) => faction.stance === 'foederati',
   ).length;
@@ -152,13 +160,13 @@ export const limitedFoederati: Strategy = (state) => {
   }
 
   const threatened = mostThreatenedProvince(state);
-  if (actions.length < MAX_ACTIONS_PER_TURN && threatened) {
+  if (slotsUsed(actions) < MAX_ACTIONS_PER_TURN && threatened) {
     actions.push({ type: 'military_deploy', provinceId: threatened });
   }
-  if (actions.length < MAX_ACTIONS_PER_TURN && state.treasury > CONSCRIPT_COST * 2) {
+  if (slotsUsed(actions) < MAX_ACTIONS_PER_TURN && state.treasury > CONSCRIPT_COST * 2) {
     actions.push({ type: 'military_conscript' });
   }
-  if (actions.length < MAX_ACTIONS_PER_TURN && state.treasury < CONSCRIPT_COST) {
+  if (slotsUsed(actions) < MAX_ACTIONS_PER_TURN && state.treasury < CONSCRIPT_COST) {
     actions.push({ type: 'domestic_raise_taxes' });
   }
 
@@ -170,7 +178,7 @@ export const limitedFoederati: Strategy = (state) => {
  * 「要求に答える」ことが本当に選択肢として成立しているかを測るための方針
  */
 export const appeaser: Strategy = (state) => {
-  const actions: PlayerAction[] = [];
+  const actions: PlayerAction[] = [...administer(state)];
 
   const demanding = Object.values(state.factions).filter(
     (faction) => faction.stance === 'hostile' && faction.demand !== null,
@@ -184,13 +192,13 @@ export const appeaser: Strategy = (state) => {
   }
 
   const threatened = mostThreatenedProvince(state);
-  if (actions.length < MAX_ACTIONS_PER_TURN && threatened) {
+  if (slotsUsed(actions) < MAX_ACTIONS_PER_TURN && threatened) {
     actions.push({ type: 'military_deploy', provinceId: threatened });
   }
-  if (actions.length < MAX_ACTIONS_PER_TURN && state.treasury > CONSCRIPT_COST * 2) {
+  if (slotsUsed(actions) < MAX_ACTIONS_PER_TURN && state.treasury > CONSCRIPT_COST * 2) {
     actions.push({ type: 'military_conscript' });
   }
-  if (actions.length < MAX_ACTIONS_PER_TURN && state.treasury < CONSCRIPT_COST) {
+  if (slotsUsed(actions) < MAX_ACTIONS_PER_TURN && state.treasury < CONSCRIPT_COST) {
     actions.push({ type: 'domestic_raise_taxes' });
   }
 
@@ -200,6 +208,11 @@ export const appeaser: Strategy = (state) => {
 
 /**
  * 空いた官職を埋める手を、優先度の高い順に返す。
+ *
+ * これは方針の違いではなく事務なので、`passive` 以外のすべての方針が使う。
+ * `general` だけが官職を埋めていたときは、空位の減収と守備の罰が
+ * 他の方針にだけ掛かり続け、「将軍を使うかどうか」ではなく
+ * 「官職を埋めるかどうか」を測っていた
  *
  * 長官は帝国全体の税収に効くので先に埋める。総督は担当属州にしか
  * 効かないので、収入の大きい属州から順に埋める。
@@ -225,6 +238,27 @@ function refillOffices(state: GameState): PlayerAction[] {
     actions.push({ type: 'appoint_governor', provinceId: id, officialId: best.id });
   }
 
+  return actions;
+}
+
+/**
+ * どの方針でも同じように打つ事務の手。
+ *
+ * 空いた官職を埋め、軍司令官が空位なら任命する。
+ * どちらも「方針」ではなく、まともな宮廷なら必ずやることなので、
+ * これを `general` だけがやっていたときは方針の違いではなく
+ * 「宮廷が機能しているかどうか」を測っていた。
+ * 実際、中位の3方針が 0〜5% に潰れていた原因の大半がこれで、
+ * 事務を揃えたところ `appeaser` が初級 5% → 12% に戻った。
+ *
+ * `general` 方針だけの持ち味は「いつ将軍を切るか」のほうに残す。
+ * `passive` は何もしない基準値なのでこれも使わない
+ */
+function administer(state: GameState): PlayerAction[] {
+  const actions = refillOffices(state);
+  if (state.general.current === null && state.treasury > GENERAL_APPOINT_COST * 2) {
+    actions.push({ type: 'military_appoint_general' });
+  }
   return actions;
 }
 
