@@ -45,14 +45,25 @@ export const PROVINCE_POINTS: Record<ProvinceId, Point> = {
  * ライン川の向こうに5勢力が並ぶため、緯度もずらして段違いにする
  */
 const EXTERIOR_POINTS: Record<BarbarianFactionId, Point> = {
-  Saxons: projectLonLat(8.5, 55.6),
-  Franks: projectLonLat(6.8, 52.0),
-  Suebi: projectLonLat(12.5, 54.0),
-  Vandals: projectLonLat(17.5, 52.2),
-  Burgundians: projectLonLat(12.0, 50.0),
-  Alans: projectLonLat(23.0, 50.5),
-  Huns: projectLonLat(29.5, 48.0),
-  Visigoths: projectLonLat(24.5, 45.2),
+  // 郷里を持つ勢力。境外にいる年は面で描くので、この点は進軍の起点にだけ使う
+  Saxons: projectLonLat(9.5, 56.2),
+  Franks: projectLonLat(9.0, 51.5),
+  Suebi: projectLonLat(15.4, 50.0),
+  Burgundians: projectLonLat(19.6, 52.6),
+  Gepids: projectLonLat(25.0, 46.0),
+  Scoti: projectLonLat(-8.0, 53.2),
+  /*
+   * 郷里を持たない勢力。ここが駒の立ち位置になる。
+   * 郷里の面と重ならず、駒どうしの名前もぶつからないよう、
+   * 郷里に割り当てていない土地（ウクライナ・ベラルーシ以東）へ散らす
+   */
+  Vandals: projectLonLat(25.5, 49.2),
+  Heruli: projectLonLat(26.5, 53.2),
+  Alans: projectLonLat(30.5, 51.4),
+  Huns: projectLonLat(35.0, 48.4),
+  Ostrogoths: projectLonLat(40.5, 46.6),
+  Visigoths: projectLonLat(28.6, 44.6),
+  Alemanni: projectLonLat(8.6, 47.6),
 };
 
 /** 野戦軍が出撃する拠点 */

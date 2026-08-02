@@ -44,6 +44,11 @@ export const FACTION_LABELS: Record<BarbarianFactionId, string> = {
   Suebi: 'スエビ',
   Alans: 'アラン',
   Saxons: 'サクソン',
+  Gepids: 'ゲピード',
+  Scoti: 'スコティ',
+  Ostrogoths: '東ゴート',
+  Heruli: 'ヘルール',
+  Alemanni: 'アラマンニ',
 };
 
 /** 要求の種類。何を差し出すことになるかを添える */

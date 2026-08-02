@@ -94,12 +94,13 @@ function ActionCard({
    */
   const baseIds =
     template.target === 'homeland'
-      ? allFactionIds.filter(
-          (id) =>
-            state.homelands[id]?.owner !== 'west' &&
-            // 給金を払っている相手の郷里は攻められない
-            state.factions[id].stance !== 'foederati',
-        )
+      ? allFactionIds.filter((id) => {
+          const homeland = state.homelands[id];
+          // 郷里を持たない勢力は攻め込む先が無い
+          if (homeland === undefined || homeland.owner === 'west') return false;
+          // 給金を払っている相手の郷里は攻められない
+          return state.factions[id].stance !== 'foederati';
+        })
       : allFactionIds;
   const factionIds = template.factionFilter
     ? baseIds.filter((id) => template.factionFilter!(state, id))
@@ -213,6 +214,7 @@ function ActionCard({
           <Select value={target ?? ''} onChange={(v) => setFaction(v as BarbarianFactionId)}>
             {factionIds.map((id) => {
               const homeland = state.homelands[id];
+              if (homeland === undefined) return null;
               return (
                 <option key={id} value={id}>
                   {homeland.name}（{FACTION_LABELS[id]}・支配 {Math.round(homeland.control)}・兵{' '}

@@ -113,14 +113,18 @@ export function ProvinceMap({
   const ids = Object.keys(PROVINCE_PATHS) as ProvinceId[];
   const factionIds = Object.keys(state.factions) as BarbarianFactionId[];
   /*
-   * 駒は属州にいる勢力だけに出す。境外にいる勢力は郷里の面で描くので、
-   * 同じものを丸でも描くと二重になる
+   * 駒に出すのは、属州にいる勢力と、郷里を持たない勢力。
+   *
+   * フンやアランのように移動を続けた民には帝国外の定住地が無いので、
+   * 面では描けず駒で置く。郷里を持つ勢力が境外にいる年は面のほうで
+   * 出ているので、同じものを丸でも描くと二重になる
    */
   const markers = deriveFactionMarkers(state).filter(
-    (m) => state.factions[m.id].location !== 'exterior',
+    (m) => state.factions[m.id].location !== 'exterior' || state.homelands[m.id] === undefined,
   );
   const settled = settledProvinces(state);
-  const homelandRegions = factionIds.map((id) => ({
+  const homelandIds = factionIds.filter((id) => state.homelands[id] !== undefined);
+  const homelandRegions = homelandIds.map((id) => ({
     id,
     tone: homelandTone(state, id),
   }));
@@ -211,7 +215,7 @@ export function ProvinceMap({
       */}
       {onInspect && (
         <g>
-          {factionIds.map((id) =>
+          {homelandIds.map((id) =>
             HOMELAND_PATHS[id] ? (
               <path
                 key={`hit-${id}`}
@@ -234,6 +238,21 @@ export function ProvinceMap({
             className="cursor-pointer"
             onClick={() => onInspect({ kind: 'persia' })}
           />
+          {/*
+            駒で描く勢力の当たり判定。郷里を持たない民は触れる面が無いので、
+            駒の位置に見えない円を置く。指で押せる大きさにする
+          */}
+          {markers.map((marker) => (
+            <circle
+              key={`hit-token-${marker.id}`}
+              cx={marker.at[0]}
+              cy={marker.at[1]}
+              r={18}
+              fill="transparent"
+              className="cursor-pointer"
+              onClick={() => onInspect({ kind: 'faction', id: marker.id })}
+            />
+          ))}
         </g>
       )}
 
@@ -294,10 +313,10 @@ export function ProvinceMap({
       })}
 
       {/* 蛮族の郷里の名。郷里の支配度と兵力、そこにいる軍勢の戦力を添える */}
-      {factionIds.map((id) => {
+      {homelandIds.map((id) => {
         const at = HOMELAND_LABEL_OVERRIDES[id] ?? HOMELAND_LABEL_POINTS[id];
-        if (!at) return null;
         const homeland = state.homelands[id];
+        if (!at || homeland === undefined) return null;
         const faction = state.factions[id];
         const tone = homelandTone(state, id);
         return (
@@ -385,9 +404,11 @@ const EAST_LABEL_OVERRIDES: Record<string, [number, number]> = {
  * ゲルマニア・ボイオハエムム・シレジアの札が重なって読めない
  */
 const HOMELAND_LABEL_OVERRIDES: Record<string, [number, number]> = {
+  // アイルランドの重心は左端に寄りすぎて札が画面外へはみ出す
+  Scoti: projectLonLat(-6.6, 52.2),
   Franks: projectLonLat(7.6, 51.6),
-  Suebi: projectLonLat(14.4, 50.2),
-  Vandals: projectLonLat(19.6, 52.6),
+  Suebi: projectLonLat(14.4, 50.0),
+  Burgundians: projectLonLat(19.6, 52.4),
 };
 
 /**
@@ -706,11 +727,11 @@ export function MapLegend() {
       </span>
 
       {/*
-        蛮族は郷里を面で持ち、属州へ攻め入った軍勢だけを駒で描く。
+        定住した勢力は郷里を面で、移動を続ける勢力は駒で描く。
         面と駒で色の意味は同じなので、色見本は一度だけ出す
       */}
       <span className="basis-full h-0" />
-      <span className="roman-heading">蛮族（郷里＝面／軍勢＝駒）</span>
+      <span className="roman-heading">蛮族（定住＝面／移動＝駒）</span>
       {(Object.keys(STANCE_COLORS) as BarbarianStance[]).map((stance) => (
         <span key={stance} className="flex items-center gap-1.5">
           <span

@@ -141,6 +141,22 @@ function describe(state: GameState, target: InspectTarget): CardView {
     const homeland = state.homelands[target.id];
     const age = chiefAge(faction.strength);
     const isHun = target.id === 'Huns';
+    /*
+     * 郷里を持たない勢力は「どこに住んでいるか」を出せない。
+     * 移動を続けた民であることをそのまま書く
+     */
+    const homelandRows: [string, string][] =
+      homeland === undefined
+        ? [['本拠', '無し・移動する民']]
+        : [
+            ['郷里', homeland.name],
+            [
+              '郷里の支配',
+              homeland.owner === 'west'
+                ? `自国 ${Math.round(homeland.control)}`
+                : String(Math.round(homeland.control)),
+            ],
+          ];
     return {
       title: `${FACTION_LABELS[target.id]}の族長`,
       name: factionLeaderName(target.id, state.year),
@@ -152,21 +168,17 @@ function describe(state: GameState, target: InspectTarget): CardView {
         [
           '所在',
           faction.location === 'exterior'
-            ? homeland.name
+            ? (homeland?.name ?? '境外')
             : PROVINCE_LABELS[faction.location],
         ],
-        ['郷里', homeland.name],
-        [
-          '郷里の支配',
-          homeland.owner === 'west'
-            ? `自国 ${Math.round(homeland.control)}`
-            : String(Math.round(homeland.control)),
-        ],
+        ...homelandRows,
       ],
       note:
-        homeland.owner === 'west'
-          ? '郷里を失った勢力は人が集まらず、戦力が伸びにくい'
-          : '「軍事 → 蛮族の郷里へ遠征」でこの土地を攻められる。他の敵対勢力が加勢に来る',
+        homeland === undefined
+          ? '攻め込む先を持たない。戦力そのものを戦場で叩くしかない'
+          : homeland.owner === 'west'
+            ? '郷里を失った勢力は人が集まらず、戦力が伸びにくい'
+            : '「軍事 → 蛮族の郷里へ遠征」でこの土地を攻められる。他の敵対勢力が加勢に来る',
       portrait: {
         role: 'chief',
         origin: isHun ? 'hun' : 'barbarian',
