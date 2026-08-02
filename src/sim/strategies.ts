@@ -180,14 +180,15 @@ export const limitedFoederati: Strategy = (state) => {
 export const appeaser: Strategy = (state) => {
   const actions: PlayerAction[] = [...administer(state)];
 
+  /*
+   * 金の要求は administer() が既定で飲んでいる。
+   * この方針の持ち味は、土地と称号まで飲むことのほう
+   */
   const demanding = Object.values(state.factions).filter(
-    (faction) => faction.stance === 'hostile' && faction.demand !== null,
+    (faction) =>
+      faction.stance === 'hostile' && faction.demand !== null && faction.demand.type !== 'gold',
   );
   for (const faction of demanding) {
-    const demand = faction.demand;
-    if (demand === null) continue;
-    // 金の要求は払えるときだけ飲む
-    if (demand.type === 'gold' && state.treasury < demand.amount) continue;
     actions.push({ type: 'negotiate_accept_demand', factionId: faction.id });
   }
 
@@ -259,6 +260,18 @@ function administer(state: GameState): PlayerAction[] {
   if (state.general.current === null && state.treasury > GENERAL_APPOINT_COST * 2) {
     actions.push({ type: 'military_appoint_general' });
   }
+  /*
+   * 払える金の要求は飲む。これも方針ではなく既定の手で、
+   * 計測でも「金のみ飲む」が最良（拒否と並ぶ）と出ている。
+   * `general` だけがこれをやっていたときは、他の方針が
+   * 未応答の要求による攻撃補正（DEMAND_REFUSAL_POWER_BONUS）と
+   * 定住されやすさを一方的に背負っていた
+   */
+  for (const faction of Object.values(state.factions)) {
+    if (faction.stance !== 'hostile' || faction.demand === null) continue;
+    if (faction.demand.type !== 'gold' || state.treasury < faction.demand.amount) continue;
+    actions.push({ type: 'negotiate_accept_demand', factionId: faction.id });
+  }
   return actions;
 }
 
@@ -271,24 +284,11 @@ const GENERAL_PURGE_LEGITIMACY = 35;
 const GENERAL_PURGE_MIN_MILITARY = 7;
 
 export const generalMinded: Strategy = (state) => {
-  const actions: PlayerAction[] = [];
-
-  for (const faction of Object.values(state.factions)) {
-    if (faction.stance !== 'hostile' || faction.demand === null) continue;
-    if (faction.demand.type !== 'gold' || state.treasury < faction.demand.amount) continue;
-    actions.push({ type: 'negotiate_accept_demand', factionId: faction.id });
-  }
+  const actions: PlayerAction[] = [...administer(state)];
 
   const slots = () => actions.filter(consumesActionSlot).length;
-  // 空いた官職は埋める。空位のままだと減収と守備の罰が続く
-  for (const action of refillOffices(state)) {
-    if (slots() >= MAX_ACTIONS_PER_TURN) break;
-    actions.push(action);
-  }
   const general = state.general.current;
-  if (general === null && state.treasury > GENERAL_APPOINT_COST * 2) {
-    actions.push({ type: 'military_appoint_general' });
-  } else if (
+  if (
     general !== null &&
     general.military >= GENERAL_PURGE_MIN_MILITARY &&
     state.legitimacy < GENERAL_PURGE_LEGITIMACY
