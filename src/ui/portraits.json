@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "basePath": "/portraits/",
   "entries": [
     {
@@ -726,6 +726,42 @@
       "file": "emperor_barbarian_elder_02.webp",
       "role": "emperor",
       "origin": "barbarian",
+      "age": "elder"
+    },
+    {
+      "file": "chief_mauri_youth_01.webp",
+      "role": "chief",
+      "origin": "mauri",
+      "age": "youth"
+    },
+    {
+      "file": "chief_mauri_youth_02.webp",
+      "role": "chief",
+      "origin": "mauri",
+      "age": "youth"
+    },
+    {
+      "file": "chief_mauri_adult_01.webp",
+      "role": "chief",
+      "origin": "mauri",
+      "age": "adult"
+    },
+    {
+      "file": "chief_mauri_adult_02.webp",
+      "role": "chief",
+      "origin": "mauri",
+      "age": "adult"
+    },
+    {
+      "file": "chief_mauri_elder_01.webp",
+      "role": "chief",
+      "origin": "mauri",
+      "age": "elder"
+    },
+    {
+      "file": "chief_mauri_elder_02.webp",
+      "role": "chief",
+      "origin": "mauri",
       "age": "elder"
     }
   ]

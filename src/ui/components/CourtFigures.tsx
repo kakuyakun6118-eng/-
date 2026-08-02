@@ -81,16 +81,16 @@ export function CourtFigures({ state }: { state: GameState }) {
            */
           const seedId = `${index}:${id}:${factionLeaderName(id, state.year)}`;
           const age = chiefAge(faction.strength);
-          const isHun = id === 'Huns';
+          const distinct = DISTINCT_ORIGINS[id];
           return (
             <Figure
               key={id}
               role="chief"
-              origin={isHun ? 'hun' : 'barbarian'}
+              origin={distinct ?? 'barbarian'}
               age={age}
               seedId={seedId}
-              // フンは専用画像を hash で引く。他は勢力ごとに顔を固定する
-              file={isHun ? null : factionPortraitFile(id, age)}
+              // フンとマウリは専用画像を hash で引く。他は勢力ごとに顔を固定する
+              file={distinct ? null : factionPortraitFile(id, age)}
               title={FACTION_LABELS[id]}
               name={factionLeaderName(id, state.year)}
               note={`${STANCE_LABELS[faction.stance]}・${Math.round(faction.strength)}${
@@ -105,6 +105,16 @@ export function CourtFigures({ state }: { state: GameState }) {
     </section>
   );
 }
+
+
+/**
+ * ゲルマン諸族とは風貌が異なる勢力の出自。
+ * これらは勢力ごとに顔を固定せず、専用の絵柄から族長名の hash で引く
+ */
+const DISTINCT_ORIGINS: Partial<Record<BarbarianFactionId, 'hun' | 'mauri'>> = {
+  Huns: 'hun',
+  Mauri: 'mauri',
+};
 
 /**
  * 将軍の肖像に使う年代。将軍は年齢を持たないので、在職年数と軍事能力で代える。
@@ -122,14 +132,13 @@ function termAge(years: number, military: number): 'youth' | 'adult' | 'elder' {
 /**
  * 強大な勢力ほど老練な族長に見せる。族長は年齢を持たないので戦力で代える。
  *
- * 一度は id の hash で散らしていた。族長の絵が年代ごとに1枚しかなく、
- * 戦力で割り当てると弱小勢力5つが揃って同じ顔になったため。
- * 壮年・老年とも複数枚そろったので、戦力との対応に戻してある
- * （同じ年代の中では族長名から1枚が決まるので、顔は勢力ごとに散る）
+ * 帯の境目は勢力の戦力の分布に合わせる。14勢力に割り直したとき
+ * 30/60 のままでは9勢力が若年の帯に落ち、若年の絵が2枚しかないため
+ * 「諸国の顔ぶれ」に同じ顔が9つ並んだ
  */
 function chiefAge(strength: number): 'youth' | 'adult' | 'elder' {
-  if (strength < 30) return 'youth';
-  return strength >= 60 ? 'elder' : 'adult';
+  if (strength < 14) return 'youth';
+  return strength >= 45 ? 'elder' : 'adult';
 }
 
 function Figure({
@@ -145,7 +154,7 @@ function Figure({
   file,
 }: {
   role: 'general' | 'chief' | 'eastemperor' | 'shah';
-  origin: 'roman' | 'barbarian' | 'east' | 'persia' | 'hun';
+  origin: 'roman' | 'barbarian' | 'east' | 'persia' | 'hun' | 'mauri';
   age: 'youth' | 'adult' | 'elder';
   seedId: string;
   title: string;

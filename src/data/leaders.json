@@ -472,20 +472,15 @@
       "adult": "chief_barbarian_adult_06.webp",
       "elder": "chief_barbarian_elder_01.webp"
     },
-    "Franks": {
-      "youth": "chief_barbarian_youth_01.webp",
-      "adult": "chief_barbarian_adult_02.webp",
-      "elder": "chief_barbarian_elder_02.webp"
-    },
-    "Saxons": {
-      "youth": "chief_barbarian_youth_01.webp",
-      "adult": "chief_barbarian_adult_01.webp",
-      "elder": "chief_barbarian_elder_05.webp"
-    },
     "Vandals": {
       "youth": "chief_barbarian_youth_02.webp",
       "adult": "chief_barbarian_adult_03.webp",
       "elder": "chief_barbarian_elder_06.webp"
+    },
+    "Franks": {
+      "youth": "chief_barbarian_youth_01.webp",
+      "adult": "chief_barbarian_adult_02.webp",
+      "elder": "chief_barbarian_elder_02.webp"
     },
     "Burgundians": {
       "youth": "chief_barbarian_youth_02.webp",
@@ -493,8 +488,8 @@
       "elder": "chief_barbarian_elder_05.webp"
     },
     "Suebi": {
-      "youth": "chief_barbarian_youth_02.webp",
-      "adult": "chief_barbarian_adult_05.webp",
+      "youth": "chief_barbarian_youth_01.webp",
+      "adult": "chief_barbarian_adult_01.webp",
       "elder": "chief_barbarian_elder_03.webp"
     },
     "Alans": {
@@ -502,35 +497,35 @@
       "adult": "chief_barbarian_adult_04.webp",
       "elder": "chief_barbarian_elder_04.webp"
     },
-    "Alemanni": {
-      "youth": "chief_barbarian_youth_01.webp",
-      "adult": "chief_barbarian_adult_04.webp",
-      "elder": "chief_barbarian_elder_06.webp"
-    },
-    "Ostrogoths": {
-      "youth": "chief_barbarian_youth_01.webp",
-      "adult": "chief_barbarian_adult_02.webp",
-      "elder": "chief_barbarian_elder_04.webp"
-    },
-    "Gepids": {
-      "youth": "chief_barbarian_youth_02.webp",
-      "adult": "chief_barbarian_adult_06.webp",
-      "elder": "chief_barbarian_elder_02.webp"
-    },
-    "Heruli": {
+    "Saxons": {
       "youth": "chief_barbarian_youth_02.webp",
       "adult": "chief_barbarian_adult_01.webp",
-      "elder": "chief_barbarian_elder_03.webp"
+      "elder": "chief_barbarian_elder_05.webp"
+    },
+    "Gepids": {
+      "youth": "chief_barbarian_youth_01.webp",
+      "adult": "chief_barbarian_adult_06.webp",
+      "elder": "chief_barbarian_elder_02.webp"
     },
     "Scoti": {
       "youth": "chief_barbarian_youth_01.webp",
       "adult": "chief_barbarian_adult_03.webp",
       "elder": "chief_barbarian_elder_01.webp"
     },
-    "Mauri": {
+    "Ostrogoths": {
       "youth": "chief_barbarian_youth_02.webp",
+      "adult": "chief_barbarian_adult_02.webp",
+      "elder": "chief_barbarian_elder_04.webp"
+    },
+    "Heruli": {
+      "youth": "chief_barbarian_youth_02.webp",
+      "adult": "chief_barbarian_adult_05.webp",
+      "elder": "chief_barbarian_elder_03.webp"
+    },
+    "Alemanni": {
+      "youth": "chief_barbarian_youth_01.webp",
       "adult": "chief_barbarian_adult_04.webp",
-      "elder": "chief_barbarian_elder_01.webp"
+      "elder": "chief_barbarian_elder_06.webp"
     }
   },
   "_militaryNote": "族長の軍事能力（1〜10）。史実の事績に即して付ける。ローマを陥れたアラリック、アフリカを奪い49年統治したガイセリック、カタラウヌムまで攻め上ったアッティラを10前後に、史料の乏しい者や短命だった者を4〜5に置く。戦闘解決の攻撃側戦力を補正するだけで新しい資源ではない",

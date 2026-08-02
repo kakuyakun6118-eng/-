@@ -33,7 +33,12 @@ export type PortraitOrigin =
    * フン族。中央アジアの遊牧民で、ゲルマン諸族とは風貌が異なるため
    * 蛮族一般とは別の出自として持つ
    */
-  | 'hun';
+  | 'hun'
+  /**
+   * マウリ（ムーア人）。北アフリカのベルベル系で、
+   * こちらもゲルマン諸族とは風貌が異なるため別の出自として持つ
+   */
+  | 'mauri';
 export type PortraitAge = 'youth' | 'adult' | 'elder';
 
 export interface PortraitEntry {
