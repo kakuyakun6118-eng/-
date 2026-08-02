@@ -104,8 +104,12 @@ const HOMELAND_COUNTRIES: Record<string, string[]> = {
   Visigoths: ['Romania', 'Moldova'],
   // ポントス草原。フンの本拠
   Huns: ['Ukraine'],
-  // 北カフカスからドン川。イラン系遊牧民のアラン
-  Alans: ['Russia', 'Georgia'],
+  /*
+   * カフカス。イラン系遊牧民のアラン。
+   * ロシアを充てると領域が表示範囲を大きくはみ出し、
+   * 重心もほとんど地図の外に出てしまうのでカフカス3国に絞る
+   */
+  Alans: ['Georgia', 'Armenia', 'Azerbaijan'],
 };
 
 const HOMELAND_LABEL_COUNTRY: Record<string, string> = {
@@ -116,7 +120,7 @@ const HOMELAND_LABEL_COUNTRY: Record<string, string> = {
   Burgundians: 'Belarus',
   Visigoths: 'Romania',
   Huns: 'Ukraine',
-  Alans: 'Russia',
+  Alans: 'Georgia',
 };
 
 /*
