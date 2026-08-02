@@ -216,11 +216,11 @@ export const MARRIAGE_LEGITIMACY_LOSS = 3;
  * 0.3 では要求が絶え間なく、無視する遊び方の生存率が
  * 49% → 30% まで落ちて単なる難易度上げになっていた
  */
-export const DEMAND_PROBABILITY = 0.15;
+export const DEMAND_PROBABILITY = 0.09;
 /** 金の要求額は戦力に比例する。強大な勢力ほど高く付く */
 export const DEMAND_GOLD_PER_STRENGTH = 0.8;
 /** 支配度がこれを下回った属州は、その土地そのものを要求される */
-export const DEMAND_LAND_CONTROL_THRESHOLD = 45;
+export const DEMAND_LAND_CONTROL_THRESHOLD = 32;
 /** 土地を要求できない場合に、金ではなく称号を求める確率 */
 export const DEMAND_TITLE_SHARE = 0.35;
 /** 称号を認めた際の元老院支持の低下。蛮族に官位を与えたことへの反発 */
@@ -290,7 +290,7 @@ export const DEFEND_COST = 40;
  * 1属州の守備を厚くする手は野戦軍を増やす手に完全に負ける
  * （`defensive` が中級 0%、`passive` と区別が付かなくなっていた）
  */
-export const DEFEND_GARRISON_GAIN = 18;
+export const DEFEND_GARRISON_GAIN = 14;
 export const CONSCRIPT_COST = 150;
 export const CONSCRIPT_ARMY_GAIN = 15;
 export const CONSCRIPT_SENATE_LOSS = 5;
