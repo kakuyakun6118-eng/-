@@ -24,7 +24,16 @@ export type PortraitRole =
   | 'eastemperor'
   /** サーサーン朝の王 */
   | 'shah';
-export type PortraitOrigin = 'roman' | 'east' | 'barbarian' | 'persia';
+export type PortraitOrigin =
+  | 'roman'
+  | 'east'
+  | 'barbarian'
+  | 'persia'
+  /**
+   * フン族。中央アジアの遊牧民で、ゲルマン諸族とは風貌が異なるため
+   * 蛮族一般とは別の出自として持つ
+   */
+  | 'hun';
 export type PortraitAge = 'youth' | 'adult' | 'elder';
 
 export interface PortraitEntry {

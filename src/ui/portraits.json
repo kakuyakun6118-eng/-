@@ -673,6 +673,42 @@
       "role": "consort",
       "origin": "east",
       "age": "adult"
+    },
+    {
+      "file": "chief_hun_youth_01.webp",
+      "role": "chief",
+      "origin": "hun",
+      "age": "youth"
+    },
+    {
+      "file": "chief_hun_adult_01.webp",
+      "role": "chief",
+      "origin": "hun",
+      "age": "adult"
+    },
+    {
+      "file": "chief_hun_elder_01.webp",
+      "role": "chief",
+      "origin": "hun",
+      "age": "elder"
+    },
+    {
+      "file": "chief_hun_youth_02.webp",
+      "role": "chief",
+      "origin": "hun",
+      "age": "youth"
+    },
+    {
+      "file": "chief_hun_adult_02.webp",
+      "role": "chief",
+      "origin": "hun",
+      "age": "adult"
+    },
+    {
+      "file": "chief_hun_elder_02.webp",
+      "role": "chief",
+      "origin": "hun",
+      "age": "elder"
     }
   ]
 }

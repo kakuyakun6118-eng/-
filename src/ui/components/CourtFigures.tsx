@@ -83,7 +83,7 @@ export function CourtFigures({ state }: { state: GameState }) {
             <Figure
               key={id}
               role="chief"
-              origin="barbarian"
+              origin={id === 'Huns' ? 'hun' : 'barbarian'}
               age={chiefAge(faction.strength)}
               seedId={seedId}
               title={FACTION_LABELS[id]}
@@ -139,7 +139,7 @@ function Figure({
   faded,
 }: {
   role: 'general' | 'chief' | 'eastemperor' | 'shah';
-  origin: 'roman' | 'barbarian' | 'east' | 'persia';
+  origin: 'roman' | 'barbarian' | 'east' | 'persia' | 'hun';
   age: 'youth' | 'adult' | 'elder';
   seedId: string;
   title: string;
