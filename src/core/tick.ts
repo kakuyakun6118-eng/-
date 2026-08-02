@@ -30,6 +30,14 @@ import {
 } from './east';
 import { applyHistoricalEvents } from './events';
 import {
+  appointGovernor,
+  appointPrefect,
+  checkRevolts,
+  dismissGovernor,
+  dismissPrefect,
+  updateOfficials,
+} from './officials';
+import {
   appeaseSenate,
   applyLegitimacyDecay,
   applySenateDecay,
@@ -71,8 +79,27 @@ import type {
  * この判断はヘッドレス計測では裏を取れない。方針AIは枠を平均1.5/2
  * しか使っておらず、枠の逼迫そのものを再現できていないため
  */
+/**
+ * 官職の任命も枠を消費しない。
+ *
+ * 長官1人と総督7人は任期がばらばらに切れるので、枠を食わせると
+ * ほぼ毎年どちらかの任命に追われ、派遣も徴募もできなくなる。
+ * 実測では枠を消費させた場合に生存率が中級37%→24%まで落ちた。
+ * 任命は勅令一本の話であって、1年を費やす行動ではない。
+ *
+ * 無償ではない。任命には金がかかり、有能でも野心の高い人物を
+ * 選べば反乱の確率が上がる。「誰を選ぶか」に判断を寄せる。
+ * 解任のほうは枠を消費させる（正統性が戻る政治的な行為なので、
+ * 無料の上振れにしない）
+ */
+const SLOT_FREE_ACTIONS: ReadonlySet<PlayerAction['type']> = new Set([
+  'negotiate_accept_demand',
+  'appoint_prefect',
+  'appoint_governor',
+]);
+
 export function consumesActionSlot(action: PlayerAction): boolean {
-  return action.type !== 'negotiate_accept_demand';
+  return !SLOT_FREE_ACTIONS.has(action.type);
 }
 
 /**
@@ -130,11 +157,19 @@ export function tick(state: GameState, actions: PlayerActions, seed: Seed): Game
   next = applyLegitimacyDecay(next);
   next = applySenateDecay(next);
   next = checkUsurper(next, rng);
+  /*
+   * 属州総督と皇帝の兄弟の反乱。簒奪判定の直後に置く。
+   * どちらも正統性が低い年にだけ起きるので、判定の順序を
+   * 正統性が確定したあとに揃える
+   */
+  next = checkRevolts(next, rng);
 
   // 8. 王朝の更新（加齢・出生・寿命と暗殺の判定・継承）
   next = updateDynasty(next, rng);
   // 軍司令官の任期。退任しても後任は自動では決まらない
   next = updateGeneral(next);
+  // 長官と総督の任期。退任しても後任は自動では決まらない
+  next = updateOfficials(next, rng);
   // 婚姻のうち、子が生まれて初めて発生する効果を清算する
   next = settlePendingMarriages(next);
 
@@ -175,6 +210,14 @@ function applyAction(
       return reinforceGarrison(state, action.provinceId);
     case 'military_conscript':
       return conscript(state);
+    case 'appoint_prefect':
+      return appointPrefect(state, action.officialId);
+    case 'dismiss_prefect':
+      return dismissPrefect(state);
+    case 'appoint_governor':
+      return appointGovernor(state, action.provinceId, action.officialId);
+    case 'dismiss_governor':
+      return dismissGovernor(state, action.provinceId);
     case 'military_appoint_general':
       return appointGeneral(state, rng);
     case 'military_dismiss_general':

@@ -228,6 +228,14 @@ export type TurnEventId =
   | 'general_usurped'
   /** 軍司令官が任期を終えて職を退いた年 */
   | 'general_retired'
+  /** プラエトリア長官が任期を終えて職を退いた年 */
+  | 'prefect_retired'
+  /** 属州総督が任期を終えて職を退いた年 */
+  | 'governor_retired'
+  /** 属州総督が反乱を起こした年 */
+  | 'governor_revolt'
+  /** 皇帝の兄弟（傍系の一族）が帝位を狙って挙兵した年 */
+  | 'brother_revolt'
   /** 東ローマとの戦端が開かれた年 */
   | 'east_war_declared'
   /** 東方の属州を1つ征服した年 */
@@ -240,6 +248,73 @@ export type TurnEventId =
   | 'persia_intervened'
   /** ペルシアが属州を奪った年 */
   | 'persia_offensive';
+
+// ── 官職（プラエトリア長官・属州総督） ────────────────
+
+/**
+ * 官職に就く人物。
+ *
+ * 君主能力や軍司令官と同じく**新しい資源ではない**。
+ * 既存の計算式に対する補正としてのみ作用する。
+ *
+ * `ambition`（野心）は反乱の確率にだけ効く。有能な人物ほど
+ * 帝国の役に立つが、同時に帝位に手が届いてしまうという
+ * この時代の構図を、能力とは別の軸で持たせる
+ */
+export interface Official {
+  id: string;
+  name: string;
+  /** 職務能力。1〜10。ABILITY_NEUTRAL を基準に補正が上下する */
+  ability: number;
+  /** 野心。1〜10。反乱の確率にのみ効く */
+  ambition: number;
+  appointedYear: number;
+  /** 任期。この年になると自ら退く */
+  retiresYear: number;
+}
+
+/**
+ * プラエトリア長官（praefectus praetorio）。
+ *
+ * 近衛隊は312年に解散しているので、この時代の長官は軍の指揮官ではなく
+ * 税務・軍糧・属州行政を統べる文官の筆頭。軍を率いるのは
+ * マギステル・ミリトゥムのほうで、役割は重ならない。
+ *
+ * 作用先は既存の2つの式に限る:
+ * - 税収（徴税機構を握っているため）
+ * - 元老院支持の自然減（貴族との折衝が職務のため）
+ */
+export interface PrefectSeat {
+  current: Official | null;
+  /**
+   * 任命の候補。空位のあいだだけ並ぶ。
+   * 誰を選ぶかをプレイヤーに決めさせるため state に持たせる。
+   * 毎ターン引き直すと選択が無意味になるので、空位になった年に一度だけ作る
+   */
+  candidates: Official[];
+  history: OfficialRecord[];
+}
+
+/** 属州総督。担当する属州の統治と防衛にだけ効く */
+export interface Governor extends Official {
+  provinceId: ProvinceId;
+}
+
+export interface GovernorSeat {
+  current: Governor | null;
+  candidates: Governor[];
+}
+
+export type OfficialEnd = 'retired' | 'dismissed' | 'revolted';
+
+export interface OfficialRecord {
+  officialId: string;
+  name: string;
+  fromYear: number;
+  toYear: number;
+  ability: number;
+  end: OfficialEnd;
+}
 
 // ── シナリオ ──────────────────────────────────────────
 
@@ -319,6 +394,12 @@ export interface GameState {
 
   /** 軍司令官。これも7パラメータには含めない別サブ構造 */
   general: GeneralSeat;
+
+  /** プラエトリア長官。財政と属州行政の長。同じく別サブ構造 */
+  prefect: PrefectSeat;
+
+  /** 属州総督。属州ごとに1人。空位もありうる */
+  governors: Record<ProvinceId, GovernorSeat>;
 
   /**
    * 東ローマ帝国。7パラメータには含めない別サブ構造。
@@ -459,6 +540,31 @@ export interface EastMakePeaceAction {
   type: 'east_make_peace';
 }
 
+/**
+ * プラエトリア長官を任命する。候補の中から選ぶ。
+ * 誰を選ぶかが判断になるので、対象の id を持たせる
+ */
+export interface AppointPrefectAction {
+  type: 'appoint_prefect';
+  officialId: string;
+}
+
+export interface DismissPrefectAction {
+  type: 'dismiss_prefect';
+}
+
+/** 属州総督を任命する。属州と候補の両方を指定する */
+export interface AppointGovernorAction {
+  type: 'appoint_governor';
+  provinceId: ProvinceId;
+  officialId: string;
+}
+
+export interface DismissGovernorAction {
+  type: 'dismiss_governor';
+  provinceId: ProvinceId;
+}
+
 /** 軍司令官を任命する。空位を埋める */
 export interface MilitaryAppointGeneralAction {
   type: 'military_appoint_general';
@@ -488,6 +594,10 @@ export type PlayerAction =
   | DomesticAppeaseSenateAction
   | EastRequestAidAction
   | EastConfirmTitleAction
+  | AppointPrefectAction
+  | DismissPrefectAction
+  | AppointGovernorAction
+  | DismissGovernorAction
   | EastImproveRelationsAction
   | EastDeclareWarAction
   | EastInvadeAction

@@ -33,6 +33,7 @@ import {
 } from './constants';
 import { militaryModifier } from './dynasty';
 import { generalDefenseModifier, generalVictoryCreditShare } from './general';
+import { governorDefenseModifier } from './officials';
 import { resolveCombat } from './military';
 import type { BarbarianFactionId, GameState, ProvinceId, TurnModifiers } from './types';
 import { clamp } from './util';
@@ -120,8 +121,11 @@ export function applyBarbarianActions(
     const armyShare = modifiers.reinforced.has(location)
       ? DEPLOY_ARMY_DEFENSE_SHARE
       : FIELD_ARMY_DEFENSE_SHARE;
+    // 総督は自分の属州の守備隊にだけ効く。野戦軍やフォエデラティには効かない
     const defenseBase =
-      province.garrison + state.fieldArmy * armyShare + foederatiDefenseAt(location);
+      province.garrison * governorDefenseModifier(state, location) +
+      state.fieldArmy * armyShare +
+      foederatiDefenseAt(location);
 
     /*
      * 突きつけた要求に答えを得られていない勢力は、その年の攻撃が重くなる。

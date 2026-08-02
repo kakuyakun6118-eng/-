@@ -3,8 +3,10 @@ import {
   DEFEND_COST,
   FOEDERATI_HIRE_COST,
   GENERAL_APPOINT_COST,
+  GOVERNOR_APPOINT_COST,
   MARRIAGE_COST,
   MAX_ACTIONS_PER_TURN,
+  PREFECT_APPOINT_COST,
 } from '../core/constants';
 import { consumesActionSlot } from '../core/tick';
 import type {
@@ -195,6 +197,37 @@ export const appeaser: Strategy = (state) => {
   return pair(actions);
 };
 
+
+/**
+ * 空いた官職を埋める手を、優先度の高い順に返す。
+ *
+ * 長官は帝国全体の税収に効くので先に埋める。総督は担当属州にしか
+ * 効かないので、収入の大きい属州から順に埋める。
+ * 候補は能力が最も高い者を選ぶ（野心は見ない。野心の高い有能な人物を
+ * 使うかどうかがプレイヤーの判断になる部分なので、方針AIは単純に能力で選ぶ）
+ */
+function refillOffices(state: GameState): PlayerAction[] {
+  const actions: PlayerAction[] = [];
+
+  if (state.prefect.current === null && state.prefect.candidates.length > 0) {
+    const best = [...state.prefect.candidates].sort((a, b) => b.ability - a.ability)[0];
+    if (state.treasury > PREFECT_APPOINT_COST * 2) {
+      actions.push({ type: 'appoint_prefect', officialId: best.id });
+    }
+  }
+
+  const vacant = (Object.keys(state.governors) as ProvinceId[])
+    .filter((id) => state.governors[id].current === null && state.governors[id].candidates.length > 0)
+    .sort((a, b) => state.provinces[b].baseTax - state.provinces[a].baseTax);
+  for (const id of vacant) {
+    if (state.treasury <= GOVERNOR_APPOINT_COST * 2) break;
+    const best = [...state.governors[id].candidates].sort((a, b) => b.ability - a.ability)[0];
+    actions.push({ type: 'appoint_governor', provinceId: id, officialId: best.id });
+  }
+
+  return actions;
+}
+
 /**
  * 軍司令官を使う方針。
  * 空位なら任命し、正統性が簒奪の圏内に落ちたときだけ名将を切る。
@@ -213,6 +246,11 @@ export const generalMinded: Strategy = (state) => {
   }
 
   const slots = () => actions.filter(consumesActionSlot).length;
+  // 空いた官職は埋める。空位のままだと減収と守備の罰が続く
+  for (const action of refillOffices(state)) {
+    if (slots() >= MAX_ACTIONS_PER_TURN) break;
+    actions.push(action);
+  }
   const general = state.general.current;
   if (general === null && state.treasury > GENERAL_APPOINT_COST * 2) {
     actions.push({ type: 'military_appoint_general' });

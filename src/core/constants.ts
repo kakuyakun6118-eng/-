@@ -339,6 +339,94 @@ export const GENERAL_DISMISS_LEGITIMACY_GAIN = 8;
 /** 将軍が簒奪を起こしたときに追加で失う野戦軍の割合 */
 export const GENERAL_USURP_EXTRA_ARMY_LOSS = 0.1;
 
+// ── 官職（プラエトリア長官・属州総督） ────────────────
+
+/**
+ * 官職の能力・野心の生成範囲。
+ * 君主(3〜8)より少し広く取る。凡庸な皇帝の下に有能な官僚が並ぶ、
+ * という軍司令官と同じ考え方
+ */
+export const OFFICIAL_ABILITY_ROLL_MIN = 3;
+export const OFFICIAL_ABILITY_ROLL_MAX = 9;
+export const OFFICIAL_AMBITION_ROLL_MIN = 1;
+export const OFFICIAL_AMBITION_ROLL_MAX = 9;
+
+/** 任命候補の人数。多すぎると選択が作業になるので3人 */
+export const OFFICIAL_CANDIDATE_COUNT = 3;
+
+// プラエトリア長官
+export const PREFECT_APPOINT_COST = 100;
+export const PREFECT_MIN_TERM = 10;
+export const PREFECT_MAX_TERM = 28;
+/**
+ * 長官の能力1点あたり税収にかかる補正（ABILITY_NEUTRAL 基準）。
+ * 徴税機構を握っているので税収に効く。軍事には一切効かない
+ */
+export const PREFECT_INCOME_PER_POINT = 0.03;
+/** 空位のあいだ税収にかかる罰。徴税機構に頭がいない状態 */
+export const PREFECT_VACANT_INCOME_PENALTY = 0.05;
+/**
+ * 長官の能力1点あたり、元老院支持の自然減にかかる軽減。
+ * 貴族との折衝が職務なので、有能なら離反を抑えられる
+ */
+export const PREFECT_SENATE_DECAY_PER_POINT = 0.02;
+/** 解任で回復する正統性。長官は軍を持たないので兵は離れない */
+export const PREFECT_DISMISS_LEGITIMACY_GAIN = 3;
+
+// 属州総督
+export const GOVERNOR_APPOINT_COST = 30;
+export const GOVERNOR_MIN_TERM = 12;
+export const GOVERNOR_MAX_TERM = 32;
+/** 総督の能力1点あたり、その属州の支配度の自然回復にかかる補正 */
+export const GOVERNOR_CONTROL_RECOVERY_PER_POINT = 0.12;
+/** 総督の能力1点あたり、その属州の守備隊の戦闘力にかかる補正 */
+export const GOVERNOR_DEFENSE_PER_POINT = 0.04;
+/** 空位の属州にかかる守備の罰 */
+export const GOVERNOR_VACANT_DEFENSE_PENALTY = 0.06;
+
+// ── 反乱 ──────────────────────────────────────────────
+
+/**
+ * 属州総督の反乱。
+ *
+ * 簒奪(checkUsurper)とは別口で、正統性が低い年に野心の高い総督が
+ * 独立を図る。この時代の西ローマはガリアやブリタンニアで実際に
+ * 何度も僭称帝が立っており、崩壊は中央からではなく属州から始まった。
+ *
+ * 正統性が閾値を下回っている年にだけ判定する。低正統性という
+ * 既存の失敗経路を濃くするもので、無条件の追加リスクにはしない
+ */
+export const GOVERNOR_REVOLT_LEGITIMACY_THRESHOLD = 45;
+export const GOVERNOR_REVOLT_BASE_PROBABILITY = 0.01;
+/** 野心が ABILITY_NEUTRAL を超えた1点あたりの上乗せ */
+export const GOVERNOR_REVOLT_AMBITION_PER_POINT = 0.012;
+/** 属州が荒れているほど反乱しやすい。支配度がこれを下回ると上乗せ */
+export const GOVERNOR_REVOLT_LOW_CONTROL_THRESHOLD = 50;
+export const GOVERNOR_REVOLT_LOW_CONTROL_BONUS = 0.03;
+/** 1属州あたりの反乱確率の上限 */
+export const GOVERNOR_REVOLT_PROBABILITY_CAP = 0.12;
+/** 反乱でその属州が失う支配度 */
+export const GOVERNOR_REVOLT_CONTROL_LOSS = 25;
+/** 反乱で総督に付いていく守備隊の割合 */
+export const GOVERNOR_REVOLT_GARRISON_LOSS_RATE = 0.5;
+export const GOVERNOR_REVOLT_LEGITIMACY_LOSS = 6;
+
+/**
+ * 皇帝の兄弟（傍系の一族）の挙兵。
+ *
+ * 成人した一族がいるのに帝位が揺らいでいる年に起きる。
+ * 後継者がいることは継承危機を防ぐ利点だが、同時に
+ * 帝位を狙う者を抱えることでもある、という取引にする
+ */
+export const BROTHER_REVOLT_LEGITIMACY_THRESHOLD = 40;
+export const BROTHER_REVOLT_BASE_PROBABILITY = 0.03;
+/** 成人した一族1人あたりの上乗せ */
+export const BROTHER_REVOLT_PER_ADULT = 0.02;
+export const BROTHER_REVOLT_PROBABILITY_CAP = 0.15;
+/** 挙兵に付いていく野戦軍の割合 */
+export const BROTHER_REVOLT_ARMY_LOSS_RATE = 0.18;
+export const BROTHER_REVOLT_LEGITIMACY_LOSS = 10;
+
 // ── 難易度 ────────────────────────────────────────────
 
 export const DEFAULT_DIFFICULTY: Difficulty = 'standard';

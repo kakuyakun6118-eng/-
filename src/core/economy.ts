@@ -45,6 +45,13 @@ import {
   TAX_RATE,
 } from './constants';
 import { governanceModifier } from './dynasty';
+import {
+  createInitialGovernors,
+  createInitialPrefect,
+  governorControlRecoveryModifier,
+  prefectIncomeModifier,
+  prefectSenateDecayRelief,
+} from './officials';
 import { generalLegitimacyDrain } from './general';
 import { clamp } from './util';
 
@@ -72,6 +79,8 @@ export function createInitialState(
     factions: Object.fromEntries(factions.map((f) => [f.id, f])) as GameState['factions'],
     dynasty,
     general,
+    prefect: createInitialPrefect(),
+    governors: createInitialGovernors(provinces.map((p) => p.id)),
     east,
     persia,
     scenario,
@@ -123,6 +132,8 @@ export function calculateIncome(state: GameState): number {
     senateIncomeFactor(state.senateSupport) *
     // 君主の統治能力は税収の補正として作用する
     governanceModifier(state) *
+    // プラエトリア長官は徴税機構の長なので税収にだけ効く
+    prefectIncomeModifier(state) *
     DIFFICULTY_SETTINGS[state.difficulty].incomeMultiplier
   );
 }
@@ -150,7 +161,8 @@ export function applySenateDecay(state: GameState): GameState {
   return {
     ...state,
     senateSupport: clamp(
-      state.senateSupport - SENATE_SUPPORT_NATURAL_DECAY,
+      // 有能な長官は貴族との折衝で離反を抑える
+      state.senateSupport - Math.max(0, SENATE_SUPPORT_NATURAL_DECAY - prefectSenateDecayRelief(state)),
       MIN_SENATE_SUPPORT,
       MAX_SENATE_SUPPORT,
     ),
@@ -223,7 +235,12 @@ export function updateControl(state: GameState): GameState {
     if (province.control >= MAX_CONTROL) continue;
     provinces[id] = {
       ...province,
-      control: clamp(province.control + CONTROL_RECOVERY_PER_TURN, MIN_CONTROL, MAX_CONTROL),
+      control: clamp(
+        // 有能な総督ほど属州の立て直しが速い
+        province.control + CONTROL_RECOVERY_PER_TURN * governorControlRecoveryModifier(state, id),
+        MIN_CONTROL,
+        MAX_CONTROL,
+      ),
     };
   }
   return { ...state, provinces };
