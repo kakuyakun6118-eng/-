@@ -433,6 +433,14 @@ export interface Persia {
   interventionYear: number | null;
   /** ペルシアが奪った東方属州。取り返さない限り統一は成立しない */
   seizedProvinces: EastProvinceId[];
+  /**
+   * 西との関係（0〜100）。
+   *
+   * 7パラメータには足さない。`eastRelations` と違って新しい資源にはせず、
+   * 既存の2つの確率（介入の開始・毎年の攻勢）を下げる補正としてのみ働く。
+   * 使者と贈り物でしか動かず、上がっても軍が来るわけではない
+   */
+  relations: number;
 }
 
 // ── 状態モデル（7パラメータ固定） ────────────────────
@@ -619,6 +627,10 @@ export interface EastInvadeAction {
 }
 
 /** 東ローマと講和する。統一シナリオでのみ選べる */
+export interface PersiaImproveRelationsAction {
+  type: 'persia_improve_relations';
+}
+
 export interface EastMakePeaceAction {
   type: 'east_make_peace';
 }
@@ -685,7 +697,8 @@ export type PlayerAction =
   | EastImproveRelationsAction
   | EastDeclareWarAction
   | EastInvadeAction
-  | EastMakePeaceAction;
+  | EastMakePeaceAction
+  | PersiaImproveRelationsAction;
 
 /**
  * 1ターンに渡すアクション。

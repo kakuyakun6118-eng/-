@@ -36,6 +36,7 @@ import {
   MIN_LEGITIMACY,
   MIN_SENATE_SUPPORT,
   MIN_TAX_BASE,
+  PERSIA_INITIAL_RELATIONS,
   RAISE_TAXES_CONTROL_LOSS,
   RAISE_TAXES_INCOME_MULTIPLIER,
   RAISE_TAXES_SENATE_LOSS,
@@ -113,6 +114,7 @@ const DORMANT_PERSIA: Persia = {
   intervened: false,
   interventionYear: null,
   seizedProvinces: [],
+  relations: PERSIA_INITIAL_RELATIONS,
 };
 
 /**

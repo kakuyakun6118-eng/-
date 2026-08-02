@@ -23,6 +23,7 @@ import { appointGeneral, dismissGeneral, updateGeneral } from './general';
 import {
   declareWarOnEast,
   improveEastRelations,
+  improvePersiaRelations,
   invadeEastProvince,
   isUnified,
   makePeaceWithEast,
@@ -243,6 +244,8 @@ function applyAction(
       return invadeEastProvince(state, action.provinceId, rng);
     case 'east_make_peace':
       return makePeaceWithEast(state);
+    case 'persia_improve_relations':
+      return improvePersiaRelations(state);
     case 'conquer_homeland':
       return conquerHomeland(state, action.factionId, rng);
   }

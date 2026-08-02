@@ -10,8 +10,9 @@ import type { Difficulty, DifficultySettings, Scenario } from './types';
  *    空で補える情報ではないため旧版は読めない
  * 5: プラエトリア長官（prefect）と属州総督（governors）を追加
  * 6: 蛮族の郷里（homelands）と、東ローマ・ペルシアの軍司令官（commander）を追加
+ * 7: ペルシアとの関係（persia.relations）を追加
  */
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 7;
 
 export const STARTING_YEAR = 395;
 export const ENDING_YEAR = 476;
@@ -742,6 +743,36 @@ export const EAST_PEACE_RELATIONS = 20;
  * 統一を狙うほどペルシアを呼び込む、という取引にする
  */
 export const PERSIA_INTERVENTION_PROBABILITY = 0.4;
+
+// ── ペルシアとの修好 ──────────────────────────────────
+
+/**
+ * 西とサーサーン朝の関係の初期値。
+ *
+ * 史実の西ローマとペルシアにはほとんど直接の往来が無かったので低く置く。
+ * 東ローマとの関係（60）より冷たいところから始める
+ */
+export const PERSIA_INITIAL_RELATIONS = 20;
+export const MIN_PERSIA_RELATIONS = 0;
+export const MAX_PERSIA_RELATIONS = 100;
+/** 使者と贈り物の費用。東への修好より遠く、高く付く */
+export const PERSIA_IMPROVE_COST = 110;
+/** 1回の修好で戻る関係。交渉能力で補正される */
+export const PERSIA_IMPROVE_RELATIONS_GAIN = 12;
+/**
+ * 関係が満点のときに介入の確率へ掛かる係数。
+ * 0.45 なら 0.4 → 0.18 まで下がる。**介入そのものを止めることはできない。**
+ * 止められてしまうと「ペルシアをラスボスとして機能させる」という
+ * 主題が金で買えることになるため
+ */
+export const PERSIA_RELATIONS_INTERVENTION_FLOOR = 0.45;
+/** 同じく、動き出したあとの毎年の攻勢の確率に掛かる係数 */
+export const PERSIA_RELATIONS_ATTACK_FLOOR = 0.55;
+/**
+ * 一度介入したペルシアに対する修好の効きの弱まり。
+ * 剣を抜いた相手に贈り物はあまり通らない
+ */
+export const PERSIA_IMPROVE_AT_WAR_PENALTY = 0.5;
 /**
  * 介入までに要するローマ内戦の年数。
  *

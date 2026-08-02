@@ -32,12 +32,19 @@ import {
   MAX_CONTROL,
   MAX_EAST_RELATIONS,
   MAX_LEGITIMACY,
+  MAX_PERSIA_RELATIONS,
   MAX_SENATE_SUPPORT,
   MIN_CONTROL,
   MIN_EAST_RELATIONS,
   MIN_LEGITIMACY,
+  MIN_PERSIA_RELATIONS,
   MIN_SENATE_SUPPORT,
   PERSIA_ATTACK_CONTROL_DAMAGE,
+  PERSIA_IMPROVE_AT_WAR_PENALTY,
+  PERSIA_IMPROVE_COST,
+  PERSIA_IMPROVE_RELATIONS_GAIN,
+  PERSIA_RELATIONS_ATTACK_FLOOR,
+  PERSIA_RELATIONS_INTERVENTION_FLOOR,
   PERSIA_ATTACK_PROBABILITY,
   PERSIA_ATTACK_SHARE,
   PERSIA_DEFENSE_SHARE,
@@ -124,6 +131,49 @@ export function improveEastRelations(state: GameState): GameState {
       MAX_EAST_RELATIONS,
     ),
   };
+}
+
+/**
+ * サーサーン朝への修好。
+ *
+ * 史実の西ローマとペルシアにはほとんど直接の往来が無かったが、
+ * このゲームのペルシアは統一の最後の関門なので、
+ * 使者を送って介入を遅らせる手を持たせる。
+ *
+ * **新しい資源にはしない。** 上がった関係は既存の2つの確率
+ * （介入の開始・毎年の攻勢）を下げる補正としてのみ働き、
+ * どちらもゼロにはできない（PERSIA_RELATIONS_*_FLOOR）。
+ * 金でラスボスを消せてしまっては主題が壊れる
+ */
+export function improvePersiaRelations(state: GameState): GameState {
+  if (!isReunification(state)) return state;
+  if (state.treasury < PERSIA_IMPROVE_COST) return state;
+  if (state.persia.relations >= MAX_PERSIA_RELATIONS) return state;
+
+  // 剣を抜いた相手に贈り物はあまり通らない
+  const efficiency = state.persia.intervened ? PERSIA_IMPROVE_AT_WAR_PENALTY : 1;
+  return {
+    ...state,
+    treasury: state.treasury - PERSIA_IMPROVE_COST,
+    persia: {
+      ...state.persia,
+      relations: clamp(
+        state.persia.relations +
+          PERSIA_IMPROVE_RELATIONS_GAIN * diplomacyModifier(state) * efficiency,
+        MIN_PERSIA_RELATIONS,
+        MAX_PERSIA_RELATIONS,
+      ),
+    },
+  };
+}
+
+/**
+ * 関係が確率に掛ける係数。関係0で1.0、満点で floor まで下がる。
+ * 補正の形は君主能力や官職と同じで、既存の式に掛かるだけ
+ */
+function persiaRelationsFactor(state: GameState, floor: number): number {
+  const ratio = state.persia.relations / MAX_PERSIA_RELATIONS;
+  return 1 - (1 - floor) * ratio;
 }
 
 /** 東ローマに宣戦する。ローマ人同士の戦なので正統性と元老院支持を先払いする */
@@ -317,7 +367,14 @@ function persianTurn(state: GameState, rng: () => number): GameState {
     if (east.stance !== 'war' || east.warStartYear === null) return state;
     // 緒戦のうちは静観する。内戦が長引いたのを見てから動く
     if (state.year - east.warStartYear < PERSIA_MIN_WAR_YEARS) return state;
-    if (rng() >= PERSIA_INTERVENTION_PROBABILITY) return state;
+    // 修好が続いていれば、動き出す年が遅くなる
+    if (
+      rng() >=
+      PERSIA_INTERVENTION_PROBABILITY *
+        persiaRelationsFactor(state, PERSIA_RELATIONS_INTERVENTION_FLOOR)
+    ) {
+      return state;
+    }
 
     /*
      * 介入は宣言だけで終わらせず、その年のうちに橋頭堡を確保させる。
@@ -360,7 +417,10 @@ function persianTurn(state: GameState, rng: () => number): GameState {
   }
 
   const grown = persia.strength * (1 + PERSIA_GROWTH_RATE);
-  if (rng() >= PERSIA_ATTACK_PROBABILITY) {
+  if (
+    rng() >=
+    PERSIA_ATTACK_PROBABILITY * persiaRelationsFactor(state, PERSIA_RELATIONS_ATTACK_FLOOR)
+  ) {
     return { ...state, persia: { ...persia, strength: grown } };
   }
 
