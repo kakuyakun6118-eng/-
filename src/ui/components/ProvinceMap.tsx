@@ -1,9 +1,17 @@
+import type { ReactNode } from 'react';
 import { MAX_CONTROL } from '../../core/constants';
 import type { BarbarianStance, GameState, ProvinceId } from '../../core/types';
-import { FACTION_LABELS, PROVINCE_LABELS, STANCE_LABELS } from '../catalogue';
+import {
+  EAST_PROVINCE_LABELS,
+  FACTION_LABELS,
+  PROVINCE_LABELS,
+  STANCE_LABELS,
+} from '../catalogue';
 import {
   EAST_ROMAN_LABEL_POINT,
   MAP_VIEWBOX,
+  EAST_PROVINCE_LABEL_POINTS,
+  projectLonLat,
   PERSIA_LABEL_POINT,
   PROVINCE_PATHS,
 } from '../mapPaths';
@@ -146,7 +154,7 @@ export function ProvinceMap({ state, selectedProvince, onSelect, motion = NO_MOT
         ))}
 
       {/* 東ローマとペルシア。西の属州とは別の塗り分けにする */}
-      <EastRomanTerritory />
+      <EastRomanTerritory provinces={state.east.provinces} />
       <PersiaTerritory />
 
       {/* 海岸線の内側の影と、光彩を添えた点線の境界 */}
@@ -169,12 +177,45 @@ export function ProvinceMap({ state, selectedProvince, onSelect, motion = NO_MOT
       ))}
 
       {/* 隣国の名。属州ラベルより小さくして主役でないことを示す */}
-      <NeighbourLabel at={EAST_ROMAN_LABEL_POINT} fill="#ddd6fe" outline="#2e1065">
-        東ローマ
-      </NeighbourLabel>
+      {/*
+        東ローマの総称。属州ごとに名前を出す統一シナリオでは
+        ギリシャの上で属州名とぶつかるので出さない。
+        東の野戦軍は「東方戦線」の欄に出ている
+      */}
+      {state.east.provinces.length === 0 && (
+        <NeighbourLabel at={EAST_ROMAN_LABEL_POINT} fill="#ddd6fe" outline="#2e1065">
+          東ローマ
+        </NeighbourLabel>
+      )}
       <NeighbourLabel at={PERSIA_LABEL_POINT} fill="#99f6e4" outline="#042f2e">
-        ペルシア
+        ペルシア {Math.round(state.persia.strength)}
       </NeighbourLabel>
+
+      {/* 東方属州。統一シナリオでのみ中身が入る */}
+      {state.east.provinces.map((province) => {
+        const at = EAST_LABEL_OVERRIDES[province.id] ?? EAST_PROVINCE_LABEL_POINTS[province.id];
+        if (!at) return null;
+        return (
+          <g key={`east-${province.id}`} className="pointer-events-none select-none">
+            <NeighbourLabel at={at} fill={EAST_LABEL_COLOR[province.owner]} outline="#1e1b4b">
+              {EAST_PROVINCE_LABELS[province.id]}
+            </NeighbourLabel>
+            <text
+              x={at[0]}
+              y={at[1] + 13}
+              textAnchor="middle"
+              fill="#e2e8f0"
+              stroke="#1e1b4b"
+              strokeWidth={3.5}
+              paintOrder="stroke"
+              fontSize={12}
+            >
+              {Math.round(province.control)}
+              <tspan fill="#fcd34d"> ⛨{Math.round(province.garrison)}</tspan>
+            </text>
+          </g>
+        );
+      })}
 
       {/* ラベルは属州の上に重ねる */}
       {ids.map((id) => {
@@ -208,7 +249,9 @@ export function ProvinceMap({ state, selectedProvince, onSelect, motion = NO_MOT
               paintOrder="stroke"
               fontSize={16}
             >
+              {/* 支配度と守備隊。兵の数が分からないと守りの厚みが読めない */}
               {Math.round(province.control)}
+              <tspan fill="#fcd34d"> ⛨{Math.round(province.garrison)}</tspan>
               {occupiers.length > 0 ? ` ⚔${occupiers.length}` : ''}
             </text>
           </g>
@@ -217,6 +260,22 @@ export function ProvinceMap({ state, selectedProvince, onSelect, motion = NO_MOT
     </svg>
   );
 }
+
+/**
+ * 生成された重心では収まりの悪いラベルの逃がし先。
+ * トラキアの重心（ブルガリア）はイリュリクムの札と重なるので、
+ * 北東へ寄せてバルカン東部に置く
+ */
+const EAST_LABEL_OVERRIDES: Record<string, [number, number]> = {
+  Thracia: projectLonLat(27.2, 43.2),
+};
+
+/** 東方属州のラベルの色。持ち主で変える */
+const EAST_LABEL_COLOR = {
+  east: '#ddd6fe',
+  west: '#fde68a',
+  persia: '#99f6e4',
+} as const;
 
 /** 蛮族の駒ひとつ。円章に兵力、その下に勢力名を出す */
 function FactionMarkerToken({ marker }: { marker: FactionMarker }) {
@@ -254,7 +313,7 @@ function NeighbourLabel({
   at: [number, number];
   fill: string;
   outline: string;
-  children: string;
+  children: ReactNode;
 }) {
   return (
     <text

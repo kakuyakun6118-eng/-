@@ -5,6 +5,7 @@ import {
   LAKE_PATH,
   MINOR_RIVER_PATH,
   MOUNTAIN_PATH,
+  EAST_PROVINCE_PATHS,
   PERSIA_PATH,
   PLAIN_PATH,
   PLATEAU_PATH,
@@ -209,28 +210,64 @@ export function TerrainLayers() {
 /**
  * 東ローマ帝国の領域。
  *
- * プレイヤーの属州ではないので支配度の色帯には乗せず、
- * 帝室の紫で一様に塗る。西（支配度で緑〜赤に変わる）とも、
- * 帝国外の蛮族の地（暗く落とした背景）とも区別が付くようにする
+ * 統一シナリオでは属州ごとに持ち主が変わるので、一色で塗らず
+ * 属州単位で塗り分ける。西が奪った属州は西の紫寄りの色に、
+ * ペルシアが握った属州は青緑になる。
+ * 史実シナリオでは east.provinces が空なので、従来どおり
+ * 東ローマ全体を帝室の紫で一様に塗る
  */
-export function EastRomanTerritory() {
+export function EastRomanTerritory({
+  provinces,
+}: {
+  /** 東方属州の持ち主。空なら東ローマ全体を一色で塗る */
+  provinces?: { id: string; owner: 'east' | 'west' | 'persia' }[];
+}) {
+  if (provinces === undefined || provinces.length === 0) {
+    return <TintedRegion d={EAST_ROMAN_PATH} base="#7b5fc4" shade="#6247b5" edge="#c4b5fd" />;
+  }
   return (
     <g pointerEvents="none">
-      {/*
-       * 乗算だけだと山地の陰影に負けて茶色に沈むので、
-       * 先に薄い紫を通常合成で敷いてから乗算を重ねる
-       */}
-      <path d={EAST_ROMAN_PATH} fill="#7b5fc4" opacity={0.3} />
+      {provinces.map((p) => {
+        const d = EAST_PROVINCE_PATHS[p.id];
+        if (!d) return null;
+        const c = EAST_OWNER_COLORS[p.owner];
+        return <TintedRegion key={p.id} d={d} base={c.base} shade={c.shade} edge={c.edge} />;
+      })}
+    </g>
+  );
+}
+
+/** 東方属州の持ち主ごとの色。西＝深紅寄り、東＝帝室の紫、ペルシア＝青緑 */
+const EAST_OWNER_COLORS = {
+  east: { base: '#7b5fc4', shade: '#6247b5', edge: '#c4b5fd' },
+  west: { base: '#b8894a', shade: '#8a5f2c', edge: '#fde68a' },
+  persia: { base: '#3f9d94', shade: '#1f6f68', edge: '#99f6e4' },
+} as const;
+
+/**
+ * 色を乗せた領域。
+ * 乗算だけだと山地の陰影に負けて茶色に沈むので、
+ * 先に薄い色を通常合成で敷いてから乗算を重ねる
+ */
+function TintedRegion({
+  d,
+  base,
+  shade,
+  edge,
+}: {
+  d: string;
+  base: string;
+  shade: string;
+  edge: string;
+}) {
+  return (
+    <g pointerEvents="none">
+      <path d={d} fill={base} opacity={0.3} />
+      <path d={d} fill={shade} opacity={0.5} style={{ mixBlendMode: 'multiply' }} />
       <path
-        d={EAST_ROMAN_PATH}
-        fill="#6247b5"
-        opacity={0.5}
-        style={{ mixBlendMode: 'multiply' }}
-      />
-      <path
-        d={EAST_ROMAN_PATH}
+        d={d}
         fill="none"
-        stroke="#c4b5fd"
+        stroke={edge}
         strokeWidth={1.3}
         strokeDasharray="5 4"
         opacity={0.7}
