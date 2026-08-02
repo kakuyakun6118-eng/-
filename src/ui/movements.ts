@@ -70,8 +70,12 @@ const EXTERIOR_POINTS: Record<BarbarianFactionId, Point> = {
   Alans: projectLonLat(44.0, 44.2),
   // アグリ・デクマテス。ライン上流の対岸
   Alemanni: projectLonLat(8.6, 47.6),
-  // マウレタニアの内陸。アフリカ属州の南に広がる山地と砂漠
-  Mauri: projectLonLat(2.0, 27.5),
+  /*
+   * マウレタニア。アトラス山脈の内陸で、属州の海岸帯の南西に当たる。
+   * 以前は 2°E の砂漠に置いていたが、それはヌミディアの南で
+   * マウリの地ではない。ローマの支配が届かなかった山地に置く
+   */
+  Mauri: projectLonLat(-5.0, 31.8),
 };
 
 /** 野戦軍が出撃する拠点 */

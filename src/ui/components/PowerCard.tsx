@@ -202,7 +202,10 @@ function describe(state: GameState, target: InspectTarget): CardView {
      */
     const homelandRows: [string, string][] =
       homeland === undefined
-        ? [['本拠', '無し・移動する民']]
+        ? [
+            ['本拠', '無し'],
+            ['戦い方', faction.raider === true ? '略奪のみ' : '移動する民'],
+          ]
         : [
             ['郷里', homeland.name],
             [
@@ -229,7 +232,9 @@ function describe(state: GameState, target: InspectTarget): CardView {
         ...homelandRows,
       ],
       note:
-        homeland === undefined
+        faction.raider === true
+          ? '山地から降りて掠め、その年のうちに引き揚げる。土地を奪って住み着くことはない'
+          : homeland === undefined
           ? '攻め込む先を持たない。戦力そのものを戦場で叩くしかない'
           : homeland.owner === 'west'
             ? '郷里を失った勢力は人が集まらず、戦力が伸びにくい'
