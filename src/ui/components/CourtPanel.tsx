@@ -93,13 +93,18 @@ function Seat({
   if (official !== null) {
     return (
       <div className={compact ? 'text-xs' : 'mt-2 text-xs'}>
+        {/*
+          名前は長さがまちまちなので、はみ出す分は省略して1行に収める。
+          折り返させると「マッリウス・テ / オドルス」のように
+          途中で切れて読みにくい。全体は title 属性で読める
+        */}
         <div className="flex items-baseline justify-between gap-2">
-          <span style={{ color: 'var(--ink)' }}>
+          <span className="min-w-0 truncate" style={{ color: 'var(--ink)' }} title={official.name}>
             <span className="roman-heading text-xs">{title}</span>{' '}
             <span style={{ color: 'var(--purple-deep)' }}>{official.name}</span>
           </span>
           <span className="tabular-nums shrink-0" style={{ color: 'var(--ink-soft)' }}>
-            能力 {official.ability}・野心 {official.ambition}・在職 {year - official.appointedYear}年
+            能{official.ability}・野{official.ambition}・{year - official.appointedYear}年
           </span>
         </div>
         {!compact && (
