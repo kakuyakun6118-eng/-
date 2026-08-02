@@ -227,7 +227,74 @@ export type TurnEventId =
   /** 簒奪を起こしたのが軍司令官だった年 */
   | 'general_usurped'
   /** 軍司令官が任期を終えて職を退いた年 */
-  | 'general_retired';
+  | 'general_retired'
+  /** 東ローマとの戦端が開かれた年 */
+  | 'east_war_declared'
+  /** 東方の属州を1つ征服した年 */
+  | 'east_province_taken'
+  /** 東ローマに攻め返され、東方の属州を奪い返された年 */
+  | 'east_province_lost'
+  /** 東ローマと講和した年 */
+  | 'east_peace'
+  /** ペルシアが介入を始めた年 */
+  | 'persia_intervened'
+  /** ペルシアが属州を奪った年 */
+  | 'persia_offensive';
+
+// ── シナリオ ──────────────────────────────────────────
+
+/**
+ * 遊ぶ世界線。
+ *
+ * `historical` は395〜476年の史実で、勝利は延命。既存の調整済みバランスそのもの。
+ * `reunification` は「東を併合してローマを統一できた世界線」で、
+ * 勝利条件も敵も別物になる。史実側の数値には影響させない
+ */
+export type Scenario = 'historical' | 'reunification';
+
+// ── 東ローマ帝国 ──────────────────────────────────────
+
+export type EastProvinceId = 'Thracia' | 'Asiana' | 'Oriens' | 'Aegyptus';
+
+/**
+ * 東方の属州。西の属州と同じ形だが、持ち主が変わる。
+ * 西の `provinces` に混ぜないのは、史実シナリオで
+ * 収入計算や蛮族の進路に紛れ込ませないため
+ */
+export interface EastProvince {
+  id: EastProvinceId;
+  control: number;
+  baseTax: number;
+  garrison: number;
+  /**
+   * 征服すると 'west' に変わり、西の収入に加算されるようになる。
+   * ペルシアに奪われた属州は 'persia' になり、取り返さない限り統一できない
+   */
+  owner: 'east' | 'west' | 'persia';
+}
+
+export type EastStance = 'peace' | 'war';
+
+export interface EastEmpire {
+  /** 東の野戦軍。西との戦争でのみ使う */
+  army: number;
+  stance: EastStance;
+  /** 開戦した年。講和の可否や正統性の判定に使う */
+  warStartYear: number | null;
+  provinces: EastProvince[];
+}
+
+// ── サーサーン朝ペルシア ──────────────────────────────
+
+export interface Persia {
+  strength: number;
+  /** 介入を始めたか。ローマ同士の戦争が引き金になる */
+  intervened: boolean;
+  /** 介入を始めた年 */
+  interventionYear: number | null;
+  /** ペルシアが奪った東方属州。取り返さない限り統一は成立しない */
+  seizedProvinces: EastProvinceId[];
+}
 
 // ── 状態モデル（7パラメータ固定） ────────────────────
 
@@ -253,6 +320,22 @@ export interface GameState {
   /** 軍司令官。これも7パラメータには含めない別サブ構造 */
   general: GeneralSeat;
 
+  /**
+   * 東ローマ帝国。7パラメータには含めない別サブ構造。
+   * 史実シナリオでは属州も軍も持たない空の状態で、
+   * eastRelations だけが従来どおり働く
+   */
+  east: EastEmpire;
+
+  /**
+   * サーサーン朝ペルシア。同じく別サブ構造。
+   * ローマ同士が潰し合うと漁夫の利を狙って動き出す
+   */
+  persia: Persia;
+
+  /** 遊ぶシナリオ。難易度と同じくプレイ開始時の設定 */
+  scenario: Scenario;
+
   /** 難易度。7パラメータではなくプレイ開始時の設定 */
   difficulty: Difficulty;
 
@@ -268,7 +351,11 @@ export interface GameState {
   status: GameStatus;
 }
 
-export type GameStatus = 'ongoing' | 'survived' | 'collapsed';
+/**
+ * `unified` は統一シナリオ専用の勝利。
+ * 東方属州をすべて西の持ち物にし、なおかつペルシアを退けた状態を指す
+ */
+export type GameStatus = 'ongoing' | 'survived' | 'collapsed' | 'unified';
 
 // ── プレイヤーアクション（1ターン最大2つ） ──────────
 
@@ -344,6 +431,34 @@ export interface EastConfirmTitleAction {
   type: 'east_confirm_title';
 }
 
+/**
+ * 東ローマへの修好。使者と贈り物を送って関係を戻す。
+ *
+ * 援軍要請（関係 −12）と帝位の承認（関係 −6）は東との関係を削るので、
+ * 使い続けると関係30を割って援軍が撃てなくなる。
+ * 関係を能動的に戻す手段が無いと、東帝国の欄は
+ * 「使い切ったら終わり」の一方通行になっていた
+ */
+export interface EastImproveRelationsAction {
+  type: 'east_improve_relations';
+}
+
+/** 東ローマに宣戦する。統一シナリオでのみ選べる */
+export interface EastDeclareWarAction {
+  type: 'east_declare_war';
+}
+
+/** 東方の属州へ侵攻する。統一シナリオでのみ選べる */
+export interface EastInvadeAction {
+  type: 'east_invade';
+  provinceId: EastProvinceId;
+}
+
+/** 東ローマと講和する。統一シナリオでのみ選べる */
+export interface EastMakePeaceAction {
+  type: 'east_make_peace';
+}
+
 /** 軍司令官を任命する。空位を埋める */
 export interface MilitaryAppointGeneralAction {
   type: 'military_appoint_general';
@@ -372,7 +487,11 @@ export type PlayerAction =
   | DomesticReorganizeArmyAction
   | DomesticAppeaseSenateAction
   | EastRequestAidAction
-  | EastConfirmTitleAction;
+  | EastConfirmTitleAction
+  | EastImproveRelationsAction
+  | EastDeclareWarAction
+  | EastInvadeAction
+  | EastMakePeaceAction;
 
 /**
  * 1ターンに渡すアクション。

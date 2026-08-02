@@ -20,6 +20,14 @@ import {
 } from './diplomacy';
 import { updateDynasty } from './dynasty';
 import { appointGeneral, dismissGeneral, updateGeneral } from './general';
+import {
+  declareWarOnEast,
+  improveEastRelations,
+  invadeEastProvince,
+  isUnified,
+  makePeaceWithEast,
+  updateEasternFront,
+} from './east';
 import { applyHistoricalEvents } from './events';
 import {
   appeaseSenate,
@@ -107,6 +115,13 @@ export function tick(state: GameState, actions: PlayerActions, seed: Seed): Game
   // 属州に居座る勢力は要求を突きつける。答えられるのは翌年になる
   next = updateBarbarianDemands(next, rng);
 
+  /*
+   * 4B. 東方戦線。統一シナリオでのみ動く。
+   * 蛮族の手番と同じ位置に置く。東の反撃もペルシアの侵攻も
+   * 「こちらの行動のあとに相手が動く」という同じ順序にするため
+   */
+  next = updateEasternFront(next, rng);
+
   // 6. 支配度と税基盤の更新
   next = updateControl(next);
   next = updateFoederatiObligations(next);
@@ -174,12 +189,23 @@ function applyAction(
       return requestEastAid(state);
     case 'east_confirm_title':
       return confirmTitle(state);
+    case 'east_improve_relations':
+      return improveEastRelations(state);
+    case 'east_declare_war':
+      return declareWarOnEast(state, state.year);
+    case 'east_invade':
+      return invadeEastProvince(state, action.provinceId, rng);
+    case 'east_make_peace':
+      return makePeaceWithEast(state);
   }
 }
 
 /** スコア = 保持属州数 × taxBase × legitimacy */
 export function evaluateScore(state: GameState): ScoreResult {
-  const provincesHeld = Object.values(state.provinces).filter((p) => p.control > 0).length;
+  // 征服した東方属州も保持属州として数える
+  const provincesHeld =
+    Object.values(state.provinces).filter((p) => p.control > 0).length +
+    state.east.provinces.filter((p) => p.owner === 'west' && p.control > 0).length;
   return {
     status: state.status,
     finalYear: state.year,
@@ -204,6 +230,13 @@ function determineStatus(state: GameState): GameStatus {
   if (italiaLost || (armyDestroyed && bankrupt)) {
     return 'collapsed';
   }
+
+  /*
+   * 統一シナリオの勝利。476年を待たずにその場で決まる。
+   * 東方属州をすべて西の持ち物にすることが条件で、
+   * ペルシアに1つでも握られていれば成立しない
+   */
+  if (isUnified(state)) return 'unified';
 
   if (state.year >= ENDING_YEAR) {
     const provincesHeld = Object.values(state.provinces).filter((p) => p.control > 0).length;

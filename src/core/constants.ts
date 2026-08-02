@@ -1,6 +1,6 @@
 // 数値定数はすべてここに集約する。
 
-import type { Difficulty, DifficultySettings } from './types';
+import type { Difficulty, DifficultySettings, Scenario } from './types';
 
 /**
  * セーブデータの形式版。互換性のない変更をしたら上げる。
@@ -341,6 +341,9 @@ export const GENERAL_USURP_EXTRA_ARMY_LOSS = 0.1;
 
 export const DEFAULT_DIFFICULTY: Difficulty = 'standard';
 
+/** 既定のシナリオ。史実（延命）がこのゲームの本編 */
+export const DEFAULT_SCENARIO: Scenario = 'historical';
+
 /**
  * 難易度ごとの補正倍率。
  * 中級(standard)はすべて 1.0 で、これまで調整してきたバランスが
@@ -484,3 +487,79 @@ export const EAST_AID_RELATIONS_LOSS = 12;
 export const EAST_TITLE_COST = 80;
 export const EAST_TITLE_LEGITIMACY_GAIN = 10;
 export const EAST_TITLE_RELATIONS_LOSS = 6;
+
+/**
+ * 修好。使者と贈り物を送って東との関係を戻す。
+ *
+ * 援軍要請(−12)と帝位の承認(−6)は関係を削る一方で、戻す手段が無かった。
+ * 関係30を割ると援軍が撃てなくなるので、東帝国の欄が
+ * 「3回使ったら終わり」の一方通行になっていた。
+ *
+ * 金額は「援軍要請との往復で儲からない」ことを条件に決める。
+ * 関係12ぶんの回復に 100 × 12/8 = 150 かかるので、
+ * 援軍の +200 に対する差益は 50 しかない。この差益のために
+ * 行動枠を2.5回ぶん使うのは徴税強化(1枠で150以上)に明確に劣るため、
+ * 無限に金を生む手にはならない
+ */
+export const EAST_IMPROVE_COST = 100;
+export const EAST_IMPROVE_RELATIONS_GAIN = 8;
+
+// ── 統一シナリオ: 東ローマとの戦争 ────────────────────
+
+/**
+ * 宣戦の代償。ローマ人がローマ人と戦うことへの反発。
+ * 正統性と元老院支持を先払いさせ、統一を「安い拡大」にしない
+ */
+export const EAST_DECLARE_WAR_LEGITIMACY_LOSS = 12;
+export const EAST_DECLARE_WAR_SENATE_LOSS = 10;
+
+/** 交戦中は毎年これだけ正統性が余分に減る。同胞と戦い続ける負担 */
+export const EAST_WAR_LEGITIMACY_DRAIN = 0.8;
+
+/** 東方へ侵攻するとき、遠征に振り向ける野戦軍の割合 */
+export const EAST_INVADE_ARMY_SHARE = 0.5;
+/** 遠征の損耗。本国の防衛派遣(0.04)より重い */
+export const EAST_INVADE_ATTRITION_RATE = 0.06;
+/** 東の野戦軍が属州防衛に加える割合 */
+export const EAST_DEFENSE_ARMY_SHARE = 0.3;
+/** 侵攻に勝った年に東方属州の支配度が受けるダメージ */
+export const EAST_INVADE_CONTROL_DAMAGE = 12;
+/** 征服した直後の支配度。奪ったばかりの土地は言うことを聞かない */
+export const EAST_CONQUEST_CONTROL = 35;
+/** 戦闘の優劣差に対する東の軍の損耗係数 */
+export const EAST_ARMY_LOSS_FACTOR = 0.35;
+/** 同じく西の野戦軍の損耗係数 */
+export const WEST_ARMY_LOSS_FACTOR = 0.3;
+/** 東の軍が毎年回復する割合 */
+export const EAST_ARMY_GROWTH_RATE = 0.02;
+/** 交戦中に東が攻め返してくる確率 */
+export const EAST_COUNTERATTACK_PROBABILITY = 0.35;
+
+/** 講和できるようになるまでの最低交戦年数。開戦即講和を防ぐ */
+export const EAST_PEACE_MIN_WAR_YEARS = 3;
+/** 講和した時点の東との関係 */
+export const EAST_PEACE_RELATIONS = 20;
+
+// ── 統一シナリオ: サーサーン朝ペルシア ────────────────
+
+/**
+ * ローマ同士が交戦している年に、ペルシアが介入を始める確率。
+ * 統一を狙うほどペルシアを呼び込む、という取引にする
+ */
+export const PERSIA_INTERVENTION_PROBABILITY = 0.25;
+/** 介入後、ペルシアが毎年強くなる割合 */
+export const PERSIA_GROWTH_RATE = 0.03;
+/** 介入後、ペルシアが東方属州を攻める確率 */
+export const PERSIA_ATTACK_PROBABILITY = 0.5;
+/** ペルシアが攻撃に振り向ける戦力の割合 */
+export const PERSIA_ATTACK_SHARE = 0.45;
+/** ペルシアが属州防衛に振り向ける戦力の割合 */
+export const PERSIA_DEFENSE_SHARE = 0.4;
+/** ペルシアの攻撃が通った年の支配度ダメージ */
+export const PERSIA_ATTACK_CONTROL_DAMAGE = 15;
+/** この支配度を下回った東方属州はペルシアに奪われる */
+export const PERSIA_SEIZE_CONTROL_THRESHOLD = 20;
+/** 戦闘の優劣差に対するペルシアの損耗係数 */
+export const PERSIA_LOSS_FACTOR = 0.3;
+/** 属州を1つ奪うたびにペルシアが得る戦力 */
+export const PERSIA_SEIZE_STRENGTH_GAIN = 25;

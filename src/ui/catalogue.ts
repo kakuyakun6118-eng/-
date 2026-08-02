@@ -63,6 +63,12 @@ export const TURN_EVENT_LABELS: Record<TurnEventId, string> = {
   usurper_attempt: '僭称者が立ち軍の一部が離反',
   general_usurped: '軍司令官が帝位を狙って蜂起し、職を離れた',
   general_retired: '軍司令官が任期を終えて職を退いた',
+  east_war_declared: '東ローマに宣戦した。ローマ人がローマ人と戦う',
+  east_province_taken: '東方の属州を征服した',
+  east_province_lost: '東ローマに東方の属州を奪い返された',
+  east_peace: '東ローマと講和した',
+  persia_intervened: 'サーサーン朝ペルシアが介入を始めた',
+  persia_offensive: 'ペルシアが東方の属州を奪った',
 };
 
 /** 軍司令官が職を離れた理由 */

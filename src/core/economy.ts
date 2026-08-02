@@ -2,10 +2,13 @@ import type {
   BarbarianFaction,
   Difficulty,
   Dynasty,
+  EastEmpire,
   GameState,
   GeneralSeat,
+  Persia,
   Province,
   ProvinceId,
+  Scenario,
 } from './types';
 import {
   APPEASE_SENATE_GAIN,
@@ -15,6 +18,7 @@ import {
   CONTROL_RECOVERY_PER_TURN,
   COURT_UPKEEP,
   DEFAULT_DIFFICULTY,
+  DEFAULT_SCENARIO,
   DIFFICULTY_SETTINGS,
   INITIAL_EAST_RELATIONS,
   INITIAL_FIELD_ARMY,
@@ -50,6 +54,9 @@ export function createInitialState(
   dynasty: Dynasty,
   general: GeneralSeat,
   difficulty: Difficulty = DEFAULT_DIFFICULTY,
+  scenario: Scenario = DEFAULT_SCENARIO,
+  east: EastEmpire = EMPTY_EAST,
+  persia: Persia = DORMANT_PERSIA,
 ): GameState {
   return {
     turn: 0,
@@ -65,6 +72,9 @@ export function createInitialState(
     factions: Object.fromEntries(factions.map((f) => [f.id, f])) as GameState['factions'],
     dynasty,
     general,
+    east,
+    persia,
+    scenario,
     difficulty,
     firedEventIds: [],
     turnEvents: [],
@@ -72,6 +82,20 @@ export function createInitialState(
     status: 'ongoing',
   };
 }
+
+/**
+ * 史実シナリオ用の空の東ローマ。属州も軍も持たず、
+ * eastRelations という数値としてだけ働く従来どおりの姿
+ */
+const EMPTY_EAST: EastEmpire = { army: 0, stance: 'peace', warStartYear: null, provinces: [] };
+
+/** 同じく、動き出していないペルシア */
+const DORMANT_PERSIA: Persia = {
+  strength: 0,
+  intervened: false,
+  interventionYear: null,
+  seizedProvinces: [],
+};
 
 /**
  * 元老院の協力度が徴税効率に与える係数。
@@ -83,10 +107,15 @@ function senateIncomeFactor(senateSupport: number): number {
 }
 
 export function calculateIncome(state: GameState): number {
-  const provinceIncome = Object.values(state.provinces).reduce(
-    (sum, province) => sum + (province.control / MAX_CONTROL) * province.baseTax,
-    0,
-  );
+  /*
+   * 征服した東方属州もそのまま収入源になる。
+   * 史実シナリオでは east.provinces が空なので、この項は 0 で
+   * 従来の計算式と完全に一致する
+   */
+  const provinceIncome = [
+    ...Object.values(state.provinces),
+    ...state.east.provinces.filter((p) => p.owner === 'west'),
+  ].reduce((sum, province) => sum + (province.control / MAX_CONTROL) * province.baseTax, 0);
   return (
     provinceIncome *
     (state.taxBase / MAX_TAX_BASE) *
