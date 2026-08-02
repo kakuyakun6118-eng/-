@@ -343,6 +343,39 @@ export const unifier: Strategy = (state) => {
   return pair(actions);
 };
 
+/**
+ * 境外へ攻め出る方針。
+ *
+ * `general` と同じ土台に、余力のある年だけ蛮族の郷里への遠征を足す。
+ * 「拡大はこの帝国には本来無理だった」という主題が郷里の征服でも
+ * 崩れていないかを測るための方針で、生存率が `general` を上回るなら
+ * 遠征が安すぎることになる
+ */
+/** この兵力を超えるまでは境外へ出ない */
+const CONQUER_ARMY_FLOOR = 105;
+/** 本国にこれ以上の敵がいる年は遠征しない */
+const CONQUER_MAX_HOME_THREATS = 2;
+
+export const conqueror: Strategy = (state) => {
+  const base = generalMinded(state);
+  const homeThreats = hostileInProvinces(state).length;
+  if (
+    state.fieldArmy < CONQUER_ARMY_FLOOR ||
+    homeThreats > CONQUER_MAX_HOME_THREATS ||
+    state.treasury < CONSCRIPT_COST
+  ) {
+    return base;
+  }
+
+  // 狙うのは守りの薄い郷里から。族長が境外に残っている勢力は本国の脅威でもある
+  const target = Object.values(state.homelands)
+    .filter((h) => h.owner !== 'west' && state.factions[h.factionId].stance !== 'foederati')
+    .sort((a, b) => a.garrison - b.garrison)[0];
+  if (target === undefined) return base;
+
+  return pair([{ type: 'conquer_homeland', factionId: target.factionId }, ...base]);
+};
+
 export const strategies: Record<string, Strategy> = {
   passive,
   limited: limitedFoederati,
@@ -350,5 +383,6 @@ export const strategies: Record<string, Strategy> = {
   foederati: foederatiHeavy,
   appeaser,
   general: generalMinded,
+  conqueror,
   unifier,
 };
