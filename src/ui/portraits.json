@@ -373,6 +373,198 @@
       "role": "shah",
       "origin": "persia",
       "age": "elder"
+    },
+    {
+      "file": "emperor_roman_youth_04.webp",
+      "role": "emperor",
+      "origin": "roman",
+      "age": "youth"
+    },
+    {
+      "file": "emperor_roman_youth_05.webp",
+      "role": "emperor",
+      "origin": "roman",
+      "age": "youth"
+    },
+    {
+      "file": "emperor_roman_youth_06.webp",
+      "role": "emperor",
+      "origin": "roman",
+      "age": "youth"
+    },
+    {
+      "file": "emperor_roman_youth_07.webp",
+      "role": "emperor",
+      "origin": "roman",
+      "age": "youth"
+    },
+    {
+      "file": "emperor_roman_adult_07.webp",
+      "role": "emperor",
+      "origin": "roman",
+      "age": "adult"
+    },
+    {
+      "file": "emperor_roman_adult_08.webp",
+      "role": "emperor",
+      "origin": "roman",
+      "age": "adult"
+    },
+    {
+      "file": "emperor_roman_adult_09.webp",
+      "role": "emperor",
+      "origin": "roman",
+      "age": "adult"
+    },
+    {
+      "file": "emperor_roman_adult_10.webp",
+      "role": "emperor",
+      "origin": "roman",
+      "age": "adult"
+    },
+    {
+      "file": "emperor_roman_elder_03.webp",
+      "role": "emperor",
+      "origin": "roman",
+      "age": "elder"
+    },
+    {
+      "file": "emperor_roman_elder_04.webp",
+      "role": "emperor",
+      "origin": "roman",
+      "age": "elder"
+    },
+    {
+      "file": "emperor_roman_elder_05.webp",
+      "role": "emperor",
+      "origin": "roman",
+      "age": "elder"
+    },
+    {
+      "file": "emperor_roman_elder_06.webp",
+      "role": "emperor",
+      "origin": "roman",
+      "age": "elder"
+    },
+    {
+      "file": "consort_barbarian_adult_07.webp",
+      "role": "consort",
+      "origin": "barbarian",
+      "age": "adult"
+    },
+    {
+      "file": "consort_barbarian_adult_08.webp",
+      "role": "consort",
+      "origin": "barbarian",
+      "age": "adult"
+    },
+    {
+      "file": "consort_barbarian_elder_04.webp",
+      "role": "consort",
+      "origin": "barbarian",
+      "age": "elder"
+    },
+    {
+      "file": "consort_barbarian_elder_05.webp",
+      "role": "consort",
+      "origin": "barbarian",
+      "age": "elder"
+    },
+    {
+      "file": "consort_east_adult_14.webp",
+      "role": "consort",
+      "origin": "east",
+      "age": "adult"
+    },
+    {
+      "file": "consort_east_adult_15.webp",
+      "role": "consort",
+      "origin": "east",
+      "age": "adult"
+    },
+    {
+      "file": "consort_east_adult_16.webp",
+      "role": "consort",
+      "origin": "east",
+      "age": "adult"
+    },
+    {
+      "file": "consort_east_elder_02.webp",
+      "role": "consort",
+      "origin": "east",
+      "age": "elder"
+    },
+    {
+      "file": "consort_barbarian_adult_09.webp",
+      "role": "consort",
+      "origin": "barbarian",
+      "age": "adult"
+    },
+    {
+      "file": "consort_barbarian_adult_10.webp",
+      "role": "consort",
+      "origin": "barbarian",
+      "age": "adult"
+    },
+    {
+      "file": "consort_barbarian_elder_06.webp",
+      "role": "consort",
+      "origin": "barbarian",
+      "age": "elder"
+    },
+    {
+      "file": "consort_barbarian_elder_07.webp",
+      "role": "consort",
+      "origin": "barbarian",
+      "age": "elder"
+    },
+    {
+      "file": "chief_barbarian_adult_02.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "adult"
+    },
+    {
+      "file": "chief_barbarian_adult_03.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "adult"
+    },
+    {
+      "file": "chief_barbarian_elder_02.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "elder"
+    },
+    {
+      "file": "chief_barbarian_elder_03.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "elder"
+    },
+    {
+      "file": "chief_barbarian_adult_04.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "adult"
+    },
+    {
+      "file": "chief_barbarian_adult_05.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "adult"
+    },
+    {
+      "file": "chief_barbarian_elder_04.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "elder"
+    },
+    {
+      "file": "chief_barbarian_elder_05.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "elder"
     }
   ]
 }

@@ -65,15 +65,20 @@ export function CourtFigures({ state }: { state: GameState }) {
           />
         )}
 
-        {factionIds.map((id) => {
+        {factionIds.map((id, index) => {
           const faction = state.factions[id];
+          /*
+           * 種に並び順を混ぜる。勢力 id と族長名だけでは文字列が似すぎて
+           * hash が散らず、フランクとブルグントのように同じ顔が並んだ
+           */
+          const seedId = `${index}:${id}:${factionLeaderName(id, state.year)}`;
           return (
             <Figure
               key={id}
               role="chief"
               origin="barbarian"
-              age={chiefAge(`${id}${factionLeaderName(id, state.year)}`)}
-              seedId={`${id}${factionLeaderName(id, state.year)}`}
+              age={chiefAge(faction.strength)}
+              seedId={seedId}
               title={FACTION_LABELS[id]}
               name={factionLeaderName(id, state.year)}
               note={`${STANCE_LABELS[faction.stance]}・${Math.round(faction.strength)}${
@@ -98,20 +103,15 @@ function termAge(years: number): 'youth' | 'adult' | 'elder' {
 }
 
 /**
- * 族長の肖像は勢力と族長名から決める。
+ * 強大な勢力ほど老練な族長に見せる。族長は年齢を持たないので戦力で代える。
  *
- * 当初は戦力で年代を割り当てていたが、族長の絵は年代ごとに1枚しかないため
- * 弱小勢力5つが揃って同じ若者の顔になった。id から散らして重複を減らす。
- * 族長が代替わりすれば絵も変わる
+ * 一度は id の hash で散らしていた。族長の絵が年代ごとに1枚しかなく、
+ * 戦力で割り当てると弱小勢力5つが揃って同じ顔になったため。
+ * 壮年・老年とも複数枚そろったので、戦力との対応に戻してある
+ * （同じ年代の中では族長名から1枚が決まるので、顔は勢力ごとに散る）
  */
-const AGE_BANDS = ['youth', 'adult', 'elder'] as const;
-function chiefAge(seedId: string): 'youth' | 'adult' | 'elder' {
-  let hash = 2166136261;
-  for (let i = 0; i < seedId.length; i++) {
-    hash ^= seedId.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-  return AGE_BANDS[(hash >>> 0) % AGE_BANDS.length];
+function chiefAge(strength: number): 'adult' | 'elder' {
+  return strength >= 60 ? 'elder' : 'adult';
 }
 
 function Figure({
