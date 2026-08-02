@@ -306,6 +306,7 @@ function describe(state: GameState, target: InspectTarget): CardView {
     rows: [
       ['戦力', persia.intervened ? String(Math.round(persia.strength)) : '—'],
       ['動向', persia.intervened ? '介入中' : '静観'],
+      ['西との関係', String(Math.round(persia.relations))],
       ['介入年', persia.interventionYear === null ? '—' : `${persia.interventionYear}年`],
       ['奪った属州', String(persia.seizedProvinces.length)],
     ],

@@ -6,6 +6,8 @@ import {
   EAST_PEACE_MIN_WAR_YEARS,
   EAST_TITLE_COST,
   MAX_EAST_RELATIONS,
+  MAX_PERSIA_RELATIONS,
+  PERSIA_IMPROVE_COST,
   FOEDERATI_HIRE_COST,
   GENERAL_APPOINT_COST,
   MARRIAGE_COST,
@@ -383,6 +385,22 @@ export const ACTION_TEMPLATES: ActionTemplate[] = [
           : null,
     build: ({ eastProvince }) =>
       eastProvince ? { type: 'east_invade', provinceId: eastProvince } : null,
+  },
+  {
+    id: 'persia_improve_relations',
+    category: '東帝国',
+    label: 'ペルシアへ修好',
+    detail:
+      'サーサーン朝に使者と贈り物を送る。介入を始める年が遅くなり、' +
+      '動き出したあとの攻勢も鈍る。ただし介入そのものは止められない',
+    cost: PERSIA_IMPROVE_COST,
+    target: 'none',
+    scenario: 'reunification',
+    blockedReason: (state) =>
+      state.persia.relations >= MAX_PERSIA_RELATIONS
+        ? '関係はすでに最良'
+        : needsGold(PERSIA_IMPROVE_COST)(state),
+    build: () => ({ type: 'persia_improve_relations' }),
   },
   {
     id: 'east_make_peace',
