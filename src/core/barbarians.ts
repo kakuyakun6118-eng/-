@@ -25,6 +25,8 @@ import {
   MIN_STRENGTH_TO_ADVANCE,
   MIN_TAX_BASE,
   RAID_CONTROL_DAMAGE,
+  RAIDER_MAX_STRENGTH,
+  RAIDER_MIN_CONTROL,
   RAID_TAX_BASE_LOSS,
   RAID_TREASURY_LOOT,
   SETTLE_CONTROL_THRESHOLD,
@@ -87,9 +89,14 @@ export function applyBarbarianActions(
       if (nextTarget && faction.strength >= MIN_STRENGTH_TO_ADVANCE && rng() < ADVANCE_PROBABILITY) {
         factions[factionId] = { ...faction, location: nextTarget };
       } else {
+        /*
+         * 略奪する民は毎年境外へ戻るので、上限を置かないと
+         * 成長がかかり続けて最大の脅威になってしまう
+         */
+        const grown = faction.strength * (1 + EXTERIOR_GROWTH_RATE);
         factions[factionId] = {
           ...faction,
-          strength: faction.strength * (1 + EXTERIOR_GROWTH_RATE),
+          strength: faction.raider === true ? Math.min(grown, RAIDER_MAX_STRENGTH) : grown,
         };
       }
       continue;
@@ -104,6 +111,8 @@ export function applyBarbarianActions(
       SETTLE_CONTROL_THRESHOLD +
       (faction.demand !== null ? DEMAND_REFUSAL_SETTLE_CONTROL_BONUS : 0);
     const canSettle =
+      // 略奪だけの民は土地に住み着かない
+      faction.raider !== true &&
       province.control < settleThreshold &&
       faction.strength > province.garrison * SETTLE_STRENGTH_MULTIPLIER;
 
@@ -164,7 +173,16 @@ export function applyBarbarianActions(
     const { attackerWins, margin } = resolveCombat(attackerPower, defenderPower);
 
     if (attackerWins) {
-      const newControl = clamp(province.control - RAID_CONTROL_DAMAGE, MIN_CONTROL, MAX_CONTROL);
+      /*
+       * 略奪だけの民は土地を奪い切らない。掠めるだけなので
+       * 支配度は RAIDER_MIN_CONTROL より下へは落ちない
+       */
+      const controlFloor = faction.raider === true ? RAIDER_MIN_CONTROL : MIN_CONTROL;
+      const newControl = clamp(
+        province.control - RAID_CONTROL_DAMAGE,
+        Math.min(controlFloor, province.control),
+        MAX_CONTROL,
+      );
       provinces[location] = {
         ...province,
         control: newControl,
@@ -199,13 +217,21 @@ export function applyBarbarianActions(
       factions[factionId] = {
         ...faction,
         strength: Math.max(0, faction.strength - margin * ATTACKER_LOSS_FACTOR),
-        routeIndex: advanceFurther ? nextIndex : faction.routeIndex,
-        location: advanceFurther ? faction.route[nextIndex] : location,
+        // 略奪だけの民は奥へ進まず、掠めたその年のうちに引き揚げる
+        routeIndex: faction.raider === true || !advanceFurther ? faction.routeIndex : nextIndex,
+        location:
+          faction.raider === true
+            ? 'exterior'
+            : advanceFurther
+              ? faction.route[nextIndex]
+              : location,
       };
     } else {
       factions[factionId] = {
         ...faction,
         strength: Math.max(0, faction.strength - margin * ATTACKER_LOSS_FACTOR),
+        // 撃退されても同じ。襲撃は一度の出撃であって駐留ではない
+        location: faction.raider === true ? 'exterior' : faction.location,
       };
       provinces[location] = {
         ...province,

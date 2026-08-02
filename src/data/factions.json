@@ -155,13 +155,14 @@
   },
   {
     "id": "Mauri",
-    "strength": 12,
+    "strength": 20,
     "stance": "hostile",
     "location": "exterior",
     "demand": null,
     "route": [
       "Africa"
     ],
-    "routeIndex": 0
+    "routeIndex": 0,
+    "raider": true
   }
 ]

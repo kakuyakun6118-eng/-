@@ -64,6 +64,28 @@ export const ADVANCE_PROBABILITY = 0.185;
 /** 境外で待機している勢力の戦力成長率（ターンあたり） */
 export const EXTERIOR_GROWTH_RATE = 0.05;
 
+/**
+ * 略奪だけを行う民（raider）が属州の支配度を削れる下限。
+ * 掠めはするが土地を奪い切ることはないので、この水準より下へは落とせない。
+ * SETTLE_CONTROL_THRESHOLD より十分上に取り、略奪だけで定住や
+ * 土地の要求の条件が整うことがないようにしてある
+ */
+export const RAIDER_MIN_CONTROL = 55;
+
+/**
+ * 略奪だけを行う民の戦力の上限。
+ *
+ * 略奪する民は掠めた年のうちに境外へ引き揚げるので、
+ * 境外での成長（EXTERIOR_GROWTH_RATE）がほぼ毎年かかり続ける。
+ * 上限を置かないと 20 で始まったマウリが476年には 460 まで膨らみ、
+ * 山地の襲撃者ではなく最大の脅威になってしまう。
+ * 王国を建てず版図も増えない民は人も増えない、という形にする。
+ *
+ * MIN_STRENGTH_TO_ADVANCE より必ず大きく取ること。45 にしたときは
+ * 閾値の 55 に届かず、マウリが一度も山を降りない飾りになった
+ */
+export const RAIDER_MAX_STRENGTH = 62;
+
 /** 属州の control がこれを下回ると定住されうる */
 export const SETTLE_CONTROL_THRESHOLD = 30;
 
