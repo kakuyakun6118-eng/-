@@ -108,14 +108,26 @@ export function applyBarbarianActions(
       faction.strength > province.garrison * SETTLE_STRENGTH_MULTIPLIER;
 
     if (canSettle) {
+      /*
+       * 恒久的に失うのはその属州の税基盤なので、失えるのは一度きり。
+       * すでに他の勢力が住み着いて baseTax が尽きている土地に
+       * もうひとつ住み着いても、帝国がさらに差し出すものは無い。
+       *
+       * 二重に取っていたときは、勢力を8から13に増やしただけで
+       * 1局あたりの定住が 4.2 → 8.9 件に増え、そのぶん taxBase と
+       * legitimacy が二重に削られていた
+       */
+      const firstSettlement = province.baseTax > 0;
       provinces[location] = { ...province, baseTax: 0 };
       factions[factionId] = { ...faction, stance: 'settled' };
-      taxBase = clamp(taxBase - SETTLE_TAX_BASE_LOSS, MIN_TAX_BASE, MAX_TAX_BASE);
-      legitimacy = clamp(
-        legitimacy - LEGITIMACY_LOSS_PER_SETTLEMENT,
-        MIN_LEGITIMACY,
-        MAX_LEGITIMACY,
-      );
+      if (firstSettlement) {
+        taxBase = clamp(taxBase - SETTLE_TAX_BASE_LOSS, MIN_TAX_BASE, MAX_TAX_BASE);
+        legitimacy = clamp(
+          legitimacy - LEGITIMACY_LOSS_PER_SETTLEMENT,
+          MIN_LEGITIMACY,
+          MAX_LEGITIMACY,
+        );
+      }
       continue;
     }
 

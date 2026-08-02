@@ -51,8 +51,15 @@ export const FOEDERATI_DEFECTION_LOYALTY_THRESHOLD = 20;
 /** 境外の勢力がこの戦力未満なら侵入を試みない（初期戦力の差で侵入時期が自然に分散する） */
 export const MIN_STRENGTH_TO_ADVANCE = 55;
 
-/** 境外の勢力が毎ターン帝国領へ侵入を試みる確率 */
-export const ADVANCE_PROBABILITY = 0.3;
+/**
+ * 境外の勢力が毎ターン帝国領へ侵入を試みる確率。
+ *
+ * これは1勢力あたりの率なので、勢力の数を増やすと帝国が受ける
+ * 侵入の総量がそのまま増える。8勢力から13勢力に増やしたとき、
+ * 0.3 のままでは中級・上級の生存率が 0% に落ちた。
+ * 帝国が1年に受ける侵入の期待値を元の水準に戻すため 8/13 を掛けてある
+ */
+export const ADVANCE_PROBABILITY = 0.185;
 
 /** 境外で待機している勢力の戦力成長率（ターンあたり） */
 export const EXTERIOR_GROWTH_RATE = 0.05;
@@ -113,7 +120,7 @@ export const MAX_FOEDERATI_LOYALTY = 100;
 /** 敵勢力のいない属州が毎ターン回復する control */
 export const CONTROL_RECOVERY_PER_TURN = 4;
 
-/** 略奪1回につき恒久的に失われる taxBase */
+/** 略奪1回につき恒久的に失われる taxBase（同じく勢力数で割り直してある） */
 export const RAID_TAX_BASE_LOSS = 0.6;
 
 /** 蛮族1勢力の定住につき恒久的に失われる taxBase */

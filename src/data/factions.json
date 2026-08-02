@@ -1,74 +1,156 @@
 [
   {
     "id": "Visigoths",
-    "strength": 80,
+    "strength": 68,
     "stance": "foederati",
     "location": "Illyricum",
-    "demand": { "type": "gold", "amount": 30 },
-    "route": ["Italia", "Gallia", "Hispania"],
+    "demand": {
+      "type": "gold",
+      "amount": 30
+    },
+    "route": [
+      "Italia",
+      "Gallia",
+      "Hispania"
+    ],
     "routeIndex": 0
   },
   {
     "id": "Vandals",
-    "strength": 50,
+    "strength": 34,
     "stance": "hostile",
     "location": "exterior",
     "demand": null,
-    "route": ["Gallia", "Hispania", "Africa"],
+    "route": [
+      "Gallia",
+      "Hispania",
+      "Africa"
+    ],
     "routeIndex": 0
   },
   {
     "id": "Huns",
-    "strength": 90,
+    "strength": 68,
     "stance": "hostile",
     "location": "exterior",
     "demand": null,
-    "route": ["Illyricum", "Italia"],
+    "route": [
+      "Illyricum",
+      "Italia"
+    ],
     "routeIndex": 0
   },
   {
     "id": "Franks",
-    "strength": 40,
-    "stance": "hostile",
-    "location": "exterior",
-    "demand": null,
-    "route": ["Gallia"],
-    "routeIndex": 0
-  },
-  {
-    "id": "Burgundians",
-    "strength": 35,
-    "stance": "hostile",
-    "location": "exterior",
-    "demand": null,
-    "route": ["Gallia"],
-    "routeIndex": 0
-  },
-  {
-    "id": "Suebi",
-    "strength": 25,
-    "stance": "hostile",
-    "location": "exterior",
-    "demand": null,
-    "route": ["Hispania"],
-    "routeIndex": 0
-  },
-  {
-    "id": "Alans",
     "strength": 30,
     "stance": "hostile",
     "location": "exterior",
     "demand": null,
-    "route": ["Gallia", "Hispania"],
+    "route": [
+      "Gallia"
+    ],
     "routeIndex": 0
   },
   {
-    "id": "Saxons",
+    "id": "Burgundians",
+    "strength": 24,
+    "stance": "hostile",
+    "location": "exterior",
+    "demand": null,
+    "route": [
+      "Gallia"
+    ],
+    "routeIndex": 0
+  },
+  {
+    "id": "Suebi",
+    "strength": 17,
+    "stance": "hostile",
+    "location": "exterior",
+    "demand": null,
+    "route": [
+      "Hispania"
+    ],
+    "routeIndex": 0
+  },
+  {
+    "id": "Alans",
     "strength": 20,
     "stance": "hostile",
     "location": "exterior",
     "demand": null,
-    "route": ["Britannia"],
+    "route": [
+      "Gallia",
+      "Hispania"
+    ],
+    "routeIndex": 0
+  },
+  {
+    "id": "Saxons",
+    "strength": 14,
+    "stance": "hostile",
+    "location": "exterior",
+    "demand": null,
+    "route": [
+      "Britannia"
+    ],
+    "routeIndex": 0
+  },
+  {
+    "id": "Alemanni",
+    "strength": 30,
+    "stance": "hostile",
+    "location": "exterior",
+    "demand": null,
+    "route": [
+      "Gallia"
+    ],
+    "routeIndex": 0
+  },
+  {
+    "id": "Ostrogoths",
+    "strength": 30,
+    "stance": "hostile",
+    "location": "exterior",
+    "demand": null,
+    "route": [
+      "Illyricum",
+      "Noricum"
+    ],
+    "routeIndex": 0
+  },
+  {
+    "id": "Gepids",
+    "strength": 20,
+    "stance": "hostile",
+    "location": "exterior",
+    "demand": null,
+    "route": [
+      "Illyricum",
+      "Noricum"
+    ],
+    "routeIndex": 0
+  },
+  {
+    "id": "Heruli",
+    "strength": 12,
+    "stance": "hostile",
+    "location": "exterior",
+    "demand": null,
+    "route": [
+      "Noricum"
+    ],
+    "routeIndex": 0
+  },
+  {
+    "id": "Scoti",
+    "strength": 11,
+    "stance": "hostile",
+    "location": "exterior",
+    "demand": null,
+    "route": [
+      "Britannia"
+    ],
     "routeIndex": 0
   }
 ]

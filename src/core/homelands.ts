@@ -1,8 +1,11 @@
 /**
  * 蛮族の本拠地と、その征服。
  *
- * 帝国の外にある各勢力の郷里を領域として持ち、攻め取れば属州になる。
+ * 帝国の外に定住地が特定できる勢力だけが郷里を持ち、攻め取れば属州になる。
  * 7パラメータには増やさず、`GameState` の別サブ構造として置く。
+ *
+ * フンやアランのように移動を続けた勢力は郷里を持たない。攻め込む先が
+ * 無いので、その戦力そのものを戦場で叩くしかない。
  *
  * **征服は属州の防衛より重い。** 狙われた勢力だけでなく、
  * 他の敵対勢力も加勢する（COALITION_DEFENSE_SHARE）。
@@ -55,11 +58,10 @@ function randomizedPower(base: number, rng: () => number): number {
 }
 
 /** 初期状態。データから読む。コードに直接書かない */
-export function createInitialHomelands(): Record<BarbarianFactionId, Homeland> {
+export function createInitialHomelands(): Partial<Record<BarbarianFactionId, Homeland>> {
   const list = homelandsData.homelands as Homeland[];
-  return Object.fromEntries(list.map((h) => [h.factionId, { ...h }])) as Record<
-    BarbarianFactionId,
-    Homeland
+  return Object.fromEntries(list.map((h) => [h.factionId, { ...h }])) as Partial<
+    Record<BarbarianFactionId, Homeland>
   >;
 }
 
@@ -87,7 +89,12 @@ export function chiefPowerModifier(state: GameState, factionId: BarbarianFaction
 
 /** 西が併合した本拠地。収入と保持領域に数える */
 export function westHeldHomelands(state: GameState): Homeland[] {
-  return Object.values(state.homelands).filter((h) => h.owner === 'west');
+  return homelandList(state).filter((h) => h.owner === 'west');
+}
+
+/** 郷里を持つ勢力の一覧。持たない勢力は飛ばす */
+export function homelandList(state: GameState): Homeland[] {
+  return Object.values(state.homelands).filter((h): h is Homeland => h !== undefined);
 }
 
 /**
@@ -184,7 +191,7 @@ export function updateHomelands(state: GameState, rng: () => number): GameState 
 
   for (const id of Object.keys(homelands) as BarbarianFactionId[]) {
     const homeland = homelands[id];
-    if (homeland.owner !== 'west') continue;
+    if (homeland === undefined || homeland.owner !== 'west') continue;
 
     const faction = state.factions[id];
     // 勢力が健在なかぎり郷里を諦めない

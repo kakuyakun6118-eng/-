@@ -21,15 +21,29 @@ export interface Province {
 
 // ── 蛮族勢力 ──────────────────────────────────────────
 
+/**
+ * 蛮族勢力。
+ *
+ * 郷里（homelands）を持つのは、帝国の外に定住地が特定できる勢力だけ。
+ * フンやアランのような遊牧民、西ゴートやヴァンダルのように
+ * この時代ずっと動き続けていた民は郷里を持たず、地図でも駒で描く
+ */
 export type BarbarianFactionId =
-  | 'Visigoths'
-  | 'Vandals'
-  | 'Huns'
+  // 郷里を持つ（地図では領域）
   | 'Franks'
   | 'Burgundians'
   | 'Suebi'
+  | 'Saxons'
+  | 'Gepids'
+  | 'Scoti'
+  // 郷里を持たない（地図では駒）
+  | 'Visigoths'
+  | 'Vandals'
+  | 'Huns'
   | 'Alans'
-  | 'Saxons';
+  | 'Ostrogoths'
+  | 'Heruli'
+  | 'Alemanni';
 
 export type BarbarianStance = 'hostile' | 'foederati' | 'settled';
 
@@ -444,7 +458,11 @@ export interface GameState {
    * 蛮族の本拠地。7パラメータには含めない別サブ構造。
    * 征服すると西の領域になる
    */
-  homelands: Record<BarbarianFactionId, Homeland>;
+  /**
+   * 郷里。移動を続けた勢力は持たないので、全勢力ぶんは揃わない。
+   * 郷里の無い勢力は遠征の相手にならず、戦力そのものを叩くしかない
+   */
+  homelands: Partial<Record<BarbarianFactionId, Homeland>>;
 
   /**
    * 東ローマ帝国。7パラメータには含めない別サブ構造。

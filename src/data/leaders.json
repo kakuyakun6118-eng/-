@@ -314,6 +314,112 @@
         "name": "ヘンギスト",
         "military": 6
       }
+    ],
+    "Alemanni": [
+      {
+        "from": 395,
+        "to": 450,
+        "name": "フラオマール",
+        "military": 5
+      },
+      {
+        "from": 450,
+        "to": 999,
+        "name": "ギバルド",
+        "military": 6
+      }
+    ],
+    "Ostrogoths": [
+      {
+        "from": 395,
+        "to": 420,
+        "name": "ウィニタリウス",
+        "military": 5
+      },
+      {
+        "from": 420,
+        "to": 450,
+        "name": "フニムンド",
+        "military": 5
+      },
+      {
+        "from": 450,
+        "to": 469,
+        "name": "ウァラミル",
+        "military": 7
+      },
+      {
+        "from": 469,
+        "to": 474,
+        "name": "テオデミル",
+        "military": 7
+      },
+      {
+        "from": 474,
+        "to": 999,
+        "name": "テオドリック大王",
+        "military": 9
+      }
+    ],
+    "Gepids": [
+      {
+        "from": 395,
+        "to": 435,
+        "name": "ファスティダ",
+        "military": 5
+      },
+      {
+        "from": 435,
+        "to": 470,
+        "name": "アルダリック",
+        "military": 8
+      },
+      {
+        "from": 470,
+        "to": 999,
+        "name": "トラウスティラ",
+        "military": 6
+      }
+    ],
+    "Heruli": [
+      {
+        "from": 395,
+        "to": 450,
+        "name": "ロドゥルフ",
+        "military": 4
+      },
+      {
+        "from": 450,
+        "to": 470,
+        "name": "エデコ",
+        "military": 6
+      },
+      {
+        "from": 470,
+        "to": 999,
+        "name": "オドアケル",
+        "military": 8
+      }
+    ],
+    "Scoti": [
+      {
+        "from": 395,
+        "to": 405,
+        "name": "ニール・ノイギャラハ",
+        "military": 6
+      },
+      {
+        "from": 405,
+        "to": 445,
+        "name": "ナス・イー",
+        "military": 5
+      },
+      {
+        "from": 445,
+        "to": 999,
+        "name": "ロイガレ・マク・ネール",
+        "military": 5
+      }
     ]
   },
   "generalNames": [
@@ -375,6 +481,31 @@
       "youth": "chief_barbarian_youth_02.webp",
       "adult": "chief_barbarian_adult_04.webp",
       "elder": "chief_barbarian_elder_04.webp"
+    },
+    "Alemanni": {
+      "youth": "chief_barbarian_youth_01.webp",
+      "adult": "chief_barbarian_adult_04.webp",
+      "elder": "chief_barbarian_elder_06.webp"
+    },
+    "Ostrogoths": {
+      "youth": "chief_barbarian_youth_01.webp",
+      "adult": "chief_barbarian_adult_02.webp",
+      "elder": "chief_barbarian_elder_04.webp"
+    },
+    "Gepids": {
+      "youth": "chief_barbarian_youth_02.webp",
+      "adult": "chief_barbarian_adult_06.webp",
+      "elder": "chief_barbarian_elder_02.webp"
+    },
+    "Heruli": {
+      "youth": "chief_barbarian_youth_02.webp",
+      "adult": "chief_barbarian_adult_01.webp",
+      "elder": "chief_barbarian_elder_03.webp"
+    },
+    "Scoti": {
+      "youth": "chief_barbarian_youth_01.webp",
+      "adult": "chief_barbarian_adult_03.webp",
+      "elder": "chief_barbarian_elder_01.webp"
     }
   },
   "_militaryNote": "族長の軍事能力（1〜10）。史実の事績に即して付ける。ローマを陥れたアラリック、アフリカを奪い49年統治したガイセリック、カタラウヌムまで攻め上ったアッティラを10前後に、史料の乏しい者や短命だった者を4〜5に置く。戦闘解決の攻撃側戦力を補正するだけで新しい資源ではない",
