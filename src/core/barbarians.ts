@@ -33,6 +33,7 @@ import {
 } from './constants';
 import { militaryModifier } from './dynasty';
 import { generalDefenseModifier, generalVictoryCreditShare } from './general';
+import { chiefPowerModifier } from './homelands';
 import { governorDefenseModifier } from './officials';
 import { resolveCombat } from './military';
 import type { BarbarianFactionId, GameState, ProvinceId, TurnModifiers } from './types';
@@ -132,10 +133,15 @@ export function applyBarbarianActions(
      * 拒否の代償をここで受けるので、放置した年数で複利に膨らむことはない
      */
     const refusalBonus = faction.demand !== null ? 1 + DEMAND_REFUSAL_POWER_BONUS : 1;
+    /*
+     * 族長の力量を攻撃側に掛ける。アッティラやガイセリックの下では
+     * 同じ兵力でも重くなる。史実の名を並べるだけでなく数値にも効かせる
+     */
     const attackerPower = randomizedPower(
       faction.strength *
         DIFFICULTY_SETTINGS[state.difficulty].barbarianPowerMultiplier *
-        refusalBonus,
+        refusalBonus *
+        chiefPowerModifier(state, factionId),
       rng,
     );
     // 君主の軍事能力は防御側戦力の補正としてのみ作用する

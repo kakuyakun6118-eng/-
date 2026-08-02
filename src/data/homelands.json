@@ -1,0 +1,13 @@
+{
+  "_note": "帝国外にある各勢力の郷里。征服すると西の属州になる。baseTax は属州（40〜220）より低く取る。ローマの版図の外なので徴税機構が育っておらず、奪っても属州ほどの実入りにはならない",
+  "homelands": [
+    { "factionId": "Visigoths",   "name": "ダキア",     "control": 100, "baseTax": 70, "garrison": 14, "owner": "barbarian" },
+    { "factionId": "Vandals",     "name": "シレジア",   "control": 100, "baseTax": 55, "garrison": 10, "owner": "barbarian" },
+    { "factionId": "Huns",        "name": "スキュティア", "control": 100, "baseTax": 65, "garrison": 13, "owner": "barbarian" },
+    { "factionId": "Franks",      "name": "ゲルマニア", "control": 100, "baseTax": 60, "garrison": 12, "owner": "barbarian" },
+    { "factionId": "Burgundians", "name": "ウィスワ",   "control": 100, "baseTax": 45, "garrison": 9,  "owner": "barbarian" },
+    { "factionId": "Suebi",       "name": "ボイオハエムム", "control": 100, "baseTax": 50, "garrison": 10, "owner": "barbarian" },
+    { "factionId": "Alans",       "name": "カフカス",   "control": 100, "baseTax": 50, "garrison": 10, "owner": "barbarian" },
+    { "factionId": "Saxons",      "name": "ダニア",     "control": 100, "baseTax": 40, "garrison": 8,  "owner": "barbarian" }
+  ]
+}

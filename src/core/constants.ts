@@ -9,8 +9,9 @@ import type { Difficulty, DifficultySettings, Scenario } from './types';
  * 4: シナリオ（scenario）と東ローマ・ペルシア（east / persia）を追加。
  *    空で補える情報ではないため旧版は読めない
  * 5: プラエトリア長官（prefect）と属州総督（governors）を追加
+ * 6: 蛮族の郷里（homelands）と、東ローマ・ペルシアの軍司令官（commander）を追加
  */
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
 
 export const STARTING_YEAR = 395;
 export const ENDING_YEAR = 476;
@@ -437,6 +438,64 @@ export const BROTHER_REVOLT_PROBABILITY_CAP = 0.15;
 /** 挙兵に付いていく野戦軍の割合 */
 export const BROTHER_REVOLT_ARMY_LOSS_RATE = 0.18;
 export const BROTHER_REVOLT_LEGITIMACY_LOSS = 10;
+
+// ── 蛮族の本拠地の征服 ────────────────────────────────
+
+/**
+ * 帝国外への遠征。属州の防衛と違い、こちらから攻め込む。
+ * 補給線が伸びるので本国の防衛派遣(0.5)より多くを割く必要がある
+ */
+export const CONQUEST_ARMY_SHARE = 0.7;
+/** 遠征の損耗。東方への遠征(0.06)より重い。道も港もない土地へ攻め込む */
+export const CONQUEST_ATTRITION_RATE = 0.07;
+/** 勝った年に本拠地の支配度が受けるダメージ */
+export const CONQUEST_CONTROL_DAMAGE = 25;
+/** 併合した直後の支配度。奪ったばかりの異民族の地なので低い */
+export const CONQUEST_INITIAL_CONTROL = 25;
+/** 本拠地を守る側が、その勢力の戦力から出す割合 */
+export const HOMELAND_DEFENSE_STRENGTH_SHARE = 0.5;
+
+/**
+ * 連合の防御補正。
+ *
+ * 帝国外へ攻め込むと、狙われた勢力以外の敵対勢力も加勢する。
+ * 他勢力の戦力の合計にこの割合を掛けて守備側に足す。
+ * 「蛮族同士が連合してくる」という想定を数値にしたもので、
+ * 属州を守るのと違って遠征が重くなる主因になる
+ */
+export const COALITION_DEFENSE_SHARE = 0.25;
+
+/**
+ * 連合の高まり。すでに西が奪った郷里1つにつき、上の割合をこの率だけ増す。
+ *
+ * これが無いと、一度連合を破った帝国はそのまま境外を平らげてしまう
+ * （初級で8勢力すべての郷里を取る局が出た）。奪われるほど残りが
+ * 結束を固める形にして、遠征を重ねるほど次が重くなるようにする
+ */
+export const COALITION_RALLY_PER_HOMELAND = 0.35;
+
+/** 併合した本拠地が毎年回復する支配度。属州(4)より遅い */
+export const HOMELAND_CONTROL_RECOVERY = 2.5;
+/**
+ * 併合した本拠地を蛮族が取り返しに来る確率。
+ * その勢力が健在なかぎり郷里を諦めない
+ */
+export const HOMELAND_RECLAIM_PROBABILITY = 0.12;
+/** 取り返しの攻撃が通った年に失う支配度 */
+export const HOMELAND_RECLAIM_CONTROL_DAMAGE = 12;
+/** 征服で得る正統性。異民族を平らげた皇帝の名声 */
+export const CONQUEST_LEGITIMACY_GAIN = 6;
+/** 本拠地を失った勢力の戦力に掛かる減衰。郷里を失えば人が集まらない */
+export const HOMELAND_LOST_STRENGTH_PENALTY = 0.75;
+
+/**
+ * 族長の軍事能力が攻撃側戦力に掛ける補正（ABILITY_NEUTRAL 基準の1点あたり）。
+ * アッティラやガイセリックの下では同じ兵力でも重くなる
+ */
+export const CHIEF_MILITARY_PER_POINT = 0.05;
+
+/** 東ローマ・ペルシアの将が自軍に掛ける補正（同じく1点あたり） */
+export const FOREIGN_COMMANDER_PER_POINT = 0.04;
 
 // ── 難易度 ────────────────────────────────────────────
 

@@ -45,6 +45,7 @@ import {
   TAX_RATE,
 } from './constants';
 import { governanceModifier } from './dynasty';
+import { createInitialHomelands } from './homelands';
 import {
   createInitialGovernors,
   createInitialPrefect,
@@ -79,6 +80,7 @@ export function createInitialState(
     factions: Object.fromEntries(factions.map((f) => [f.id, f])) as GameState['factions'],
     dynasty,
     general,
+    homelands: createInitialHomelands(),
     prefect: createInitialPrefect(),
     governors: createInitialGovernors(provinces.map((p) => p.id)),
     east,
@@ -96,11 +98,18 @@ export function createInitialState(
  * 史実シナリオ用の空の東ローマ。属州も軍も持たず、
  * eastRelations という数値としてだけ働く従来どおりの姿
  */
-const EMPTY_EAST: EastEmpire = { army: 0, stance: 'peace', warStartYear: null, provinces: [] };
+const EMPTY_EAST: EastEmpire = {
+  army: 0,
+  commander: { name: '', military: 5 },
+  stance: 'peace',
+  warStartYear: null,
+  provinces: [],
+};
 
 /** 同じく、動き出していないペルシア */
 const DORMANT_PERSIA: Persia = {
   strength: 0,
+  commander: { name: '', military: 5 },
   intervened: false,
   interventionYear: null,
   seizedProvinces: [],
@@ -124,6 +133,8 @@ export function calculateIncome(state: GameState): number {
   const provinceIncome = [
     ...Object.values(state.provinces),
     ...state.east.provinces.filter((p) => p.owner === 'west'),
+    // 併合した蛮族の郷里も収入源になる
+    ...Object.values(state.homelands).filter((h) => h.owner === 'west'),
   ].reduce((sum, province) => sum + (province.control / MAX_CONTROL) * province.baseTax, 0);
   return (
     provinceIncome *

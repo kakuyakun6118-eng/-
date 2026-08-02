@@ -29,6 +29,7 @@ import {
   updateEasternFront,
 } from './east';
 import { applyHistoricalEvents } from './events';
+import { conquerHomeland, updateHomelands } from './homelands';
 import {
   appointGovernor,
   appointPrefect,
@@ -148,6 +149,8 @@ export function tick(state: GameState, actions: PlayerActions, seed: Seed): Game
    * 「こちらの行動のあとに相手が動く」という同じ順序にするため
    */
   next = updateEasternFront(next, rng);
+  // 併合した郷里の落ち着きと、元の主による奪還
+  next = updateHomelands(next, rng);
 
   // 6. 支配度と税基盤の更新
   next = updateControl(next);
@@ -240,6 +243,8 @@ function applyAction(
       return invadeEastProvince(state, action.provinceId, rng);
     case 'east_make_peace':
       return makePeaceWithEast(state);
+    case 'conquer_homeland':
+      return conquerHomeland(state, action.factionId, rng);
   }
 }
 
@@ -248,7 +253,9 @@ export function evaluateScore(state: GameState): ScoreResult {
   // 征服した東方属州も保持属州として数える
   const provincesHeld =
     Object.values(state.provinces).filter((p) => p.control > 0).length +
-    state.east.provinces.filter((p) => p.owner === 'west' && p.control > 0).length;
+    state.east.provinces.filter((p) => p.owner === 'west' && p.control > 0).length +
+    // 併合した蛮族の郷里も保持領域に数える
+    Object.values(state.homelands).filter((h) => h.owner === 'west' && h.control > 0).length;
   return {
     status: state.status,
     finalYear: state.year,

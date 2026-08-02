@@ -232,6 +232,10 @@ export type TurnEventId =
   | 'prefect_retired'
   /** 属州総督が任期を終えて職を退いた年 */
   | 'governor_retired'
+  /** 蛮族の本拠地を征服した年 */
+  | 'homeland_conquered'
+  /** 征服した本拠地を蛮族に取り返された年 */
+  | 'homeland_lost'
   /** 属州総督が反乱を起こした年 */
   | 'governor_revolt'
   /** 皇帝の兄弟（傍系の一族）が帝位を狙って挙兵した年 */
@@ -316,6 +320,37 @@ export interface OfficialRecord {
   end: OfficialEnd;
 }
 
+// ── 蛮族の本拠地 ──────────────────────────────────────
+
+/**
+ * 帝国の外にある各勢力の郷里。
+ *
+ * 7パラメータには含めない別サブ構造。征服すると `owner` が 'west' になり、
+ * 西の収入と保持属州数に加わる。属州（`provinces`）に混ぜないのは、
+ * 蛮族AIの進路や既存の計算式に紛れ込ませないため
+ */
+export interface Homeland {
+  /** 郷里を持つ勢力。地図の領域もこの id で引く */
+  factionId: BarbarianFactionId;
+  /** 表示名（ゲルマニア、ダキアなど）。データから読む */
+  name: string;
+  control: number;
+  baseTax: number;
+  garrison: number;
+  owner: 'barbarian' | 'west';
+}
+
+// ── 東ローマ・ペルシアの軍司令官 ──────────────────────
+
+/**
+ * 敵国の将。西の軍司令官と同じく戦闘の防御・攻撃を補正するだけで、
+ * 新しい資源ではない。名と能力を持ち、地図から見られる
+ */
+export interface ForeignCommander {
+  name: string;
+  military: number;
+}
+
 // ── シナリオ ──────────────────────────────────────────
 
 /**
@@ -353,6 +388,8 @@ export type EastStance = 'peace' | 'war';
 export interface EastEmpire {
   /** 東の野戦軍。西との戦争でのみ使う */
   army: number;
+  /** 東の軍司令官。西と同じくマギステル・ミリトゥムを置く */
+  commander: ForeignCommander;
   stance: EastStance;
   /** 開戦した年。講和の可否や正統性の判定に使う */
   warStartYear: number | null;
@@ -363,6 +400,8 @@ export interface EastEmpire {
 
 export interface Persia {
   strength: number;
+  /** ペルシアの軍司令官（エーラーン・スパーフベド） */
+  commander: ForeignCommander;
   /** 介入を始めたか。ローマ同士の戦争が引き金になる */
   intervened: boolean;
   /** 介入を始めた年 */
@@ -400,6 +439,12 @@ export interface GameState {
 
   /** 属州総督。属州ごとに1人。空位もありうる */
   governors: Record<ProvinceId, GovernorSeat>;
+
+  /**
+   * 蛮族の本拠地。7パラメータには含めない別サブ構造。
+   * 征服すると西の領域になる
+   */
+  homelands: Record<BarbarianFactionId, Homeland>;
 
   /**
    * 東ローマ帝国。7パラメータには含めない別サブ構造。
@@ -529,6 +574,15 @@ export interface EastDeclareWarAction {
   type: 'east_declare_war';
 }
 
+/**
+ * 蛮族の本拠地へ遠征する。支配度を0まで削ると属州として併合できる。
+ * 他の敵対勢力が連合して守るので、属州の防衛より重い
+ */
+export interface ConquerHomelandAction {
+  type: 'conquer_homeland';
+  factionId: BarbarianFactionId;
+}
+
 /** 東方の属州へ侵攻する。統一シナリオでのみ選べる */
 export interface EastInvadeAction {
   type: 'east_invade';
@@ -598,6 +652,7 @@ export type PlayerAction =
   | DismissPrefectAction
   | AppointGovernorAction
   | DismissGovernorAction
+  | ConquerHomelandAction
   | EastImproveRelationsAction
   | EastDeclareWarAction
   | EastInvadeAction
