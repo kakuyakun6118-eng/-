@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "basePath": "/portraits/",
   "entries": [
     {
@@ -961,6 +961,42 @@
       "role": "emperor",
       "origin": "barbarian",
       "age": "child"
+    },
+    {
+      "file": "chief_barbarian_youth_06.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "youth"
+    },
+    {
+      "file": "chief_barbarian_adult_13.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "adult"
+    },
+    {
+      "file": "chief_barbarian_elder_13.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "elder"
+    },
+    {
+      "file": "chief_barbarian_youth_07.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "youth"
+    },
+    {
+      "file": "chief_barbarian_youth_08.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "youth"
+    },
+    {
+      "file": "chief_barbarian_youth_09.webp",
+      "role": "chief",
+      "origin": "barbarian",
+      "age": "youth"
     }
   ]
 }
