@@ -709,6 +709,24 @@
       "role": "chief",
       "origin": "hun",
       "age": "elder"
+    },
+    {
+      "file": "emperor_barbarian_youth_02.webp",
+      "role": "emperor",
+      "origin": "barbarian",
+      "age": "youth"
+    },
+    {
+      "file": "emperor_barbarian_adult_03.webp",
+      "role": "emperor",
+      "origin": "barbarian",
+      "age": "adult"
+    },
+    {
+      "file": "emperor_barbarian_elder_02.webp",
+      "role": "emperor",
+      "origin": "barbarian",
+      "age": "elder"
     }
   ]
 }
