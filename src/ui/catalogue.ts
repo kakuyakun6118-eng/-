@@ -2,7 +2,10 @@ import {
   CONSCRIPT_COST,
   DEFEND_COST,
   EAST_AID_MIN_RELATIONS,
+  EAST_IMPROVE_COST,
+  EAST_PEACE_MIN_WAR_YEARS,
   EAST_TITLE_COST,
+  MAX_EAST_RELATIONS,
   FOEDERATI_HIRE_COST,
   GENERAL_APPOINT_COST,
   MARRIAGE_COST,
@@ -12,10 +15,12 @@ import {
 import type {
   BarbarianDemandType,
   BarbarianFactionId,
+  EastProvinceId,
   GameState,
   GeneralEnd,
   PlayerAction,
   ProvinceId,
+  Scenario,
   TurnEventId,
 } from '../core/types';
 
@@ -96,7 +101,13 @@ export const DIFFICULTY_LABELS = {
   veteran: '上級',
 } as const;
 
-export type TargetKind = 'none' | 'province' | 'faction' | 'faction-province' | 'marriage';
+export type TargetKind =
+  | 'none'
+  | 'province'
+  | 'faction'
+  | 'faction-province'
+  | 'marriage'
+  | 'east-province';
 
 export interface ActionTemplate {
   id: string;
@@ -112,7 +123,14 @@ export interface ActionTemplate {
    * 省略すると全勢力。要求への応答のように、対象が限られる行動で使う
    */
   factionFilter?: (state: GameState, id: BarbarianFactionId) => boolean;
-  build: (target: { province?: ProvinceId; faction?: BarbarianFactionId; east?: boolean }) => PlayerAction | null;
+  build: (target: {
+    province?: ProvinceId;
+    faction?: BarbarianFactionId;
+    east?: boolean;
+    eastProvince?: EastProvinceId;
+  }) => PlayerAction | null;
+  /** このシナリオでだけ出す。省略すると常に出す */
+  scenario?: Scenario;
 }
 
 const needsGold = (cost: number) => (state: GameState) =>
@@ -293,6 +311,85 @@ export const ACTION_TEMPLATES: ActionTemplate[] = [
     blockedReason: needsGold(EAST_TITLE_COST),
     build: () => ({ type: 'east_confirm_title' }),
   },
+  {
+    id: 'east_improve_relations',
+    category: '東帝国',
+    label: '東ローマへ修好',
+    detail: '使者と贈り物を送って関係を戻す。援軍要請と帝位の承認で消耗した関係はこれで回復する',
+    cost: EAST_IMPROVE_COST,
+    target: 'none',
+    blockedReason: (state) =>
+      state.east.stance === 'war'
+        ? '交戦中は使者が通らない'
+        : state.eastRelations >= MAX_EAST_RELATIONS
+          ? '関係はすでに最良'
+          : needsGold(EAST_IMPROVE_COST)(state),
+    build: () => ({ type: 'east_improve_relations' }),
+  },
+  {
+    id: 'east_declare_war',
+    category: '東帝国',
+    label: '東ローマに宣戦',
+    detail: 'ローマ人がローマ人と戦う。正統性と元老院の支持を先払いし、東との関係は断たれる',
+    cost: null,
+    target: 'none',
+    scenario: 'reunification',
+    blockedReason: (state) => (state.east.stance === 'war' ? 'すでに交戦中' : null),
+    build: () => ({ type: 'east_declare_war' }),
+  },
+  {
+    id: 'east_invade',
+    category: '東帝国',
+    label: '東方へ侵攻',
+    detail: '野戦軍を遠征に出す。支配度を0まで削ると属州を併合できる',
+    cost: null,
+    target: 'east-province',
+    scenario: 'reunification',
+    blockedReason: (state) =>
+      state.east.stance !== 'war'
+        ? '宣戦していない'
+        : state.east.provinces.every((p) => p.owner === 'west')
+          ? '東方はすべて手中にある'
+          : null,
+    build: ({ eastProvince }) =>
+      eastProvince ? { type: 'east_invade', provinceId: eastProvince } : null,
+  },
+  {
+    id: 'east_make_peace',
+    category: '東帝国',
+    label: '東ローマと講和',
+    detail: '奪った属州は保持したまま戦端を閉じる。ペルシアは引かない',
+    cost: null,
+    target: 'none',
+    scenario: 'reunification',
+    blockedReason: (state) => {
+      if (state.east.stance !== 'war' || state.east.warStartYear === null) return '交戦していない';
+      const years = state.year - state.east.warStartYear;
+      return years < EAST_PEACE_MIN_WAR_YEARS
+        ? `開戦から${EAST_PEACE_MIN_WAR_YEARS}年は講和できない（あと${EAST_PEACE_MIN_WAR_YEARS - years}年）`
+        : null;
+    },
+    build: () => ({ type: 'east_make_peace' }),
+  },
 ];
+
+/** 東方属州の表示名 */
+export const EAST_PROVINCE_LABELS: Record<EastProvinceId, string> = {
+  Thracia: 'トラキア',
+  Asiana: 'アシア',
+  Oriens: 'オリエンス（シリア）',
+  Aegyptus: 'エジプト',
+};
+
+export const EAST_OWNER_LABELS = {
+  east: '東ローマ',
+  west: '自国',
+  persia: 'ペルシア',
+} as const;
+
+export const SCENARIO_LABELS: Record<Scenario, string> = {
+  historical: '史実',
+  reunification: '統一',
+};
 
 export const MARRIAGE_EAST_REQUIREMENT = MARRIAGE_EAST_MIN_RELATIONS;

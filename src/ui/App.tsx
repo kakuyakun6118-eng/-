@@ -5,6 +5,7 @@ import { consumesActionSlot } from '../core/tick';
 import type { GameState, ProvinceId } from '../core/types';
 import { ActionPanel } from './components/ActionPanel';
 import { MapLegend, ProvinceMap, occupierNames } from './components/ProvinceMap';
+import { EastPanel } from './components/EastPanel';
 import { RulerPanel } from './components/RulerPanel';
 import { ResultScreen, TitleScreen } from './components/Screens';
 import { StatusBar } from './components/StatusBar';
@@ -84,10 +85,10 @@ export function App() {
   if (state === null) {
     return (
       <TitleScreen
-        onStart={(difficulty, rulerName) => {
+        onStart={(difficulty, rulerName, scenario) => {
           // 難易度を選ぶ操作をきっかけに鳴らす。操作なしでは再生できない
           music.startIfAllowed();
-          start(difficulty, rulerName);
+          start(difficulty, rulerName, scenario);
         }}
         onLoad={load}
         loadError={loadError}
@@ -131,6 +132,8 @@ export function App() {
         </section>
 
         <RulerPanel state={state} onRename={rename} />
+
+        <EastPanel state={state} />
 
         <DemandPanel state={state} />
 

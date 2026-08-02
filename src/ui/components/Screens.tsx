@@ -3,10 +3,11 @@ import { useState } from 'react';
 import dynastyData from '../../data/dynasty.json';
 import { ENDING_YEAR, STARTING_YEAR } from '../../core/constants';
 import { findEvent } from '../../core/events';
-import type { Difficulty, GameState, ProvinceId, ScoreResult } from '../../core/types';
+import type { Difficulty, GameState, ProvinceId, Scenario, ScoreResult } from '../../core/types';
 import {
   DIFFICULTY_LABELS,
   RULER_NAME_MAX_LENGTH,
+  SCENARIO_LABELS,
   FACTION_LABELS,
   GENERAL_END_LABELS,
   PROVINCE_LABELS,
@@ -14,6 +15,20 @@ import {
 
 /** 名前が空のまま始めたときに使う既定名。データ側の初期君主に合わせる */
 const DEFAULT_RULER_NAME = dynastyData.ruler.name;
+/** 世界線の説明。史実が本編で、統一は「もし東を併合できたら」の別枠 */
+const SCENARIO_DETAIL: Record<Scenario, { title: string; detail: string }> = {
+  historical: {
+    title: '史実 — 延命',
+    detail: '395年から476年まで、帝国を1年でも長く保たせる。拡大の手段はない',
+  },
+  reunification: {
+    title: '統一 — ローマ再統一',
+    detail:
+      '東ローマに宣戦し、東方属州を併合してローマを統一する。' +
+      'ただしローマ同士の内戦を見たサーサーン朝ペルシアが背後から介入してくる',
+  },
+};
+
 const DIFFICULTY_DETAIL: Record<Difficulty, string> = {
   beginner: '税収に余裕があり、蛮族の圧力と傭兵の要求も緩い',
   standard: '基準となるバランス',
@@ -25,12 +40,13 @@ export function TitleScreen({
   onLoad,
   loadError,
 }: {
-  onStart: (difficulty: Difficulty, rulerName: string) => void;
+  onStart: (difficulty: Difficulty, rulerName: string, scenario: Scenario) => void;
   onLoad: (file: File) => void;
   loadError: string | null;
 }) {
   // 空のまま始めても遊べるよう、データの既定名を初期値にする
   const [rulerName, setRulerName] = useState(DEFAULT_RULER_NAME);
+  const [scenario, setScenario] = useState<Scenario>('historical');
   return (
     <div className="min-h-dvh flex flex-col justify-center px-5 py-10 max-w-lg mx-auto">
       <div className="roman-meander" />
@@ -62,11 +78,37 @@ export function TitleScreen({
         </span>
       </label>
 
+      <div className="mt-6">
+        <span className="roman-heading text-xs">世界線</span>
+        <div className="mt-1 space-y-2">
+          {(['historical', 'reunification'] as Scenario[]).map((id) => (
+            <button
+              key={id}
+              onClick={() => setScenario(id)}
+              className="roman-panel w-full text-left rounded-sm px-4 py-2.5 transition"
+              style={
+                scenario === id
+                  ? {
+                      borderColor: 'var(--gold-bright)',
+                      boxShadow: '0 0 0 2px rgba(216, 171, 60, 0.45)',
+                    }
+                  : undefined
+              }
+            >
+              <div className="roman-heading text-sm">{SCENARIO_DETAIL[id].title}</div>
+              <div className="text-xs mt-0.5" style={{ color: 'var(--ink-soft)' }}>
+                {SCENARIO_DETAIL[id].detail}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="mt-6 space-y-2">
         {(['beginner', 'standard', 'veteran'] as Difficulty[]).map((difficulty) => (
           <button
             key={difficulty}
-            onClick={() => onStart(difficulty, rulerName.trim() || DEFAULT_RULER_NAME)}
+            onClick={() => onStart(difficulty, rulerName.trim() || DEFAULT_RULER_NAME, scenario)}
             className="roman-panel w-full text-left rounded-sm px-4 py-3 transition"
           >
             <div className="roman-heading text-base">{DIFFICULTY_LABELS[difficulty]}</div>
@@ -110,24 +152,47 @@ export function ResultScreen({
   state: GameState;
   onRestart: () => void;
 }) {
+  const unified = score.status === 'unified';
   const survived = score.status === 'survived';
+  const won = unified || survived;
   return (
     <div className="min-h-dvh flex flex-col justify-center px-5 py-10 max-w-lg mx-auto">
       <div className="roman-meander" />
       <div
         className="roman-title text-3xl mt-5 text-center"
-        style={{ color: survived ? 'var(--purple-deep)' : 'var(--oxblood)' }}
+        style={{ color: won ? 'var(--purple-deep)' : 'var(--oxblood)' }}
       >
-        {survived ? '帝国は存続した' : '帝国は崩壊した'}
+        {unified ? 'ローマは統一された' : survived ? '帝国は存続した' : '帝国は崩壊した'}
       </div>
       <div className="text-sm mt-1 text-center" style={{ color: 'var(--ink-soft)' }}>
-        {score.finalYear}年まで到達
+        {unified ? `${score.finalYear}年に東西を再統一` : `${score.finalYear}年まで到達`}
       </div>
       <div className="roman-rule mt-3" />
 
       <dl className="roman-panel rounded-sm mt-6 px-3 py-2 space-y-2">
         <Row label="スコア" value={Math.round(score.score).toLocaleString()} strong />
         <Row label="難易度" value={DIFFICULTY_LABELS[score.difficulty]} />
+        <Row label="世界線" value={SCENARIO_LABELS[state.scenario]} />
+        {state.scenario === 'reunification' && (
+          <>
+            <Row
+              label="東方属州"
+              value={`${state.east.provinces.filter((p) => p.owner === 'west').length} / ${
+                state.east.provinces.length
+              } を保持`}
+            />
+            <Row
+              label="ペルシア"
+              value={
+                state.persia.intervened
+                  ? `介入（${state.persia.interventionYear}年）・戦力 ${Math.round(
+                      state.persia.strength,
+                    )}`
+                  : '介入せず'
+              }
+            />
+          </>
+        )}
         <Row label="保持属州" value={`${score.provincesHeld}`} />
         <Row label="税基盤" value={score.taxBase.toFixed(0)} />
         <Row label="正統性" value={score.legitimacy.toFixed(0)} />

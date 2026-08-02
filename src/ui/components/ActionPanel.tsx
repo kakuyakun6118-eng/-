@@ -1,9 +1,17 @@
 import { useState } from 'react';
 
 import { MAX_ACTIONS_PER_TURN } from '../../core/constants';
-import type { BarbarianFactionId, GameState, PlayerAction, ProvinceId } from '../../core/types';
+import type {
+  BarbarianFactionId,
+  EastProvinceId,
+  GameState,
+  PlayerAction,
+  ProvinceId,
+} from '../../core/types';
 import {
   ACTION_TEMPLATES,
+  EAST_OWNER_LABELS,
+  EAST_PROVINCE_LABELS,
   FACTION_LABELS,
   MARRIAGE_EAST_REQUIREMENT,
   PROVINCE_LABELS,
@@ -44,7 +52,12 @@ export function ActionPanel({ state, selected, onToggle }: Props) {
       </div>
 
       <div className="space-y-2">
-        {ACTION_TEMPLATES.filter((t) => t.category === openCategory).map((template) => (
+        {ACTION_TEMPLATES.filter(
+          (t) =>
+            t.category === openCategory &&
+            // シナリオ指定のある行動は、そのシナリオでだけ出す
+            (t.scenario === undefined || t.scenario === state.scenario),
+        ).map((template) => (
           <ActionCard
             key={template.id}
             template={template}
@@ -79,6 +92,7 @@ function ActionCard({
     : allFactionIds;
 
   const [province, setProvince] = useState<ProvinceId>('Italia');
+  const [eastProvince, setEastProvince] = useState<EastProvinceId>('Thracia');
   const [faction, setFaction] = useState<BarbarianFactionId>('Visigoths');
   const [east, setEast] = useState(false);
 
@@ -93,6 +107,7 @@ function ActionCard({
     province,
     faction: target,
     east: template.target === 'marriage' ? east : undefined,
+    eastProvince,
   });
   const key = action ? actionKey(action) : template.id;
   const isSelected = selected.some((a) => actionKey(a) === key);
@@ -155,6 +170,19 @@ function ActionCard({
                 {PROVINCE_LABELS[id]}（支配 {Math.round(state.provinces[id].control)}）
               </option>
             ))}
+          </Select>
+        )}
+
+        {template.target === 'east-province' && (
+          <Select value={eastProvince} onChange={(v) => setEastProvince(v as EastProvinceId)}>
+            {state.east.provinces
+              .filter((p) => p.owner !== 'west')
+              .map((p) => (
+                <option key={p.id} value={p.id}>
+                  {EAST_PROVINCE_LABELS[p.id]}（{EAST_OWNER_LABELS[p.owner]}・支配{' '}
+                  {Math.round(p.control)}）
+                </option>
+              ))}
           </Select>
         )}
 

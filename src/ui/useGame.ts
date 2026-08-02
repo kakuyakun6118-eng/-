@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 
 import dynastyData from '../data/dynasty.json';
+import eastData from '../data/east.json';
+import persiaData from '../data/persia.json';
 import generalData from '../data/general.json';
 import factionsData from '../data/factions.json';
 import provincesData from '../data/provinces.json';
@@ -14,11 +16,14 @@ import type {
   BarbarianFaction,
   Difficulty,
   Dynasty,
+  EastEmpire,
   GameState,
   GeneralSeat,
+  Persia,
   PlayerAction,
   PlayerActions,
   Province,
+  Scenario,
 } from '../core/types';
 import { FACTION_LABELS, PROVINCE_LABELS, TURN_EVENT_LABELS } from './catalogue';
 import { deriveTurnMotion, NO_MOTION, type TurnMotion } from './movements';
@@ -36,9 +41,10 @@ export function useGame() {
   /** 直前のターンに地図上で起きた進軍と戦闘。表示のためだけの派生値 */
   const [motion, setMotion] = useState<TurnMotion>(NO_MOTION);
 
-  const start = useCallback((difficulty: Difficulty, rulerName: string) => {
+  const start = useCallback((difficulty: Difficulty, rulerName: string, scenario: Scenario) => {
     // 乱数の種はここで一度だけ引く。tick() 自体は seed から決定的に動く
     setRunSeed(Math.floor(Math.random() * 1_000_000_000));
+    const reunification = scenario === 'reunification';
     const fresh = createInitialState(
       provincesData as Province[],
       factionsData as BarbarianFaction[],
@@ -46,6 +52,10 @@ export function useGame() {
       JSON.parse(JSON.stringify(dynastyData)) as Dynasty,
       JSON.parse(JSON.stringify(generalData)) as GeneralSeat,
       difficulty,
+      scenario,
+      // 史実シナリオでは東もペルシアも実体を持たない
+      reunification ? (JSON.parse(JSON.stringify(eastData)) as EastEmpire) : undefined,
+      reunification ? (JSON.parse(JSON.stringify(persiaData)) as Persia) : undefined,
     );
     setState(renameRuler(fresh, rulerName));
     setSelected([]);
