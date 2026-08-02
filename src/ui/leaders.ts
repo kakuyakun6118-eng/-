@@ -34,6 +34,13 @@ const DATA = leadersData as {
   generalNames: string[];
   /** データで名が決まっている将軍。開始時のスティリコなど */
   knownGenerals: Record<string, string>;
+  /**
+   * 勢力ごとに固定する族長の顔。年代の帯ごとに1枚。
+   * フン族は専用の出自（origin: 'hun'）から引くのでここには入れない
+   */
+  factionPortraits: Partial<
+    Record<BarbarianFactionId, Record<'youth' | 'adult' | 'elder', string>>
+  >;
 };
 
 function reignAt(reigns: Reign[], year: number): Reign | undefined {
@@ -75,6 +82,20 @@ export function persianKingAge(year: number): 'youth' | 'adult' | 'elder' {
 export function factionLeaderName(id: BarbarianFactionId, year: number): string {
   const reigns = DATA.factions[id];
   return reigns ? nameAt(reigns, year) : '';
+}
+
+/**
+ * 勢力ごとに固定した族長の顔。
+ *
+ * hash 任せにすると、同じ年代の帯に入った勢力どうしで顔が重なるうえ、
+ * 族長が代替わりするたびに顔が入れ替わって勢力の見分けが付かなくなる。
+ * データで固定して「西ゴートといえばこの顔」を保つ
+ */
+export function factionPortraitFile(
+  id: BarbarianFactionId,
+  age: 'youth' | 'adult' | 'elder',
+): string | null {
+  return DATA.factionPortraits[id]?.[age] ?? null;
 }
 
 /** 文字列から決定的に整数を作る。肖像画の割り当てと同じ手 */

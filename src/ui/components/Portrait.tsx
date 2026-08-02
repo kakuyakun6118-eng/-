@@ -6,6 +6,7 @@ import {
   consortAgeBandOf,
   consortOriginOf,
   emperorOriginOf,
+  portraitUrl,
   selectPortrait,
   type PortraitAge,
   type PortraitOrigin,
@@ -506,6 +507,7 @@ export function LeaderFigure({
   seedId,
   alt,
   className,
+  file,
 }: {
   role: PortraitRole;
   origin: PortraitOrigin;
@@ -513,9 +515,11 @@ export function LeaderFigure({
   seedId: string;
   alt: string;
   className?: string;
+  /** 指定するとこのファイルを使う。勢力ごとに顔を固定するため */
+  file?: string | null;
 }) {
   const [failed, setFailed] = useState(false);
-  const url = selectPortrait(role, origin, age, seedId);
+  const url = file ? portraitUrl(file) : selectPortrait(role, origin, age, seedId);
   if (url === null || failed) return null;
   return (
     <img

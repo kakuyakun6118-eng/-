@@ -102,6 +102,15 @@ function hashString(value: string): number {
 }
 
 /**
+ * manifest の basePath は先頭が "/" の絶対パス。
+ * そのまま使うとサブパスで公開したときに配信元の根を指して 404 になるので、
+ * Vite の BASE_URL を前に付けて公開先に追随させる
+ */
+export function portraitUrl(file: string): string {
+  return `${import.meta.env.BASE_URL}${MANIFEST.basePath.replace(/^\//, '')}${file}`;
+}
+
+/**
  * 属性に合う肖像を1枚選ぶ。
  * 完全一致が無ければ年代を、それも無ければ出自を順に緩める。
  * 少数の画像から始めて後から足していけるようにするため
@@ -124,11 +133,5 @@ export function selectPortrait(
           ? byRole.filter((e) => e.age === age)
           : byRole;
 
-  const chosen = candidates[hashString(seedId) % candidates.length];
-  /*
-   * manifest の basePath は先頭が "/" の絶対パス。
-   * そのまま使うとサブパスで公開したときに配信元の根を指して 404 になるので、
-   * Vite の BASE_URL を前に付けて公開先に追随させる
-   */
-  return `${import.meta.env.BASE_URL}${MANIFEST.basePath.replace(/^\//, '')}${chosen.file}`;
+  return portraitUrl(candidates[hashString(seedId) % candidates.length].file);
 }

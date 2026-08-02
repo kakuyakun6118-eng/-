@@ -307,5 +307,43 @@
   ],
   "knownGenerals": {
     "stilicho": "スティリコ"
+  },
+  "_portraitNote": "勢力ごとの族長の顔を固定する。hash 任せだと同じ帯に入った勢力どうしで 顔が重なり、しかもゲーム間で入れ替わって勢力の見分けが付かない。アラン人はイラン系の遊牧民なので暗色の顔を、サクソンなど北方ゲルマンには金髪系を当てている。フン族は origin: 'hun' の専用画像を引くのでここには書かない",
+  "factionPortraits": {
+    "Visigoths": {
+      "youth": "chief_barbarian_youth_01.webp",
+      "adult": "chief_barbarian_adult_06.webp",
+      "elder": "chief_barbarian_elder_01.webp"
+    },
+    "Franks": {
+      "youth": "chief_barbarian_youth_01.webp",
+      "adult": "chief_barbarian_adult_02.webp",
+      "elder": "chief_barbarian_elder_02.webp"
+    },
+    "Saxons": {
+      "youth": "chief_barbarian_youth_01.webp",
+      "adult": "chief_barbarian_adult_01.webp",
+      "elder": "chief_barbarian_elder_05.webp"
+    },
+    "Vandals": {
+      "youth": "chief_barbarian_youth_02.webp",
+      "adult": "chief_barbarian_adult_03.webp",
+      "elder": "chief_barbarian_elder_06.webp"
+    },
+    "Burgundians": {
+      "youth": "chief_barbarian_youth_02.webp",
+      "adult": "chief_barbarian_adult_05.webp",
+      "elder": "chief_barbarian_elder_05.webp"
+    },
+    "Suebi": {
+      "youth": "chief_barbarian_youth_02.webp",
+      "adult": "chief_barbarian_adult_05.webp",
+      "elder": "chief_barbarian_elder_03.webp"
+    },
+    "Alans": {
+      "youth": "chief_barbarian_youth_02.webp",
+      "adult": "chief_barbarian_adult_04.webp",
+      "elder": "chief_barbarian_elder_04.webp"
+    }
   }
 }

@@ -4,6 +4,7 @@ import {
   eastEmperorAge,
   eastEmperorName,
   factionLeaderName,
+  factionPortraitFile,
   generalName,
   persianKingAge,
   persianKingName,
@@ -79,13 +80,17 @@ export function CourtFigures({ state }: { state: GameState }) {
            * hash が散らず、フランクとブルグントのように同じ顔が並んだ
            */
           const seedId = `${index}:${id}:${factionLeaderName(id, state.year)}`;
+          const age = chiefAge(faction.strength);
+          const isHun = id === 'Huns';
           return (
             <Figure
               key={id}
               role="chief"
-              origin={id === 'Huns' ? 'hun' : 'barbarian'}
-              age={chiefAge(faction.strength)}
+              origin={isHun ? 'hun' : 'barbarian'}
+              age={age}
               seedId={seedId}
+              // フンは専用画像を hash で引く。他は勢力ごとに顔を固定する
+              file={isHun ? null : factionPortraitFile(id, age)}
               title={FACTION_LABELS[id]}
               name={factionLeaderName(id, state.year)}
               note={`${STANCE_LABELS[faction.stance]}・${Math.round(faction.strength)}${
@@ -137,6 +142,7 @@ function Figure({
   note,
   hostile,
   faded,
+  file,
 }: {
   role: 'general' | 'chief' | 'eastemperor' | 'shah';
   origin: 'roman' | 'barbarian' | 'east' | 'persia' | 'hun';
@@ -147,6 +153,7 @@ function Figure({
   note: string;
   hostile?: boolean;
   faded?: boolean;
+  file?: string | null;
 }) {
   return (
     <figure
@@ -162,6 +169,7 @@ function Figure({
         origin={origin}
         age={age}
         seedId={seedId}
+        file={file}
         alt={`${title}の肖像`}
         className="w-full h-auto block"
       />
