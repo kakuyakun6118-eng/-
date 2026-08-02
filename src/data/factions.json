@@ -1,7 +1,7 @@
 [
   {
     "id": "Visigoths",
-    "strength": 68,
+    "strength": 66,
     "stance": "foederati",
     "location": "Illyricum",
     "demand": {
@@ -17,7 +17,7 @@
   },
   {
     "id": "Vandals",
-    "strength": 34,
+    "strength": 32,
     "stance": "hostile",
     "location": "exterior",
     "demand": null,
@@ -30,7 +30,7 @@
   },
   {
     "id": "Huns",
-    "strength": 68,
+    "strength": 66,
     "stance": "hostile",
     "location": "exterior",
     "demand": null,
@@ -42,7 +42,7 @@
   },
   {
     "id": "Franks",
-    "strength": 30,
+    "strength": 29,
     "stance": "hostile",
     "location": "exterior",
     "demand": null,
@@ -53,7 +53,7 @@
   },
   {
     "id": "Burgundians",
-    "strength": 24,
+    "strength": 23,
     "stance": "hostile",
     "location": "exterior",
     "demand": null,
@@ -64,7 +64,7 @@
   },
   {
     "id": "Suebi",
-    "strength": 17,
+    "strength": 16,
     "stance": "hostile",
     "location": "exterior",
     "demand": null,
@@ -75,7 +75,7 @@
   },
   {
     "id": "Alans",
-    "strength": 20,
+    "strength": 19,
     "stance": "hostile",
     "location": "exterior",
     "demand": null,
@@ -87,7 +87,7 @@
   },
   {
     "id": "Saxons",
-    "strength": 14,
+    "strength": 13,
     "stance": "hostile",
     "location": "exterior",
     "demand": null,
@@ -98,7 +98,7 @@
   },
   {
     "id": "Alemanni",
-    "strength": 30,
+    "strength": 28,
     "stance": "hostile",
     "location": "exterior",
     "demand": null,
@@ -109,7 +109,7 @@
   },
   {
     "id": "Ostrogoths",
-    "strength": 30,
+    "strength": 28,
     "stance": "hostile",
     "location": "exterior",
     "demand": null,
@@ -121,7 +121,7 @@
   },
   {
     "id": "Gepids",
-    "strength": 20,
+    "strength": 19,
     "stance": "hostile",
     "location": "exterior",
     "demand": null,
@@ -133,7 +133,7 @@
   },
   {
     "id": "Heruli",
-    "strength": 12,
+    "strength": 11,
     "stance": "hostile",
     "location": "exterior",
     "demand": null,
@@ -144,12 +144,23 @@
   },
   {
     "id": "Scoti",
-    "strength": 11,
+    "strength": 10,
     "stance": "hostile",
     "location": "exterior",
     "demand": null,
     "route": [
       "Britannia"
+    ],
+    "routeIndex": 0
+  },
+  {
+    "id": "Mauri",
+    "strength": 12,
+    "stance": "hostile",
+    "location": "exterior",
+    "demand": null,
+    "route": [
+      "Africa"
     ],
     "routeIndex": 0
   }

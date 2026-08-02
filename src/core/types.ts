@@ -43,7 +43,8 @@ export type BarbarianFactionId =
   | 'Alans'
   | 'Ostrogoths'
   | 'Heruli'
-  | 'Alemanni';
+  | 'Alemanni'
+  | 'Mauri';
 
 export type BarbarianStance = 'hostile' | 'foederati' | 'settled';
 

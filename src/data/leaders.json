@@ -420,6 +420,26 @@
         "name": "ロイガレ・マク・ネール",
         "military": 5
       }
+    ],
+    "Mauri": [
+      {
+        "from": 395,
+        "to": 398,
+        "name": "ギルド",
+        "military": 6
+      },
+      {
+        "from": 398,
+        "to": 450,
+        "name": "マスティエス",
+        "military": 5
+      },
+      {
+        "from": 450,
+        "to": 999,
+        "name": "マスナ",
+        "military": 5
+      }
     ]
   },
   "generalNames": [
@@ -505,6 +525,11 @@
     "Scoti": {
       "youth": "chief_barbarian_youth_01.webp",
       "adult": "chief_barbarian_adult_03.webp",
+      "elder": "chief_barbarian_elder_01.webp"
+    },
+    "Mauri": {
+      "youth": "chief_barbarian_youth_02.webp",
+      "adult": "chief_barbarian_adult_04.webp",
       "elder": "chief_barbarian_elder_01.webp"
     }
   },
