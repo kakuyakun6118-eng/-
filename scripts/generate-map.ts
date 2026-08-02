@@ -64,6 +64,62 @@ const EAST_ROMAN_COUNTRIES = [
 ];
 
 /*
+ * 東方属州。統一シナリオで西が奪えるので、東ローマ全体を一色で塗らず
+ * 属州ごとに分けて持ち主を出せるようにする。
+ * 上の EAST_ROMAN_COUNTRIES と同じ国を4つに割ったもの
+ */
+const EAST_PROVINCE_COUNTRIES: Record<string, string[]> = {
+  Thracia: ['Greece', 'Bulgaria'],
+  Asiana: ['Turkey', 'Cyprus', 'N. Cyprus'],
+  Oriens: ['Syria', 'Lebanon', 'Israel', 'Palestine', 'Jordan'],
+  Aegyptus: ['Egypt'],
+};
+
+/** ラベルを置く国。表示範囲に確実に入るものを選ぶ */
+const EAST_PROVINCE_LABEL_COUNTRY: Record<string, string> = {
+  Thracia: 'Bulgaria',
+  Asiana: 'Turkey',
+  Oriens: 'Syria',
+  Aegyptus: 'Egypt',
+};
+
+/*
+ * 蛮族の本拠地。帝国の外にある各勢力の郷里で、征服すると属州になる。
+ *
+ * 395年前後の所在を現代の国で近似している。国境線は分割できないので
+ * 1勢力に1つ以上の国を割り当て、領域が重ならないようにした
+ */
+const HOMELAND_COUNTRIES: Record<string, string[]> = {
+  // 下ライン。フランク諸部族
+  Franks: ['Germany'],
+  // ユトランドと北海沿岸
+  Saxons: ['Denmark', 'Sweden'],
+  // ボヘミア。マルコマンニ・クアディなどスエビ系
+  Suebi: ['Czechia'],
+  // シレジア。ヴァンダルの郷里
+  Vandals: ['Poland'],
+  // ヴィスワ川からバルト海。ブルグントの伝承上の出自
+  Burgundians: ['Lithuania', 'Latvia', 'Belarus'],
+  // ダキア。西ゴートは376年にドナウを渡るまでここにいた
+  Visigoths: ['Romania', 'Moldova'],
+  // ポントス草原。フンの本拠
+  Huns: ['Ukraine'],
+  // 北カフカスからドン川。イラン系遊牧民のアラン
+  Alans: ['Russia', 'Georgia'],
+};
+
+const HOMELAND_LABEL_COUNTRY: Record<string, string> = {
+  Franks: 'Germany',
+  Saxons: 'Denmark',
+  Suebi: 'Czechia',
+  Vandals: 'Poland',
+  Burgundians: 'Belarus',
+  Visigoths: 'Romania',
+  Huns: 'Ukraine',
+  Alans: 'Russia',
+};
+
+/*
  * サーサーン朝ペルシア。西ローマの敵ではないが、東ローマが
  * 援軍を出せるかどうかを左右する存在なので地図に置く。
  * ゲームの状態は持たず、地図上の背景としてのみ描く。
@@ -224,6 +280,23 @@ function pickCountries(names: string[], labelCountry: string) {
 }
 
 const east = pickCountries(EAST_ROMAN_COUNTRIES, 'Greece');
+
+// 東方属州と蛮族の本拠地。pickCountries は owned に積むので東の後に呼ぶ
+const eastProvincePaths: Record<string, string> = {};
+const eastProvinceLabels: Record<string, [number, number]> = {};
+for (const [id, countries] of Object.entries(EAST_PROVINCE_COUNTRIES)) {
+  const r = pickCountries(countries, EAST_PROVINCE_LABEL_COUNTRY[id]);
+  eastProvincePaths[id] = r.path;
+  eastProvinceLabels[id] = r.label as [number, number];
+}
+
+const homelandPaths: Record<string, string> = {};
+const homelandLabels: Record<string, [number, number]> = {};
+for (const [id, countries] of Object.entries(HOMELAND_COUNTRIES)) {
+  const r = pickCountries(countries, HOMELAND_LABEL_COUNTRY[id]);
+  homelandPaths[id] = r.path;
+  homelandLabels[id] = r.label as [number, number];
+}
 // ペルシアのラベルはメソポタミア（クテシフォンのある地）に置く
 const persia = pickCountries(PERSIA_COUNTRIES, 'Iraq');
 
@@ -364,6 +437,16 @@ export const RIVER_PATH = ${JSON.stringify(riverPath)};
 
 /** 支流。細く薄く描いて水系の広がりを出す */
 export const MINOR_RIVER_PATH = ${JSON.stringify(minorRiverPath)};
+
+/** 東方属州の領域。持ち主（東ローマ／西ローマ／ペルシア）で塗り分ける */
+export const EAST_PROVINCE_PATHS: Record<string, string> = ${JSON.stringify(eastProvincePaths, null, 2)};
+
+export const EAST_PROVINCE_LABEL_POINTS: Record<string, [number, number]> = ${JSON.stringify(eastProvinceLabels, null, 2)};
+
+/** 蛮族の本拠地。征服すると西ローマの領域になる */
+export const HOMELAND_PATHS: Record<string, string> = ${JSON.stringify(homelandPaths, null, 2)};
+
+export const HOMELAND_LABEL_POINTS: Record<string, [number, number]> = ${JSON.stringify(homelandLabels, null, 2)};
 
 export const PROVINCE_PATHS: Record<ProvinceId, string> = ${JSON.stringify(provincePaths, null, 2)} as Record<ProvinceId, string>;
 
