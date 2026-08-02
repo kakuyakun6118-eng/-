@@ -9,6 +9,7 @@
 
 import {
   COMBAT_RANDOMNESS,
+  CONTROL_RECOVERY_PER_TURN,
   DEFENSE_MULTIPLIER,
   EAST_ARMY_GROWTH_RATE,
   EAST_ARMY_LOSS_FACTOR,
@@ -38,8 +39,10 @@ import {
   PERSIA_ATTACK_SHARE,
   PERSIA_DEFENSE_SHARE,
   PERSIA_GROWTH_RATE,
+  PERSIA_HOLD_CONTROL,
   PERSIA_INTERVENTION_PROBABILITY,
   PERSIA_LOSS_FACTOR,
+  PERSIA_MIN_WAR_YEARS,
   PERSIA_SEIZE_CONTROL_THRESHOLD,
   PERSIA_SEIZE_STRENGTH_GAIN,
   WEST_ARMY_LOSS_FACTOR,
@@ -257,11 +260,47 @@ function persianTurn(state: GameState, rng: () => number): GameState {
 
   if (!persia.intervened) {
     // ローマ同士が潰し合っている隙にだけ動き出す
-    if (east.stance !== 'war') return state;
+    if (east.stance !== 'war' || east.warStartYear === null) return state;
+    // 緒戦のうちは静観する。内戦が長引いたのを見てから動く
+    if (state.year - east.warStartYear < PERSIA_MIN_WAR_YEARS) return state;
     if (rng() >= PERSIA_INTERVENTION_PROBABILITY) return state;
+
+    /*
+     * 介入は宣言だけで終わらせず、その年のうちに橋頭堡を確保させる。
+     *
+     * 確率的に削るだけにしていたときは、西が東を平らげるほうが速く、
+     * 統一した58局のうちペルシアと属州を争ったのは2局しかなかった。
+     * それではラスボスではなく、間に合えば無視できる背景になる。
+     * 介入した時点で必ず1州を握らせ、統一するなら必ず
+     * ペルシアを打ち破らなければならない形にする
+     */
+    const beachhead = east.provinces
+      .map((p, i) => ({ p, i }))
+      .filter(({ p }) => p.owner !== 'persia')
+      .sort((a, b) => a.p.control - b.p.control)[0];
+    if (beachhead === undefined) {
+      return {
+        ...state,
+        persia: { ...persia, intervened: true, interventionYear: state.year },
+        turnEvents: [...state.turnEvents, 'persia_intervened'],
+      };
+    }
+    const provinces = [...east.provinces];
+    provinces[beachhead.i] = {
+      ...beachhead.p,
+      owner: 'persia',
+      control: PERSIA_HOLD_CONTROL,
+    };
     return {
       ...state,
-      persia: { ...persia, intervened: true, interventionYear: state.year },
+      east: { ...east, provinces },
+      persia: {
+        ...persia,
+        intervened: true,
+        interventionYear: state.year,
+        strength: persia.strength + PERSIA_SEIZE_STRENGTH_GAIN,
+        seizedProvinces: [...persia.seizedProvinces, beachhead.p.id],
+      },
       turnEvents: [...state.turnEvents, 'persia_intervened'],
     };
   }
@@ -316,7 +355,7 @@ function persianTurn(state: GameState, rng: () => number): GameState {
   }
 
   if (control <= PERSIA_SEIZE_CONTROL_THRESHOLD) {
-    provinces[index] = { ...target, owner: 'persia', control: EAST_CONQUEST_CONTROL };
+    provinces[index] = { ...target, owner: 'persia', control: PERSIA_HOLD_CONTROL };
     seized = seized.includes(target.id) ? seized : [...seized, target.id];
     strength += PERSIA_SEIZE_STRENGTH_GAIN;
     turnEvents.push('persia_offensive');
@@ -357,10 +396,32 @@ export function updateEasternFront(state: GameState, rng: () => number): GameSta
   next = eastCounterattack(next, rng);
   next = persianTurn(next, rng);
 
+  /*
+   * 東方属州の支配度の回復。
+   *
+   * 西の属州は updateControl が面倒を見るが、east.provinces は
+   * そこを通らない。入れ忘れていたときは、征服した属州が
+   * EAST_CONQUEST_CONTROL のまま永久に回復せず、
+   * ペルシアに削られて必ず奪われていた。
+   *
+   * 回復するのは西が押さえた属州だけにする。西の属州で
+   * 「敵がいる属州は回復しない」のと同じ理屈で、攻められている
+   * 東方属州が毎年立ち直ると攻略がまったく進まなくなる
+   */
+  const provinces = next.east.provinces.map((p) =>
+    p.owner === 'west' && p.control < MAX_CONTROL
+      ? { ...p, control: clamp(p.control + CONTROL_RECOVERY_PER_TURN, MIN_CONTROL, MAX_CONTROL) }
+      : p,
+  );
+
   // 東の軍は毎年少しずつ立て直す
   return {
     ...next,
-    east: { ...next.east, army: next.east.army * (1 + EAST_ARMY_GROWTH_RATE) },
+    east: {
+      ...next.east,
+      army: next.east.army * (1 + EAST_ARMY_GROWTH_RATE),
+      provinces,
+    },
   };
 }
 

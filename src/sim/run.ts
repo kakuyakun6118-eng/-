@@ -1,11 +1,14 @@
 import { writeFileSync } from 'node:fs';
 
 import dynastyData from '../data/dynasty.json';
+import eastData from '../data/east.json';
+import persiaData from '../data/persia.json';
 import generalData from '../data/general.json';
 import factionsData from '../data/factions.json';
 import provincesData from '../data/provinces.json';
 import {
   DEFAULT_DIFFICULTY,
+  DEFAULT_SCENARIO,
   DIFFICULTY_SETTINGS,
   FIELD_ARMY_COLLAPSE_THRESHOLD,
   TOTAL_TURNS,
@@ -17,10 +20,13 @@ import type {
   BarbarianFaction,
   Difficulty,
   Dynasty,
+  EastEmpire,
   GameState,
   GeneralSeat,
+  Persia,
   Province,
   RulerAbilities,
+  Scenario,
 } from '../core/types';
 import { strategies } from './strategies';
 
@@ -73,6 +79,7 @@ interface Options {
   /** --adjust 軍事,統治,交渉 で君主能力を上書きする（スコアは調整済みになる） */
   adjust: Partial<RulerAbilities> | null;
   difficulty: Difficulty;
+  scenario: Scenario;
 }
 
 function parseArgs(argv: string[]): Options {
@@ -84,6 +91,7 @@ function parseArgs(argv: string[]): Options {
     seed: 0,
     adjust: null,
     difficulty: DEFAULT_DIFFICULTY,
+    scenario: DEFAULT_SCENARIO,
   };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--turns') options.turns = Number(argv[++i]);
@@ -92,6 +100,7 @@ function parseArgs(argv: string[]): Options {
     else if (argv[i] === '--trials') options.trials = Number(argv[++i]);
     else if (argv[i] === '--seed') options.seed = Number(argv[++i]);
     else if (argv[i] === '--difficulty') options.difficulty = argv[++i] as Difficulty;
+    else if (argv[i] === '--scenario') options.scenario = argv[++i] as Scenario;
     else if (argv[i] === '--adjust') {
       const [military, governance, diplomacy] = argv[++i].split(',').map(Number);
       options.adjust = { military, governance, diplomacy };
@@ -101,12 +110,17 @@ function parseArgs(argv: string[]): Options {
 }
 
 function freshState(options: Options): GameState {
+  const reunification = options.scenario === 'reunification';
   const state = createInitialState(
     provincesData as Province[],
     factionsData as BarbarianFaction[],
     dynastyData as Dynasty,
     structuredClone(generalData) as GeneralSeat,
     options.difficulty,
+    options.scenario,
+    // 史実シナリオでは既定の空の東ローマのまま。属州も軍も持たせない
+    reunification ? (structuredClone(eastData) as EastEmpire) : undefined,
+    reunification ? (structuredClone(persiaData) as Persia) : undefined,
   );
   return options.adjust ? adjustRulerAbilities(state, options.adjust) : state;
 }
@@ -162,6 +176,8 @@ function runTrial(options: Options, seedBase: number): TrialOutcome {
       collapseCause = diagnoseCollapse(state);
       collapsedDuringCrisis = state.dynasty.crisisYearsRemaining > 0;
     }
+    // 統一は勝利なのでその場で打ち切る
+    if (state.status === 'unified') break;
   }
 
   return { state, rows, collapseYear, collapseCause, collapsedDuringCrisis, nonFinite };
@@ -202,11 +218,20 @@ function reportAggregate(options: Options): void {
   const causes = new Map<string, number>();
   let nonFiniteTrials = 0;
   let crisisAtCollapse = 0;
+  // 統一シナリオ用。史実シナリオでは常に0のまま
+  let unified = 0;
+  let persiaIntervened = 0;
+  const unifiedYears: number[] = [];
 
   for (let trial = 0; trial < options.trials; trial++) {
     const outcome = runTrial(options, options.seed + trial * 1000);
     if (outcome.nonFinite) nonFiniteTrials++;
     survived.push(outcome.state.status === 'survived' ? 1 : 0);
+    if (outcome.state.status === 'unified') {
+      unified++;
+      unifiedYears.push(outcome.state.year);
+    }
+    if (outcome.state.persia.intervened) persiaIntervened++;
     if (outcome.collapseYear !== null) collapseYears.push(outcome.collapseYear);
     const score = evaluateScore(outcome.state);
     scores.push(score.score);
@@ -226,6 +251,18 @@ function reportAggregate(options: Options): void {
       (options.adjust ? ' [調整済み: スコアは他と比較できない]' : ''),
   );
   console.log(`  survival rate      : ${survivalRate}%`);
+  if (options.scenario === 'reunification') {
+    console.log(
+      `  unified            : ${((unified / options.trials) * 100).toFixed(0)}%` +
+        (unifiedYears.length > 0
+          ? ` (統一年 avg ${average(unifiedYears).toFixed(0)}, ` +
+            `${Math.min(...unifiedYears)}–${Math.max(...unifiedYears)})`
+          : ''),
+    );
+    console.log(
+      `  persia intervened  : ${((persiaIntervened / options.trials) * 100).toFixed(0)}%`,
+    );
+  }
   console.log(`  non-finite trials  : ${nonFiniteTrials}`);
   console.log(`  avg score          : ${average(scores).toFixed(0)}`);
   console.log(`  score stddev       : ${stdDev(scores).toFixed(0)} ` +

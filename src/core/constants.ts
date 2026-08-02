@@ -517,13 +517,13 @@ export const EAST_DECLARE_WAR_SENATE_LOSS = 10;
 export const EAST_WAR_LEGITIMACY_DRAIN = 0.8;
 
 /** 東方へ侵攻するとき、遠征に振り向ける野戦軍の割合 */
-export const EAST_INVADE_ARMY_SHARE = 0.5;
+export const EAST_INVADE_ARMY_SHARE = 0.7;
 /** 遠征の損耗。本国の防衛派遣(0.04)より重い */
 export const EAST_INVADE_ATTRITION_RATE = 0.06;
 /** 東の野戦軍が属州防衛に加える割合 */
-export const EAST_DEFENSE_ARMY_SHARE = 0.3;
+export const EAST_DEFENSE_ARMY_SHARE = 0.25;
 /** 侵攻に勝った年に東方属州の支配度が受けるダメージ */
-export const EAST_INVADE_CONTROL_DAMAGE = 12;
+export const EAST_INVADE_CONTROL_DAMAGE = 35;
 /** 征服した直後の支配度。奪ったばかりの土地は言うことを聞かない */
 export const EAST_CONQUEST_CONTROL = 35;
 /** 戦闘の優劣差に対する東の軍の損耗係数 */
@@ -546,20 +546,37 @@ export const EAST_PEACE_RELATIONS = 20;
  * ローマ同士が交戦している年に、ペルシアが介入を始める確率。
  * 統一を狙うほどペルシアを呼び込む、という取引にする
  */
-export const PERSIA_INTERVENTION_PROBABILITY = 0.25;
+export const PERSIA_INTERVENTION_PROBABILITY = 0.4;
+/**
+ * 介入までに要するローマ内戦の年数。
+ *
+ * 開戦の翌年から動けるようにすると、西が東方属州を1つ取る前に
+ * ペルシアが東を食べ尽くしてしまい、統一が成立しなかった
+ * （計測では4州すべてを取れた局が1%）。
+ * 「内戦が長引いたのを見て動く」形にして、緒戦の窓を開ける
+ */
+export const PERSIA_MIN_WAR_YEARS = 4;
 /** 介入後、ペルシアが毎年強くなる割合 */
-export const PERSIA_GROWTH_RATE = 0.03;
+export const PERSIA_GROWTH_RATE = 0.008;
 /** 介入後、ペルシアが東方属州を攻める確率 */
-export const PERSIA_ATTACK_PROBABILITY = 0.5;
+export const PERSIA_ATTACK_PROBABILITY = 0.15;
 /** ペルシアが攻撃に振り向ける戦力の割合 */
 export const PERSIA_ATTACK_SHARE = 0.45;
 /** ペルシアが属州防衛に振り向ける戦力の割合 */
-export const PERSIA_DEFENSE_SHARE = 0.4;
+export const PERSIA_DEFENSE_SHARE = 0.22;
 /** ペルシアの攻撃が通った年の支配度ダメージ */
-export const PERSIA_ATTACK_CONTROL_DAMAGE = 15;
+export const PERSIA_ATTACK_CONTROL_DAMAGE = 8;
 /** この支配度を下回った東方属州はペルシアに奪われる */
 export const PERSIA_SEIZE_CONTROL_THRESHOLD = 20;
 /** 戦闘の優劣差に対するペルシアの損耗係数 */
-export const PERSIA_LOSS_FACTOR = 0.3;
+export const PERSIA_LOSS_FACTOR = 0.45;
 /** 属州を1つ奪うたびにペルシアが得る戦力 */
 export const PERSIA_SEIZE_STRENGTH_GAIN = 25;
+/**
+ * ペルシアが握った属州の支配度。
+ *
+ * 征服直後の支配度(EAST_CONQUEST_CONTROL)のままにすると、
+ * 一度の戦闘で取り返せてしまい関門にならない。
+ * ペルシアの統治は根を張っている、という形で2勝ぶんの厚みを持たせる
+ */
+export const PERSIA_HOLD_CONTROL = 70;

@@ -221,7 +221,9 @@ export function evaluateScore(state: GameState): ScoreResult {
 }
 
 function determineStatus(state: GameState): GameStatus {
+  // 決着した局はそのまま。統一は勝利なのでその年でゲームが終わる
   if (state.status === 'collapsed') return 'collapsed';
+  if (state.status === 'unified') return 'unified';
 
   const italiaLost = state.provinces.Italia.control <= 0;
   const armyDestroyed = state.fieldArmy <= FIELD_ARMY_COLLAPSE_THRESHOLD;

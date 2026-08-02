@@ -238,6 +238,73 @@ export const generalMinded: Strategy = (state) => {
   return pair(actions);
 };
 
+/**
+ * 統一シナリオ用。本国を固めてから東へ攻め込む。
+ *
+ * 本国が崩れていては遠征どころではないので、
+ * 「本国が落ち着いている年だけ東を攻める」形にする。
+ * 統一が現実的に狙えるのかを測るための方針
+ */
+/** この兵力を超えるまでは東へ攻め込まない */
+const UNIFY_ARMY_FLOOR = 110;
+/** 本国にこれ以上の敵がいる年は遠征しない */
+const UNIFY_MAX_HOME_THREATS = 2;
+/** この正統性を下回ったら宣戦しない（同胞との戦は正統性を食う） */
+const UNIFY_MIN_LEGITIMACY = 45;
+
+export const unifier: Strategy = (state) => {
+  const actions: PlayerAction[] = [];
+  const slots = () => actions.filter(consumesActionSlot).length;
+
+  // 金の要求は飲む。枠を使わずに戦線を1つ黙らせられる
+  for (const faction of Object.values(state.factions)) {
+    if (faction.stance !== 'hostile' || faction.demand === null) continue;
+    if (faction.demand.type !== 'gold' || state.treasury < faction.demand.amount) continue;
+    actions.push({ type: 'negotiate_accept_demand', factionId: faction.id });
+  }
+
+  const general = state.general.current;
+  if (general === null && state.treasury > GENERAL_APPOINT_COST * 2) {
+    actions.push({ type: 'military_appoint_general' });
+  }
+
+  const homeThreats = hostileInProvinces(state).length;
+  const homeQuiet = homeThreats <= UNIFY_MAX_HOME_THREATS;
+  const strongEnough = state.fieldArmy >= UNIFY_ARMY_FLOOR;
+
+  if (state.east.stance === 'war') {
+    // 開戦したら、まだ手に入れていない属州のうち最も支配度が低いものを叩く
+    const target = state.east.provinces
+      .filter((p) => p.owner !== 'west')
+      .sort((a, b) => a.control - b.control)[0];
+    if (target && slots() < MAX_ACTIONS_PER_TURN && state.fieldArmy > UNIFY_ARMY_FLOOR / 2) {
+      actions.push({ type: 'east_invade', provinceId: target.id });
+    }
+  } else if (
+    homeQuiet &&
+    strongEnough &&
+    state.legitimacy >= UNIFY_MIN_LEGITIMACY &&
+    slots() < MAX_ACTIONS_PER_TURN
+  ) {
+    actions.push({ type: 'east_declare_war' });
+  }
+
+  // 本国の守り
+  const threatened = mostThreatenedProvince(state);
+  if (slots() < MAX_ACTIONS_PER_TURN && threatened) {
+    actions.push({ type: 'military_deploy', provinceId: threatened });
+  }
+  // 遠征には兵が要る。金がある限り徴募し続ける
+  if (slots() < MAX_ACTIONS_PER_TURN && state.treasury > CONSCRIPT_COST * 2) {
+    actions.push({ type: 'military_conscript' });
+  }
+  if (slots() < MAX_ACTIONS_PER_TURN && state.treasury < CONSCRIPT_COST) {
+    actions.push({ type: 'domestic_raise_taxes' });
+  }
+
+  return pair(actions);
+};
+
 export const strategies: Record<string, Strategy> = {
   passive,
   limited: limitedFoederati,
@@ -245,4 +312,5 @@ export const strategies: Record<string, Strategy> = {
   foederati: foederatiHeavy,
   appeaser,
   general: generalMinded,
+  unifier,
 };
