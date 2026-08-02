@@ -7,6 +7,9 @@ import {
   consortOriginOf,
   emperorOriginOf,
   selectPortrait,
+  type PortraitAge,
+  type PortraitOrigin,
+  type PortraitRole,
 } from '../portraitAssets';
 
 /**
@@ -488,4 +491,40 @@ export function ConsortFigure({
 /** 婚姻相手の呼び名 */
 export function consortOriginLabel(origin: MarriageOrigin, factionLabel: string): string {
   return origin.kind === 'east' ? '東ローマ帝室' : `${factionLabel}の族長家`;
+}
+
+/**
+ * 軍司令官・蛮族の族長・東ローマ皇帝・ペルシア王の肖像。
+ *
+ * 君主や皇后と違い、これらは SVG の代替図を持たない。
+ * 画像が無ければ何も描かず、呼び出し側が枠だけを出す
+ */
+export function LeaderFigure({
+  role,
+  origin,
+  age,
+  seedId,
+  alt,
+  className,
+}: {
+  role: PortraitRole;
+  origin: PortraitOrigin;
+  age: PortraitAge;
+  seedId: string;
+  alt: string;
+  className?: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  const url = selectPortrait(role, origin, age, seedId);
+  if (url === null || failed) return null;
+  return (
+    <img
+      src={url}
+      className={className}
+      alt={alt}
+      loading="lazy"
+      decoding="async"
+      onError={() => setFailed(true)}
+    />
+  );
 }

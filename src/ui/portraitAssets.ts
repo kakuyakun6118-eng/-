@@ -13,8 +13,18 @@ import manifest from './portraits.json';
  * components/Portrait.tsx の SVG 肖像にそのまま落ちる
  */
 
-export type PortraitRole = 'emperor' | 'consort';
-export type PortraitOrigin = 'roman' | 'east' | 'barbarian';
+export type PortraitRole =
+  | 'emperor'
+  | 'consort'
+  /** 軍司令官（マギステル・ミリトゥム） */
+  | 'general'
+  /** 蛮族の族長 */
+  | 'chief'
+  /** 東ローマ皇帝 */
+  | 'eastemperor'
+  /** サーサーン朝の王 */
+  | 'shah';
+export type PortraitOrigin = 'roman' | 'east' | 'barbarian' | 'persia';
 export type PortraitAge = 'youth' | 'adult' | 'elder';
 
 export interface PortraitEntry {
