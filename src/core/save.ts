@@ -75,6 +75,15 @@ export function deserialize(json: string): LoadResult {
   if (state.general === undefined || !Array.isArray(state.general.history)) {
     return { ok: false, error: '状態が壊れています（general）' };
   }
+  if (state.scenario === undefined) {
+    return { ok: false, error: '状態に不足があります（scenario）' };
+  }
+  if (state.east === undefined || !Array.isArray(state.east.provinces)) {
+    return { ok: false, error: '状態が壊れています（east）' };
+  }
+  if (state.persia === undefined || !Array.isArray(state.persia.seizedProvinces)) {
+    return { ok: false, error: '状態が壊れています（persia）' };
+  }
   if (!Array.isArray(state.firedEventIds)) {
     return { ok: false, error: '状態が壊れています（firedEventIds）' };
   }
@@ -90,7 +99,7 @@ export function deserialize(json: string): LoadResult {
   return { ok: true, state };
 }
 
-/** 保存ファイル名。年と難易度が分かるようにする */
+/** 保存ファイル名。年・シナリオ・難易度が分かるようにする */
 export function suggestFileName(state: GameState): string {
-  return `western-rome-${state.year}-${state.difficulty}.json`;
+  return `western-rome-${state.year}-${state.scenario}-${state.difficulty}.json`;
 }
