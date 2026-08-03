@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import dynastyData from '../../data/dynasty.json';
-import { ENDING_YEAR, STARTING_YEAR } from '../../core/constants';
+import { ENDING_YEAR, STARTING_YEAR, endingYearOf } from '../../core/constants';
 import { findEvent } from '../../core/events';
 import type { Difficulty, GameState, ProvinceId, Scenario, ScoreResult } from '../../core/types';
 import {
@@ -25,7 +25,9 @@ const SCENARIO_DETAIL: Record<Scenario, { title: string; detail: string }> = {
     title: '統一 — ローマ再統一',
     detail:
       '東ローマに宣戦し、東方属州を併合してローマを統一する。' +
-      'ただしローマ同士の内戦を見たサーサーン朝ペルシアが背後から介入してくる',
+      'ローマ同士の内戦を見たサーサーン朝ペルシアが背後から介入し、' +
+      '6世紀にはユスティニアヌス1世がベリサリウスとナルセスを送り込んでくる。' +
+      '565年まで、全170ターン',
   },
 };
 
@@ -56,7 +58,8 @@ export function TitleScreen({
       </p>
       <div className="roman-rule mt-3" />
       <p className="text-sm mt-4" style={{ color: 'var(--ink-soft)' }}>
-        {STARTING_YEAR}年から{ENDING_YEAR}年まで、全{ENDING_YEAR - STARTING_YEAR}ターン。
+        {STARTING_YEAR}年から{ENDING_YEAR}年まで、全{ENDING_YEAR - STARTING_YEAR}ターン
+        （統一の世界線だけは{endingYearOf('reunification')}年まで続く）。
         帝国を1年でも長く保たせることが目的で、拡大は目的ではない。
       </p>
       <p className="text-xs mt-3" style={{ color: 'var(--ink-soft)' }}>

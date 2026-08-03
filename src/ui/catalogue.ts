@@ -13,6 +13,7 @@ import {
   MARRIAGE_COST,
   MARRIAGE_EAST_MIN_RELATIONS,
   REORGANIZE_COST,
+  SENATE_GAMES_COST,
 } from '../core/constants';
 import { availableBattleLeaders, canGiveBattle } from '../core/battle';
 import { invadableEastProvinces } from '../core/east';
@@ -109,6 +110,8 @@ export const TURN_EVENT_LABELS: Record<TurnEventId, string> = {
   east_vassalized: '東方は西の宗主権のもとに置かれた。兵権も貢納も西にある',
   east_independence: '東方帝が宗主権を振り払い、東ローマが独立した',
   rome_reunified: 'ローマ全土が再び一人の皇帝のもとに統一された',
+  justinian_reconquest:
+    'ユスティニアヌス1世が西方の回復を掲げ、ベリサリウスを西へ送り込んだ',
 };
 
 /** 会戦を率いる者 */
@@ -475,6 +478,26 @@ export const ACTION_TEMPLATES: ActionTemplate[] = [
     target: 'none',
     blockedReason: () => null,
     build: () => ({ type: 'domestic_appease_senate' }),
+  },
+  {
+    id: 'domestic_hold_games',
+    category: '内政',
+    label: '競技会を催す',
+    detail: '戦車競走と見世物で元老院と民衆の機嫌を取る。削るのは国庫',
+    cost: SENATE_GAMES_COST,
+    target: 'none',
+    blockedReason: needsGold(SENATE_GAMES_COST),
+    build: () => ({ type: 'domestic_hold_games' }),
+  },
+  {
+    id: 'domestic_grant_consulship',
+    category: '内政',
+    label: '執政官位を授ける',
+    detail: '名誉職を貴族に与える。金も土地も要らないが、その年の栄誉は皇帝のものでなくなる',
+    cost: null,
+    target: 'none',
+    blockedReason: () => null,
+    build: () => ({ type: 'domestic_grant_consulship' }),
   },
   {
     id: 'east_request_aid',

@@ -1,4 +1,4 @@
-import { ENDING_YEAR } from '../../core/constants';
+import { endingYearOf } from '../../core/constants';
 import type { GameState } from '../../core/types';
 import { DIFFICULTY_LABELS } from '../catalogue';
 import type { Music } from '../music';
@@ -33,7 +33,7 @@ export function StatusBar({ state, music }: { state: GameState; music: Music }) 
         <div className="roman-title text-lg">
           {state.year}
           <span className="text-xs font-normal ml-1" style={{ color: 'var(--ink-soft)' }}>
-            年 / {ENDING_YEAR}
+            年 / {endingYearOf(state.scenario)}
           </span>
         </div>
         <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--ink-soft)' }}>
