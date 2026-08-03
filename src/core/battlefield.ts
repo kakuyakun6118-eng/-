@@ -31,6 +31,7 @@ import {
   BATTLE_FOE_PERSIA_ARCHERS,
   BATTLE_FOE_PERSIA_CAVALRY,
   BATTLE_FOE_PERSIA_INFANTRY,
+  BATTLE_LEADER_MANEUVER_SCALE,
   BATTLE_LEADER_MORALE_SCALE,
   BATTLE_MATCHUP_ADVANTAGE,
   BATTLE_MATCHUP_DISADVANTAGE,
@@ -38,6 +39,7 @@ import {
   BATTLE_MORALE_DRAIN_PER_ROUND,
   BATTLE_MORALE_LOSS_PER_LOSS_RATIO,
   BATTLE_MORALE_RECOVERY_WITHDRAW,
+  ABILITY_NEUTRAL,
   BATTLE_ORDER_ATTACK_ADVANCE,
   BATTLE_ORDER_ATTACK_FLANK,
   BATTLE_ORDER_ATTACK_WITHDRAW,
@@ -195,6 +197,7 @@ export function openBattlefield(
     ourStartStrength: ourStrength,
     theirStartStrength: theirStrength,
     resilience: moraleResilience(state, leader),
+    maneuver: maneuverSkill(state, leader),
     // 先に 1 を入れて型を満たし、この直後に試算した値で置き換える
     baselineExchange: 1,
     log: [],
@@ -202,11 +205,18 @@ export function openBattlefield(
   };
 
   /*
-   * 中庸に指した場合の交換比を、いま引いた乱数で一度だけ試算する。
-   * これを基準にすることで、兵力で劣る側が中庸に指しても
-   * 倍率が 1.0 前後に収まる（数の差は giveBattle() の側で既に効いている）
+   * 基準になる交換比を、いま引いた乱数で一度だけ試算する。
+   *
+   * **試算は「中庸の将が中庸に指した場合」で取る。** その指揮官自身で
+   * 基準を作っていたときは、名将ほど基準の交換比も良くなるので差が
+   * 打ち消し合い、軍事1の将のほうが倍率が高く出た（迂回で 1.065 対 1.041）。
+   * 基準を将から切り離すことで、**指揮官の技量そのものが倍率に乗る**
    */
-  return { ...field, baselineExchange: exchangeRatio(autoResolveBattlefield(field, rng)) };
+  const neutralLeader: Battlefield = { ...field, resilience: 1, maneuver: 1 };
+  return {
+    ...field,
+    baselineExchange: exchangeRatio(autoResolveBattlefield(neutralLeader, rng)),
+  };
 }
 
 /** 失った兵 ÷ 討ち取った兵。小さいほど良い交換 */
@@ -281,19 +291,33 @@ function matchup(attacker: BattleArm, defender: BattleArm): number {
   return 1;
 }
 
-function orderAttack(order: BattleOrder): number {
+/**
+ * 命令ごとの攻撃補正。
+ *
+ * **前進には指揮官の巧拙を掛けない。** 前進は正面からぶつかるだけで
+ * 手順が要らず、そこへ掛けると `giveBattle()` の指揮官補正と二重取りになる。
+ * 掛かるのは迂回（側面へ回り込む）と退却（整然と下がる）という、
+ * 段取りの要る動きの**上振れ分**だけ
+ */
+function orderAttack(order: BattleOrder, maneuver: number): number {
   if (order === 'advance') return BATTLE_ORDER_ATTACK_ADVANCE;
-  if (order === 'flank') return BATTLE_ORDER_ATTACK_FLANK;
+  if (order === 'flank') {
+    return 1 + (BATTLE_ORDER_ATTACK_FLANK - 1) * maneuver;
+  }
   return BATTLE_ORDER_ATTACK_WITHDRAW;
 }
 
-function orderDefense(order: BattleOrder, terrain: Terrain): number {
-  const base =
-    order === 'advance'
-      ? BATTLE_ORDER_DEFENSE_ADVANCE
-      : order === 'flank'
-        ? BATTLE_ORDER_DEFENSE_FLANK
-        : BATTLE_ORDER_DEFENSE_WITHDRAW;
+function orderDefense(order: BattleOrder, terrain: Terrain, maneuver: number): number {
+  let base: number;
+  if (order === 'advance') {
+    base = BATTLE_ORDER_DEFENSE_ADVANCE;
+  } else if (order === 'flank') {
+    // 有能な将ほど正面を空ける隙が小さい
+    base = 1 + (BATTLE_ORDER_DEFENSE_FLANK - 1) / maneuver;
+  } else {
+    // 有能な将ほど下がりながらの損害が小さい
+    base = 1 - (1 - BATTLE_ORDER_DEFENSE_WITHDRAW) * maneuver;
+  }
   // 渡河点では前へ出た戦列が余計に削られる
   if (terrain === 'river' && order === 'advance') return base * BATTLE_RIVER_ADVANCE_PENALTY;
   return base;
@@ -354,6 +378,7 @@ function attackPower(
   defenders: BattleUnit[],
   order: BattleOrder,
   terrain: Terrain,
+  maneuver: number,
 ): number {
   const defenderTotal = laneStrength(defenders);
   return attackers.reduce((sum, u) => {
@@ -365,17 +390,31 @@ function attackPower(
             (m, d) => m + matchup(u.arm, d.arm) * (d.strength / defenderTotal),
             0,
           );
-    return sum + u.strength * match * BATTLE_TERRAIN_MODIFIERS[terrain][u.arm] * orderAttack(order);
+    return (
+      sum +
+      u.strength * match * BATTLE_TERRAIN_MODIFIERS[terrain][u.arm] * orderAttack(order, maneuver)
+    );
   }, 0);
+}
+
+/** 会戦を率いる者の軍事能力 */
+function leaderAbility(state: GameState, leader: BattleLeader): number {
+  return leader === 'ruler'
+    ? state.dynasty.ruler.abilities.military
+    : (state.general.current?.military ?? ABILITY_NEUTRAL);
 }
 
 /** 指揮官の能力から来る士気の粘り。有能なほど崩れにくい */
 function moraleResilience(state: GameState, leader: BattleLeader): number {
-  const ability =
-    leader === 'ruler'
-      ? state.dynasty.ruler.abilities.military
-      : (state.general.current?.military ?? 5);
-  return 1 + (ability - 5) * BATTLE_LEADER_MORALE_SCALE;
+  return 1 + (leaderAbility(state, leader) - ABILITY_NEUTRAL) * BATTLE_LEADER_MORALE_SCALE;
+}
+
+/** 指揮官の能力から来る機動の巧拙。有能なほど迂回と退却が決まる */
+function maneuverSkill(state: GameState, leader: BattleLeader): number {
+  return Math.max(
+    0.2,
+    1 + (leaderAbility(state, leader) - ABILITY_NEUTRAL) * BATTLE_LEADER_MANEUVER_SCALE,
+  );
 }
 
 /** 損害を戦列の各隊へ兵力に比例して割り振り、士気を削る */
@@ -452,6 +491,8 @@ export function battleRound(
 
   const theirOrders = foeOrders(field, rng);
   const resilience = field.resilience;
+  // 相手の指揮官の巧拙はこの模型では持たないので中庸に据える
+  const foeManeuver = 1;
 
   // 各戦列が誰を突くかを先に決める
   const ourTargets = {} as Record<BattleLane, BattleLane | null>;
@@ -473,9 +514,10 @@ export function battleRound(
           field.theirs.lanes[target],
           orders[lane],
           field.terrain,
+          field.maneuver,
         ) *
         BATTLE_DAMAGE_RATE *
-        orderDefense(theirOrders[target], field.terrain);
+        orderDefense(theirOrders[target], field.terrain, foeManeuver);
     }
 
     const theirTarget = theirTargets[lane];
@@ -486,9 +528,10 @@ export function battleRound(
           field.ours.lanes[theirTarget],
           theirOrders[lane],
           field.terrain,
+          foeManeuver,
         ) *
         BATTLE_DAMAGE_RATE *
-        orderDefense(orders[theirTarget], field.terrain);
+        orderDefense(orders[theirTarget], field.terrain, field.maneuver);
     }
   }
 
@@ -546,8 +589,9 @@ export function battleRound(
  */
 export function battlefieldTactics(field: Battlefield): number {
   /*
-   * 測るのは「どれだけ残ったか」ではなく、**中庸に指したときと比べて
-   * どれだけ良い交換ができたか**。
+   * 測るのは「どれだけ残ったか」ではなく、**中庸の将が中庸に指したときと
+   * 比べてどれだけ良い交換ができたか**。指し手の巧拙と指揮官の技量の
+   * 両方がここに乗る。
    *
    * 残存率の差で測っていたときは、兵力で劣る側が必ず下限に張り付いた。
    * 少ないほうが多く削られるのは当たり前で、それは `giveBattle()` が

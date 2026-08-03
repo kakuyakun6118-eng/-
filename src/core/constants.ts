@@ -13,8 +13,9 @@ import type { Difficulty, DifficultySettings, Scenario } from './types';
  * 7: ペルシアとの関係（persia.relations）を追加
  * 8: 僭称帝国（usurpers）と属州の動揺（upheavalYearsRemaining）を追加
  * 9: 東方帝（east.vassalRuler）・統一年（unifiedYear）・戦場（battlefield）を追加
+ * 10: 戦場に指揮官の機動の巧拙（battlefield.maneuver）を追加
  */
-export const SAVE_VERSION = 9;
+export const SAVE_VERSION = 10;
 
 export const STARTING_YEAR = 395;
 export const ENDING_YEAR = 476;
@@ -1053,11 +1054,23 @@ export const BATTLE_MORALE_RECOVERY_WITHDRAW = 12;
 /**
  * 指揮官の能力が士気の粘りに効く量。
  *
- * **攻撃力には掛けない。** 指揮官の補正は既に `giveBattle()` の
- * 攻撃側戦力に入っているので、戦場でも掛けると二重取りになる。
- * 戦場では「崩れにくさ」としてだけ働かせる
+ * **攻撃力そのものには掛けない。** 指揮官の補正は既に `giveBattle()` の
+ * 攻撃側戦力に入っているので、戦場でも同じものを掛けると二重取りになる。
  */
 export const BATTLE_LEADER_MORALE_SCALE = 0.06;
+
+/**
+ * 指揮官の能力が**機動の巧拙**に効く量。能力1点あたり。
+ *
+ * 掛かるのは前進の攻撃力ではなく、迂回と退却という
+ * **手順の要る動きの成否**だけ。有能な将は側面をより深く突き、
+ * 正面を空ける隙を小さくし、下がるときも整然と下がる。
+ *
+ * 前進に掛けないので、中庸に指したときの交換比（`baselineExchange`）は
+ * 指揮官によらず変わらない。つまり調整済みの釣り合いは動かず、
+ * 「有能な将のもとでは戦術が効く」という差だけが出る
+ */
+export const BATTLE_LEADER_MANEUVER_SCALE = 0.055;
 
 /** 地形ごとの兵科補正 */
 export const BATTLE_TERRAIN_MODIFIERS: Record<

@@ -570,6 +570,12 @@ export interface Battlefield {
   resilience: number;
 
   /**
+   * 指揮官の能力から来る**機動の巧拙**。迂回と退却の成否にだけ効く。
+   * 前進には掛からないので、中庸に指した基準（`baselineExchange`）は動かない
+   */
+  maneuver: number;
+
+  /**
    * 同じ布陣・同じ敵に**中庸の指し手で臨んだ場合の交換比**。
    * 戦場を開いた時点で一度だけ試算して焼き付ける。
    *
