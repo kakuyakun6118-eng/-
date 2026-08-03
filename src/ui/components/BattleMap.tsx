@@ -4,6 +4,7 @@ import { BATTLE_LANES, resolveTarget } from '../../core/battlefield';
 import type { BattleOrders } from '../../core/battlefield';
 import type { BattleArm, BattleLane, BattleUnit, Battlefield, Terrain } from '../../core/types';
 import { BATTLE_ARM_LABELS, BATTLE_LANE_LABELS, formatTroops } from '../catalogue';
+import { useTerrainArt } from '../terrainArt';
 
 /**
  * 戦場の地図。
@@ -73,6 +74,13 @@ function TerrainDefs({ terrain }: { terrain: Terrain }) {
         <stop offset="100%" stopColor={g.shade} />
       </linearGradient>
       {/* 遠くを霞ませる。上ほど白を薄く重ねて奥行きを出す */}
+      {/* 画を敷いたときに札と兵を読ませるための陰。上下だけ落とす */}
+      <linearGradient id="bf-vignette" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="rgba(20,14,6,0.42)" />
+        <stop offset="26%" stopColor="rgba(20,14,6,0.04)" />
+        <stop offset="72%" stopColor="rgba(20,14,6,0.06)" />
+        <stop offset="100%" stopColor="rgba(20,14,6,0.44)" />
+      </linearGradient>
       <linearGradient id="bf-haze" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stopColor="rgba(255,250,235,0.42)" />
         <stop offset="35%" stopColor="rgba(255,250,235,0.06)" />
@@ -678,6 +686,7 @@ export function BattleMap({
       .map((arm) => ({ arm, strength: pending.strengthOf(arm), morale: 100 }));
   };
 
+  const art = useTerrainArt(field.terrain);
   const emptyLabel = field.round > 1 ? '崩れた' : 'なし';
 
   /** その戦列の我が軍の隊の上端。矢はここから伸びる */
@@ -697,12 +706,35 @@ export function BattleMap({
     >
       <TerrainDefs terrain={field.terrain} />
 
-      {/* 地。起伏の陰影を薄く重ねてから、地形の層を置く */}
-      <rect x={0} y={0} width={W} height={H} fill="url(#bf-ground)" />
-      <rect x={0} y={0} width={W} height={H} filter="url(#bf-relief)" opacity={0.13} />
-      <TerrainScene terrain={field.terrain} />
-      <NearGround terrain={field.terrain} />
-      <rect x={0} y={0} width={W} height={H} fill="url(#bf-haze)" />
+      {/*
+       * 地。画が登録されていればそれを敷き、無ければ線と面で描く。
+       * 画は地形だけを写したもので、兵は描き込まない（兵は状態から描く）
+       */}
+      {art === null ? (
+        <>
+          <rect x={0} y={0} width={W} height={H} fill="url(#bf-ground)" />
+          <rect x={0} y={0} width={W} height={H} filter="url(#bf-relief)" opacity={0.13} />
+          <TerrainScene terrain={field.terrain} />
+          <NearGround terrain={field.terrain} />
+          <rect x={0} y={0} width={W} height={H} fill="url(#bf-haze)" />
+        </>
+      ) : (
+        <>
+          <image
+            href={art}
+            x={0}
+            y={0}
+            width={W}
+            height={H}
+            preserveAspectRatio="xMidYMid slice"
+          />
+          {/*
+           * 上下だけ落とす。写実的な地に札や兵をそのまま置くと
+           * 明るい草地や砂の上で読めなくなる
+           */}
+          <rect x={0} y={0} width={W} height={H} fill="url(#bf-vignette)" />
+        </>
+      )}
 
       {/* 敵軍。上端から下へ積む */}
       {BATTLE_LANES.map((lane) => {
