@@ -14,6 +14,7 @@ import {
   MARRIAGE_EAST_MIN_RELATIONS,
   REORGANIZE_COST,
 } from '../core/constants';
+import { invadableEastProvinces } from '../core/east';
 import type {
   BarbarianDemandType,
   BarbarianFactionId,
@@ -373,15 +374,17 @@ export const ACTION_TEMPLATES: ActionTemplate[] = [
     id: 'east_invade',
     category: '東帝国',
     label: '東方へ侵攻',
-    detail: '野戦軍を遠征に出す。支配度を0まで削ると属州を併合できる',
+    detail:
+      '野戦軍を遠征に出す。支配度を0まで削ると属州を併合できる。' +
+      'ペルシアが握る属州は東ローマと講和したあとでも攻められる',
     cost: null,
     target: 'east-province',
     scenario: 'reunification',
     blockedReason: (state) =>
-      state.east.stance !== 'war'
-        ? '宣戦していない'
-        : state.east.provinces.every((p) => p.owner === 'west')
-          ? '東方はすべて手中にある'
+      state.east.provinces.every((p) => p.owner === 'west')
+        ? '東方はすべて手中にある'
+        : invadableEastProvinces(state).length === 0
+          ? '宣戦していない（ペルシアが握る属州なら講和後でも攻められる）'
           : null,
     build: ({ eastProvince }) =>
       eastProvince ? { type: 'east_invade', provinceId: eastProvince } : null,

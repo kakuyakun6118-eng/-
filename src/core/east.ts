@@ -212,6 +212,28 @@ export function makePeaceWithEast(state: GameState): GameState {
 }
 
 /**
+ * その東方属州に攻め込めるか。
+ *
+ * 東ローマの属州を攻めるには宣戦していることが要る。
+ * **ペルシアが握っている属州は講和後でも攻められる。**
+ * 交戦中であることを一律の条件にしていたときは、ペルシアが1州でも
+ * 持っている状態で講和すると取り返す手段が消え、統一が永久に
+ * 成立しなくなっていた（ペルシアの側は介入済みなら講和に関わらず
+ * 攻勢を続けるので、一方的に殴られ続ける形になる）。
+ * 「講和してもペルシアは引かない」という行動の説明とも食い違っていた
+ */
+export function canInvadeEastProvince(state: GameState, province: EastProvince): boolean {
+  if (province.owner === 'west') return false;
+  if (province.owner === 'persia') return true;
+  return state.east.stance === 'war';
+}
+
+/** 攻め込める東方属州。UI の候補もこれで絞る */
+export function invadableEastProvinces(state: GameState): EastProvince[] {
+  return state.east.provinces.filter((p) => canInvadeEastProvince(state, p));
+}
+
+/**
  * 東方属州への侵攻。
  * 西の野戦軍を遠征に振り向け、支配度を削り、0まで落とすと自分のものになる
  */
@@ -221,11 +243,10 @@ export function invadeEastProvince(
   rng: () => number,
 ): GameState {
   const { east } = state;
-  if (east.stance !== 'war') return state;
   const index = east.provinces.findIndex((p) => p.id === provinceId);
   if (index < 0) return state;
   const target = east.provinces[index];
-  if (target.owner === 'west') return state;
+  if (!canInvadeEastProvince(state, target)) return state;
 
   const attacker = randomizedPower(
     state.fieldArmy * EAST_INVADE_ARMY_SHARE * militaryModifier(state),

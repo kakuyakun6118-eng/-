@@ -17,6 +17,7 @@ import {
   PROVINCE_LABELS,
   type ActionTemplate,
 } from '../catalogue';
+import { invadableEastProvinces } from '../../core/east';
 import { consumesActionSlot } from '../../core/tick';
 import { actionKey } from '../useGame';
 
@@ -108,6 +109,15 @@ function ActionCard({
 
   const [province, setProvince] = useState<ProvinceId>('Italia');
   const [eastProvince, setEastProvince] = useState<EastProvinceId>('Thracia');
+  /*
+   * 攻め込める東方属州は状況で変わる（講和するとペルシアが握る州だけになる）。
+   * 選択中の州が候補から外れたら先頭に読み替え、無効な相手を掴んだまま
+   * 枠を捨てることがないようにする
+   */
+  const invadable = invadableEastProvinces(state);
+  const eastTarget = invadable.some((p) => p.id === eastProvince)
+    ? eastProvince
+    : invadable[0]?.id;
   const [faction, setFaction] = useState<BarbarianFactionId>('Visigoths');
   const [east, setEast] = useState(false);
 
@@ -122,7 +132,7 @@ function ActionCard({
     province,
     faction: target,
     east: template.target === 'marriage' ? east : undefined,
-    eastProvince,
+    eastProvince: eastTarget,
   });
   const key = action ? actionKey(action) : template.id;
   const isSelected = selected.some((a) => actionKey(a) === key);
@@ -189,15 +199,13 @@ function ActionCard({
         )}
 
         {template.target === 'east-province' && (
-          <Select value={eastProvince} onChange={(v) => setEastProvince(v as EastProvinceId)}>
-            {state.east.provinces
-              .filter((p) => p.owner !== 'west')
-              .map((p) => (
-                <option key={p.id} value={p.id}>
-                  {EAST_PROVINCE_LABELS[p.id]}（{EAST_OWNER_LABELS[p.owner]}・支配{' '}
-                  {Math.round(p.control)}）
-                </option>
-              ))}
+          <Select value={eastTarget ?? ''} onChange={(v) => setEastProvince(v as EastProvinceId)}>
+            {invadable.map((p) => (
+              <option key={p.id} value={p.id}>
+                {EAST_PROVINCE_LABELS[p.id]}（{EAST_OWNER_LABELS[p.owner]}・支配{' '}
+                {Math.round(p.control)}）
+              </option>
+            ))}
           </Select>
         )}
 
