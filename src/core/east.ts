@@ -55,9 +55,11 @@ import {
   PERSIA_MIN_WAR_YEARS,
   PERSIA_SEIZE_CONTROL_THRESHOLD,
   PERSIA_SEIZE_STRENGTH_GAIN,
+  SUCCESSION_UNREST_PERSIA_MULTIPLIER,
   WEST_ARMY_LOSS_FACTOR,
 } from './constants';
 import { diplomacyModifier, militaryModifier } from './dynasty';
+import { isSuccessionUnrest } from './partition';
 import { generalDefenseModifier } from './general';
 import { resolveCombat } from './military';
 import type { EastProvince, EastProvinceId, ForeignCommander, GameState } from './types';
@@ -440,7 +442,10 @@ function persianTurn(state: GameState, rng: () => number): GameState {
   const grown = persia.strength * (1 + PERSIA_GROWTH_RATE);
   if (
     rng() >=
-    PERSIA_ATTACK_PROBABILITY * persiaRelationsFactor(state, PERSIA_RELATIONS_ATTACK_FLOOR)
+    PERSIA_ATTACK_PROBABILITY *
+      persiaRelationsFactor(state, PERSIA_RELATIONS_ATTACK_FLOOR) *
+      // 代替わりの隙はペルシアも突いてくる
+      (isSuccessionUnrest(state) ? SUCCESSION_UNREST_PERSIA_MULTIPLIER : 1)
   ) {
     return { ...state, persia: { ...persia, strength: grown } };
   }

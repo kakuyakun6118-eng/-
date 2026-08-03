@@ -1,5 +1,11 @@
 import { applyBarbarianActions } from './barbarians';
 import {
+  applyCapitalPressure,
+  applyEastCapitalFall,
+  applyMajorProvinceLoss,
+  applyPersiaMajorLoss,
+} from './capitals';
+import {
   giveBattle,
   suppressUsurper,
   updateUpheaval,
@@ -161,6 +167,16 @@ export function tick(state: GameState, actions: PlayerActions, seed: Seed): Game
   next = updateHomelands(next, rng);
   // 僭称帝国は年ごとに兵を蓄える
   next = updateUsurpers(next);
+
+  /*
+   * 首都と主要属州の占領。蛮族の手番と東方戦線が終わったこの位置で、
+   * 「この1年で何を失い、何を奪ったか」をまとめて見る
+   */
+  next = applyMajorProvinceLoss(state, next);
+  next = applyEastCapitalFall(state, next);
+  next = applyPersiaMajorLoss(state, next);
+  // 都を押さえられているあいだ属州は動揺し続ける
+  next = applyCapitalPressure(next);
 
   // 6. 支配度と税基盤の更新
   next = updateControl(next);

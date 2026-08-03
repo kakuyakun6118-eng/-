@@ -600,6 +600,59 @@ export const SUPPRESS_LEGITIMACY_GAIN = 10;
 /** 取り戻した属州の支配度 */
 export const SUPPRESS_RECOVERED_CONTROL = 30;
 
+// ── 首都と主要属州の占領 ──────────────────────────────
+
+/**
+ * 自国の都が「敵手にある」とみなす支配度。
+ * イタリアは 0 で崩壊してしまうので、その手前を拾う必要がある
+ */
+export const CAPITAL_FALLEN_CONTROL_THRESHOLD = 25;
+/** 都を押さえられているあいだ、毎年これだけ動揺が積まれる */
+export const CAPITAL_FALLEN_UPHEAVAL_YEARS = 1;
+
+/** 大都市を含む属州を失ったときの、正統性への追加の代償 */
+export const MAJOR_PROVINCE_LOST_LEGITIMACY = 8;
+/** 同じく元老院支持への代償。都と穀倉を失えば貴族は離れる */
+export const MAJOR_PROVINCE_LOST_SENATE = 10;
+
+/** 東ローマの都を落とされたときに失う野戦軍の割合 */
+export const EAST_CAPITAL_LOST_ARMY_LOSS = 0.35;
+/** 同じく、残る東方属州が失う支配度 */
+export const EAST_CAPITAL_LOST_CONTROL_LOSS = 20;
+
+/** ペルシアが押さえた大都市を取り返したときに削れる戦力の割合 */
+export const PERSIA_MAJOR_PROVINCE_LOST_STRENGTH = 0.25;
+
+// ── 東西の分割相続 ────────────────────────────────────
+
+/**
+ * 統一を果たした皇帝の死に際して、成人した後継者が複数いれば
+ * 帝国は東西に割れる。395年のテオドシウス1世の死と同じことが
+ * もう一度起きる、という円環をここで閉じる。
+ *
+ * 分け与えられた東は、兄の帝国の野戦軍のこの割合しか持てない。
+ * **土地の数では差を付けず、軍で「西ローマ優位」を作る**
+ */
+export const EAST_PARTITION_ARMY_SHARE = 0.45;
+/** 分割された東方属州が引き継ぐ支配度 */
+export const EAST_PARTITION_CONTROL = 55;
+/** 帝国が割れたときに失う正統性。全土の帝ではなくなる */
+export const PARTITION_LEGITIMACY_LOSS = 10;
+
+/**
+ * 代替わりの動揺が続く年数。
+ * 新しい状態は持たせず、君主の即位年から導く
+ */
+export const SUCCESSION_UNREST_YEARS = 2;
+/**
+ * 代替わりの年に蛮族の侵入確率へ掛かる係数。
+ * 帝位が定まらない隙を突かれる、という形。
+ * 既存の ADVANCE_PROBABILITY に掛かるだけで新しい仕組みではない
+ */
+export const SUCCESSION_UNREST_ADVANCE_MULTIPLIER = 1.8;
+/** 同じく、ペルシアの攻勢の確率に掛かる係数 */
+export const SUCCESSION_UNREST_PERSIA_MULTIPLIER = 1.6;
+
 // ── 難易度 ────────────────────────────────────────────
 
 export const DEFAULT_DIFFICULTY: Difficulty = 'standard';

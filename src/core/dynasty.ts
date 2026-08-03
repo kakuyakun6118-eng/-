@@ -28,6 +28,7 @@ import type {
   RulerAbilities,
   SuccessionOutcome,
 } from './types';
+import { partitionOnSuccession } from './partition';
 import { clamp } from './util';
 
 // ── 能力補正 ──────────────────────────────────────────
@@ -249,7 +250,7 @@ function succeed(
     state.legitimacy - legitimacyLoss,
   );
 
-  return {
+  const succeeded: GameState = {
     ...state,
     legitimacy: clamp(flooredLegitimacy, MIN_LEGITIMACY, MAX_LEGITIMACY),
     dynasty: {
@@ -265,6 +266,12 @@ function succeed(
         outcome === 'crisis' ? SUCCESSION_CRISIS_DURATION : dynasty.crisisYearsRemaining,
     },
   };
+
+  /*
+   * 統一を果たしていた場合、残った成人の後継者が複数いれば帝国は割れる。
+   * 継承者を1人に絞った皇帝だけが全土をそのまま渡せる
+   */
+  return partitionOnSuccession(succeeded, ADULT_AGE);
 }
 
 // ── Task 4: 能力の変更口 ──────────────────────────────

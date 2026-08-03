@@ -39,6 +39,7 @@ import { chiefPowerModifier } from './homelands';
 import { governorDefenseModifier } from './officials';
 import { resolveCombat } from './military';
 import type { BarbarianFactionId, GameState, ProvinceId, TurnModifiers } from './types';
+import { successionAdvanceMultiplier } from './partition';
 import { clamp } from './util';
 
 function randomizedPower(base: number, rng: () => number): number {
@@ -86,7 +87,12 @@ export function applyBarbarianActions(
 
     if (location === 'exterior') {
       const nextTarget = faction.route[faction.routeIndex];
-      if (nextTarget && faction.strength >= MIN_STRENGTH_TO_ADVANCE && rng() < ADVANCE_PROBABILITY) {
+      /*
+       * 代替わりの直後は帝位が定まらず、その隙を突かれる。
+       * 既存の侵入確率に係数を掛けるだけで、新しい仕組みではない
+       */
+      const advance = ADVANCE_PROBABILITY * successionAdvanceMultiplier(state);
+      if (nextTarget && faction.strength >= MIN_STRENGTH_TO_ADVANCE && rng() < advance) {
         factions[factionId] = { ...faction, location: nextTarget };
       } else {
         /*

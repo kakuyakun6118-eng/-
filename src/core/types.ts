@@ -292,7 +292,9 @@ export type TurnEventId =
   /** 僭称帝国との戦に敗れた年 */
   | 'usurper_battle_lost'
   /** 僭称帝国を平らげ、属州を取り戻した年 */
-  | 'usurper_suppressed';
+  | 'usurper_suppressed'
+  /** 統一した帝国が代替わりで東西に割れた年 */
+  | 'empire_partitioned';
 
 // ── 官職（プラエトリア長官・属州総督） ────────────────
 
