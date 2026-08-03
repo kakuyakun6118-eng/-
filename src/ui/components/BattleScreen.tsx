@@ -166,8 +166,13 @@ export function BattleScreen({
           </div>
           <div className="text-[11px] mt-1 text-right" style={{ color: 'var(--ink-soft)' }}>
             我が軍{' '}
-            {Math.round(BATTLE_LANES.reduce((s, l) => s + laneStrength(field.ours, l), 0))} /
-            敵 {Math.round(BATTLE_LANES.reduce((s, l) => s + laneStrength(field.theirs, l), 0))}
+            {/* 布陣前は戦列がまだ空なので、投じる兵力そのものを出す */}
+            {Math.round(
+              field.phase === 'deploy'
+                ? field.ourStartStrength
+                : BATTLE_LANES.reduce((s, l) => s + laneStrength(field.ours, l), 0),
+            )}{' '}
+            / 敵 {Math.round(BATTLE_LANES.reduce((s, l) => s + laneStrength(field.theirs, l), 0))}
           </div>
         </section>
 
