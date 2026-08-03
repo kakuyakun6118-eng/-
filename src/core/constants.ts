@@ -11,8 +11,9 @@ import type { Difficulty, DifficultySettings, Scenario } from './types';
  * 5: プラエトリア長官（prefect）と属州総督（governors）を追加
  * 6: 蛮族の郷里（homelands）と、東ローマ・ペルシアの軍司令官（commander）を追加
  * 7: ペルシアとの関係（persia.relations）を追加
+ * 8: 僭称帝国（usurpers）と属州の動揺（upheavalYearsRemaining）を追加
  */
-export const SAVE_VERSION = 7;
+export const SAVE_VERSION = 8;
 
 export const STARTING_YEAR = 395;
 export const ENDING_YEAR = 476;
@@ -532,6 +533,72 @@ export const CHIEF_MILITARY_PER_POINT = 0.05;
 
 /** 東ローマ・ペルシアの将が自軍に掛ける補正（同じく1点あたり） */
 export const FOREIGN_COMMANDER_PER_POINT = 0.04;
+
+// ── 会戦と僭称帝国 ────────────────────────────────────
+
+/**
+ * 会戦。属州の攻防と違い、野戦軍どうしが正面からぶつかる。
+ *
+ * 属州の防衛（FIELD_ARMY_DEFENSE_SHARE 0.2）と違って軍の大半を
+ * 投じるので、勝てば相手の軍を大きく削れる代わりに、負ければ
+ * 帝国の主力が一度に失われる。**率いる者が要る。**
+ * 皇帝自身か軍司令官がいなければ挑めない
+ */
+export const PITCHED_ARMY_SHARE = 0.85;
+/** 皇帝が自ら率いるのに要る軍事能力。これ未満なら将軍に任せるしかない */
+export const PITCHED_RULER_MIN_MILITARY = 6;
+/** 勝った側が相手に与える損害の係数 */
+export const PITCHED_WINNER_DAMAGE = 0.7;
+/** 負けた側が失う戦力の係数 */
+export const PITCHED_LOSER_DAMAGE = 0.55;
+/** 会戦に勝って得る正統性。撃退（2）より大きい */
+export const PITCHED_VICTORY_LEGITIMACY = 8;
+/** 会戦に負けて失う正統性 */
+export const PITCHED_DEFEAT_LEGITIMACY = 6;
+
+/**
+ * 大敗の閾値。負けた側の戦力に対する margin の比がこれを超えると
+ * 単なる敗北ではなく壊走になり、属州が動揺する
+ */
+export const PITCHED_ROUT_MARGIN_RATIO = 0.6;
+/** 大敗で失う正統性（PITCHED_DEFEAT_LEGITIMACY に上乗せ） */
+export const PITCHED_ROUT_LEGITIMACY = 12;
+/** 皇帝が自ら率いて大敗したときに捕虜になる確率 */
+export const PITCHED_CAPTURE_PROBABILITY = 0.35;
+/** 君主が捕虜になったときの正統性の低下。ウァレリアヌスの故事 */
+export const PITCHED_CAPTURE_LEGITIMACY = 30;
+
+/**
+ * 属州の動揺。大敗や捕縛の直後、総督の反乱判定にこの上乗せが掛かる。
+ * 通常の基礎確率（0.0007）に対して桁違いに大きい。
+ * 「敗報が届いた属州は離れる」という形にするため
+ */
+export const UPHEAVAL_REVOLT_BONUS = 0.35;
+/** 大敗で動揺が続く年数 */
+export const UPHEAVAL_YEARS_ON_ROUT = 2;
+/** 君主捕縛で動揺が続く年数 */
+export const UPHEAVAL_YEARS_ON_CAPTURE = 4;
+
+/** 僭称帝国が引き継ぐ守備隊の割合。残りは離散する */
+export const USURPER_GARRISON_SHARE = 0.8;
+/**
+ * 僭称帝国の初期兵力に上乗せされる、その属州の税収基礎ぶんの係数。
+ * 0.12 ではブリタンニア帝国が兵8で、討伐が作業になっていた。
+ * 豊かな属州が離れるほど手強い僭称帝国になるようにする
+ */
+export const USURPER_STRENGTH_PER_BASE_TAX = 0.3;
+/** 僭称帝国が毎年蓄える兵力の伸び */
+export const USURPER_GROWTH_RATE = 0.04;
+/** 僭称帝国の出現で失う正統性 */
+export const USURPER_EMPIRE_LEGITIMACY_LOSS = 14;
+/** 討伐に投じる野戦軍の割合 */
+export const SUPPRESS_ARMY_SHARE = 0.6;
+/** 討伐の損耗 */
+export const SUPPRESS_ATTRITION_RATE = 0.05;
+/** 討伐に成功して戻る正統性 */
+export const SUPPRESS_LEGITIMACY_GAIN = 10;
+/** 取り戻した属州の支配度 */
+export const SUPPRESS_RECOVERED_CONTROL = 30;
 
 // ── 難易度 ────────────────────────────────────────────
 

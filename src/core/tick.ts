@@ -1,5 +1,12 @@
 import { applyBarbarianActions } from './barbarians';
 import {
+  giveBattle,
+  suppressUsurper,
+  updateUpheaval,
+  updateUsurpers,
+  usurperHeldProvinces,
+} from './battle';
+import {
   ENDING_YEAR,
   FIELD_ARMY_COLLAPSE_THRESHOLD,
   MAX_ACTIONS_PER_TURN,
@@ -152,6 +159,8 @@ export function tick(state: GameState, actions: PlayerActions, seed: Seed): Game
   next = updateEasternFront(next, rng);
   // 併合した郷里の落ち着きと、元の主による奪還
   next = updateHomelands(next, rng);
+  // 僭称帝国は年ごとに兵を蓄える
+  next = updateUsurpers(next);
 
   // 6. 支配度と税基盤の更新
   next = updateControl(next);
@@ -167,6 +176,8 @@ export function tick(state: GameState, actions: PlayerActions, seed: Seed): Game
    * 正統性が確定したあとに揃える
    */
   next = checkRevolts(next, rng);
+  // 敗報による動揺は年ごとに冷めていく
+  next = updateUpheaval(next);
 
   // 8. 王朝の更新（加齢・出生・寿命と暗殺の判定・継承）
   next = updateDynasty(next, rng);
@@ -246,6 +257,10 @@ function applyAction(
       return makePeaceWithEast(state);
     case 'persia_improve_relations':
       return improvePersiaRelations(state);
+    case 'military_pitched_battle':
+      return giveBattle(state, action.foe, action.leader, rng).state;
+    case 'military_suppress_usurper':
+      return suppressUsurper(state, action.usurperId, rng);
     case 'conquer_homeland':
       return conquerHomeland(state, action.factionId, rng);
   }
@@ -254,8 +269,9 @@ function applyAction(
 /** スコア = 保持属州数 × taxBase × legitimacy */
 export function evaluateScore(state: GameState): ScoreResult {
   // 征服した東方属州も保持属州として数える
+  const held = usurperHeldProvinces(state);
   const provincesHeld =
-    Object.values(state.provinces).filter((p) => p.control > 0).length +
+    Object.values(state.provinces).filter((p) => p.control > 0 && !held.has(p.id)).length +
     state.east.provinces.filter((p) => p.owner === 'west' && p.control > 0).length +
     // 併合した蛮族の郷里も保持領域に数える
     Object.values(state.homelands).filter((h) => h.owner === 'west' && h.control > 0).length;
@@ -294,7 +310,10 @@ function determineStatus(state: GameState): GameStatus {
   if (isUnified(state)) return 'unified';
 
   if (state.year >= ENDING_YEAR) {
-    const provincesHeld = Object.values(state.provinces).filter((p) => p.control > 0).length;
+    const loyal = usurperHeldProvinces(state);
+    const provincesHeld = Object.values(state.provinces).filter(
+      (p) => p.control > 0 && !loyal.has(p.id),
+    ).length;
     /*
      * 正統性を失ったまま軍と属州だけが残っている状態は
      * 「名前だけの傀儡国家」であり、帝位が保たれたとは言えない。

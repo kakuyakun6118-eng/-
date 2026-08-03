@@ -45,6 +45,7 @@ import {
   STARTING_YEAR,
   TAX_RATE,
 } from './constants';
+import { usurperHeldProvinces } from './battle';
 import { governanceModifier } from './dynasty';
 import { createInitialHomelands } from './homelands';
 import {
@@ -82,6 +83,8 @@ export function createInitialState(
     dynasty,
     general,
     homelands: createInitialHomelands(),
+    usurpers: [],
+    upheavalYearsRemaining: 0,
     prefect: createInitialPrefect(),
     governors: createInitialGovernors(provinces.map((p) => p.id)),
     east,
@@ -132,8 +135,10 @@ export function calculateIncome(state: GameState): number {
    * 史実シナリオでは east.provinces が空なので、この項は 0 で
    * 従来の計算式と完全に一致する
    */
+  // 僭称帝国が握る属州からは税が入らない
+  const usurped = usurperHeldProvinces(state);
   const provinceIncome = [
-    ...Object.values(state.provinces),
+    ...Object.values(state.provinces).filter((p) => !usurped.has(p.id)),
     ...state.east.provinces.filter((p) => p.owner === 'west'),
     // 併合した蛮族の郷里も収入源になる
     ...Object.values(state.homelands).filter((h) => h.owner === 'west'),

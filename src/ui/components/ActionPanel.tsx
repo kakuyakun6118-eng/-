@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { MAX_ACTIONS_PER_TURN } from '../../core/constants';
 import type {
   BarbarianFactionId,
+  BattleLeader,
   EastProvinceId,
   GameState,
   PlayerAction,
@@ -10,6 +11,10 @@ import type {
 } from '../../core/types';
 import {
   ACTION_TEMPLATES,
+  BATTLE_LEADER_LABELS,
+  battleFoeKey,
+  battleFoeLabel,
+  battleFoes,
   EAST_OWNER_LABELS,
   EAST_PROVINCE_LABELS,
   FACTION_LABELS,
@@ -17,6 +22,7 @@ import {
   PROVINCE_LABELS,
   type ActionTemplate,
 } from '../catalogue';
+import { availableBattleLeaders } from '../../core/battle';
 import { invadableEastProvinces } from '../../core/east';
 import { consumesActionSlot } from '../../core/tick';
 import { actionKey } from '../useGame';
@@ -120,6 +126,17 @@ function ActionCard({
     : invadable[0]?.id;
   const [faction, setFaction] = useState<BarbarianFactionId>('Visigoths');
   const [east, setEast] = useState(false);
+  const [foeKey, setFoeKey] = useState<string>('');
+  const [leader, setLeader] = useState<BattleLeader>('general');
+  const [usurperId, setUsurperId] = useState<string>('');
+
+  // 会戦の相手と率いる者。どちらも状況で候補が変わるので先頭に読み替える
+  const foes = battleFoes(state);
+  const foe = foes.find((f) => battleFoeKey(f) === foeKey) ?? foes[0];
+  const leaders = availableBattleLeaders(state);
+  const battleLeader = leaders.includes(leader) ? leader : leaders[0];
+  const usurper =
+    state.usurpers.find((u) => u.id === usurperId) ?? state.usurpers[0];
 
   /*
    * 選択中の相手が候補から外れることがある（要求に答えた直後など）。
@@ -133,6 +150,9 @@ function ActionCard({
     faction: target,
     east: template.target === 'marriage' ? east : undefined,
     eastProvince: eastTarget,
+    foe,
+    leader: battleLeader,
+    usurperId: usurper?.id,
   });
   const key = action ? actionKey(action) : template.id;
   const isSelected = selected.some((a) => actionKey(a) === key);
@@ -215,6 +235,35 @@ function ActionCard({
             <option value="east">
               東ローマ帝室（関係 {MARRIAGE_EAST_REQUIREMENT} 以上・成立しにくい）
             </option>
+          </Select>
+        )}
+
+        {template.target === 'battle' && foes.length > 0 && leaders.length > 0 && (
+          <>
+            <Select value={foe ? battleFoeKey(foe) : ''} onChange={setFoeKey}>
+              {foes.map((f) => (
+                <option key={battleFoeKey(f)} value={battleFoeKey(f)}>
+                  {battleFoeLabel(f)}
+                </option>
+              ))}
+            </Select>
+            <Select value={battleLeader ?? ''} onChange={(v) => setLeader(v as BattleLeader)}>
+              {leaders.map((l) => (
+                <option key={l} value={l}>
+                  {BATTLE_LEADER_LABELS[l]}
+                </option>
+              ))}
+            </Select>
+          </>
+        )}
+
+        {template.target === 'usurper' && state.usurpers.length > 0 && (
+          <Select value={usurper?.id ?? ''} onChange={setUsurperId}>
+            {state.usurpers.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name}（{u.emperorName}・兵 {Math.round(u.strength)}）
+              </option>
+            ))}
           </Select>
         )}
 

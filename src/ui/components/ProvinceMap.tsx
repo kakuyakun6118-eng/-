@@ -41,6 +41,7 @@ import {
   UnitSpriteDefs,
   WarbandSprite,
 } from './UnitSprite';
+import { usurperHeldProvinces } from '../../core/battle';
 import { CITIES, CITY_LABEL_MIN_RANK, cityPoint } from '../cities';
 import {
   NO_MOTION,
@@ -76,6 +77,9 @@ const STANCE_COLORS: Record<BarbarianStance, { fill: string; rim: string }> = {
  * 勢力色の不透明度。下地の山脈・河川・砂漠が透けて見える濃さにする。
  * 失った属州はさらに薄くして色を主張させない
  */
+/** 僭称帝国が握る属州の色。西の緑〜赤とも蛮族の赤とも違う紫紅にする */
+const USURPER_FILL = '#a21caf';
+
 const CONTROL_FILL_OPACITY = 0.55;
 const LOST_FILL_OPACITY = 0.3;
 
@@ -124,6 +128,8 @@ export function ProvinceMap({
     (m) => state.factions[m.id].location !== 'exterior' || state.homelands[m.id] === undefined,
   );
   const settled = settledProvinces(state);
+  // 僭称帝国が握る属州。帝国の色ではなく、離反を示す色で塗る
+  const usurped = usurperHeldProvinces(state);
   const homelandIds = factionIds.filter((id) => state.homelands[id] !== undefined);
   const homelandRegions = homelandIds.map((id) => ({
     id,
@@ -176,7 +182,7 @@ export function ProvinceMap({
           <path
             key={id}
             d={PROVINCE_PATHS[id]}
-            fill={fillFor(province.control)}
+            fill={usurped.has(id) ? USURPER_FILL : fillFor(province.control)}
             opacity={province.control <= 0 ? LOST_FILL_OPACITY : CONTROL_FILL_OPACITY}
             style={{ mixBlendMode: 'multiply' }}
             onClick={() => onSelect(id)}
@@ -372,6 +378,30 @@ export function ProvinceMap({
           </g>
         );
       })}
+
+      {/* 僭称帝国の名。属州名の上に重ねて「ここは別の帝国だ」と示す */}
+      {state.usurpers.map((u) =>
+        u.provinces.map((id) => {
+          const [x, y] = PROVINCE_POINTS[id];
+          return (
+            <text
+              key={`usurper-${u.id}-${id}`}
+              x={x}
+              y={y - 22}
+              textAnchor="middle"
+              fill="#fbcfe8"
+              stroke="#4a044e"
+              strokeWidth={4}
+              paintOrder="stroke"
+              fontSize={14}
+              fontWeight={700}
+              className="pointer-events-none select-none"
+            >
+              {u.name}
+            </text>
+          );
+        }),
+      )}
 
       {/* ラベルは属州の上に重ねる */}
       {ids.map((id) => {
@@ -838,6 +868,13 @@ export function MapLegend() {
           }}
         />
         定住された属州
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span
+          className="w-4 h-3 rounded-sm"
+          style={{ background: USURPER_FILL, border: '1px solid var(--bronze)' }}
+        />
+        僭称帝国
       </span>
     </div>
   );

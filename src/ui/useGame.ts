@@ -161,6 +161,12 @@ export function actionKey(action: PlayerAction): string {
   if ('target' in action) {
     parts.push(action.target.kind === 'east' ? 'east' : action.target.factionId);
   }
+  // 会戦は「誰と戦うか」と「誰が率いるか」で別の行動になる
+  if ('foe' in action) {
+    parts.push(action.foe.kind === 'barbarian' ? action.foe.factionId : action.foe.kind);
+    parts.push(action.leader);
+  }
+  if ('usurperId' in action) parts.push(action.usurperId);
   return parts.join(':');
 }
 

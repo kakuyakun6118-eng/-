@@ -42,6 +42,7 @@ import {
   GOVERNOR_REVOLT_LOW_LEGITIMACY_BONUS,
   GOVERNOR_REVOLT_LOW_CONTROL_THRESHOLD,
   GOVERNOR_REVOLT_PROBABILITY_CAP,
+  UPHEAVAL_REVOLT_BONUS,
   GOVERNOR_VACANT_DEFENSE_PENALTY,
   MAX_CONTROL,
   MAX_LEGITIMACY,
@@ -69,7 +70,16 @@ import type {
   PrefectSeat,
   ProvinceId,
 } from './types';
+import { proclaimUsurperEmpire } from './battle';
+import regionsData from '../data/regions.json';
 import { clamp } from './util';
+
+const REGION_NAMES = (regionsData as { regions: Record<string, string> }).regions;
+
+/** 僭称帝国の名に使う地域名。データから引く。コードに直接書かない */
+function regionName(id: ProvinceId): string {
+  return REGION_NAMES[id] ?? id;
+}
 
 const NAME_POOL: string[] = officialsData.namePool;
 
@@ -312,6 +322,20 @@ function legitimacyPressure(legitimacy: number, from: number): number {
   return clamp((from - legitimacy) / from, 0, 1);
 }
 
+/**
+ * 属州の動揺による押し上げ。
+ * 会戦の大敗や君主の捕縛の直後だけ立ち、桁違いに大きい
+ */
+function upheavalBonus(state: GameState): number {
+  return state.upheavalYearsRemaining > 0 ? UPHEAVAL_REVOLT_BONUS : 0;
+}
+
+/**
+ * 僭称帝を名乗る野心の下限。
+ * 動揺していても、野心の薄い総督は独立まではしない
+ */
+const USURPER_MIN_AMBITION = 7;
+
 function checkGovernorRevolt(state: GameState, rng: () => number): GameState {
   /*
    * 正統性に関わらず毎年判定する。順調な帝国でも属州は離れうる、
@@ -334,10 +358,21 @@ function checkGovernorRevolt(state: GameState, rng: () => number): GameState {
         pressure * GOVERNOR_REVOLT_LOW_LEGITIMACY_BONUS +
         (province.control < GOVERNOR_REVOLT_LOW_CONTROL_THRESHOLD
           ? GOVERNOR_REVOLT_LOW_CONTROL_BONUS
-          : 0),
+          : 0) +
+        upheavalBonus(state),
       GOVERNOR_REVOLT_PROBABILITY_CAP,
+  UPHEAVAL_REVOLT_BONUS,
     );
     if (rng() >= probability) continue;
+
+    /*
+     * 敗報で属州が動揺しているあいだ、野心の高い総督は
+     * 単に離反するのではなくローマ皇帝を僭称して属州ごと帝国から抜ける。
+     * 史実のエデッサの戦いのあとのガリア帝国と同じ形
+     */
+    if (state.upheavalYearsRemaining > 0 && governor.ambition >= USURPER_MIN_AMBITION) {
+      return proclaimUsurperEmpire(state, id, regionName(id), governor.name);
+    }
 
     /*
      * 反乱した総督はその属州の守備隊を連れて独立する。

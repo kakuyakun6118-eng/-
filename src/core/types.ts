@@ -276,7 +276,23 @@ export type TurnEventId =
   /** ペルシアが介入を始めた年 */
   | 'persia_intervened'
   /** ペルシアが属州を奪った年 */
-  | 'persia_offensive';
+  | 'persia_offensive'
+  /** 会戦に勝った年 */
+  | 'pitched_victory'
+  /** 会戦に敗れた年 */
+  | 'pitched_defeat'
+  /** 会戦で大敗し、属州が動揺した年 */
+  | 'pitched_rout'
+  /** 君主が捕虜になった年 */
+  | 'ruler_captured'
+  /** 総督が皇帝を僭称して属州ごと離れた年 */
+  | 'usurper_empire'
+  /** 僭称帝国との戦に勝った年（まだ潰し切れていない） */
+  | 'usurper_battle_won'
+  /** 僭称帝国との戦に敗れた年 */
+  | 'usurper_battle_lost'
+  /** 僭称帝国を平らげ、属州を取り戻した年 */
+  | 'usurper_suppressed';
 
 // ── 官職（プラエトリア長官・属州総督） ────────────────
 
@@ -443,6 +459,43 @@ export interface Persia {
   relations: number;
 }
 
+// ── 会戦と僭称帝国 ────────────────────────────────────
+
+/** 会戦を率いる者。皇帝自身か、軍司令官か */
+export type BattleLeader = 'ruler' | 'general';
+
+/** 会戦の相手。蛮族の軍勢か、東ローマの野戦軍か、ペルシアの軍か */
+export type BattleFoe =
+  | { kind: 'barbarian'; factionId: BarbarianFactionId }
+  | { kind: 'east' }
+  | { kind: 'persia' };
+
+/** 会戦の結末。margin の大きさで段が変わる */
+export type BattleOutcome = 'victory' | 'defeat' | 'rout' | 'captured';
+
+/**
+ * 僭称帝国。
+ *
+ * 大敗や君主の捕縛で属州が動揺し、野心の高い総督がローマ皇帝を
+ * 僭称して離れた国。史実のエデッサの戦い（260年、ウァレリアヌス捕縛）の
+ * あとに現れたガリア帝国やパルミラの型を、この時代に置いたもの。
+ *
+ * 7パラメータには足さず `GameState` の別サブ構造として持つ。
+ * 握られた属州は収入にも保持属州数にも数えない
+ */
+export interface Usurper {
+  id: string;
+  /** 「ガリア帝国」のように地域名＋帝国 */
+  name: string;
+  /** 僭称した皇帝の名 */
+  emperorName: string;
+  /** 握っている属州 */
+  provinces: ProvinceId[];
+  /** 僭称帝国の兵力。討伐の相手になる */
+  strength: number;
+  foundedYear: number;
+}
+
 // ── 状態モデル（7パラメータ固定） ────────────────────
 
 export interface GameState {
@@ -472,6 +525,18 @@ export interface GameState {
 
   /** 属州総督。属州ごとに1人。空位もありうる */
   governors: Record<ProvinceId, GovernorSeat>;
+
+  /**
+   * 僭称帝国。会戦の大敗や君主の捕縛をきっかけに現れる。
+   * 7パラメータには含めない別サブ構造
+   */
+  usurpers: Usurper[];
+
+  /**
+   * 属州の動揺が残っている年数。会戦の大敗や君主の捕縛で立つ。
+   * 総督の反乱判定を押し上げるだけの一時的な値で、資源ではない
+   */
+  upheavalYearsRemaining: number;
 
   /**
    * 蛮族の本拠地。7パラメータには含めない別サブ構造。
@@ -627,6 +692,17 @@ export interface EastInvadeAction {
 }
 
 /** 東ローマと講和する。統一シナリオでのみ選べる */
+export interface MilitaryPitchedBattleAction {
+  type: 'military_pitched_battle';
+  foe: BattleFoe;
+  leader: BattleLeader;
+}
+
+export interface MilitarySuppressUsurperAction {
+  type: 'military_suppress_usurper';
+  usurperId: string;
+}
+
 export interface PersiaImproveRelationsAction {
   type: 'persia_improve_relations';
 }
@@ -698,7 +774,9 @@ export type PlayerAction =
   | EastDeclareWarAction
   | EastInvadeAction
   | EastMakePeaceAction
-  | PersiaImproveRelationsAction;
+  | PersiaImproveRelationsAction
+  | MilitaryPitchedBattleAction
+  | MilitarySuppressUsurperAction;
 
 /**
  * 1ターンに渡すアクション。

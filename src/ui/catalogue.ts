@@ -14,9 +14,12 @@ import {
   MARRIAGE_EAST_MIN_RELATIONS,
   REORGANIZE_COST,
 } from '../core/constants';
+import { availableBattleLeaders, canGiveBattle } from '../core/battle';
 import { invadableEastProvinces } from '../core/east';
 import type {
   BarbarianDemandType,
+  BattleFoe,
+  BattleLeader,
   BarbarianFactionId,
   EastProvinceId,
   GameState,
@@ -89,7 +92,29 @@ export const TURN_EVENT_LABELS: Record<TurnEventId, string> = {
   east_peace: '東ローマと講和した',
   persia_intervened: 'サーサーン朝ペルシアが介入を始めた',
   persia_offensive: 'ペルシアが東方の属州を奪った',
+  pitched_victory: '会戦に勝ち、敵の主力を打ち破った',
+  pitched_defeat: '会戦に敗れ、野戦軍を大きく損なった',
+  pitched_rout: '会戦で大敗した。敗報に属州が動揺している',
+  ruler_captured: '君主が敵手に落ちた。属州は大きく動揺している',
+  usurper_empire: '属州総督がローマ皇帝を僭称し、属州ごと離れた',
+  usurper_battle_won: '僭称帝国の軍を破ったが、まだ平らげてはいない',
+  usurper_battle_lost: '僭称帝国の軍に敗れた',
+  usurper_suppressed: '僭称帝国を平らげ、属州を取り戻した',
 };
+
+/** 会戦を率いる者 */
+export const BATTLE_LEADER_LABELS = {
+  ruler: '皇帝が親征',
+  general: '軍司令官に任せる',
+} as const;
+
+/** 会戦の結末 */
+export const BATTLE_OUTCOME_LABELS = {
+  victory: '勝利',
+  defeat: '敗北',
+  rout: '大敗',
+  captured: '君主捕縛',
+} as const;
 
 /** 軍司令官が職を離れた理由 */
 export const GENERAL_END_LABELS: Record<GeneralEnd, string> = {
@@ -123,7 +148,9 @@ export type TargetKind =
   | 'faction-province'
   | 'marriage'
   | 'east-province'
-  | 'homeland';
+  | 'homeland'
+  | 'battle'
+  | 'usurper';
 
 export interface ActionTemplate {
   id: string;
@@ -144,9 +171,33 @@ export interface ActionTemplate {
     faction?: BarbarianFactionId;
     east?: boolean;
     eastProvince?: EastProvinceId;
+    foe?: BattleFoe;
+    leader?: BattleLeader;
+    usurperId?: string;
   }) => PlayerAction | null;
   /** このシナリオでだけ出す。省略すると常に出す */
   scenario?: Scenario;
+}
+
+/** 会戦に応じる相手。戦場に出ている敵だけが並ぶ */
+export function battleFoes(state: GameState): BattleFoe[] {
+  const foes: BattleFoe[] = [];
+  for (const id of Object.keys(state.factions) as BarbarianFactionId[]) {
+    const foe: BattleFoe = { kind: 'barbarian', factionId: id };
+    if (canGiveBattle(state, foe)) foes.push(foe);
+  }
+  if (canGiveBattle(state, { kind: 'east' })) foes.push({ kind: 'east' });
+  if (canGiveBattle(state, { kind: 'persia' })) foes.push({ kind: 'persia' });
+  return foes;
+}
+
+export function battleFoeLabel(foe: BattleFoe): string {
+  if (foe.kind === 'barbarian') return FACTION_LABELS[foe.factionId];
+  return foe.kind === 'east' ? '東ローマの野戦軍' : 'ペルシアの軍';
+}
+
+export function battleFoeKey(foe: BattleFoe): string {
+  return foe.kind === 'barbarian' ? `barbarian:${foe.factionId}` : foe.kind;
 }
 
 const needsGold = (cost: number) => (state: GameState) =>
@@ -273,6 +324,37 @@ export const ACTION_TEMPLATES: ActionTemplate[] = [
     target: 'none',
     blockedReason: (state) => (state.general.current === null ? '軍司令官は空位' : null),
     build: () => ({ type: 'military_dismiss_general' }),
+  },
+  {
+    id: 'military_pitched_battle',
+    category: '軍事',
+    label: '会戦を挑む',
+    detail:
+      '野戦軍の大半を投じて敵の主力と正面からぶつかる。勝てば相手の軍を大きく削れるが、' +
+      '大敗すれば属州が動揺し、野心の高い総督が皇帝を僭称して離れる。' +
+      '皇帝自身（軍事6以上）か軍司令官が率いる必要がある',
+    cost: null,
+    target: 'battle',
+    blockedReason: (state) =>
+      availableBattleLeaders(state).length === 0
+        ? '会戦を率いる者がいない（皇帝の軍事6以上、または軍司令官）'
+        : battleFoes(state).length === 0
+          ? '会戦に応じる敵がいない'
+          : null,
+    build: ({ foe, leader }) =>
+      foe && leader ? { type: 'military_pitched_battle', foe, leader } : null,
+  },
+  {
+    id: 'military_suppress_usurper',
+    category: '軍事',
+    label: '僭称帝国を討つ',
+    detail: '離れた属州を武力で取り戻す。勝てば正統性がよく戻るが、相手もローマの軍である',
+    cost: null,
+    target: 'usurper',
+    blockedReason: (state) =>
+      state.usurpers.length === 0 ? '僭称帝国は現れていない' : null,
+    build: ({ usurperId }) =>
+      usurperId ? { type: 'military_suppress_usurper', usurperId } : null,
   },
   {
     id: 'conquer_homeland',
