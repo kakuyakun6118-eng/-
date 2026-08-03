@@ -2,9 +2,22 @@ import type { ReactElement } from 'react';
 
 import { BATTLE_LANES, resolveTarget } from '../../core/battlefield';
 import type { BattleOrders } from '../../core/battlefield';
-import type { BattleArm, BattleLane, BattleUnit, Battlefield, Terrain } from '../../core/types';
-import { BATTLE_ARM_LABELS, BATTLE_LANE_LABELS, formatTroops } from '../catalogue';
+import type {
+  BattleArm,
+  BattleLane,
+  BattleLeader,
+  BattleUnit,
+  Battlefield,
+  Terrain,
+} from '../../core/types';
+import {
+  BATTLE_ARM_LABELS,
+  BATTLE_LANE_LABELS,
+  BATTLE_LEADER_LABELS,
+  formatTroops,
+} from '../catalogue';
 import { useTerrainArt } from '../terrainArt';
+import { ChiRho } from './UnitSprite';
 
 /**
  * 戦場の地図。
@@ -20,7 +33,7 @@ import { useTerrainArt } from '../terrainArt';
  */
 
 const W = 320;
-const H = 250;
+const H = 292;
 
 /** 戦列の左端と幅。左翼・中央・右翼を等分に置く */
 const LANE_X: Record<BattleLane, number> = { left: 8, center: 112, right: 216 };
@@ -38,8 +51,11 @@ const ROW_H = 14;
  * 両軍のあいだ＝戦場そのものになる
  */
 const FOE_TOP = 12;
-const OUR_BOTTOM = H - 20;
-const MID_Y = 124;
+/** 我が軍の隊の下端。この下に戦列の名、さらに下に本陣を置く */
+const OUR_BOTTOM = H - 64;
+const MID_Y = 118;
+/** 本陣の地面の高さ。戦列の名と重ならないよう十分に下へ取る */
+const HQ_Y = H - 10;
 
 function laneStrength(units: BattleUnit[]): number {
   return units.reduce((sum, u) => sum + u.strength, 0);
@@ -490,57 +506,90 @@ function Formation({
   faded?: boolean;
 }) {
   const body = foe ? '#7c2029' : '#2c4454';
-  const trim = foe ? '#c46a70' : '#c9a227';
+  const dark = foe ? '#571219' : '#182c38';
+  const trim = foe ? '#e0a0a4' : '#d8ab3c';
   const left = cx - width / 2;
 
   const pieces: ReactElement[] = [];
 
   if (unit.arm === 'infantry') {
-    // 楯の壁。2列に組み、後列を半歩ずらす
-    const step = 5;
+    /*
+     * 重装歩兵。楯を並べた密集陣を2列に組み、後列を半歩ずらす。
+     * 兜の房と槍の穂先まで描いて、遠目にも槍衾と分かるようにする
+     */
+    const step = 5.4;
     const n = Math.max(3, Math.floor(width / step));
     for (let row = 0; row < 2; row++) {
       for (let i = 0; i < n; i++) {
         const x = left + i * step + row * (step / 2) + 1;
-        const yy = y + row * 5;
+        const yy = y + row * 4.6;
         pieces.push(
           <g key={`i${row}-${i}`}>
-            {/* 槍 */}
-            <path d={`M ${x + 1.6} ${yy} l 0 -3.5`} stroke={trim} strokeWidth={0.6} />
-            {/* 楯 */}
-            <rect x={x} y={yy} width={3.2} height={4.4} rx={1.2} fill={body} />
+            {/* 槍。穂先を斜めに立てる */}
+            <path d={`M ${x + 3.6} ${yy + 4} l -0.5 -6`} stroke={dark} strokeWidth={0.55} />
+            <path d={`M ${x + 3.1} ${yy - 2} l 0.5 -1.2 l 0.5 1.2 z`} fill={trim} />
+            {/* 兜 */}
+            <path d={`M ${x + 0.6} ${yy} q 1 -1.6 2 0`} fill={dark} />
+            {/* 楯（スクトゥム）。縦長の長方形に真ん中の飾り */}
+            <rect x={x} y={yy} width={3.2} height={4.8} rx={0.7} fill={body} stroke={dark} strokeWidth={0.3} />
+            <path d={`M ${x + 1.6} ${yy + 1} l 0 2.8`} stroke={trim} strokeWidth={0.45} />
           </g>,
         );
       }
     }
   } else if (unit.arm === 'cavalry') {
-    // 騎馬。胴を横長に取り、首と脚で馬に見せる
-    const step = 11;
+    /*
+     * 騎兵。馬を横向きに描く。胴・首・頭・四肢と尾まで取り、
+     * 鞍上に槍を構えた騎手を乗せる
+     */
+    const step = 12;
     const n = Math.max(2, Math.floor(width / step));
     for (let i = 0; i < n; i++) {
       const x = left + i * step + 2;
       pieces.push(
         <g key={`c${i}`}>
-          <rect x={x} y={y + 3.4} width={7.5} height={3} rx={1.4} fill={body} />
-          <path d={`M ${x + 6.6} ${y + 4} l 1.6 -2.6`} stroke={body} strokeWidth={1.5} strokeLinecap="round" />
-          <path d={`M ${x + 1.4} ${y + 6.2} l 0 2.4 M ${x + 6} ${y + 6.2} l 0 2.4`} stroke={body} strokeWidth={0.7} />
-          {/* 騎手 */}
-          <circle cx={x + 3.4} cy={y + 1.6} r={1.5} fill={trim} />
+          {/* 馬の胴 */}
+          <path
+            d={`M ${x + 0.6} ${y + 6} q 0.6 -2.4 3.6 -2.4 q 3 0 3.8 2.2 l 0 1.4 q -3.6 1 -7.4 0 z`}
+            fill={body}
+          />
+          {/* 首と頭 */}
+          <path d={`M ${x + 7.6} ${y + 5.6} l 2.1 -2.6 l 1.5 0.5 l -1.2 1.4 l -1.5 1.6 z`} fill={body} />
+          {/* 四肢 */}
+          <g stroke={dark} strokeWidth={0.7} strokeLinecap="round">
+            <path d={`M ${x + 1.8} ${y + 7.4} l -0.4 2.6 M ${x + 3.6} ${y + 7.4} l 0.3 2.6`} />
+            <path d={`M ${x + 6.2} ${y + 7.4} l -0.3 2.6 M ${x + 7.6} ${y + 7.2} l 0.5 2.8`} />
+          </g>
+          {/* 尾 */}
+          <path d={`M ${x + 0.6} ${y + 5.4} q -1.6 0.8 -1.8 3`} fill="none" stroke={dark} strokeWidth={0.7} />
+          {/* 騎手。胴と頭、構えた槍 */}
+          <path d={`M ${x + 3.6} ${y + 4.6} l 0 -2.4`} stroke={body} strokeWidth={1.5} strokeLinecap="round" />
+          <circle cx={x + 3.6} cy={y + 1.4} r={1.1} fill={dark} />
+          <path d={`M ${x + 2} ${y + 0.4} l 6 3.4`} stroke={trim} strokeWidth={0.6} />
         </g>,
       );
     }
   } else {
-    // 散兵線。弓を構えた姿を粗く散らす
-    const step = 9;
+    /*
+     * 弓兵。散らした散兵線。弓をはっきり C 字に描き、
+     * 弦と矢を添えて「射る姿」に見せる
+     */
+    const step = 9.5;
     const n = Math.max(2, Math.floor(width / step));
     for (let i = 0; i < n; i++) {
       const x = left + i * step + 2;
-      const yy = y + (i % 2) * 2.5;
+      const yy = y + (i % 2) * 2.4 + 1;
       pieces.push(
         <g key={`a${i}`}>
-          <circle cx={x + 2} cy={yy + 1.6} r={1.5} fill={body} />
-          <rect x={x + 1.1} y={yy + 3} width={1.8} height={3.6} rx={0.8} fill={body} />
-          <path d={`M ${x + 4.4} ${yy + 0.6} q 2.2 2.6 0 5.2`} fill="none" stroke={trim} strokeWidth={0.7} />
+          {/* 弓と弦 */}
+          <path d={`M ${x + 4.6} ${yy - 0.6} q 2.6 3 0 6`} fill="none" stroke={trim} strokeWidth={0.75} />
+          <path d={`M ${x + 4.6} ${yy - 0.6} l 0 6`} stroke={trim} strokeWidth={0.35} />
+          {/* 矢 */}
+          <path d={`M ${x + 2.6} ${yy + 2.4} l 3.6 0`} stroke={dark} strokeWidth={0.45} />
+          {/* 射手。頭・胴・踏み出した脚 */}
+          <circle cx={x + 2} cy={yy} r={1.15} fill={dark} />
+          <path d={`M ${x + 2} ${yy + 1.2} l 0 3`} stroke={body} strokeWidth={1.6} strokeLinecap="round" />
+          <path d={`M ${x + 2} ${yy + 4.2} l -1.2 2 M ${x + 2} ${yy + 4.2} l 1.4 1.8`} stroke={dark} strokeWidth={0.6} />
         </g>,
       );
     }
@@ -549,7 +598,7 @@ function Formation({
   return (
     <g opacity={faded ? 0.5 : 1}>
       {/* 足元の影。地面から浮いて見せない */}
-      <ellipse cx={cx} cy={y + 10.5} rx={width / 2} ry={2.2} fill="rgba(35,25,10,0.22)" />
+      <ellipse cx={cx} cy={y + 11} rx={width / 2} ry={2.2} fill="rgba(35,25,10,0.24)" />
       {pieces}
     </g>
   );
@@ -595,6 +644,66 @@ function TroopTag({
         height={1.6}
         fill={foe ? '#d98b93' : '#d8ab3c'}
       />
+    </g>
+  );
+}
+
+/**
+ * 本陣。指揮官が控える位置に**ラバルム**（キリストのモノグラム ☧）を立てる。
+ *
+ * コンスタンティヌス以降のローマ軍の標識で、この時代の軍旗は鷲章ではなくこれ。
+ * 地図・軍団の竿頭・君主の欄と同じ図を使い回す
+ */
+function Headquarters({ leader }: { leader: BattleLeader }) {
+  // 竿・天幕・銘を横一列に並べる。縦に積むと戦列の名に重なった
+  const pole = W / 2 - 34;
+  return (
+    <g>
+      {/* 天幕。竿だけだと地面に刺さった棒に見える */}
+      {[-24, -12].map((dx, i) => (
+        <path
+          key={i}
+          d={`M ${pole + dx - 7} ${HQ_Y} l 7 -${9 + i * 2} l 7 ${9 + i * 2} z`}
+          fill="rgba(58,38,20,0.9)"
+          stroke="#c9a227"
+          strokeWidth={0.5}
+        />
+      ))}
+      {/* 竿 */}
+      <path d={`M ${pole} ${HQ_Y} l 0 -22`} stroke="#c9a227" strokeWidth={1.4} />
+      {/* 竿頭のラバルム。この時代の軍の標識は鷲章ではなくこれ */}
+      <g transform={`translate(${pole}, ${HQ_Y - 27}) scale(0.36)`}>
+        <ChiRho color="#f6d68a" strokeWidth={5.5} />
+      </g>
+      {/* 布。帝室紫に金の縁 */}
+      <path
+        d={`M ${pole + 0.7} ${HQ_Y - 20} l 12 1.6 l 0 8.4 l -12 -1.6 z`}
+        fill="#5b2141"
+        stroke="#c9a227"
+        strokeWidth={0.6}
+      />
+      <text
+        x={pole + 18}
+        y={HQ_Y - 4}
+        fontSize={8}
+        fill="#f4ead2"
+        style={{ letterSpacing: '0.1em', paintOrder: 'stroke' }}
+        stroke="rgba(20,14,4,0.72)"
+        strokeWidth={2.4}
+      >
+        本陣
+      </text>
+      <text
+        x={pole + 44}
+        y={HQ_Y - 4}
+        fontSize={7.5}
+        fill="#e2d2b4"
+        style={{ paintOrder: 'stroke' }}
+        stroke="rgba(20,14,4,0.72)"
+        strokeWidth={2.4}
+      >
+        {BATTLE_LEADER_LABELS[leader]}
+      </text>
     </g>
   );
 }
@@ -852,7 +961,7 @@ export function BattleMap({
             })}
             <text
               x={laneCenter(lane)}
-              y={H - 6}
+              y={OUR_BOTTOM + 12}
               textAnchor="middle"
               fontSize={8.5}
               fill="#f4ead2"
@@ -866,6 +975,8 @@ export function BattleMap({
         );
       })}
 
+      {/* 本陣。ラバルムを立てた指揮官の位置 */}
+      <Headquarters leader={field.leader} />
     </svg>
   );
 }
