@@ -12,8 +12,9 @@ import type { Difficulty, DifficultySettings, Scenario } from './types';
  * 6: 蛮族の郷里（homelands）と、東ローマ・ペルシアの軍司令官（commander）を追加
  * 7: ペルシアとの関係（persia.relations）を追加
  * 8: 僭称帝国（usurpers）と属州の動揺（upheavalYearsRemaining）を追加
+ * 9: 東方帝（east.vassalRuler）・統一年（unifiedYear）・戦場（battlefield）を追加
  */
-export const SAVE_VERSION = 8;
+export const SAVE_VERSION = 9;
 
 export const STARTING_YEAR = 395;
 export const ENDING_YEAR = 476;
@@ -957,3 +958,111 @@ export const PERSIA_SEIZE_STRENGTH_GAIN = 25;
  * ペルシアの統治は根を張っている、という形で2勝ぶんの厚みを持たせる
  */
 export const PERSIA_HOLD_CONTROL = 70;
+
+// ── 戦場（会戦の戦列マップ） ──────────────────────────
+
+/**
+ * 戦術の優劣が会戦の攻撃側戦力に掛かる幅。
+ *
+ * **戦術は戦略の結果を置き換えない。** 戦場で積んだ優劣は
+ * この幅の1つの倍率になり、既存の `giveBattle()` に掛かるだけ。
+ * 中庸に戦えば 1.0 になるので、既存の釣り合いは動かない
+ */
+export const BATTLE_TACTICS_MIN = 0.7;
+export const BATTLE_TACTICS_MAX = 1.45;
+/** 兵力比の差1に対して倍率が動く量 */
+export const BATTLE_TACTICS_SPREAD = 0.55;
+
+/** 決着が付かなくても、この回数で会戦は終わる */
+export const BATTLE_MAX_ROUNDS = 5;
+
+/**
+ * 野戦軍の兵科の内訳。
+ *
+ * 後期ローマ軍は歩兵が主体だが、コミタテンセスには
+ * 相当数の騎兵（ウェクシラティオ）が付いていた
+ */
+export const BATTLE_COMPOSITION_INFANTRY = 0.6;
+export const BATTLE_COMPOSITION_CAVALRY = 0.25;
+export const BATTLE_COMPOSITION_ARCHERS = 0.15;
+
+/** 蛮族の兵科の内訳。歩兵の群れが主体 */
+export const BATTLE_FOE_BARBARIAN_INFANTRY = 0.65;
+export const BATTLE_FOE_BARBARIAN_CAVALRY = 0.25;
+export const BATTLE_FOE_BARBARIAN_ARCHERS = 0.1;
+/** 東ローマ軍の内訳。西とほぼ同じ形だが弓が厚い */
+export const BATTLE_FOE_EAST_INFANTRY = 0.5;
+export const BATTLE_FOE_EAST_CAVALRY = 0.3;
+export const BATTLE_FOE_EAST_ARCHERS = 0.2;
+/** サーサーン朝の内訳。重装騎兵（クリバナリウス）と弓騎兵の軍 */
+export const BATTLE_FOE_PERSIA_INFANTRY = 0.35;
+export const BATTLE_FOE_PERSIA_CAVALRY = 0.4;
+export const BATTLE_FOE_PERSIA_ARCHERS = 0.25;
+
+/** 隊の初期士気 */
+export const BATTLE_START_MORALE = 100;
+
+/**
+ * 兵科の相性。攻める側の兵科が受ける側の兵科に対して得る倍率。
+ * 騎兵は弓を蹴散らし、弓は歩兵を削り、歩兵の槍衾は騎兵を止める
+ */
+export const BATTLE_MATCHUP_ADVANTAGE = 1.35;
+export const BATTLE_MATCHUP_DISADVANTAGE = 0.75;
+
+/** 命令ごとの攻撃補正 */
+export const BATTLE_ORDER_ATTACK_ADVANCE = 1;
+/** 迂回は側面を突くので与える損害が増える */
+export const BATTLE_ORDER_ATTACK_FLANK = 1.5;
+/** 退却中はほとんど反撃できない */
+export const BATTLE_ORDER_ATTACK_WITHDRAW = 0.25;
+
+/** 命令ごとの被害補正。受ける損害に掛かる */
+export const BATTLE_ORDER_DEFENSE_ADVANCE = 1;
+/** 迂回すると正面が空く。そのぶん無防備に受ける */
+export const BATTLE_ORDER_DEFENSE_FLANK = 1.4;
+/** 退却すれば損害は減るが、その戦列は前へ出られない */
+export const BATTLE_ORDER_DEFENSE_WITHDRAW = 0.5;
+
+/**
+ * 攻撃力に対して実際に削れる兵力の割合。
+ *
+ * 0.5 にしていたときは、一度の激突で戦列が丸ごと消えた。
+ * 5回の激突に分ける意味が無くなり、布陣を決めた時点で決着していた
+ */
+export const BATTLE_DAMAGE_RATE = 0.16;
+
+/** 兵力を1割失うごとに落ちる士気 */
+export const BATTLE_MORALE_LOSS_PER_LOSS_RATIO = 120;
+/** 激突するだけで毎回減る士気 */
+export const BATTLE_MORALE_DRAIN_PER_ROUND = 4;
+/** 退却した戦列が取り戻す士気 */
+export const BATTLE_MORALE_RECOVERY_WITHDRAW = 12;
+
+/**
+ * 指揮官の能力が士気の粘りに効く量。
+ *
+ * **攻撃力には掛けない。** 指揮官の補正は既に `giveBattle()` の
+ * 攻撃側戦力に入っているので、戦場でも掛けると二重取りになる。
+ * 戦場では「崩れにくさ」としてだけ働かせる
+ */
+export const BATTLE_LEADER_MORALE_SCALE = 0.06;
+
+/** 地形ごとの兵科補正 */
+export const BATTLE_TERRAIN_MODIFIERS: Record<
+  'plain' | 'hill' | 'forest' | 'desert' | 'river',
+  { infantry: number; cavalry: number; archers: number }
+> = {
+  // 平原は騎兵の土地
+  plain: { infantry: 1, cavalry: 1.25, archers: 1 },
+  // 丘は歩兵が踏ん張り、騎兵の突撃が死ぬ
+  hill: { infantry: 1.2, cavalry: 0.75, archers: 1.05 },
+  // 森は射線が通らず、騎兵も走れない
+  forest: { infantry: 1.15, cavalry: 0.65, archers: 0.7 },
+  // 砂漠は重装歩兵に酷で、騎兵と弓の土地
+  desert: { infantry: 0.8, cavalry: 1.2, archers: 1.15 },
+  // 渡河点は前へ出た者が損をする
+  river: { infantry: 1.05, cavalry: 0.8, archers: 1.2 },
+};
+
+/** 渡河点で前進した戦列が余分に受ける損害 */
+export const BATTLE_RIVER_ADVANCE_PENALTY = 1.25;

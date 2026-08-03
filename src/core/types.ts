@@ -498,6 +498,99 @@ export type BattleFoe =
 /** 会戦の結末。margin の大きさで段が変わる */
 export type BattleOutcome = 'victory' | 'defeat' | 'rout' | 'captured';
 
+// ── 戦場（会戦の戦列マップ） ──────────────────────────
+
+/** 戦列。左翼・中央・右翼の3つ */
+export type BattleLane = 'left' | 'center' | 'right';
+
+/** 兵科。歩兵・騎兵・弓の3つ。相性は 騎兵 > 弓 > 歩兵 > 騎兵 */
+export type BattleArm = 'infantry' | 'cavalry' | 'archers';
+
+/** その戦列にその年に出す命令。前進・迂回・退却 */
+export type BattleOrder = 'advance' | 'flank' | 'withdraw';
+
+/** 戦場の地形。属州から引く。兵科ごとの補正としてのみ働く */
+export type Terrain = 'plain' | 'hill' | 'forest' | 'desert' | 'river';
+
+/** 戦列に並ぶ一隊。兵科・兵力・士気を持つ */
+export interface BattleUnit {
+  arm: BattleArm;
+  strength: number;
+  /** 0〜100。尽きるとその隊は崩れ、兵力ごと戦場から消える */
+  morale: number;
+}
+
+/** 戦場の片側。3つの戦列に隊を並べる */
+export interface BattleSide {
+  lanes: Record<BattleLane, BattleUnit[]>;
+}
+
+/** 1回の激突の記録。表示のためだけに持つ */
+export interface BattleRoundLog {
+  round: number;
+  lane: BattleLane;
+  ourOrder: BattleOrder;
+  theirOrder: BattleOrder;
+  /** 迂回でこの戦列が突いた相手の戦列。正面なら同じ戦列 */
+  ourTarget: BattleLane;
+  ourLoss: number;
+  theirLoss: number;
+  ourBroke: boolean;
+  theirBroke: boolean;
+}
+
+/**
+ * 戦場。会戦を挑んだ年だけ立ち、決着すると消える一時的な状態。
+ *
+ * 7パラメータには足さず `GameState` の別サブ構造として持つ。
+ * **戦術は戦略の結果を置き換えない。** ここで積んだ優劣は
+ * `battlefieldTactics()` が返す1つの補正倍率になり、
+ * 既存の `giveBattle()` の攻撃側戦力に掛かるだけ。
+ * 中庸に戦えば 1.0 になるので、既存の釣り合いは動かない
+ */
+export interface Battlefield {
+  foe: BattleFoe;
+  leader: BattleLeader;
+  terrain: Terrain;
+  /** 戦場になった土地の id（属州・東方属州・`exterior`）。表示は UI 側で引く */
+  placeId: string;
+  /** 何度目の激突か。1から数える */
+  round: number;
+  /** `deploy` のあいだは布陣を待っている。`done` なら決着済み */
+  phase: 'deploy' | 'engaged' | 'done';
+  ours: BattleSide;
+  theirs: BattleSide;
+  ourStartStrength: number;
+  theirStartStrength: number;
+
+  /**
+   * 指揮官の能力から来る士気の粘り。戦場を開いた時点で焼き付ける。
+   * こうすると激突の解決に `GameState` が要らなくなる
+   */
+  resilience: number;
+
+  /**
+   * 同じ布陣・同じ敵に**中庸の指し手で臨んだ場合の交換比**。
+   * 戦場を開いた時点で一度だけ試算して焼き付ける。
+   *
+   * 戦術の優劣はこれとの差で測る。兵力で劣る側は中庸に指しても
+   * 交換比が悪くなるので、絶対値で測ると数の差を二重に罰してしまう
+   */
+  baselineExchange: number;
+
+  log: BattleRoundLog[];
+
+  /**
+   * 決着したら適用するその年のアクション。
+   *
+   * 会戦はターンの途中で起きるので、戦場が開いているあいだ
+   * その年はまだ進んでいない。ここに預けておくことで、
+   * **`tick()` の処理順（収入→支出→行動→蛮族…）を崩さずに**
+   * 戦闘画面を挟める。セーブも戦闘の途中で取れる
+   */
+  pendingActions: PlayerAction[];
+}
+
 /**
  * 僭称帝国。
  *
@@ -562,6 +655,12 @@ export interface GameState {
    * 総督の反乱判定を押し上げるだけの一時的な値で、資源ではない
    */
   upheavalYearsRemaining: number;
+
+  /**
+   * 会戦の戦場。挑んだ年だけ立ち、決着すると `null` に戻る。
+   * 開いているあいだ UI は戦闘画面に切り替わる
+   */
+  battlefield: Battlefield | null;
 
   /**
    * 蛮族の本拠地。7パラメータには含めない別サブ構造。
@@ -719,11 +818,16 @@ export interface EastInvadeAction {
   provinceId: EastProvinceId;
 }
 
-/** 東ローマと講和する。統一シナリオでのみ選べる */
+/** 野戦軍どうしの会戦を挑む */
 export interface MilitaryPitchedBattleAction {
   type: 'military_pitched_battle';
   foe: BattleFoe;
   leader: BattleLeader;
+  /**
+   * 戦場（戦列マップ）で積んだ優劣の倍率。攻撃側戦力に掛かる。
+   * 省略すると 1.0 で、戦闘画面を経ない場合と同じ扱いになる
+   */
+  tactics?: number;
 }
 
 export interface MilitarySuppressUsurperAction {

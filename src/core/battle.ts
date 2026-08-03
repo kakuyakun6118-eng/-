@@ -128,18 +128,23 @@ export interface BattleResult {
  *
  * 勝敗は既存の `resolveCombat` で決め、margin の大きさで
  * 「敗北」と「大敗」を分ける。大敗すると属州が動揺し、
- * 皇帝が自ら率いていた場合は捕虜になることがある
+ * 皇帝が自ら率いていた場合は捕虜になることがある。
+ *
+ * `tactics` は戦場（`battlefield.ts`）で積んだ優劣の倍率。
+ * 戦闘画面を経ない場合は 1.0 で、そのとき挙動は従来と1つも変わらない
  */
 export function giveBattle(
   state: GameState,
   foe: BattleFoe,
   leader: BattleLeader,
   rng: () => number,
+  tactics = 1,
 ): BattleResult {
   if (!canGiveBattle(state, foe)) return { state, outcome: 'defeat' };
   if (!availableBattleLeaders(state).includes(leader)) return { state, outcome: 'defeat' };
 
-  const ourBase = state.fieldArmy * PITCHED_ARMY_SHARE * leaderModifier(state, leader);
+  const ourBase =
+    state.fieldArmy * PITCHED_ARMY_SHARE * leaderModifier(state, leader) * tactics;
   const theirBase = foePower(state, foe);
   const ours = randomizedPower(ourBase, rng);
   const theirs = randomizedPower(theirBase, rng);

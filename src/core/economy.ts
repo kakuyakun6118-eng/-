@@ -86,6 +86,7 @@ export function createInitialState(
     homelands: createInitialHomelands(),
     usurpers: [],
     upheavalYearsRemaining: 0,
+    battlefield: null,
     prefect: createInitialPrefect(),
     governors: createInitialGovernors(provinces.map((p) => p.id)),
     east,

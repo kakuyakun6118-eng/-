@@ -6,12 +6,22 @@ import {
   applyPersiaMajorLoss,
 } from './capitals';
 import {
+  availableBattleLeaders,
+  canGiveBattle,
   giveBattle,
   suppressUsurper,
   updateUpheaval,
   updateUsurpers,
   usurperHeldProvinces,
 } from './battle';
+import {
+  autoResolveBattlefield,
+  battleRound,
+  battlefieldTactics,
+  deployBattlefield,
+  openBattlefield,
+} from './battlefield';
+import type { BattleDeployment, BattleOrders } from './battlefield';
 import {
   ENDING_YEAR,
   FIELD_ARMY_COLLAPSE_THRESHOLD,
@@ -77,6 +87,7 @@ import type {
   PlayerAction,
   PlayerActions,
   ScoreResult,
+  MilitaryPitchedBattleAction,
   Seed,
   TurnModifiers,
 } from './types';
@@ -116,6 +127,79 @@ const SLOT_FREE_ACTIONS: ReadonlySet<PlayerAction['type']> = new Set([
 
 export function consumesActionSlot(action: PlayerAction): boolean {
   return !SLOT_FREE_ACTIONS.has(action.type);
+}
+
+// ── 会戦を挟むターン ──────────────────────────────────
+
+/**
+ * 会戦を含むターンの開始。
+ *
+ * 会戦が選ばれていれば、その年はまだ進めずに**戦場を開く**。
+ * 残りのアクションは戦場に預けておき、決着してから `concludeBattle()` が
+ * `tick()` へ渡す。こうすると戦闘画面を挟んでも
+ * コアループの処理順（収入→支出→行動→蛮族…）が崩れない。
+ *
+ * 会戦が選ばれていなければ、ただ `tick()` を呼ぶのと同じ
+ */
+export function beginTurn(state: GameState, actions: PlayerActions, seed: Seed): GameState {
+  const battle = actions.find(
+    (a): a is MilitaryPitchedBattleAction => a.type === 'military_pitched_battle',
+  );
+  if (
+    battle === undefined ||
+    !canGiveBattle(state, battle.foe) ||
+    !availableBattleLeaders(state).includes(battle.leader)
+  ) {
+    // 相手が戦場に出ていない、または指名した者が率いられない。
+    // 戦場は開かず、giveBattle() 側の同じ判定に任せてその年を進める
+    return tick(state, actions, seed);
+  }
+  const rng = createRng(seed);
+  return {
+    ...state,
+    battlefield: {
+      ...openBattlefield(state, battle.foe, battle.leader, rng),
+      pendingActions: [...actions],
+    },
+  };
+}
+
+/** 戦場に布陣する。まだ年は進まない */
+export function deployBattle(state: GameState, deployment: BattleDeployment): GameState {
+  if (state.battlefield === null) return state;
+  return { ...state, battlefield: deployBattlefield(state.battlefield, deployment) };
+}
+
+/** 一度の激突を解決する。まだ年は進まない */
+export function advanceBattle(
+  state: GameState,
+  orders: BattleOrders,
+  seed: Seed,
+): GameState {
+  if (state.battlefield === null) return state;
+  const rng = createRng(seed);
+  return { ...state, battlefield: battleRound(state.battlefield, orders, rng) };
+}
+
+/**
+ * 決着した戦場を畳み、預けていたアクションでその年を進める。
+ *
+ * 戦場で積んだ優劣は倍率1つになって会戦のアクションに乗るだけ。
+ * 戦場そのものは `tick()` に渡る前に消える
+ */
+export function concludeBattle(state: GameState, seed: Seed): GameState {
+  const field = state.battlefield;
+  if (field === null) return state;
+
+  // 布陣も命令もされないまま送られた戦場は、中庸の指し手で決着させる
+  const finished =
+    field.phase === 'done' ? field : autoResolveBattlefield(field, createRng(seed));
+  const tactics = battlefieldTactics(finished);
+
+  const actions = finished.pendingActions.map((a) =>
+    a.type === 'military_pitched_battle' ? { ...a, tactics } : a,
+  );
+  return tick({ ...state, battlefield: null }, actions as PlayerActions, seed);
 }
 
 /**
@@ -286,7 +370,8 @@ function applyAction(
     case 'persia_improve_relations':
       return improvePersiaRelations(state);
     case 'military_pitched_battle':
-      return giveBattle(state, action.foe, action.leader, rng).state;
+      // tactics は戦場（battlefield.ts）で積んだ優劣。経ていなければ 1.0
+      return giveBattle(state, action.foe, action.leader, rng, action.tactics ?? 1).state;
     case 'military_suppress_usurper':
       return suppressUsurper(state, action.usurperId, rng);
     case 'conquer_homeland':
