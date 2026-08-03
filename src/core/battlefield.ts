@@ -46,6 +46,7 @@ import {
   BATTLE_ORDER_DEFENSE_WITHDRAW,
   BATTLE_RIVER_ADVANCE_PENALTY,
   BATTLE_START_MORALE,
+  MEN_PER_STRENGTH,
   BATTLE_TACTICS_MAX,
   BATTLE_TACTICS_MIN,
   BATTLE_TACTICS_SPREAD,
@@ -214,6 +215,13 @@ function exchangeRatio(field: Battlefield): number {
   const theirLoss = Math.max(0, field.theirStartStrength - sideStrength(field.theirs));
   if (ourLoss <= 0 && theirLoss <= 0) return 1;
   return ourLoss / Math.max(1, theirLoss);
+}
+
+/**
+ * 戦力を兵員数に直す。表示のためだけで、どの計算式にも戻さない
+ */
+export function troopsOf(strength: number): number {
+  return strength * MEN_PER_STRENGTH;
 }
 
 /** 野戦軍の兵科の内訳 */
