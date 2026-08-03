@@ -1,7 +1,11 @@
+import leadersData from '../data/leaders.json';
 import {
   ABILITY_NEUTRAL,
   GENERAL_ABILITY_ROLL_MAX,
+  EXCEPTIONAL_GENERAL_ABILITY,
+  EXCEPTIONAL_GENERAL_PROBABILITY,
   GENERAL_ABILITY_ROLL_MIN,
+  HISTORIC_GENERAL_MIN_YEARS,
   GENERAL_APPOINT_COST,
   GENERAL_DEFENSE_PER_POINT,
   GENERAL_DISMISS_ARMY_LOSS_RATE,
@@ -37,11 +41,62 @@ function rollInRange(rng: () => number, min: number, max: number): number {
   return min + Math.floor(rng() * (max - min + 1));
 }
 
-/** 新しい将軍を生成する。乱数は seed 由来の rng のみ */
+/** 史実の西ローマの軍司令官。年で引く。東の `eastCommanders` と同じ作り */
+interface HistoricCommander {
+  from: number;
+  to: number;
+  id: string;
+  name: string;
+  military: number;
+}
+
+const WEST_COMMANDERS = (leadersData as { westCommanders: HistoricCommander[] })
+  .westCommanders;
+
+/**
+ * その年に迎えられる史実の将。
+ *
+ * 一度仕えた将は二度は出ない。残り任期が短すぎる年も通常の抽選に落とす
+ * （アエティウスを453年に迎えて1年で退かれても意味がない）
+ */
+function historicCommanderFor(state: GameState): HistoricCommander | null {
+  const served = new Set(state.general.history.map((r) => r.generalId));
+  if (state.general.current !== null) served.add(state.general.current.id);
+  return (
+    WEST_COMMANDERS.find(
+      (c) =>
+        state.year >= c.from &&
+        state.year < c.to &&
+        c.to - state.year >= HISTORIC_GENERAL_MIN_YEARS &&
+        !served.has(c.id),
+    ) ?? null
+  );
+}
+
+/**
+ * 新しい将軍を生成する。乱数は seed 由来の rng のみ。
+ *
+ * その年に史実の将がいればその人物を迎える。いなければ抽選で、
+ * まれに桁違いの名将が出る。東が6世紀にベリサリウスを確実に得るのに
+ * 対して、西にも名将の出る目を残すため
+ */
 export function rollGeneral(state: GameState, rng: () => number): General {
+  const historic = historicCommanderFor(state);
+  if (historic !== null) {
+    return {
+      id: historic.id,
+      military: historic.military,
+      appointedYear: state.year,
+      // 史実の在職の終わりまで仕える
+      retiresYear: historic.to,
+    };
+  }
+  const exceptional = rng() < EXCEPTIONAL_GENERAL_PROBABILITY;
   return {
     id: `g${state.year}_${Math.floor(rng() * 100000)}`,
-    military: rollInRange(rng, GENERAL_ABILITY_ROLL_MIN, GENERAL_ABILITY_ROLL_MAX),
+    military: exceptional
+      ? EXCEPTIONAL_GENERAL_ABILITY
+      : rollInRange(rng, GENERAL_ABILITY_ROLL_MIN, GENERAL_ABILITY_ROLL_MAX),
     appointedYear: state.year,
     retiresYear: state.year + rollInRange(rng, GENERAL_MIN_TERM, GENERAL_MAX_TERM),
   };

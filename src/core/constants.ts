@@ -375,6 +375,26 @@ export const SENATE_CONSULSHIP_LEGITIMACY_LOSS = 5;
 export const GENERAL_ABILITY_ROLL_MIN = 4;
 export const GENERAL_ABILITY_ROLL_MAX = 9;
 
+/**
+ * まれに出る名将。
+ *
+ * 東は6世紀にベリサリウス（軍事10）とナルセス（軍事9）を確実に得るのに、
+ * 西は史実の顔ぶれ（`data/leaders.json` の `westCommanders`）が尽きた
+ * あとは 4〜9 の抽選しか無く、一方的に不利だった。
+ * 史実に該当する将がいない年でも、まれに桁違いの将が出るようにする。
+ *
+ * **新しい仕組みではない。** 抽選の幅を広げるだけ
+ */
+export const EXCEPTIONAL_GENERAL_PROBABILITY = 0.12;
+export const EXCEPTIONAL_GENERAL_ABILITY = 10;
+
+/**
+ * 史実の将を迎えるのに必要な残り任期。
+ * これを下回る年に任命したときは、その将ではなく通常の抽選になる
+ * （アエティウスを453年に迎えて1年で退かれても意味がないため）
+ */
+export const HISTORIC_GENERAL_MIN_YEARS = 5;
+
 /** 在職年数の範囲。任期を終えると自ら職を退く */
 export const GENERAL_MIN_TERM = 8;
 export const GENERAL_MAX_TERM = 28;
@@ -793,6 +813,21 @@ export const MAX_ABILITY = 10;
  */
 export const ABILITY_ROLL_MIN = 3;
 export const ABILITY_ROLL_MAX = 8;
+
+/**
+ * まれに出る名君。
+ *
+ * 通常の抽選は 3〜8 なので、9・10 の君主は決して生まれなかった。
+ * 東がユスティニアヌスとベリサリウスを確実に得るのに対し、
+ * 西には桁違いの人物が出る目が無く、一方的に不利になっていた。
+ * マヨリアヌスのような「late Roman には稀に出た有能な帝」を表す。
+ *
+ * **新しい仕組みではない。** 抽選の幅を広げるだけで、
+ * 能力はこれまでどおり既存の計算式に掛かる補正としてしか働かない
+ */
+export const EXCEPTIONAL_RULER_PROBABILITY = 0.1;
+export const EXCEPTIONAL_ABILITY_ROLL_MIN = 7;
+export const EXCEPTIONAL_ABILITY_ROLL_MAX = 10;
 
 /**
  * 補正倍率の中心となる能力値。この値で倍率が 1.0 になる。

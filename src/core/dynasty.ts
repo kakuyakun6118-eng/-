@@ -2,6 +2,9 @@ import {
   ABILITY_MODIFIER_PER_POINT,
   ABILITY_NEUTRAL,
   ABILITY_ROLL_MAX,
+  EXCEPTIONAL_ABILITY_ROLL_MAX,
+  EXCEPTIONAL_ABILITY_ROLL_MIN,
+  EXCEPTIONAL_RULER_PROBABILITY,
   ABILITY_ROLL_MIN,
   ADULT_AGE,
   ASSASSINATION_BASE_PROBABILITY,
@@ -65,11 +68,22 @@ function rollInRange(rng: () => number, min: number, max: number): number {
 }
 
 /** 能力を生成する。極端な値が出ないよう ROLL の範囲に絞る */
+/**
+ * 君主の能力を抽選する。
+ *
+ * **まれに名君が出る。** 通常の抽選（3〜8）では9・10の君主が決して
+ * 生まれず、東がユスティニアヌスとベリサリウスを確実に得るのに対して
+ * 西には桁違いの人物が出る目が無かった。マヨリアヌスのような
+ * 「late Roman に稀に出た有能な帝」を、抽選の幅を広げることで表す
+ */
 export function rollAbilities(rng: () => number): RulerAbilities {
+  const exceptional = rng() < EXCEPTIONAL_RULER_PROBABILITY;
+  const lo = exceptional ? EXCEPTIONAL_ABILITY_ROLL_MIN : ABILITY_ROLL_MIN;
+  const hi = exceptional ? EXCEPTIONAL_ABILITY_ROLL_MAX : ABILITY_ROLL_MAX;
   return {
-    military: rollInRange(rng, ABILITY_ROLL_MIN, ABILITY_ROLL_MAX),
-    governance: rollInRange(rng, ABILITY_ROLL_MIN, ABILITY_ROLL_MAX),
-    diplomacy: rollInRange(rng, ABILITY_ROLL_MIN, ABILITY_ROLL_MAX),
+    military: rollInRange(rng, lo, hi),
+    governance: rollInRange(rng, lo, hi),
+    diplomacy: rollInRange(rng, lo, hi),
   };
 }
 

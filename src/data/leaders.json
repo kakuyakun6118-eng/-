@@ -522,7 +522,12 @@
     "アガピトゥス"
   ],
   "knownGenerals": {
-    "stilicho": "スティリコ"
+    "stilicho": "スティリコ",
+    "hist_stilicho": "スティリコ",
+    "hist_constantius": "コンスタンティウス3世",
+    "hist_aetius": "フラウィウス・アエティウス",
+    "hist_ricimer": "リキメル",
+    "hist_orestes": "オレステス"
   },
   "_portraitNote": "勢力ごとに固定する族長の顔。壮年・老年は13枚あるので勢力ごとに一意にできる。若年は9枚なので12勢力のうち3つだけ重なる。フンとマウリは専用の出自から hash で引くのでここには入れない",
   "factionPortraits": {
@@ -700,6 +705,48 @@
       "to": 999,
       "name": "アダルマハン",
       "military": 8
+    }
+  ],
+  "westCommanders": [
+    {
+      "from": 395,
+      "to": 408,
+      "id": "hist_stilicho",
+      "name": "スティリコ",
+      "military": 9,
+      "note": "ポッレンティア・ウェローナでアラリックを退けた。408年に処刑される"
+    },
+    {
+      "from": 411,
+      "to": 421,
+      "id": "hist_constantius",
+      "name": "コンスタンティウス3世",
+      "military": 8,
+      "note": "僭称帝を平らげ、西ゴートをアクィタニアに定住させた"
+    },
+    {
+      "from": 425,
+      "to": 454,
+      "id": "hist_aetius",
+      "name": "フラウィウス・アエティウス",
+      "military": 10,
+      "note": "カタラウヌムでアッティラを止めた「最後のローマ人」。454年に謀殺される"
+    },
+    {
+      "from": 457,
+      "to": 472,
+      "id": "hist_ricimer",
+      "name": "リキメル",
+      "military": 8,
+      "note": "皇帝を立てては廃した実質の支配者"
+    },
+    {
+      "from": 472,
+      "to": 476,
+      "id": "hist_orestes",
+      "name": "オレステス",
+      "military": 6,
+      "note": "アッティラの元書記。息子ロムルスを帝位に就けた"
     }
   ]
 }
