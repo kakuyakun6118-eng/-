@@ -1,42 +1,44 @@
+import type { ReactElement } from 'react';
+
 import { BATTLE_LANES, resolveTarget } from '../../core/battlefield';
 import type { BattleOrders } from '../../core/battlefield';
 import type { BattleArm, BattleLane, BattleUnit, Battlefield, Terrain } from '../../core/types';
-import { BATTLE_LANE_LABELS } from '../catalogue';
+import { BATTLE_ARM_LABELS, BATTLE_LANE_LABELS, formatTroops } from '../catalogue';
 
 /**
  * 戦場の地図。
  *
- * 関ヶ原の布陣図と同じ読み方をさせる。地形の上に両軍の隊を**駒**で置き、
- * 駒の幅が兵力、色が陣営、下の帯が士気を表す。命令は駒から伸びる矢で描く。
+ * 関ヶ原の布陣図と同じ読み方をさせる。地形の上に両軍の隊を置き、
+ * **隊は兵の列そのもの**として描く（兵科ごとに組み方が違う）。
+ * 兵数の札を添え、命令は隊から伸びる矢で描く。
+ *
+ * 地形は画像を持たず、層を重ねた SVG で描く。遠くを霞ませ、
+ * 光を左上から当てて起伏を出す（戦略地図の起伏と同じ作り）。
  *
  * **計算式はここに書かない。** 描くのは `Battlefield` が既に持っている値だけ
  */
 
 const W = 320;
-const H = 246;
+const H = 250;
 
 /** 戦列の左端と幅。左翼・中央・右翼を等分に置く */
-const LANE_X: Record<BattleLane, number> = { left: 12, center: 114, right: 216 };
-const LANE_W = 92;
+const LANE_X: Record<BattleLane, number> = { left: 8, center: 112, right: 216 };
+const LANE_W = 96;
 
-const UNIT_H = 15;
-const UNIT_GAP = 3;
+/** 隊ひとつぶんの高さ。兵の列と、その札 */
+const SLOT_H = 30;
+const ROW_H = 14;
 
 /**
- * 陣の帯の高さ。3つの兵科がすべて同じ戦列に集まることがあるので、
- * 3隊ぶんが必ず収まる高さを取る（38 にしていたときは3隊目が帯から溢れた）
+ * 陣の位置。敵は上端から下へ、我が軍は**下端から上へ**積む。
+ *
+ * どちらも上端から積んでいたときは、隊が1つずつしかない普通の布陣で
+ * 画面の下3分の1が空いたままになった。下から積めば、空くのは
+ * 両軍のあいだ＝戦場そのものになる
  */
-const BAND_H = 4 + 3 * (UNIT_H + UNIT_GAP) + 2;
-
-/** 敵の陣と我が陣の帯。あいだが戦場になる */
-const FOE_Y = 18;
-const OUR_Y = H - BAND_H - 16;
-
-const ARM_MARK: Record<BattleArm, string> = {
-  infantry: '≡',
-  cavalry: '△',
-  archers: '↟',
-};
+const FOE_TOP = 12;
+const OUR_BOTTOM = H - 20;
+const MID_Y = 124;
 
 function laneStrength(units: BattleUnit[]): number {
   return units.reduce((sum, u) => sum + u.strength, 0);
@@ -48,147 +50,541 @@ function laneCenter(lane: BattleLane): number {
 
 // ── 地形 ──────────────────────────────────────────────
 
-const TERRAIN_GROUND: Record<Terrain, string> = {
-  plain: '#c8c49a',
-  hill: '#c2b48c',
-  forest: '#a8b294',
-  desert: '#ded0a4',
-  river: '#c4c6a8',
+/**
+ * 地形ごとの地の色。手前を濃く、奥を淡くして遠近を出す。
+ * `far` が上（敵側）、`near` が下（こちら側）
+ */
+const GROUND: Record<Terrain, { far: string; near: string; shade: string }> = {
+  plain: { far: '#cbc38c', near: '#b0a768', shade: '#9d9457' },
+  hill: { far: '#c6b487', near: '#ab9868', shade: '#98865a' },
+  forest: { far: '#93a084', near: '#7b8a68', shade: '#6c7b5b' },
+  desert: { far: '#e3d3a2', near: '#d2bb80', shade: '#c1a970' },
+  river: { far: '#c3c194', near: '#aaab73', shade: '#9a9c68' },
 };
 
+/** 起伏の陰影。乱流を法線に見立てて左上から光を当てる（戦略地図と同じ作り） */
+function TerrainDefs({ terrain }: { terrain: Terrain }) {
+  const g = GROUND[terrain];
+  return (
+    <defs>
+      <linearGradient id="bf-ground" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor={g.far} />
+        <stop offset="48%" stopColor={g.near} />
+        <stop offset="100%" stopColor={g.shade} />
+      </linearGradient>
+      {/* 遠くを霞ませる。上ほど白を薄く重ねて奥行きを出す */}
+      <linearGradient id="bf-haze" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="rgba(255,250,235,0.42)" />
+        <stop offset="35%" stopColor="rgba(255,250,235,0.06)" />
+        <stop offset="100%" stopColor="rgba(40,30,15,0.05)" />
+      </linearGradient>
+      {/*
+        * 地のざらつき。周波数を上げすぎると漆喰の壁のような
+        * 均一な粒になって地面に見えないので、粗い粒を薄く重ねるに留める
+        */}
+      <filter id="bf-relief" x="0%" y="0%" width="100%" height="100%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.14" numOctaves={3} seed={9} result="n" />
+        <feDiffuseLighting in="n" lightingColor="#fff6e4" surfaceScale={2.4} result="s">
+          <feDistantLight azimuth={315} elevation={48} />
+        </feDiffuseLighting>
+        <feComposite in="s" in2="SourceAlpha" operator="in" />
+      </filter>
+      <marker id="bf-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4.5" markerHeight="4.5" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#c9a227" />
+      </marker>
+      <marker id="bf-arrow-dim" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4.5" markerHeight="4.5" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#6f6047" />
+      </marker>
+    </defs>
+  );
+}
+
+/** 木立。幹と、光の当たる面・陰になる面の2枚で葉を描く */
+function Tree({ x, y, s }: { x: number; y: number; s: number }) {
+  return (
+    <g>
+      <ellipse cx={x + s * 0.5} cy={y + s * 1.2} rx={s * 0.75} ry={s * 0.22} fill="rgba(30,40,25,0.28)" />
+      <rect x={x - s * 0.08} y={y + s * 0.5} width={s * 0.16} height={s * 0.7} fill="#5a4527" />
+      <path d={`M ${x} ${y + s * 0.7} l ${-s * 0.55} 0 l ${s * 0.55} ${-s * 1.5} z`} fill="#4f6340" />
+      <path d={`M ${x} ${y + s * 0.7} l ${s * 0.55} 0 l ${-s * 0.55} ${-s * 1.5} z`} fill="#3c4d31" />
+    </g>
+  );
+}
+
 /**
- * 地形の起伏。戦場の帯（両軍のあいだ）に描く。
- * 画像は持たず、線と面だけで描く（地図と同じ方針）
+ * 地形。遠景（敵側）・中景・手前（こちら側）の3層に分けて重ねる。
+ * 隊が乗る帯は塞がないようにして、駒が地形に埋もれないようにする
  */
-function TerrainFeatures({ terrain }: { terrain: Terrain }) {
-  const midY = (FOE_Y + BAND_H + OUR_Y) / 2;
+function TerrainScene({ terrain }: { terrain: Terrain }) {
   switch (terrain) {
     case 'hill':
-      return (
-        <g fill="none" stroke="#8d7a4e" strokeWidth={1} opacity={0.55}>
-          {[0, 1, 2].map((i) => (
-            <path
-              key={i}
-              d={`M ${30 + i * 95} ${midY + 16} q ${22} ${-26 - i * 3} ${44} 0`}
-            />
-          ))}
-          {[0, 1, 2].map((i) => (
-            <path key={`b${i}`} d={`M ${42 + i * 95} ${midY + 16} q ${10} ${-13} ${20} 0`} />
-          ))}
-        </g>
-      );
-    case 'forest':
-      return (
-        <g fill="#5f7150" opacity={0.6}>
-          {Array.from({ length: 14 }, (_, i) => {
-            const x = 20 + (i % 7) * 42 + (i > 6 ? 20 : 0);
-            const y = midY - 10 + (i > 6 ? 20 : 0);
-            return <path key={i} d={`M ${x} ${y + 12} l 6 -14 l 6 14 z`} />;
-          })}
-        </g>
-      );
-    case 'desert':
+      /*
+       * 尾根を3列、奥から手前へ重ねる。1列ごとに
+       * 「稜線の陽が当たる面」と「その下に落ちる陰」を対で描く。
+       * 面を1枚だけ置いていたときは、色の違う帯が並ぶだけで
+       * 起伏に見えなかった
+       */
       return (
         <g>
-          {/* 砂丘。稜線と、その陰になる斜面をひと組で描く */}
-          {[0, 1, 2, 3].map((i) => {
-            const y = midY + 2 + (i % 2) * 14;
-            const x = 4 + i * 78;
+          {[
+            { y: MID_Y - 44, lit: '#d3c193', dark: '#8f7c4e', h: 34 },
+            { y: MID_Y - 14, lit: '#c2ad7a', dark: '#7e6c42', h: 38 },
+            { y: MID_Y + 20, lit: '#b09a58', dark: '#6d5c33', h: 50 },
+          ].map((r, i) => {
+            const crest =
+              i === 0
+                ? `M -6 ${r.y} q 46 -30 92 -6 q 40 20 74 -14 q 46 -32 96 -4 q 40 24 84 -12`
+                : i === 1
+                  ? `M -6 ${r.y} q 54 -34 106 -4 q 44 26 90 -18 q 48 -32 90 0 q 36 20 76 -10`
+                  : `M -6 ${r.y} q 62 -38 122 0 q 50 30 98 -20 q 52 -34 122 6`;
             return (
               <g key={i}>
-                <path d={`M ${x} ${y} q ${38} ${-13} ${76} 0 l 0 7 q ${-38} ${-11} ${-76} 0 z`} fill="#c9ab68" opacity={0.5} />
-                <path d={`M ${x} ${y} q ${38} ${-13} ${76} 0`} fill="none" stroke="#a98846" strokeWidth={1.1} opacity={0.8} />
+                <path d={`${crest} l 0 ${r.h} l -340 0 z`} fill={r.lit} />
+                {/* 稜線のすぐ下の陰。ここが無いと丘が平らに見える */}
+                <path d={`${crest} l 0 13 l -340 0 z`} fill={r.dark} opacity={0.72} />
+                <path d={crest} fill="none" stroke="#6f5f39" strokeWidth={0.9} opacity={0.55} />
               </g>
             );
           })}
+          {/* 露岩と灌木。稜線に沿って点在させ、規模の目安にする */}
+          <g>
+            {[
+              [30, MID_Y - 14],
+              [126, MID_Y - 26],
+              [206, MID_Y + 4],
+              [286, MID_Y - 8],
+            ].map(([x, y], i) => (
+              <g key={i}>
+                <path d={`M ${x} ${y} l 4 -6 l 4 3 l 3 3 z`} fill="#6b5c37" />
+                <ellipse cx={x + 12} cy={y + 1} rx={5} ry={2.2} fill="#6f7a45" opacity={0.7} />
+              </g>
+            ))}
+          </g>
         </g>
       );
+
+    case 'forest':
+      /*
+       * 奥は樹海。稜線を丸い房で刻んで梢の並びに見せる。
+       * 直線の帯にしていたときは生垣の壁のように見えた
+       */
+      return (
+        <g>
+          {[
+            { y: MID_Y - 40, fill: '#5b6c4f', r: 9, h: 26 },
+            { y: MID_Y - 20, fill: '#4a5a41', r: 11, h: 26 },
+          ].map((band, bi) => (
+            <path
+              key={bi}
+              d={
+                `M -8 ${band.y + band.r} ` +
+                Array.from({ length: Math.ceil((W + 16) / (band.r * 1.5)) }, (_, i) => {
+                  const x = -8 + i * band.r * 1.5;
+                  const lift = (i % 3) * 2.5;
+                  return `Q ${x + band.r * 0.75} ${band.y - band.r * 0.5 - lift} ${x + band.r * 1.5} ${band.y + band.r * 0.4}`;
+                }).join(' ') +
+                ` L ${W + 10} ${band.y + band.h} L -8 ${band.y + band.h} z`
+              }
+              fill={band.fill}
+            />
+          ))}
+          {/* 手前の木立。中央は通り道として空け、隊が埋もれないようにする */}
+          {[
+            [6, 8],
+            [26, 6.5],
+            [52, 7.5],
+            [88, 6],
+            [232, 6],
+            [268, 7.5],
+            [296, 6.5],
+            [314, 8],
+          ].map(([x, sz], i) => (
+            <Tree key={i} x={x} y={MID_Y + 2 + (i % 3) * 7} s={sz} />
+          ))}
+          {/* 下草 */}
+          <g fill="#4f5f3c" opacity={0.5}>
+            {[120, 160, 200, 60, 250].map((x, i) => (
+              <ellipse key={i} cx={x} cy={MID_Y + 22 + (i % 2) * 8} rx={9} ry={3} />
+            ))}
+          </g>
+        </g>
+      );
+
+    case 'desert':
+      /* 砂丘。稜線に陽、風下側に陰。3列を重ねて遠近を出す */
+      return (
+        <g>
+          {[
+            { y: MID_Y - 44, fill: '#e0cd94', shade: '#c4aa6e', h: 30 },
+            { y: MID_Y - 16, fill: '#d5bd7c', shade: '#b39a58', h: 34 },
+            { y: MID_Y + 16, fill: '#c7ad6c', shade: '#a3894a', h: 46 },
+          ].map((band, i) => {
+            const crest =
+              i % 2 === 0
+                ? `M -6 ${band.y} q 58 -22 114 -2 q 52 18 104 -12 q 54 -20 134 6`
+                : `M -6 ${band.y} q 50 -18 98 4 q 56 22 112 -14 q 50 -22 138 2`;
+            return (
+              <g key={i}>
+                <path d={`${crest} l 0 ${band.h} l -340 0 z`} fill={band.fill} />
+                <path d={crest} fill="none" stroke="#fbeec6" strokeWidth={1} opacity={0.8} />
+                <path d={`${crest} l 0 10 l -340 0 z`} fill={band.shade} opacity={0.5} />
+              </g>
+            );
+          })}
+          {/* 岩と乾いた低木 */}
+          <g opacity={0.7}>
+            {[
+              [40, MID_Y - 6],
+              [180, MID_Y + 6],
+              [280, MID_Y - 18],
+            ].map(([x, y], i) => (
+              <g key={i}>
+                <path d={`M ${x} ${y} l 5 -5 l 5 5 z`} fill="#9c8248" />
+                <path
+                  d={`M ${x + 16} ${y} l 0 -5 M ${x + 13} ${y} l 3 -4 M ${x + 19} ${y} l -3 -4`}
+                  stroke="#8b8352"
+                  strokeWidth={0.8}
+                />
+              </g>
+            ))}
+          </g>
+        </g>
+      );
+
     case 'river':
-      // 渡河点。両軍のあいだを川が横切る
+      /* 川。岸・水面・浅瀬（渡河点）の順に重ねる */
       return (
         <g>
           <path
-            d={`M -4 ${midY - 6} q 60 12 110 0 q 60 -14 120 2 q 50 12 100 -2 l 0 16 q -50 14 -100 2 q -60 -16 -120 -2 q -50 12 -110 0 z`}
-            fill="#7d9db0"
-            opacity={0.75}
+            d={`M -6 ${MID_Y - 26} q 62 14 116 2 q 58 -14 122 4 q 52 12 92 -6 l 0 52 q -40 18 -92 6 q -64 -18 -122 -4 q -54 12 -116 -2 z`}
+            fill="#b9ae7c"
           />
           <path
-            d={`M -4 ${midY - 6} q 60 12 110 0 q 60 -14 120 2 q 50 12 100 -2`}
-            fill="none"
-            stroke="#5d7d92"
-            strokeWidth={0.8}
+            d={`M -6 ${MID_Y - 17} q 62 14 116 2 q 58 -14 122 4 q 52 12 92 -6 l 0 34 q -40 18 -92 6 q -64 -18 -122 -4 q -54 12 -116 -2 z`}
+            fill="#4f7a95"
           />
+          <path
+            d={`M -6 ${MID_Y - 17} q 62 14 116 2 q 58 -14 122 4 q 52 12 92 -6 l 0 14 q -40 18 -92 6 q -64 -18 -122 -4 q -54 12 -116 -2 z`}
+            fill="#7ba4bd"
+            opacity={0.9}
+          />
+          <g fill="none" stroke="#d8e8f0" strokeWidth={0.7} opacity={0.55}>
+            {[10, 92, 176, 254].map((x, i) => (
+              <path key={i} d={`M ${x} ${MID_Y - 4 + (i % 2) * 8} q 24 5 48 -2`} />
+            ))}
+          </g>
+          {/* 浅瀬。ここだけ底が見え、踏み越えられる */}
+          <clipPath id="bf-water">
+            <path
+              d={`M -6 ${MID_Y - 17} q 62 14 116 2 q 58 -14 122 4 q 52 12 92 -6 l 0 34 q -40 18 -92 6 q -64 -18 -122 -4 q -54 12 -116 -2 z`}
+            />
+          </clipPath>
+          <g clipPath="url(#bf-water)">
+            <path
+              d={`M ${laneCenter('center') - 26} ${MID_Y - 16} q 26 12 52 0 l 0 33 q -26 12 -52 0 z`}
+              fill="#93b3c2"
+            />
+            <path
+              d={`M ${laneCenter('center') - 26} ${MID_Y - 16} q 26 12 52 0 l 0 33 q -26 12 -52 0 z`}
+              fill="none"
+              stroke="#cfe2ea"
+              strokeWidth={0.8}
+              opacity={0.7}
+            />
+            <g stroke="#6f8e9c" strokeWidth={0.8} opacity={0.8}>
+              {[0, 1, 2].map((i) => (
+                <path
+                  key={i}
+                  d={`M ${laneCenter('center') - 22 + i * 15} ${MID_Y - 8} l 0 20`}
+                />
+              ))}
+            </g>
+            <text
+              x={laneCenter('center')}
+              y={MID_Y + 3}
+              textAnchor="middle"
+              fontSize={7}
+              fill="#f2f6f7"
+              style={{ letterSpacing: '0.1em', paintOrder: 'stroke' }}
+              stroke="rgba(20,40,50,0.65)"
+              strokeWidth={2}
+            >
+              浅瀬
+            </text>
+          </g>
         </g>
       );
+
     case 'plain':
+      /* 麦の野。畝を奥ほど細かく刻んで遠近を出す */
       return (
-        <g stroke="#8d9455" strokeWidth={1.2} opacity={0.75} strokeLinecap="round">
-          {Array.from({ length: 24 }, (_, i) => {
-            const x = 12 + (i % 8) * 40 + (Math.floor(i / 8) % 2) * 18;
-            const y = midY - 12 + Math.floor(i / 8) * 15;
-            return (
-              <path key={i} d={`M ${x} ${y + 7} l -2 -6 M ${x + 3} ${y + 7} l 0 -7 M ${x + 6} ${y + 7} l 2 -6`} />
-            );
-          })}
+        <g>
+          {[
+            { y: MID_Y - 46, step: 8, len: 4, color: '#c0b678', band: '#c6bd80' },
+            { y: MID_Y - 20, step: 11, len: 6, color: '#aca354', band: '#b3aa64' },
+            { y: MID_Y + 12, step: 15, len: 9, color: '#968c42', band: '#a19750' },
+          ].map((band, bi) => (
+            <g key={bi}>
+              <rect x={-6} y={band.y} width={W + 12} height={34} fill={band.band} opacity={0.75} />
+              <g stroke={band.color} strokeWidth={1.1} strokeLinecap="round" opacity={0.95}>
+                {Array.from({ length: Math.ceil(W / band.step) + 1 }, (_, i) => {
+                  const x = i * band.step + (bi % 2) * 4;
+                  const y = band.y + 14;
+                  return (
+                    <path
+                      key={i}
+                      d={`M ${x} ${y + band.len} l ${-1.6} ${-band.len} M ${x + 2} ${y + band.len} l 0 ${-band.len - 1.5} M ${x + 4} ${y + band.len} l ${1.6} ${-band.len}`}
+                    />
+                  );
+                })}
+              </g>
+            </g>
+          ))}
+          {/* 畦道と灌木。一様な野原に見せない */}
+          <path
+            d={`M -6 ${MID_Y + 4} q 80 -8 160 2 q 80 10 172 -4`}
+            fill="none"
+            stroke="#bdb281"
+            strokeWidth={3}
+            opacity={0.6}
+          />
+          <g fill="#6f7a45" opacity={0.6}>
+            {[22, 132, 214, 296].map((x, i) => (
+              <ellipse key={i} cx={x} cy={MID_Y - 6 + (i % 2) * 22} rx={8} ry={3.4} />
+            ))}
+          </g>
         </g>
       );
   }
 }
 
-// ── 駒 ────────────────────────────────────────────────
+/**
+ * 手前の地。我が軍の足元にあたる帯。
+ *
+ * ここに何も置かないと、隊が一様に暗い板の上に立っているように見える。
+ * 遠景と同じ素材を、粗く大きく散らして手前らしさを出す
+ */
+function NearGround({ terrain }: { terrain: Terrain }) {
+  const y0 = MID_Y + 52;
+  switch (terrain) {
+    case 'forest':
+      return (
+        <g>
+          {[
+            [4, 9],
+            [40, 7.5],
+            [292, 8],
+            [316, 9.5],
+          ].map(([x, sz], i) => (
+            <Tree key={i} x={x} y={y0 + (i % 2) * 12} s={sz} />
+          ))}
+          <g fill="#5e6d4a" opacity={0.45}>
+            {[86, 150, 214, 262].map((x, i) => (
+              <ellipse key={i} cx={x} cy={y0 + 30 + (i % 2) * 10} rx={14} ry={4} />
+            ))}
+          </g>
+        </g>
+      );
+    case 'desert':
+      return (
+        <g>
+          <path
+            d={`M -6 ${y0} q 70 -14 140 4 q 66 16 200 -6 l 0 90 l -346 0 z`}
+            fill="#cdb478"
+            opacity={0.8}
+          />
+          <path
+            d={`M -6 ${y0} q 70 -14 140 4 q 66 16 200 -6`}
+            fill="none"
+            stroke="#f6e8bf"
+            strokeWidth={1}
+            opacity={0.7}
+          />
+          <g opacity={0.55} stroke="#9d8449" strokeWidth={0.9}>
+            {[24, 120, 236, 300].map((x, i) => (
+              <path key={i} d={`M ${x} ${y0 + 26 + (i % 2) * 14} q 16 -5 32 0`} fill="none" />
+            ))}
+          </g>
+        </g>
+      );
+    case 'hill':
+      return (
+        <g>
+          <path
+            d={`M -6 ${y0} q 84 -18 166 2 q 74 18 186 -8 l 0 90 l -352 0 z`}
+            fill="#b5a06c"
+          />
+          <path
+            d={`M -6 ${y0} q 84 -18 166 2 q 74 18 186 -8`}
+            fill="none"
+            stroke="#7d6c43"
+            strokeWidth={1}
+            opacity={0.6}
+          />
+          <g fill="#6f7a45" opacity={0.5}>
+            {[16, 96, 208, 300].map((x, i) => (
+              <ellipse key={i} cx={x} cy={y0 + 28 + (i % 2) * 12} rx={11} ry={4} />
+            ))}
+          </g>
+        </g>
+      );
+    case 'river':
+    case 'plain':
+      return (
+        <g>
+          <g stroke="#9d9450" strokeWidth={1.3} strokeLinecap="round" opacity={0.7}>
+            {Array.from({ length: 18 }, (_, i) => {
+              const x = 6 + i * 18;
+              const y = y0 + 14 + (i % 3) * 16;
+              return (
+                <path
+                  key={i}
+                  d={`M ${x} ${y + 10} l -2.5 -9 M ${x + 3} ${y + 10} l 0 -11 M ${x + 6} ${y + 10} l 2.5 -9`}
+                />
+              );
+            })}
+          </g>
+          <g fill="#6f7a45" opacity={0.45}>
+            {[40, 150, 268].map((x, i) => (
+              <ellipse key={i} cx={x} cy={y0 + 46 + (i % 2) * 10} rx={13} ry={4.5} />
+            ))}
+          </g>
+        </g>
+      );
+  }
+}
+
+// ── 兵の列 ────────────────────────────────────────────
 
 /**
- * 隊の駒。**幅が兵力**、下の帯が士気。
- * 関ヶ原の布陣図の兵数札と同じで、大きさを見れば厚みが分かる
+ * 隊を**兵の列**として描く。兵科ごとに組み方を変える。
+ *
+ * - 歩兵 — 楯を並べた密集陣。2列に組む
+ * - 騎兵 — 間隔を空けた1列。轡を並べて突撃に備える
+ * - 弓兵 — さらに散らした散兵線
+ *
+ * 兵の数そのものは描けない（数万人になる）ので、
+ * **列の幅**で兵力を、粒の細かさで兵科を表す
  */
-function UnitPiece({
+function Formation({
   unit,
-  x,
+  cx,
   y,
-  scale,
+  width,
   foe,
-  dimmed,
+  faded,
 }: {
   unit: BattleUnit;
-  x: number;
+  cx: number;
   y: number;
-  /** 兵力1あたりの幅。両軍で共通にしないと厚みが比べられない */
-  scale: number;
+  width: number;
   foe: boolean;
-  dimmed?: boolean;
+  faded?: boolean;
 }) {
-  const w = Math.max(26, Math.min(LANE_W, unit.strength * scale));
-  const fill = foe ? '#8b2331' : '#2f4858';
+  const body = foe ? '#7c2029' : '#2c4454';
+  const trim = foe ? '#c46a70' : '#c9a227';
+  const left = cx - width / 2;
+
+  const pieces: ReactElement[] = [];
+
+  if (unit.arm === 'infantry') {
+    // 楯の壁。2列に組み、後列を半歩ずらす
+    const step = 5;
+    const n = Math.max(3, Math.floor(width / step));
+    for (let row = 0; row < 2; row++) {
+      for (let i = 0; i < n; i++) {
+        const x = left + i * step + row * (step / 2) + 1;
+        const yy = y + row * 5;
+        pieces.push(
+          <g key={`i${row}-${i}`}>
+            {/* 槍 */}
+            <path d={`M ${x + 1.6} ${yy} l 0 -3.5`} stroke={trim} strokeWidth={0.6} />
+            {/* 楯 */}
+            <rect x={x} y={yy} width={3.2} height={4.4} rx={1.2} fill={body} />
+          </g>,
+        );
+      }
+    }
+  } else if (unit.arm === 'cavalry') {
+    // 騎馬。胴を横長に取り、首と脚で馬に見せる
+    const step = 11;
+    const n = Math.max(2, Math.floor(width / step));
+    for (let i = 0; i < n; i++) {
+      const x = left + i * step + 2;
+      pieces.push(
+        <g key={`c${i}`}>
+          <rect x={x} y={y + 3.4} width={7.5} height={3} rx={1.4} fill={body} />
+          <path d={`M ${x + 6.6} ${y + 4} l 1.6 -2.6`} stroke={body} strokeWidth={1.5} strokeLinecap="round" />
+          <path d={`M ${x + 1.4} ${y + 6.2} l 0 2.4 M ${x + 6} ${y + 6.2} l 0 2.4`} stroke={body} strokeWidth={0.7} />
+          {/* 騎手 */}
+          <circle cx={x + 3.4} cy={y + 1.6} r={1.5} fill={trim} />
+        </g>,
+      );
+    }
+  } else {
+    // 散兵線。弓を構えた姿を粗く散らす
+    const step = 9;
+    const n = Math.max(2, Math.floor(width / step));
+    for (let i = 0; i < n; i++) {
+      const x = left + i * step + 2;
+      const yy = y + (i % 2) * 2.5;
+      pieces.push(
+        <g key={`a${i}`}>
+          <circle cx={x + 2} cy={yy + 1.6} r={1.5} fill={body} />
+          <rect x={x + 1.1} y={yy + 3} width={1.8} height={3.6} rx={0.8} fill={body} />
+          <path d={`M ${x + 4.4} ${yy + 0.6} q 2.2 2.6 0 5.2`} fill="none" stroke={trim} strokeWidth={0.7} />
+        </g>,
+      );
+    }
+  }
+
+  return (
+    <g opacity={faded ? 0.5 : 1}>
+      {/* 足元の影。地面から浮いて見せない */}
+      <ellipse cx={cx} cy={y + 10.5} rx={width / 2} ry={2.2} fill="rgba(35,25,10,0.22)" />
+      {pieces}
+    </g>
+  );
+}
+
+/** 兵数の札。兵科と兵数、下に士気の帯 */
+function TroopTag({
+  unit,
+  cx,
+  y,
+  foe,
+  faded,
+}: {
+  unit: BattleUnit;
+  cx: number;
+  y: number;
+  foe: boolean;
+  faded?: boolean;
+}) {
+  const label = `${BATTLE_ARM_LABELS[unit.arm]} ${formatTroops(unit.strength)}`;
+  const w = Math.min(LANE_W - 2, label.length * 5.4 + 8);
   const morale = Math.max(0, Math.min(100, unit.morale));
   return (
-    <g opacity={dimmed ? 0.45 : 1}>
+    <g opacity={faded ? 0.55 : 1}>
       <rect
-        x={x - w / 2}
+        x={cx - w / 2}
         y={y}
         width={w}
-        height={UNIT_H}
+        height={11}
         rx={1.5}
-        fill={fill}
-        stroke={foe ? '#5e141d' : '#1b2b35'}
-        strokeWidth={0.7}
+        fill={foe ? 'rgba(122,26,36,0.92)' : 'rgba(30,48,60,0.92)'}
+        stroke={foe ? '#5e141d' : '#12222c'}
+        strokeWidth={0.6}
       />
-      <text
-        x={x}
-        y={y + UNIT_H / 2 + 3.4}
-        textAnchor="middle"
-        fontSize={8}
-        fill="#f2e7cd"
-        style={{ letterSpacing: '0.04em' }}
-      >
-        {ARM_MARK[unit.arm]} {Math.round(unit.strength)}
+      <text x={cx} y={y + 7.8} textAnchor="middle" fontSize={7.2} fill="#f4ead2">
+        {label}
       </text>
-      {/* 士気の帯。尽きるとその隊は崩れる */}
-      <rect x={x - w / 2} y={y + UNIT_H} width={w} height={1.8} fill="rgba(0,0,0,0.22)" />
+      <rect x={cx - w / 2} y={y + 11} width={w} height={1.6} fill="rgba(0,0,0,0.3)" />
       <rect
-        x={x - w / 2}
-        y={y + UNIT_H}
+        x={cx - w / 2}
+        y={y + 11}
         width={(w * morale) / 100}
-        height={1.8}
+        height={1.6}
         fill={foe ? '#d98b93' : '#d8ab3c'}
       />
     </g>
@@ -197,34 +593,35 @@ function UnitPiece({
 
 // ── 命令の矢 ──────────────────────────────────────────
 
-/**
- * その戦列の命令を矢で描く。
- * 前進はまっすぐ、迂回は隣へ弧を描き、退却は後ろへ向く
- */
 function OrderArrow({
   lane,
   order,
   target,
+  /** その戦列の隊の上端。矢はここから伸びる */
+  fromY,
+  /** 突く相手の戦列の隊の下端。矢はここで止まる */
+  toY,
 }: {
   lane: BattleLane;
   order: BattleOrders[BattleLane];
   target: BattleLane;
+  fromY: number;
+  toY: number;
 }) {
   const from = laneCenter(lane);
-  const top = OUR_Y - 4;
-  const stroke = order === 'withdraw' ? '#7a6a52' : '#a8801f';
+  const stroke = order === 'withdraw' ? '#6f6047' : '#c9a227';
 
   if (order === 'withdraw') {
     return (
-      <g stroke={stroke} strokeWidth={2} fill="none" markerEnd="url(#battle-arrow-dim)">
-        <path d={`M ${from} ${OUR_Y + BAND_H - 6} l 0 12`} />
+      <g stroke={stroke} strokeWidth={2.2} fill="none" markerEnd="url(#bf-arrow-dim)">
+        <path d={`M ${from} ${OUR_BOTTOM - 4} l 0 14`} />
       </g>
     );
   }
   if (order === 'advance' && target === lane) {
     return (
-      <g stroke={stroke} strokeWidth={2} fill="none" markerEnd="url(#battle-arrow)">
-        <path d={`M ${from} ${top} L ${from} ${FOE_Y + BAND_H + 10}`} />
+      <g stroke={stroke} strokeWidth={2.2} fill="none" markerEnd="url(#bf-arrow)">
+        <path d={`M ${from} ${fromY} L ${from} ${toY}`} />
       </g>
     );
   }
@@ -235,11 +632,10 @@ function OrderArrow({
    * 「側面を突きにいく」のと「正面が空いたので隣へ流れる」のを見分けられるようにする
    */
   const to = laneCenter(target);
-  const midY = (FOE_Y + BAND_H + OUR_Y) / 2;
   return (
-    <g stroke={stroke} strokeWidth={2} fill="none" markerEnd="url(#battle-arrow)">
+    <g stroke={stroke} strokeWidth={2.2} fill="none" markerEnd="url(#bf-arrow)">
       <path
-        d={`M ${from} ${top} C ${from} ${midY}, ${to} ${midY + 14}, ${to} ${FOE_Y + BAND_H + 10}`}
+        d={`M ${from} ${fromY} C ${from} ${MID_Y + 6}, ${to} ${MID_Y - 6}, ${to} ${toY}`}
         strokeDasharray={order === 'flank' ? '5 3' : undefined}
       />
     </g>
@@ -257,20 +653,24 @@ export function BattleMap({
   onSelectLane,
 }: {
   field: Battlefield;
-  pending?: { placed: Partial<Record<BattleArm, BattleLane>>; strengthOf: (arm: BattleArm) => number };
+  pending?: {
+    placed: Partial<Record<BattleArm, BattleLane>>;
+    strengthOf: (arm: BattleArm) => number;
+  };
   orders?: BattleOrders;
   selectedLane?: BattleLane | null;
   onSelectLane?: (lane: BattleLane) => void;
 }) {
-  // 両軍で共通の目盛り。これを揃えないと駒の大きさで厚みを比べられない
+  // 両軍で共通の目盛り。揃えないと列の幅で厚みを比べられない
   const maxStrength = Math.max(
     field.ourStartStrength * 0.6,
     ...BATTLE_LANES.map((l) => laneStrength(field.theirs.lanes[l])),
     1,
   );
-  const scale = LANE_W / maxStrength;
+  const widthOf = (strength: number) =>
+    Math.max(20, Math.min(LANE_W - 6, (strength / maxStrength) * (LANE_W - 6)));
 
-  /** 我が軍の駒。布陣中は置いた兵科だけを仮に描く */
+  /** 我が軍の隊。布陣中は置いた兵科だけを仮に描く */
   const ourUnits = (lane: BattleLane): BattleUnit[] => {
     if (pending === undefined) return field.ours.lanes[lane];
     return (Object.keys(pending.placed) as BattleArm[])
@@ -278,90 +678,66 @@ export function BattleMap({
       .map((arm) => ({ arm, strength: pending.strengthOf(arm), morale: 100 }));
   };
 
+  const emptyLabel = field.round > 1 ? '崩れた' : 'なし';
+
+  /** その戦列の我が軍の隊の上端。矢はここから伸びる */
+  const ourTop = (lane: BattleLane) =>
+    OUR_BOTTOM - Math.max(1, ourUnits(lane).length) * SLOT_H;
+  /** その戦列の敵の隊の下端。矢はここで止まる */
+  const foeBottom = (lane: BattleLane) =>
+    FOE_TOP + Math.max(1, field.theirs.lanes[lane].length) * SLOT_H - 6;
+
   return (
     <svg
       viewBox={`0 0 ${W} ${H}`}
       className="w-full rounded-sm"
-      style={{ backgroundColor: TERRAIN_GROUND[field.terrain], touchAction: 'manipulation' }}
+      style={{ touchAction: 'manipulation', display: 'block' }}
       role="img"
       aria-label="戦場の布陣図"
     >
-      <defs>
-        <marker id="battle-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#a8801f" />
-        </marker>
-        <marker id="battle-arrow-dim" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#7a6a52" />
-        </marker>
-      </defs>
+      <TerrainDefs terrain={field.terrain} />
 
-      {/* 地の陰。単色の板に見せない */}
-      <rect x={0} y={0} width={W} height={H} fill="url(#battle-ground)" />
-      <defs>
-        <linearGradient id="battle-ground" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="rgba(0,0,0,0.10)" />
-          <stop offset="45%" stopColor="rgba(255,255,255,0.10)" />
-          <stop offset="100%" stopColor="rgba(0,0,0,0.12)" />
-        </linearGradient>
-      </defs>
+      {/* 地。起伏の陰影を薄く重ねてから、地形の層を置く */}
+      <rect x={0} y={0} width={W} height={H} fill="url(#bf-ground)" />
+      <rect x={0} y={0} width={W} height={H} filter="url(#bf-relief)" opacity={0.13} />
+      <TerrainScene terrain={field.terrain} />
+      <NearGround terrain={field.terrain} />
+      <rect x={0} y={0} width={W} height={H} fill="url(#bf-haze)" />
 
-      <TerrainFeatures terrain={field.terrain} />
-
-      {/* 戦列の区切り。関ヶ原図の街道のように、縦の道で三つに分ける */}
-      {[LANE_X.center - 6, LANE_X.right - 6].map((x) => (
-        <path
-          key={x}
-          d={`M ${x} 8 L ${x} ${H - 8}`}
-          stroke="rgba(90,70,40,0.22)"
-          strokeWidth={1}
-          strokeDasharray="3 4"
-        />
-      ))}
-
-      {/* 敵の陣 */}
+      {/* 敵軍。上端から下へ積む */}
       {BATTLE_LANES.map((lane) => {
         const units = field.theirs.lanes[lane];
         return (
           <g key={`foe-${lane}`}>
-            <rect
-              x={LANE_X[lane]}
-              y={FOE_Y}
-              width={LANE_W}
-              height={BAND_H}
-              fill="rgba(139,35,49,0.10)"
-              stroke="rgba(139,35,49,0.35)"
-              strokeWidth={0.7}
-              rx={2}
-            />
             {units.length === 0 && (
               <text
                 x={laneCenter(lane)}
-                y={FOE_Y + BAND_H / 2 + 3}
+                y={FOE_TOP + 22}
                 textAnchor="middle"
                 fontSize={8}
-                fill="#8b2331"
-                opacity={0.6}
+                fill="#f0c3c7"
+                style={{ paintOrder: 'stroke' }}
+                stroke="rgba(20,14,4,0.6)"
+                strokeWidth={2.2}
               >
-                {field.round > 1 ? '崩れた' : 'なし'}
+                {emptyLabel}
               </text>
             )}
             {units.map((u, i) => (
-              <UnitPiece
-                key={i}
-                unit={u}
-                x={laneCenter(lane)}
-                y={FOE_Y + 4 + i * (UNIT_H + UNIT_GAP)}
-                scale={scale}
-                foe
-              />
+              <g key={i}>
+                <TroopTag unit={u} cx={laneCenter(lane)} y={FOE_TOP + i * SLOT_H} foe />
+                <Formation
+                  unit={u}
+                  cx={laneCenter(lane)}
+                  y={FOE_TOP + i * SLOT_H + ROW_H + 2}
+                  width={widthOf(u.strength)}
+                  foe
+                />
+              </g>
             ))}
           </g>
         );
       })}
-
-      <text x={6} y={FOE_Y - 6} fontSize={8} fill="#8b2331" style={{ letterSpacing: '0.1em' }}>
-        敵軍
-      </text>
 
       {/* 命令の矢。布陣中は描かない */}
       {orders !== undefined &&
@@ -371,18 +747,20 @@ export function BattleMap({
            * 向かう先は core の規則をそのまま引く。ここで引き写すと、
            * 正面が空いた戦列が隣へ回り込む規則を描き落とす
            */
-          const target = resolveTarget(lane, orders[lane], field.theirs);
+          const target = resolveTarget(lane, orders[lane], field.theirs) ?? lane;
           return (
             <OrderArrow
               key={`arrow-${lane}`}
               lane={lane}
               order={orders[lane]}
-              target={target ?? lane}
+              target={target}
+              fromY={ourTop(lane) - 4}
+              toY={foeBottom(target) + 5}
             />
           );
         })}
 
-      {/* 我が陣 */}
+      {/* 我が軍。下端から上へ積む。触れて布陣・命令の対象にする */}
       {BATTLE_LANES.map((lane) => {
         const units = ourUnits(lane);
         const selected = selectedLane === lane;
@@ -392,56 +770,70 @@ export function BattleMap({
             onClick={() => onSelectLane?.(lane)}
             style={{ cursor: onSelectLane ? 'pointer' : undefined }}
           >
+            {/* 触れる範囲。選ばれているときだけ枠を見せる */}
+            {/* 隊にぴったり被せる。開けた地面まで伸ばすと箱が浮いて見える */}
             <rect
               x={LANE_X[lane]}
-              y={OUR_Y}
+              y={ourTop(lane) - 8}
               width={LANE_W}
-              height={BAND_H}
-              fill={selected ? 'rgba(168,128,31,0.22)' : 'rgba(47,72,88,0.10)'}
-              stroke={selected ? '#a8801f' : 'rgba(47,72,88,0.35)'}
-              strokeWidth={selected ? 1.8 : 0.7}
+              height={OUR_BOTTOM - ourTop(lane) + 12}
               rx={2}
+              fill={selected ? 'rgba(201,162,39,0.20)' : 'transparent'}
+              stroke={selected ? '#c9a227' : 'transparent'}
+              strokeWidth={1.6}
             />
-            <text
-              x={laneCenter(lane)}
-              y={H - 4}
-              textAnchor="middle"
-              fontSize={8}
-              fill="#5d4c37"
-              style={{ letterSpacing: '0.1em' }}
-            >
-              {BATTLE_LANE_LABELS[lane]}
-            </text>
             {units.length === 0 && (
               <text
                 x={laneCenter(lane)}
-                y={OUR_Y + BAND_H / 2 + 3}
+                y={OUR_BOTTOM - 12}
                 textAnchor="middle"
                 fontSize={8}
-                fill="#5d4c37"
-                opacity={0.65}
+                fill="#dfeaf1"
+                style={{ paintOrder: 'stroke' }}
+                stroke="rgba(20,14,4,0.6)"
+                strokeWidth={2.2}
               >
-                {pending ? 'ここへ置く' : field.round > 1 ? '崩れた' : 'なし'}
+                {pending ? 'ここへ置く' : emptyLabel}
               </text>
             )}
-            {units.map((u, i) => (
-              <UnitPiece
-                key={i}
-                unit={u}
-                x={laneCenter(lane)}
-                y={OUR_Y + 4 + i * (UNIT_H + UNIT_GAP)}
-                scale={scale}
-                foe={false}
-                dimmed={pending !== undefined}
-              />
-            ))}
+            {units.map((u, i) => {
+              const y = OUR_BOTTOM - (units.length - i) * SLOT_H;
+              return (
+                <g key={i}>
+                  <Formation
+                    unit={u}
+                    cx={laneCenter(lane)}
+                    y={y}
+                    width={widthOf(u.strength)}
+                    foe={false}
+                    faded={pending !== undefined}
+                  />
+                  <TroopTag
+                    unit={u}
+                    cx={laneCenter(lane)}
+                    y={y + ROW_H}
+                    foe={false}
+                    faded={pending !== undefined}
+                  />
+                </g>
+              );
+            })}
+            <text
+              x={laneCenter(lane)}
+              y={H - 6}
+              textAnchor="middle"
+              fontSize={8.5}
+              fill="#f4ead2"
+              style={{ letterSpacing: '0.12em', paintOrder: 'stroke' }}
+              stroke="rgba(20,14,4,0.65)"
+              strokeWidth={2.2}
+            >
+              {BATTLE_LANE_LABELS[lane]}
+            </text>
           </g>
         );
       })}
 
-      <text x={6} y={OUR_Y - 6} fontSize={8} fill="#2f4858" style={{ letterSpacing: '0.1em' }}>
-        我が軍
-      </text>
     </svg>
   );
 }

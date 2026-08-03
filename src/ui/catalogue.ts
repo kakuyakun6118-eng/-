@@ -16,6 +16,7 @@ import {
 } from '../core/constants';
 import { availableBattleLeaders, canGiveBattle } from '../core/battle';
 import { invadableEastProvinces } from '../core/east';
+import { troopsOf } from '../core/battlefield';
 import type {
   BarbarianDemandType,
   BattleArm,
@@ -157,6 +158,19 @@ export const BATTLE_ORDER_DETAILS: Record<BattleOrder, string> = {
   flank: '隣の敵戦列の側面を突く。損害は増えるが正面が空く',
   withdraw: '後ろへ下がる。ほとんど反撃できないが損害は半減し、士気が戻る',
 };
+
+/**
+ * 兵数の表記。千人・万人でまとめる。
+ *
+ * 兵員数そのものは core の `troopsOf()` から引く。
+ * ここでやるのは桁の丸めと単位付けだけで、計算はしていない
+ */
+export function formatTroops(strength: number): string {
+  const men = troopsOf(strength);
+  if (men >= 10000) return `${(men / 10000).toFixed(1)}万人`;
+  if (men >= 1000) return `${(men / 1000).toFixed(1)}千人`;
+  return `${Math.round(men / 10) * 10}人`;
+}
 
 /** 戦場の地形 */
 export const TERRAIN_LABELS: Record<Terrain, string> = {

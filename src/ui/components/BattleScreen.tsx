@@ -17,6 +17,7 @@ import {
   TERRAIN_DETAILS,
   TERRAIN_LABELS,
   battleFoeLabel,
+  formatTroops,
 } from '../catalogue';
 import { BattleMap } from './BattleMap';
 
@@ -136,10 +137,16 @@ export function BattleScreen({
             onSelectLane={field.phase === 'done' ? undefined : onSelectLane}
           />
           <div className="mt-1 text-[10px] flex justify-between" style={{ color: 'var(--ink-soft)' }}>
-            <span>駒の幅＝兵力／下の帯＝士気</span>
+            <span className="flex items-center gap-1">
+              <i className="inline-block w-2 h-2 rounded-sm" style={{ backgroundColor: '#2c4454' }} />
+              我が軍
+              <i className="inline-block w-2 h-2 rounded-sm ml-1" style={{ backgroundColor: '#7c2029' }} />
+              敵軍
+              <span className="ml-1">／列の幅＝兵力</span>
+            </span>
             <span>
               我が軍{' '}
-              {Math.round(
+              {formatTroops(
                 field.phase === 'deploy'
                   ? field.ourStartStrength
                   : BATTLE_LANES.reduce(
@@ -148,7 +155,7 @@ export function BattleScreen({
                     ),
               )}{' '}
               / 敵{' '}
-              {Math.round(
+              {formatTroops(
                 BATTLE_LANES.reduce(
                   (s, l) => s + field.theirs.lanes[l].reduce((a, u) => a + u.strength, 0),
                   0,
@@ -186,7 +193,7 @@ export function BattleScreen({
                       {BATTLE_ARM_MARKS[arm]} {BATTLE_ARM_LABELS[arm]}
                     </span>
                     <span className="ml-1" style={{ color: 'var(--ink-soft)' }}>
-                      {Math.round(armStrength(field, arm))}
+                      {formatTroops(armStrength(field, arm))}
                     </span>
                     <div style={{ color: lane ? 'var(--purple)' : 'var(--gold)' }}>
                       {lane ? `${BATTLE_LANE_LABELS[lane]}（触れて戻す）` : '控え'}
@@ -250,7 +257,7 @@ export function BattleScreen({
                   {BATTLE_LANE_LABELS[entry.lane]} — {BATTLE_ORDER_LABELS[entry.ourOrder]}
                   {entry.ourTarget !== entry.lane &&
                     `（${BATTLE_LANE_LABELS[entry.ourTarget]}へ回り込む）`}
-                  ／ 味方 −{Math.round(entry.ourLoss)}、敵 −{Math.round(entry.theirLoss)}
+                  ／ 味方 −{formatTroops(entry.ourLoss)}、敵 −{formatTroops(entry.theirLoss)}
                   {entry.ourBroke && (
                     <span style={{ color: 'var(--oxblood)' }}> 味方の隊が崩れた</span>
                   )}
