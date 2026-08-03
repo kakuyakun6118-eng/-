@@ -139,13 +139,13 @@ export function BattleScreen({
           <div className="mt-1 text-[10px] flex justify-between" style={{ color: 'var(--ink-soft)' }}>
             <span className="flex items-center gap-1">
               <i className="inline-block w-2 h-2 rounded-sm" style={{ backgroundColor: '#2c4454' }} />
-              我が軍
+              ローマ軍
               <i className="inline-block w-2 h-2 rounded-sm ml-1" style={{ backgroundColor: '#7c2029' }} />
               敵軍
               <span className="ml-1">／列の幅＝兵力</span>
             </span>
             <span>
-              我が軍{' '}
+              ローマ軍{' '}
               {formatTroops(
                 field.phase === 'deploy'
                   ? field.ourStartStrength
@@ -272,7 +272,7 @@ export function BattleScreen({
           <section className="roman-panel rounded-sm px-3 py-2">
             <h2 className="roman-heading text-sm">戦場の趨勢</h2>
             <p className="text-xs mt-1" style={{ color: 'var(--ink-soft)' }}>
-              戦列での優劣は、この会戦の我が軍の戦力に{' '}
+              戦列での優劣は、この会戦のローマ軍の戦力に{' '}
               <span style={{ color: 'var(--purple)', fontWeight: 600 }}>
                 ×{battlefieldTactics(field).toFixed(2)}
               </span>{' '}

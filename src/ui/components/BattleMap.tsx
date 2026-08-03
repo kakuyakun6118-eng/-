@@ -33,15 +33,16 @@ import { ChiRho } from './UnitSprite';
  */
 
 const W = 320;
-const H = 292;
+const H = 298;
 
 /** 戦列の左端と幅。左翼・中央・右翼を等分に置く */
 const LANE_X: Record<BattleLane, number> = { left: 8, center: 112, right: 216 };
 const LANE_W = 96;
 
 /** 隊ひとつぶんの高さ。兵の列と、その札 */
-const SLOT_H = 30;
-const ROW_H = 14;
+const SLOT_H = 32;
+/** 兵の列の下に札を置く位置。列を増やしたぶん下げてある */
+const ROW_H = 17;
 
 /**
  * 陣の位置。敵は上端から下へ、我が軍は**下端から上へ**積む。
@@ -517,22 +518,22 @@ function Formation({
      * 重装歩兵。楯を並べた密集陣を2列に組み、後列を半歩ずらす。
      * 兜の房と槍の穂先まで描いて、遠目にも槍衾と分かるようにする
      */
-    const step = 5.4;
-    const n = Math.max(3, Math.floor(width / step));
-    for (let row = 0; row < 2; row++) {
+    const step = 3.7;
+    const n = Math.max(4, Math.floor(width / step));
+    for (let row = 0; row < 3; row++) {
       for (let i = 0; i < n; i++) {
-        const x = left + i * step + row * (step / 2) + 1;
-        const yy = y + row * 4.6;
+        const x = left + i * step + (row % 2) * (step / 2) + 0.6;
+        const yy = y + row * 3.4;
         pieces.push(
           <g key={`i${row}-${i}`}>
             {/* 槍。穂先を斜めに立てる */}
-            <path d={`M ${x + 3.6} ${yy + 4} l -0.5 -6`} stroke={dark} strokeWidth={0.55} />
-            <path d={`M ${x + 3.1} ${yy - 2} l 0.5 -1.2 l 0.5 1.2 z`} fill={trim} />
+            <path d={`M ${x + 2.6} ${yy + 3} l -0.4 -5`} stroke={dark} strokeWidth={0.45} />
+            <path d={`M ${x + 2.2} ${yy - 2} l 0.4 -1 l 0.4 1 z`} fill={trim} />
             {/* 兜 */}
-            <path d={`M ${x + 0.6} ${yy} q 1 -1.6 2 0`} fill={dark} />
+            <path d={`M ${x + 0.4} ${yy} q 0.75 -1.3 1.5 0`} fill={dark} />
             {/* 楯（スクトゥム）。縦長の長方形に真ん中の飾り */}
-            <rect x={x} y={yy} width={3.2} height={4.8} rx={0.7} fill={body} stroke={dark} strokeWidth={0.3} />
-            <path d={`M ${x + 1.6} ${yy + 1} l 0 2.8`} stroke={trim} strokeWidth={0.45} />
+            <rect x={x} y={yy} width={2.4} height={4.2} rx={0.6} fill={body} stroke={dark} strokeWidth={0.25} />
+            <path d={`M ${x + 1.2} ${yy + 0.9} l 0 2.4`} stroke={trim} strokeWidth={0.4} />
           </g>,
         );
       }
@@ -542,30 +543,32 @@ function Formation({
      * 騎兵。馬を横向きに描く。胴・首・頭・四肢と尾まで取り、
      * 鞍上に槍を構えた騎手を乗せる
      */
-    const step = 12;
-    const n = Math.max(2, Math.floor(width / step));
+    const step = 7.6;
+    const n = Math.max(3, Math.floor(width / step));
     for (let i = 0; i < n; i++) {
-      const x = left + i * step + 2;
+      const x = left + i * step + 1;
+      // 後列を半歩ずらして、馬体が重なっても数が読めるようにする
+      const yy = y + (i % 2) * 2.6;
       pieces.push(
         <g key={`c${i}`}>
           {/* 馬の胴 */}
           <path
-            d={`M ${x + 0.6} ${y + 6} q 0.6 -2.4 3.6 -2.4 q 3 0 3.8 2.2 l 0 1.4 q -3.6 1 -7.4 0 z`}
+            d={`M ${x + 0.4} ${yy + 6} q 0.4 -1.9 2.6 -1.9 q 2.2 0 2.8 1.7 l 0 1.1 q -2.6 0.8 -5.4 0 z`}
             fill={body}
           />
           {/* 首と頭 */}
-          <path d={`M ${x + 7.6} ${y + 5.6} l 2.1 -2.6 l 1.5 0.5 l -1.2 1.4 l -1.5 1.6 z`} fill={body} />
+          <path d={`M ${x + 5.6} ${yy + 5.7} l 1.6 -2 l 1.1 0.4 l -0.9 1.1 l -1.1 1.2 z`} fill={body} />
           {/* 四肢 */}
-          <g stroke={dark} strokeWidth={0.7} strokeLinecap="round">
-            <path d={`M ${x + 1.8} ${y + 7.4} l -0.4 2.6 M ${x + 3.6} ${y + 7.4} l 0.3 2.6`} />
-            <path d={`M ${x + 6.2} ${y + 7.4} l -0.3 2.6 M ${x + 7.6} ${y + 7.2} l 0.5 2.8`} />
+          <g stroke={dark} strokeWidth={0.55} strokeLinecap="round">
+            <path d={`M ${x + 1.3} ${yy + 7} l -0.3 2 M ${x + 2.7} ${yy + 7} l 0.2 2`} />
+            <path d={`M ${x + 4.6} ${yy + 7} l -0.2 2 M ${x + 5.6} ${yy + 6.9} l 0.4 2.1`} />
           </g>
           {/* 尾 */}
-          <path d={`M ${x + 0.6} ${y + 5.4} q -1.6 0.8 -1.8 3`} fill="none" stroke={dark} strokeWidth={0.7} />
+          <path d={`M ${x + 0.4} ${yy + 5.5} q -1.2 0.6 -1.3 2.2`} fill="none" stroke={dark} strokeWidth={0.55} />
           {/* 騎手。胴と頭、構えた槍 */}
-          <path d={`M ${x + 3.6} ${y + 4.6} l 0 -2.4`} stroke={body} strokeWidth={1.5} strokeLinecap="round" />
-          <circle cx={x + 3.6} cy={y + 1.4} r={1.1} fill={dark} />
-          <path d={`M ${x + 2} ${y + 0.4} l 6 3.4`} stroke={trim} strokeWidth={0.6} />
+          <path d={`M ${x + 2.7} ${yy + 4.8} l 0 -1.9`} stroke={body} strokeWidth={1.2} strokeLinecap="round" />
+          <circle cx={x + 2.7} cy={yy + 2.2} r={0.85} fill={dark} />
+          <path d={`M ${x + 1.4} ${yy + 1.4} l 4.6 2.6`} stroke={trim} strokeWidth={0.5} />
         </g>,
       );
     }
@@ -574,31 +577,33 @@ function Formation({
      * 弓兵。散らした散兵線。弓をはっきり C 字に描き、
      * 弦と矢を添えて「射る姿」に見せる
      */
-    const step = 9.5;
-    const n = Math.max(2, Math.floor(width / step));
-    for (let i = 0; i < n; i++) {
-      const x = left + i * step + 2;
-      const yy = y + (i % 2) * 2.4 + 1;
-      pieces.push(
-        <g key={`a${i}`}>
-          {/* 弓と弦 */}
-          <path d={`M ${x + 4.6} ${yy - 0.6} q 2.6 3 0 6`} fill="none" stroke={trim} strokeWidth={0.75} />
-          <path d={`M ${x + 4.6} ${yy - 0.6} l 0 6`} stroke={trim} strokeWidth={0.35} />
-          {/* 矢 */}
-          <path d={`M ${x + 2.6} ${yy + 2.4} l 3.6 0`} stroke={dark} strokeWidth={0.45} />
-          {/* 射手。頭・胴・踏み出した脚 */}
-          <circle cx={x + 2} cy={yy} r={1.15} fill={dark} />
-          <path d={`M ${x + 2} ${yy + 1.2} l 0 3`} stroke={body} strokeWidth={1.6} strokeLinecap="round" />
-          <path d={`M ${x + 2} ${yy + 4.2} l -1.2 2 M ${x + 2} ${yy + 4.2} l 1.4 1.8`} stroke={dark} strokeWidth={0.6} />
-        </g>,
-      );
+    const step = 6.2;
+    const n = Math.max(3, Math.floor(width / step));
+    for (let row = 0; row < 2; row++) {
+      for (let i = 0; i < n; i++) {
+        const x = left + i * step + (row % 2) * (step / 2) + 0.8;
+        const yy = y + row * 4.6 + 1;
+        pieces.push(
+          <g key={`a${row}-${i}`}>
+            {/* 弓と弦 */}
+            <path d={`M ${x + 3.4} ${yy - 0.4} q 2 2.3 0 4.6`} fill="none" stroke={trim} strokeWidth={0.6} />
+            <path d={`M ${x + 3.4} ${yy - 0.4} l 0 4.6`} stroke={trim} strokeWidth={0.3} />
+            {/* 矢 */}
+            <path d={`M ${x + 1.9} ${yy + 1.9} l 2.8 0`} stroke={dark} strokeWidth={0.38} />
+            {/* 射手。頭・胴・踏み出した脚 */}
+            <circle cx={x + 1.5} cy={yy} r={0.9} fill={dark} />
+            <path d={`M ${x + 1.5} ${yy + 0.9} l 0 2.3`} stroke={body} strokeWidth={1.25} strokeLinecap="round" />
+            <path d={`M ${x + 1.5} ${yy + 3.2} l -0.9 1.5 M ${x + 1.5} ${yy + 3.2} l 1.1 1.4`} stroke={dark} strokeWidth={0.5} />
+          </g>,
+        );
+      }
     }
   }
 
   return (
     <g opacity={faded ? 0.5 : 1}>
       {/* 足元の影。地面から浮いて見せない */}
-      <ellipse cx={cx} cy={y + 11} rx={width / 2} ry={2.2} fill="rgba(35,25,10,0.24)" />
+      <ellipse cx={cx} cy={y + 12} rx={width / 2} ry={2.2} fill="rgba(35,25,10,0.24)" />
       {pieces}
     </g>
   );

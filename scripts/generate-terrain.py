@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """戦場の地の画を手続き的に描き起こす。
 
-`src/ui/public/terrain/` に 960x750 の WebP を5枚書き出す。
+`src/ui/public/terrain/` に 960x894 の WebP を5枚書き出す（布陣図と同じ比率）。
 `src/ui/terrainArt.json` に登録すると布陣図の地がその画になる。
 
 **絵描きの代わりではない。** 標高場に陰影を付けて色を乗せた「地図に近い地」で、
@@ -24,7 +24,7 @@ import os
 import numpy as np
 from PIL import Image, ImageFilter
 
-W, H = 960, 750
+W, H = 960, 894
 OUT = os.path.join(os.path.dirname(__file__), "..", "src", "ui", "public", "terrain")
 
 # 上端と下端は隊と兵数の札が乗る帯。起伏を抑えて読みやすくする
