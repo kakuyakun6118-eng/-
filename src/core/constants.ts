@@ -653,6 +653,37 @@ export const SUCCESSION_UNREST_ADVANCE_MULTIPLIER = 1.8;
 /** 同じく、ペルシアの攻勢の確率に掛かる係数 */
 export const SUCCESSION_UNREST_PERSIA_MULTIPLIER = 1.6;
 
+// ── 従属国としての東ローマ ────────────────────────────
+
+/**
+ * 分割で生まれた東は独立国ではなく、西の宗主権のもとにある従属国。
+ * 「西ローマの東方帝」という位置づけで、兵権も貢納も西に属する。
+ *
+ * **新しい資源は作らない。** 貢納は既存の収入計算に、
+ * 兵権は既存の防衛戦力に足すだけ
+ */
+
+/** 従属国の属州の収入のうち、西へ貢納として入る割合 */
+export const VASSAL_TRIBUTE_SHARE = 0.45;
+/** 従属国の野戦軍のうち、西の属州防衛に使える割合。これが「兵権」 */
+export const VASSAL_ARMY_SHARE = 0.35;
+
+/** 東帝の野心の範囲。独立の確率にのみ効く */
+export const VASSAL_AMBITION_MIN = 2;
+export const VASSAL_AMBITION_MAX = 9;
+/** 独立を図る基礎確率（毎年） */
+export const VASSAL_INDEPENDENCE_BASE = 0.01;
+/** 野心が ABILITY_NEUTRAL を超えた1点あたりの上乗せ */
+export const VASSAL_INDEPENDENCE_PER_AMBITION = 0.035;
+/**
+ * 西の正統性が低いほど独立されやすい。
+ * この値を下回った分が線形に効く（既存の反乱と同じ考え方）
+ */
+export const VASSAL_INDEPENDENCE_LEGITIMACY_FROM = 60;
+export const VASSAL_INDEPENDENCE_LOW_LEGITIMACY_BONUS = 0.12;
+/** 独立されたときに失う正統性 */
+export const VASSAL_INDEPENDENCE_LEGITIMACY_LOSS = 12;
+
 // ── 難易度 ────────────────────────────────────────────
 
 export const DEFAULT_DIFFICULTY: Difficulty = 'standard';

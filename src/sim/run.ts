@@ -176,8 +176,7 @@ function runTrial(options: Options, seedBase: number): TrialOutcome {
       collapseCause = diagnoseCollapse(state);
       collapsedDuringCrisis = state.dynasty.crisisYearsRemaining > 0;
     }
-    // 統一は勝利なのでその場で打ち切る
-    if (state.status === 'unified') break;
+    // 統一はその場では終わらない。476年まで続けて結末を見る
   }
 
   return { state, rows, collapseYear, collapseCause, collapsedDuringCrisis, nonFinite };
@@ -226,10 +225,12 @@ function reportAggregate(options: Options): void {
   for (let trial = 0; trial < options.trials; trial++) {
     const outcome = runTrial(options, options.seed + trial * 1000);
     if (outcome.nonFinite) nonFiniteTrials++;
-    survived.push(outcome.state.status === 'survived' ? 1 : 0);
-    if (outcome.state.status === 'unified') {
+    survived.push(
+      outcome.state.status === 'survived' || outcome.state.status === 'unified' ? 1 : 0,
+    );
+    if (outcome.state.unifiedYear !== null) {
       unified++;
-      unifiedYears.push(outcome.state.year);
+      unifiedYears.push(outcome.state.unifiedYear);
     }
     if (outcome.state.persia.intervened) persiaIntervened++;
     if (outcome.collapseYear !== null) collapseYears.push(outcome.collapseYear);

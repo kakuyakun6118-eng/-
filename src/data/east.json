@@ -2,6 +2,7 @@
   "army": 195,
   "stance": "peace",
   "warStartYear": null,
+  "vassalRuler": null,
   "provinces": [
     {
       "id": "Thracia",

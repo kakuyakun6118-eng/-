@@ -294,7 +294,13 @@ export type TurnEventId =
   /** 僭称帝国を平らげ、属州を取り戻した年 */
   | 'usurper_suppressed'
   /** 統一した帝国が代替わりで東西に割れた年 */
-  | 'empire_partitioned';
+  | 'empire_partitioned'
+  /** 東方が西の従属国になった年 */
+  | 'east_vassalized'
+  /** 従属国だった東ローマが独立した年 */
+  | 'east_independence'
+  /** 東方属州をすべて手中に収めた年 */
+  | 'rome_reunified';
 
 // ── 官職（プラエトリア長官・属州総督） ────────────────
 
@@ -426,7 +432,22 @@ export interface EastProvince {
   owner: 'east' | 'west' | 'persia';
 }
 
-export type EastStance = 'peace' | 'war';
+
+/**
+ * 東ローマの立ち位置。
+ *
+ * `vassal` は西の宗主権のもとにある従属国。西が東を平らげたあと、
+ * 複数の後継者に分けられて生まれる「西ローマの東方帝」がこれにあたる。
+ * 兵権は西にあり、貢納も西へ入るが、野心の高い東帝は独立を図る
+ */
+export type EastStance = 'peace' | 'war' | 'vassal';
+
+/** 従属国の東帝。西の宗主権のもとで東方を治める */
+export interface VassalRuler {
+  name: string;
+  /** 野心。1〜10。独立の確率にのみ効き、他には一切効かない */
+  ambition: number;
+}
 
 export interface EastEmpire {
   /** 東の野戦軍。西との戦争でのみ使う */
@@ -436,6 +457,8 @@ export interface EastEmpire {
   stance: EastStance;
   /** 開戦した年。講和の可否や正統性の判定に使う */
   warStartYear: number | null;
+  /** 従属国のときの東帝。独立するまで居座る */
+  vassalRuler: VassalRuler | null;
   provinces: EastProvince[];
 }
 
@@ -570,6 +593,9 @@ export interface GameState {
   difficulty: Difficulty;
 
   /** onceOnly なイベントの再発火防止用 */
+  /** 東方属州をすべて手中に収めた年。統一は勝利ではなく通過点として記録する */
+  unifiedYear: number | null;
+
   firedEventIds: string[];
 
   /** その年に起きた、状態の差分からは読み取れない出来事。毎ターン作り直す */

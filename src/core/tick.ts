@@ -43,6 +43,7 @@ import {
   updateEasternFront,
 } from './east';
 import { applyHistoricalEvents } from './events';
+import { checkVassalIndependence } from './partition';
 import { conquerHomeland, updateHomelands } from './homelands';
 import {
   appointGovernor,
@@ -197,6 +198,8 @@ export function tick(state: GameState, actions: PlayerActions, seed: Seed): Game
 
   // 8. 王朝の更新（加齢・出生・寿命と暗殺の判定・継承）
   next = updateDynasty(next, rng);
+  // 従属国の東帝が宗主権を振り払うか。野心が高いほど独立を図る
+  next = checkVassalIndependence(next, rng);
   // 軍司令官の任期。退任しても後任は自動では決まらない
   next = updateGeneral(next);
   // 長官と総督の任期。退任しても後任は自動では決まらない
@@ -206,6 +209,15 @@ export function tick(state: GameState, actions: PlayerActions, seed: Seed): Game
 
   // 9. 歴史イベントテーブルの発火判定
   next = applyHistoricalEvents(next, rng);
+
+  // 統一を果たした年を記録する。勝利ではないが節目として残す
+  if (next.unifiedYear === null && isUnified(next)) {
+    next = {
+      ...next,
+      unifiedYear: next.year,
+      turnEvents: [...next.turnEvents, 'rome_reunified'],
+    };
+  }
 
   return { ...next, status: determineStatus(next) };
 }
@@ -319,11 +331,12 @@ function determineStatus(state: GameState): GameStatus {
   }
 
   /*
-   * 統一シナリオの勝利。476年を待たずにその場で決まる。
-   * 東方属州をすべて西の持ち物にすることが条件で、
-   * ペルシアに1つでも握られていれば成立しない
+   * 統一は勝利ではなく通過点。
+   *
+   * その場で局を終わらせていたときは、全土の帝が没して帝国が
+   * 東西に割れる——このゲームの開始点そのもの——が一度も起きなかった。
+   * 統一した年は `unifiedYear` に記録し、遊びは476年まで続く
    */
-  if (isUnified(state)) return 'unified';
 
   if (state.year >= ENDING_YEAR) {
     const loyal = usurperHeldProvinces(state);
@@ -336,7 +349,13 @@ function determineStatus(state: GameState): GameStatus {
      * 存続にはItaliaに加え1属州以上と、最低限の正統性の両方が要る
      */
     if (state.legitimacy < SURVIVAL_MIN_LEGITIMACY) return 'collapsed';
-    return provincesHeld >= 2 ? 'survived' : 'collapsed';
+    if (provincesHeld < 2) return 'collapsed';
+    /*
+     * 統一を果たしたまま476年を迎えたなら、存続ではなく統一として記録する。
+     * 統一そのものはその年に局を終わらせない（通過点）が、
+     * 到達した事実は結末に残す
+     */
+    return state.unifiedYear !== null ? 'unified' : 'survived';
   }
 
   return 'ongoing';

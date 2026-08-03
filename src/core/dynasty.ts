@@ -271,7 +271,7 @@ function succeed(
    * 統一を果たしていた場合、残った成人の後継者が複数いれば帝国は割れる。
    * 継承者を1人に絞った皇帝だけが全土をそのまま渡せる
    */
-  return partitionOnSuccession(succeeded, ADULT_AGE);
+  return partitionOnSuccession(succeeded, ADULT_AGE, rng);
 }
 
 // ── Task 4: 能力の変更口 ──────────────────────────────

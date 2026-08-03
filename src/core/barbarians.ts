@@ -39,7 +39,7 @@ import { chiefPowerModifier } from './homelands';
 import { governorDefenseModifier } from './officials';
 import { resolveCombat } from './military';
 import type { BarbarianFactionId, GameState, ProvinceId, TurnModifiers } from './types';
-import { successionAdvanceMultiplier } from './partition';
+import { successionAdvanceMultiplier, vassalDefenseSupport } from './partition';
 import { clamp } from './util';
 
 function randomizedPower(base: number, rng: () => number): number {
@@ -150,9 +150,14 @@ export function applyBarbarianActions(
       ? DEPLOY_ARMY_DEFENSE_SHARE
       : FIELD_ARMY_DEFENSE_SHARE;
     // 総督は自分の属州の守備隊にだけ効く。野戦軍やフォエデラティには効かない
+    /*
+     * 従属国の兵権は西にある。東方帝の軍も属州の防衛に加わる。
+     * 新しい資源ではなく、既存の防衛戦力に足すだけ
+     */
     const defenseBase =
       province.garrison * governorDefenseModifier(state, location) +
       state.fieldArmy * armyShare +
+      vassalDefenseSupport(state) * armyShare +
       foederatiDefenseAt(location);
 
     /*

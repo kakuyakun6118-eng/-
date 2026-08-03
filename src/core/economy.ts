@@ -46,6 +46,7 @@ import {
   TAX_RATE,
 } from './constants';
 import { usurperHeldProvinces } from './battle';
+import { vassalTribute } from './partition';
 import { governanceModifier } from './dynasty';
 import { createInitialHomelands } from './homelands';
 import {
@@ -91,6 +92,7 @@ export function createInitialState(
     persia,
     scenario,
     difficulty,
+    unifiedYear: null,
     firedEventIds: [],
     turnEvents: [],
     africaLost: false,
@@ -107,6 +109,7 @@ const EMPTY_EAST: EastEmpire = {
   commander: { name: '', military: 5 },
   stance: 'peace',
   warStartYear: null,
+  vassalRuler: null,
   provinces: [],
 };
 
@@ -144,7 +147,7 @@ export function calculateIncome(state: GameState): number {
     ...Object.values(state.homelands).filter((h) => h.owner === 'west'),
   ].reduce((sum, province) => sum + (province.control / MAX_CONTROL) * province.baseTax, 0);
   return (
-    provinceIncome *
+    (provinceIncome + vassalTribute(state)) *
     (state.taxBase / MAX_TAX_BASE) *
     TAX_RATE *
     senateIncomeFactor(state.senateSupport) *
