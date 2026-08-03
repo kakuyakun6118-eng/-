@@ -14,6 +14,11 @@ import {
   APPEASE_SENATE_GAIN,
   APPEASE_SENATE_LEGITIMACY_GAIN,
   APPEASE_SENATE_TAX_BASE_LOSS,
+  SENATE_CONSULSHIP_LEGITIMACY_LOSS,
+  SENATE_CONSULSHIP_SENATE_GAIN,
+  SENATE_GAMES_COST,
+  SENATE_GAMES_LEGITIMACY_GAIN,
+  SENATE_GAMES_SENATE_GAIN,
   ARMY_UPKEEP_PER_UNIT,
   CONTROL_RECOVERY_PER_TURN,
   COURT_UPKEEP,
@@ -236,6 +241,54 @@ export function appeaseSenate(state: GameState): GameState {
       MAX_LEGITIMACY,
     ),
     taxBase: clamp(state.taxBase - APPEASE_SENATE_TAX_BASE_LOSS, MIN_TAX_BASE, MAX_TAX_BASE),
+  };
+}
+
+/**
+ * 競技会を催す。
+ *
+ * 戦車競走と見世物に国庫を割く。元老院の機嫌も直るが、
+ * 沸くのは民衆のほうなので正統性への効きが大きい。
+ * 免税特権の追認（税基盤を削る）と違い、削るのは国庫
+ */
+export function holdGames(state: GameState): GameState {
+  if (state.treasury < SENATE_GAMES_COST) return state;
+  return {
+    ...state,
+    treasury: state.treasury - SENATE_GAMES_COST,
+    senateSupport: clamp(
+      state.senateSupport + SENATE_GAMES_SENATE_GAIN,
+      MIN_SENATE_SUPPORT,
+      MAX_SENATE_SUPPORT,
+    ),
+    legitimacy: clamp(
+      state.legitimacy + SENATE_GAMES_LEGITIMACY_GAIN,
+      MIN_LEGITIMACY,
+      MAX_LEGITIMACY,
+    ),
+  };
+}
+
+/**
+ * 執政官位を貴族に授ける。
+ *
+ * この時代の執政官は実権のない名誉職で、皇帝が毎年貴族に与える褒賞だった。
+ * 金も土地も要らないが、**その年の栄誉は皇帝ではなくその貴族のものになる**。
+ * 戦勝の名声を軍司令官が持っていくのと同じ構図を元老院に対して作る
+ */
+export function grantConsulship(state: GameState): GameState {
+  return {
+    ...state,
+    senateSupport: clamp(
+      state.senateSupport + SENATE_CONSULSHIP_SENATE_GAIN,
+      MIN_SENATE_SUPPORT,
+      MAX_SENATE_SUPPORT,
+    ),
+    legitimacy: clamp(
+      state.legitimacy - SENATE_CONSULSHIP_LEGITIMACY_LOSS,
+      MIN_LEGITIMACY,
+      MAX_LEGITIMACY,
+    ),
   };
 }
 

@@ -14,9 +14,13 @@ import {
   CONTROL_RECOVERY_PER_TURN,
   DEFENSE_MULTIPLIER,
   EAST_ARMY_GROWTH_RATE,
+  EAST_ARMY_MAX,
+  EAST_ARMY_REBUILD,
   EAST_ARMY_LOSS_FACTOR,
   EAST_CONQUEST_CONTROL,
+  EAST_COMMANDER_TEMPO_PER_POINT,
   EAST_COUNTERATTACK_PROBABILITY,
+  JUSTINIAN_RECONQUEST_YEAR,
   EAST_DECLARE_WAR_LEGITIMACY_LOSS,
   EAST_DECLARE_WAR_SENATE_LOSS,
   EAST_DEFENSE_ARMY_SHARE,
@@ -49,6 +53,7 @@ import {
   PERSIA_ATTACK_SHARE,
   PERSIA_DEFENSE_SHARE,
   PERSIA_GROWTH_RATE,
+  PERSIA_MAX_STRENGTH,
   PERSIA_HOLD_CONTROL,
   PERSIA_INTERVENTION_PROBABILITY,
   PERSIA_LOSS_FACTOR,
@@ -321,10 +326,45 @@ export function invadeEastProvince(
  * 東ローマの手番。交戦中なら攻め返してくる。
  * 西が奪った東方属州を取り返しに来る
  */
+/**
+ * ユスティニアヌス1世の西方回復（renovatio imperii）。
+ *
+ * 527年、東方属州を西に握られていれば、**講和していようと従属して
+ * いようと東は戦端を開く。** ベリサリウスとナルセスを西へ送り込んだ
+ * 史実そのままの筋で、統一シナリオの山場になる。
+ *
+ * これが無いと、統一したあと講和してしまえば東は二度と動かず、
+ * 6世紀が何も起きない89年になっていた
+ */
+function justinianReconquest(state: GameState): GameState {
+  // その年に一度だけ。tick() が年を進めるので二重には起きない
+  if (state.year !== JUSTINIAN_RECONQUEST_YEAR) return state;
+  if (state.east.stance === 'war') return state;
+  if (!state.east.provinces.some((p) => p.owner === 'west')) return state;
+
+  return {
+    ...state,
+    east: {
+      ...state.east,
+      stance: 'war',
+      warStartYear: state.year,
+      // 従属していた東方帝は宗主権を振り払ってこれに加わる
+      vassalRuler: null,
+    },
+    turnEvents: [...state.turnEvents, 'justinian_reconquest', 'east_war_declared'],
+  };
+}
+
 function eastCounterattack(state: GameState, rng: () => number): GameState {
   const { east } = state;
   if (east.stance !== 'war') return state;
-  if (rng() >= EAST_COUNTERATTACK_PROBABILITY) return state;
+  /*
+   * 攻め返す頻度は司令官の力量で変わる。
+   * 有能な将は一撃が重いだけでなく、休まず戦役を起こす
+   */
+  const tempo =
+    1 + (east.commander.military - ABILITY_NEUTRAL) * EAST_COMMANDER_TEMPO_PER_POINT;
+  if (rng() >= EAST_COUNTERATTACK_PROBABILITY * tempo) return state;
 
   // 取り返す相手は、西が握っている東方属州のうち最も支配度が低いもの
   const targets = east.provinces
@@ -439,7 +479,8 @@ function persianTurn(state: GameState, rng: () => number): GameState {
     };
   }
 
-  const grown = persia.strength * (1 + PERSIA_GROWTH_RATE);
+  // 東の軍と同じく天井を置く。171ターンでは掛け算だけだと膨らみ続ける
+  const grown = Math.min(PERSIA_MAX_STRENGTH, persia.strength * (1 + PERSIA_GROWTH_RATE));
   if (
     rng() >=
     PERSIA_ATTACK_PROBABILITY *
@@ -546,6 +587,8 @@ export function updateEasternFront(state: GameState, rng: () => number): GameSta
     };
   }
 
+  // 527年、ユスティニアヌスが西方の回復を掲げて動く
+  next = justinianReconquest(next);
   next = eastCounterattack(next, rng);
   next = persianTurn(next, rng);
 
@@ -567,12 +610,21 @@ export function updateEasternFront(state: GameState, rng: () => number): GameSta
       : p,
   );
 
-  // 東の軍は毎年少しずつ立て直す
+  /*
+   * 東の軍は毎年少しずつ立て直す。
+   *
+   * 掛け算だけだと一度壊滅させた東は二度と戻れず、6世紀の巻き返しが
+   * 起きない。逆に上限が無いと171ターンで28倍まで膨らむ。
+   * 天井へ向かって伸び、削り切っても最低量は戻る形にする
+   */
   return {
     ...next,
     east: {
       ...next.east,
-      army: next.east.army * (1 + EAST_ARMY_GROWTH_RATE),
+      army: Math.min(
+        EAST_ARMY_MAX,
+        next.east.army * (1 + EAST_ARMY_GROWTH_RATE) + EAST_ARMY_REBUILD,
+      ),
       provinces,
     },
   };

@@ -11,7 +11,7 @@ import {
   DEFAULT_SCENARIO,
   DIFFICULTY_SETTINGS,
   FIELD_ARMY_COLLAPSE_THRESHOLD,
-  TOTAL_TURNS,
+  totalTurnsOf,
 } from '../core/constants';
 import { adjustRulerAbilities } from '../core/dynasty';
 import { createInitialState } from '../core/economy';
@@ -84,7 +84,8 @@ interface Options {
 
 function parseArgs(argv: string[]): Options {
   const options: Options = {
-    turns: TOTAL_TURNS,
+    // シナリオごとに長さが違う（史実81 / 統一170）。引数が無ければ後で埋める
+    turns: 0,
     out: null,
     strategy: 'passive',
     trials: 1,
@@ -106,6 +107,8 @@ function parseArgs(argv: string[]): Options {
       options.adjust = { military, governance, diplomacy };
     }
   }
+  // --turns が無ければシナリオの長さを使う（史実81 / 統一170）
+  if (options.turns <= 0) options.turns = totalTurnsOf(options.scenario);
   return options;
 }
 

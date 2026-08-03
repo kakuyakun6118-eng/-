@@ -300,7 +300,9 @@ export type TurnEventId =
   /** 従属国だった東ローマが独立した年 */
   | 'east_independence'
   /** 東方属州をすべて手中に収めた年 */
-  | 'rome_reunified';
+  | 'rome_reunified'
+  /** ユスティニアヌス1世が西方の回復を掲げて戦端を開いた年 */
+  | 'justinian_reconquest';
 
 // ── 官職（プラエトリア長官・属州総督） ────────────────
 
@@ -784,6 +786,16 @@ export interface DomesticAppeaseSenateAction {
   type: 'domestic_appease_senate';
 }
 
+/** 競技会を催す。国庫を割いて元老院と民衆の機嫌を取る */
+export interface DomesticHoldGamesAction {
+  type: 'domestic_hold_games';
+}
+
+/** 執政官位を貴族に授ける。金は要らないが、その年の栄誉は皇帝のものでなくなる */
+export interface DomesticGrantConsulshipAction {
+  type: 'domestic_grant_consulship';
+}
+
 export interface EastRequestAidAction {
   type: 'east_request_aid';
 }
@@ -901,6 +913,8 @@ export type PlayerAction =
   | DomesticRaiseTaxesAction
   | DomesticReorganizeArmyAction
   | DomesticAppeaseSenateAction
+  | DomesticHoldGamesAction
+  | DomesticGrantConsulshipAction
   | EastRequestAidAction
   | EastConfirmTitleAction
   | AppointPrefectAction

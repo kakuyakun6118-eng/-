@@ -21,6 +21,29 @@ export const STARTING_YEAR = 395;
 export const ENDING_YEAR = 476;
 export const TOTAL_TURNS = 81;
 
+/**
+ * シナリオごとの終わりの年。
+ *
+ * **史実は476年で終える。** ロムルス・アウグストゥルスの廃位が
+ * この模型の終着点で、調整済みの釣り合いもすべてこの長さで測ってある。
+ *
+ * **統一は565年まで続く。** ユスティニアヌス1世の没年。
+ * 東を併合できた世界線では、6世紀に東方から巻き返しが来る。
+ * ベリサリウスとナルセスを迎え撃てるかがこのシナリオの山場になる
+ */
+export const SCENARIO_ENDING_YEAR: Record<Scenario, number> = {
+  historical: 476,
+  reunification: 565,
+};
+
+export function endingYearOf(scenario: Scenario): number {
+  return SCENARIO_ENDING_YEAR[scenario];
+}
+
+export function totalTurnsOf(scenario: Scenario): number {
+  return SCENARIO_ENDING_YEAR[scenario] - STARTING_YEAR;
+}
+
 export const INITIAL_TREASURY = 500;
 export const INITIAL_TAX_BASE = 100;
 export const INITIAL_FIELD_ARMY = 100;
@@ -318,6 +341,29 @@ export const APPEASE_SENATE_GAIN = 12;
 export const APPEASE_SENATE_LEGITIMACY_GAIN = 4;
 /** 免税特権の追認による恒久的な税基盤の損失 */
 export const APPEASE_SENATE_TAX_BASE_LOSS = 2;
+
+/*
+ * 元老院の機嫌を取る手は3つ。**差し出すものをそれぞれ変える。**
+ * 免税特権の追認は税基盤、競技会は国庫、執政官位は正統性を削る。
+ * 「何を差し出して機嫌を取るか」を選ばせることが狙いなので、
+ * どれか1つが常に得になってはいけない
+ */
+
+/** 競技会（ludi）。戦車競走と見世物にかかる費用 */
+export const SENATE_GAMES_COST = 90;
+export const SENATE_GAMES_SENATE_GAIN = 9;
+/** 民衆も沸くので正統性にも効く。免税特権の追認より大きく取る */
+export const SENATE_GAMES_LEGITIMACY_GAIN = 6;
+
+/**
+ * 執政官位（コンスル）の授与。
+ *
+ * この時代の執政官は実権のない名誉職で、皇帝が毎年貴族に与える褒賞だった。
+ * 金も土地も要らないが、その年の栄誉は皇帝ではなくその貴族のものになる。
+ * 軍司令官が戦勝の名声を持っていくのと同じ構図を、元老院に対して作る
+ */
+export const SENATE_CONSULSHIP_SENATE_GAIN = 16;
+export const SENATE_CONSULSHIP_LEGITIMACY_LOSS = 5;
 
 // ── マギステル・ミリトゥム（軍司令官） ────────────────
 
@@ -881,8 +927,46 @@ export const EAST_ARMY_LOSS_FACTOR = 0.35;
 export const WEST_ARMY_LOSS_FACTOR = 0.3;
 /** 東の軍が毎年回復する割合 */
 export const EAST_ARMY_GROWTH_RATE = 0.02;
+/**
+ * 東の軍の上限。
+ *
+ * 掛け算だけで伸ばしていたので、171ターンの統一シナリオでは
+ * 195 が 28倍まで膨らんだ。天井を置いて頭打ちにする
+ */
+export const EAST_ARMY_MAX = 520;
+/**
+ * 東の軍が毎年立て直す最低量。
+ *
+ * 掛け算だけだと一度壊滅させた東は二度と戻れず、
+ * 6世紀のユスティニアヌスの巻き返しが起こらない。
+ * 東ローマは版図を失っても徴募の基盤（アナトリアと東方）を保っていた、
+ * という形で、削り切っても毎年これだけは戻るようにする
+ */
+export const EAST_ARMY_REBUILD = 1.6;
 /** 交戦中に東が攻め返してくる確率 */
 export const EAST_COUNTERATTACK_PROBABILITY = 0.35;
+/**
+ * 東の司令官の力量が**攻め返す頻度**に効く量。能力1点あたり。
+ *
+ * 戦力への補正（FOREIGN_COMMANDER_PER_POINT）とは別に置く。
+ * 有能な将は一撃が重いだけでなく、休まず戦役を起こす。
+ * ベリサリウス（軍事10）とイッルス（軍事6）の差を、
+ * 戦力だけで表すと 1.20 対 1.04 にしかならず、
+ * 6世紀が別の時代に見えなかった
+ */
+export const EAST_COMMANDER_TEMPO_PER_POINT = 0.09;
+
+/**
+ * ユスティニアヌス1世の即位年。
+ *
+ * 西方の回復（renovatio imperii）を掲げ、ベリサリウスとナルセスを
+ * 西へ送り込んだ。**この年、東方属州を西に握られていれば、
+ * 講和していようと従属していようと東は戦端を開く。**
+ *
+ * これが無いと、統一したあと講和した相手にはユスティニアヌスが
+ * 無関係になり、6世紀が何も起きない89年になっていた
+ */
+export const JUSTINIAN_RECONQUEST_YEAR = 527;
 
 /** 講和できるようになるまでの最低交戦年数。開戦即講和を防ぐ */
 export const EAST_PEACE_MIN_WAR_YEARS = 3;
@@ -937,6 +1021,8 @@ export const PERSIA_IMPROVE_AT_WAR_PENALTY = 0.5;
 export const PERSIA_MIN_WAR_YEARS = 4;
 /** 介入後、ペルシアが毎年強くなる割合 */
 export const PERSIA_GROWTH_RATE = 0.008;
+/** ペルシアの戦力の上限。東の軍と同じ理由で天井を置く */
+export const PERSIA_MAX_STRENGTH = 560;
 /** 介入後、ペルシアが東方属州を攻める確率 */
 export const PERSIA_ATTACK_PROBABILITY = 0.15;
 /** ペルシアが攻撃に振り向ける戦力の割合 */

@@ -23,7 +23,7 @@ import {
 } from './battlefield';
 import type { BattleDeployment, BattleOrders } from './battlefield';
 import {
-  ENDING_YEAR,
+  endingYearOf,
   FIELD_ARMY_COLLAPSE_THRESHOLD,
   MAX_ACTIONS_PER_TURN,
   SURVIVAL_MIN_LEGITIMACY,
@@ -69,6 +69,8 @@ import {
   applySenateDecay,
   calculateExpenses,
   calculateIncome,
+  grantConsulship,
+  holdGames,
   raiseTaxes,
   updateControl,
 } from './economy';
@@ -353,6 +355,10 @@ function applyAction(
       return raiseTaxes(state);
     case 'domestic_reorganize_army':
       return reorganizeArmy(state);
+    case 'domestic_hold_games':
+      return holdGames(state);
+    case 'domestic_grant_consulship':
+      return grantConsulship(state);
     case 'domestic_appease_senate':
       return appeaseSenate(state);
     case 'east_request_aid':
@@ -420,10 +426,10 @@ function determineStatus(state: GameState): GameStatus {
    *
    * その場で局を終わらせていたときは、全土の帝が没して帝国が
    * 東西に割れる——このゲームの開始点そのもの——が一度も起きなかった。
-   * 統一した年は `unifiedYear` に記録し、遊びは476年まで続く
+   * 統一した年は `unifiedYear` に記録し、遊びはそのシナリオの終わりの年まで続く
    */
 
-  if (state.year >= ENDING_YEAR) {
+  if (state.year >= endingYearOf(state.scenario)) {
     const loyal = usurperHeldProvinces(state);
     const provincesHeld = Object.values(state.provinces).filter(
       (p) => p.control > 0 && !loyal.has(p.id),
@@ -436,7 +442,7 @@ function determineStatus(state: GameState): GameStatus {
     if (state.legitimacy < SURVIVAL_MIN_LEGITIMACY) return 'collapsed';
     if (provincesHeld < 2) return 'collapsed';
     /*
-     * 統一を果たしたまま476年を迎えたなら、存続ではなく統一として記録する。
+     * 統一を果たしたままそのシナリオの終わりの年を迎えたなら、存続ではなく統一として記録する。
      * 統一そのものはその年に局を終わらせない（通過点）が、
      * 到達した事実は結末に残す
      */
