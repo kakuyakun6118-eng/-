@@ -100,7 +100,10 @@ export const TURN_EVENT_LABELS: Record<TurnEventId, string> = {
   usurper_battle_won: '僭称帝国の軍を破ったが、まだ平らげてはいない',
   usurper_battle_lost: '僭称帝国の軍に敗れた',
   usurper_suppressed: '僭称帝国を平らげ、属州を取り戻した',
-  empire_partitioned: '複数の後継者に帝国が分けられ、東方が新たな東帝国として離れた',
+  empire_partitioned: '複数の後継者に帝国が分けられ、東方帝が立った',
+  east_vassalized: '東方は西の宗主権のもとに置かれた。兵権も貢納も西にある',
+  east_independence: '東方帝が宗主権を振り払い、東ローマが独立した',
+  rome_reunified: 'ローマ全土が再び一人の皇帝のもとに統一された',
 };
 
 /** 会戦を率いる者 */

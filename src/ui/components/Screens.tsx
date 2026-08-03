@@ -152,7 +152,7 @@ export function ResultScreen({
   state: GameState;
   onRestart: () => void;
 }) {
-  const unified = score.status === 'unified';
+  const unified = state.unifiedYear !== null;
   const survived = score.status === 'survived';
   const won = unified || survived;
   return (
