@@ -216,6 +216,21 @@ function exchangeRatio(field: Battlefield): number {
   return ourLoss / Math.max(1, theirLoss);
 }
 
+/** 野戦軍の兵科の内訳 */
+const OUR_COMPOSITION: Record<BattleArm, number> = {
+  infantry: BATTLE_COMPOSITION_INFANTRY,
+  cavalry: BATTLE_COMPOSITION_CAVALRY,
+  archers: BATTLE_COMPOSITION_ARCHERS,
+};
+
+/**
+ * その兵科に割り当たる兵力。
+ * 布陣する前に駒の大きさを描くために UI から引く（計算式を ui/ に置かないため）
+ */
+export function armStrength(field: Battlefield, arm: BattleArm): number {
+  return field.ourStartStrength * OUR_COMPOSITION[arm];
+}
+
 /** 布陣を決めて戦端を開く */
 export function deployBattlefield(
   field: Battlefield,
@@ -223,14 +238,9 @@ export function deployBattlefield(
 ): Battlefield {
   if (field.phase !== 'deploy') return field;
 
-  const composition: Record<BattleArm, number> = {
-    infantry: BATTLE_COMPOSITION_INFANTRY,
-    cavalry: BATTLE_COMPOSITION_CAVALRY,
-    archers: BATTLE_COMPOSITION_ARCHERS,
-  };
   const ours = emptySide();
   for (const arm of BATTLE_ARMS) {
-    ours.lanes[deployment[arm]].push(unit(arm, field.ourStartStrength * composition[arm]));
+    ours.lanes[deployment[arm]].push(unit(arm, armStrength(field, arm)));
   }
 
   return { ...field, ours, phase: 'engaged' };
@@ -305,7 +315,7 @@ function strongestLane(side: BattleSide): BattleLane | null {
  * 何もしないままだったときは、互いの正面が食い違うと
  * どちらも1兵も削れないまま5戦が過ぎる膠着が起きた
  */
-function resolveTarget(
+export function resolveTarget(
   lane: BattleLane,
   order: BattleOrder,
   enemy: BattleSide,
