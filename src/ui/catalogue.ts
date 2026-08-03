@@ -18,8 +18,11 @@ import { availableBattleLeaders, canGiveBattle } from '../core/battle';
 import { invadableEastProvinces } from '../core/east';
 import type {
   BarbarianDemandType,
+  BattleArm,
   BattleFoe,
+  BattleLane,
   BattleLeader,
+  BattleOrder,
   BarbarianFactionId,
   EastProvinceId,
   GameState,
@@ -27,6 +30,7 @@ import type {
   PlayerAction,
   ProvinceId,
   Scenario,
+  Terrain,
   TurnEventId,
 } from '../core/types';
 
@@ -119,6 +123,57 @@ export const BATTLE_OUTCOME_LABELS = {
   rout: '大敗',
   captured: '君主捕縛',
 } as const;
+
+/** 戦列 */
+export const BATTLE_LANE_LABELS: Record<BattleLane, string> = {
+  left: '左翼',
+  center: '中央',
+  right: '右翼',
+};
+
+/** 兵科 */
+export const BATTLE_ARM_LABELS: Record<BattleArm, string> = {
+  infantry: '歩兵',
+  cavalry: '騎兵',
+  archers: '弓兵',
+};
+
+/** 兵科の印。外部のアイコンを読み込まず文字で置く */
+export const BATTLE_ARM_MARKS: Record<BattleArm, string> = {
+  infantry: '≡',
+  cavalry: '△',
+  archers: '↟',
+};
+
+/** その戦列に出す命令 */
+export const BATTLE_ORDER_LABELS: Record<BattleOrder, string> = {
+  advance: '前進',
+  flank: '迂回',
+  withdraw: '退却',
+};
+
+export const BATTLE_ORDER_DETAILS: Record<BattleOrder, string> = {
+  advance: '正面からぶつかる。与える損害も受ける損害も等倍',
+  flank: '隣の敵戦列の側面を突く。損害は増えるが正面が空く',
+  withdraw: '後ろへ下がる。ほとんど反撃できないが損害は半減し、士気が戻る',
+};
+
+/** 戦場の地形 */
+export const TERRAIN_LABELS: Record<Terrain, string> = {
+  plain: '平原',
+  hill: '丘陵',
+  forest: '森林',
+  desert: '砂漠',
+  river: '渡河点',
+};
+
+export const TERRAIN_DETAILS: Record<Terrain, string> = {
+  plain: '騎兵の土地。歩兵と弓は等倍',
+  hill: '歩兵が踏ん張る。騎兵の突撃は死ぬ',
+  forest: '射線が通らず騎兵も走れない。歩兵の土地',
+  desert: '重装歩兵に酷。騎兵と弓の土地',
+  river: '弓が利く。前へ出た戦列は余計に削られる',
+};
 
 /** 軍司令官が職を離れた理由 */
 export const GENERAL_END_LABELS: Record<GeneralEnd, string> = {

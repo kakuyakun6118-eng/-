@@ -4,6 +4,7 @@ import { MAX_ACTIONS_PER_TURN } from '../core/constants';
 import { consumesActionSlot } from '../core/tick';
 import type { GameState, ProvinceId } from '../core/types';
 import { ActionPanel } from './components/ActionPanel';
+import { BattleScreen } from './components/BattleScreen';
 import {
   MapLegend,
   ProvinceMap,
@@ -92,6 +93,9 @@ export function App() {
     toggleAction,
     rename,
     endTurn,
+    deploy,
+    fight,
+    finishBattle,
     quit,
     save,
     load,
@@ -116,6 +120,17 @@ export function App() {
   }
   if (state.status !== 'ongoing' && score !== null) {
     return <ResultScreen score={score} state={state} onRestart={quit} />;
+  }
+  // 会戦のあいだは戦闘専用の画面に切り替える。その年はまだ進んでいない
+  if (state.battlefield !== null) {
+    return (
+      <BattleScreen
+        field={state.battlefield}
+        onDeploy={deploy}
+        onFight={fight}
+        onFinish={finishBattle}
+      />
+    );
   }
 
   const occupiers = focused ? occupierNames(state, focused) : [];

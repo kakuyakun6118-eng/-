@@ -11,7 +11,15 @@ import { renameRuler } from '../core/dynasty';
 import { createInitialState } from '../core/economy';
 import { findEvent } from '../core/events';
 import { deserialize, serialize, suggestFileName } from '../core/save';
-import { consumesActionSlot, evaluateScore, tick } from '../core/tick';
+import {
+  advanceBattle,
+  beginTurn,
+  concludeBattle,
+  consumesActionSlot,
+  deployBattle,
+  evaluateScore,
+} from '../core/tick';
+import type { BattleDeployment, BattleOrders } from '../core/battlefield';
 import type {
   BarbarianFaction,
   Difficulty,
@@ -98,12 +106,52 @@ export function useGame() {
      * 黙って捨てられる
      */
     const applied = selected;
-    const next = tick(state, applied as PlayerActions, runSeed + state.turn);
+    /*
+     * 会戦が選ばれていれば beginTurn() は年を進めず戦場を開く。
+     * その場合の記録と進軍は concludeBattle() の側で作る
+     */
+    const next = beginTurn(state, applied as PlayerActions, runSeed + state.turn);
     setState(next);
+    if (next.battlefield !== null) return;
     setLog((entries) => [describeTurn(state, next), ...entries].slice(0, 40));
     setMotion(deriveTurnMotion(state, next, applied));
     setSelected([]);
   }, [state, selected, runSeed]);
+
+  /** 戦場に布陣する。年はまだ進まない */
+  const deploy = useCallback((deployment: BattleDeployment) => {
+    setState((current) => (current === null ? current : deployBattle(current, deployment)));
+  }, []);
+
+  /*
+   * 一度の激突。乱数の種は年と激突の回数からずらす。
+   * 同じ種を使い回すと、どの回も同じ目になる
+   */
+  const fight = useCallback(
+    (orders: BattleOrders) => {
+      setState((current) =>
+        current === null || current.battlefield === null
+          ? current
+          : advanceBattle(
+              current,
+              orders,
+              runSeed + current.turn * 100 + current.battlefield.round,
+            ),
+      );
+    },
+    [runSeed],
+  );
+
+  /** 決着した戦場を畳み、預けていた行動でその年を進める */
+  const finishBattle = useCallback(() => {
+    if (state === null || state.battlefield === null) return;
+    const applied = state.battlefield.pendingActions;
+    const next = concludeBattle(state, runSeed + state.turn);
+    setState(next);
+    setLog((entries) => [describeTurn(state, next), ...entries].slice(0, 40));
+    setMotion(deriveTurnMotion(state, next, applied));
+    setSelected([]);
+  }, [state, runSeed]);
 
   const save = useCallback(() => {
     if (state === null) return;
@@ -145,6 +193,9 @@ export function useGame() {
     clearActions,
     rename,
     endTurn,
+    deploy,
+    fight,
+    finishBattle,
     quit,
     save,
     load,
