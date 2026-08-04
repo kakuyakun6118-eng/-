@@ -1,10 +1,8 @@
-import type { BarbarianFactionId, GameState } from '../../core/types';
-import { FACTION_LABELS, PROVINCE_LABELS, STANCE_LABELS } from '../catalogue';
+import type { GameState } from '../../core/types';
 import {
   eastEmperorAge,
   eastEmperorName,
-  factionLeaderName,
-  factionPortraitFile,
+  generalAgeBand,
   generalName,
   persianKingAge,
   persianKingName,
@@ -12,21 +10,23 @@ import {
 import { LeaderFigure } from './Portrait';
 
 /**
- * 諸国の顔ぶれ — 軍司令官・蛮族の族長・東ローマ皇帝・ペルシア王。
+ * 宮廷と隣の帝国の顔ぶれ — 軍司令官・東ローマ皇帝・ペルシア王。
  *
  * 名前は表示のためだけの情報で、どの計算式にも影響しない。
  * 東ローマ皇帝とサーサーン朝の王は実在の人物を実際の在位年で出す
  * （395年アルカディウス／バハラーム4世から、476年ゼノン／ペーローズ1世まで）。
- * 蛮族の族長も史料に残る名を年代順に引く
+ *
+ * **蛮族の族長はここには並べない。** 14勢力ぶんの顔が常時ホーム画面を
+ * 占めても、その年に関わりのない民のほうが多い。族長の顔は
+ * 地図に触れたとき（PowerCard）と、実際に刃を交える会戦の画面で出す
  */
 export function CourtFigures({ state }: { state: GameState }) {
-  const factionIds = Object.keys(state.factions) as BarbarianFactionId[];
   const general = state.general.current;
   const showEast = state.scenario === 'reunification';
 
   return (
     <section className="roman-panel rounded-sm p-3">
-      <h2 className="roman-heading text-sm">諸国の顔ぶれ</h2>
+      <h2 className="roman-heading text-sm">宮廷と隣の帝国</h2>
       <div className="roman-rule mt-1" />
 
       <div className="mt-2 grid grid-cols-3 gap-2">
@@ -34,7 +34,7 @@ export function CourtFigures({ state }: { state: GameState }) {
           <Figure
             role="general"
             origin="roman"
-            age={termAge(state.year - general.appointedYear, general.military)}
+            age={generalAgeBand(state.year - general.appointedYear, general.military)}
             seedId={general.id}
             title="軍司令官"
             name={generalName(general.id)}
@@ -73,73 +73,11 @@ export function CourtFigures({ state }: { state: GameState }) {
           />
         )}
 
-        {factionIds.map((id, index) => {
-          const faction = state.factions[id];
-          /*
-           * 種に並び順を混ぜる。勢力 id と族長名だけでは文字列が似すぎて
-           * hash が散らず、フランクとブルグントのように同じ顔が並んだ
-           */
-          const seedId = `${index}:${id}:${factionLeaderName(id, state.year)}`;
-          const age = chiefAge(faction.strength);
-          const distinct = DISTINCT_ORIGINS[id];
-          return (
-            <Figure
-              key={id}
-              role="chief"
-              origin={distinct ?? 'barbarian'}
-              age={age}
-              seedId={seedId}
-              // フンとマウリは専用画像を hash で引く。他は勢力ごとに顔を固定する
-              file={distinct ? null : factionPortraitFile(id, age)}
-              title={FACTION_LABELS[id]}
-              name={factionLeaderName(id, state.year)}
-              note={`${STANCE_LABELS[faction.stance]}・${Math.round(faction.strength)}${
-                faction.location === 'exterior' ? '' : ` / ${PROVINCE_LABELS[faction.location]}`
-              }`}
-              hostile={faction.stance === 'hostile'}
-              faded={faction.stance === 'settled'}
-            />
-          );
-        })}
       </div>
     </section>
   );
 }
 
-
-/**
- * ゲルマン諸族とは風貌が異なる勢力の出自。
- * これらは勢力ごとに顔を固定せず、専用の絵柄から族長名の hash で引く
- */
-const DISTINCT_ORIGINS: Partial<Record<BarbarianFactionId, 'hun' | 'mauri'>> = {
-  Huns: 'hun',
-  Mauri: 'mauri',
-};
-
-/**
- * 将軍の肖像に使う年代。将軍は年齢を持たないので、在職年数と軍事能力で代える。
- *
- * 長く在職した将軍は老将になる。それ以外は能力で分け、
- * 練達しているほど老いた顔にする。3つの帯すべてを使うための割り当てで、
- * 在職年数だけで決めていたときは若年の絵が一度も出なかった
- */
-function termAge(years: number, military: number): 'youth' | 'adult' | 'elder' {
-  if (years >= 16) return 'elder';
-  if (military <= 5) return 'youth';
-  return military <= 7 ? 'adult' : 'elder';
-}
-
-/**
- * 強大な勢力ほど老練な族長に見せる。族長は年齢を持たないので戦力で代える。
- *
- * 帯の境目は勢力の戦力の分布に合わせる。14勢力に割り直したとき
- * 30/60 のままでは9勢力が若年の帯に落ち、若年の絵が2枚しかないため
- * 「諸国の顔ぶれ」に同じ顔が9つ並んだ
- */
-function chiefAge(strength: number): 'youth' | 'adult' | 'elder' {
-  if (strength < 14) return 'youth';
-  return strength >= 45 ? 'elder' : 'adult';
-}
 
 function Figure({
   role,

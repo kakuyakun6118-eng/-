@@ -48,6 +48,11 @@ export function useGame() {
   const [loadError, setLoadError] = useState<string | null>(null);
   /** 直前のターンに地図上で起きた進軍と戦闘。表示のためだけの派生値 */
   const [motion, setMotion] = useState<TurnMotion>(NO_MOTION);
+  /**
+   * 1年前の状態。状況表示に前年からの増減を添えるために持つ。
+   * 表示のためだけの控えで、どの計算にも渡さない
+   */
+  const [previous, setPrevious] = useState<GameState | null>(null);
 
   const start = useCallback((difficulty: Difficulty, rulerName: string, scenario: Scenario) => {
     // 乱数の種はここで一度だけ引く。tick() 自体は seed から決定的に動く
@@ -69,6 +74,7 @@ export function useGame() {
     setSelected([]);
     setLog([]);
     setMotion(NO_MOTION);
+    setPrevious(null);
   }, []);
 
   const toggleAction = useCallback((action: PlayerAction, key: string) => {
@@ -113,6 +119,7 @@ export function useGame() {
     const next = beginTurn(state, applied as PlayerActions, runSeed + state.turn);
     setState(next);
     if (next.battlefield !== null) return;
+    setPrevious(state);
     setLog((entries) => [describeTurn(state, next), ...entries].slice(0, 40));
     setMotion(deriveTurnMotion(state, next, applied));
     setSelected([]);
@@ -148,6 +155,7 @@ export function useGame() {
     const applied = state.battlefield.pendingActions;
     const next = concludeBattle(state, runSeed + state.turn);
     setState(next);
+    setPrevious(state);
     setLog((entries) => [describeTurn(state, next), ...entries].slice(0, 40));
     setMotion(deriveTurnMotion(state, next, applied));
     setSelected([]);
@@ -170,6 +178,8 @@ export function useGame() {
     setSelected([]);
     setLog([`${result.state.year}年 — セーブデータを読み込んだ`]);
     setMotion(NO_MOTION);
+    // 読み込んだ直後は比べる前年が無い
+    setPrevious(null);
   }, []);
 
   const quit = useCallback(() => {
@@ -177,12 +187,14 @@ export function useGame() {
     setSelected([]);
     setLog([]);
     setMotion(NO_MOTION);
+    setPrevious(null);
   }, []);
 
   const score = useMemo(() => (state ? evaluateScore(state) : null), [state]);
 
   return {
     state,
+    previous,
     selected,
     log,
     score,

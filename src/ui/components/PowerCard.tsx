@@ -14,10 +14,13 @@ import {
   STANCE_LABELS,
 } from '../catalogue';
 import {
+  chiefAgeBand,
   eastEmperorAge,
   eastEmperorName,
   factionLeaderName,
   factionPortraitFile,
+  factionPortraitOrigin,
+  hasDistinctPortraits,
   persianKingAge,
   persianKingName,
 } from '../leaders';
@@ -188,29 +191,14 @@ function describeCity(state: GameState, id: string): CardView {
 const OWNER_LABELS = { west: '西ローマ', east: '東ローマ', persia: 'ペルシア' } as const;
 
 
-/**
- * ゲルマン諸族とは風貌が異なる勢力の出自。
- * これらは勢力ごとに顔を固定せず、専用の絵柄から族長名の hash で引く
- */
-const DISTINCT_ORIGINS: Partial<Record<BarbarianFactionId, 'hun' | 'mauri'>> = {
-  Huns: 'hun',
-  Mauri: 'mauri',
-};
-
-/** 強大な勢力ほど老練な族長に見せる。「諸国の顔ぶれ」と同じ割り当て */
-function chiefAge(strength: number): 'youth' | 'adult' | 'elder' {
-  if (strength < 14) return 'youth';
-  return strength >= 45 ? 'elder' : 'adult';
-}
-
 function describe(state: GameState, target: InspectTarget): CardView {
   if (target.kind === 'city') return describeCity(state, target.id);
 
   if (target.kind === 'faction') {
     const faction = state.factions[target.id];
     const homeland = state.homelands[target.id];
-    const age = chiefAge(faction.strength);
-    const distinct = DISTINCT_ORIGINS[target.id];
+    const age = chiefAgeBand(faction.strength);
+    const distinct = hasDistinctPortraits(target.id);
     /*
      * 郷里を持たない勢力は「どこに住んでいるか」を出せない。
      * 移動を続けた民であることをそのまま書く
@@ -256,7 +244,7 @@ function describe(state: GameState, target: InspectTarget): CardView {
             : '「軍事 → 蛮族の郷里へ遠征」でこの土地を攻められる。他の敵対勢力が加勢に来る',
       portrait: {
         role: 'chief',
-        origin: distinct ?? 'barbarian',
+        origin: factionPortraitOrigin(target.id),
         age,
         seedId: `${target.id}:${factionLeaderName(target.id, state.year)}`,
         file: distinct ? null : factionPortraitFile(target.id, age),

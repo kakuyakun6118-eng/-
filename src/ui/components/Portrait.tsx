@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 
-import type { MarriageOrigin, Ruler, Spouse } from '../../core/types';
+import type { DynastyMember, MarriageOrigin, Ruler, Spouse } from '../../core/types';
 import { romanHouseName } from '../../core/diplomacy';
 import {
   ageBandOf,
@@ -237,7 +237,8 @@ export function EmperorPortrait({
   year,
   className,
 }: {
-  ruler: Ruler;
+  /** 君主に限らない。家系図では継承候補も同じ絵で描く */
+  ruler: DynastyMember;
   year: number;
   className?: string;
 }) {
@@ -431,7 +432,7 @@ export function EmperorFigure({
   year,
   className,
 }: {
-  ruler: Ruler;
+  ruler: DynastyMember;
   year: number;
   className?: string;
 }) {

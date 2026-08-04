@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { BATTLE_ARMS, BATTLE_LANES, armStrength, battlefieldTactics } from '../../core/battlefield';
 import type { BattleDeployment, BattleOrders } from '../../core/battlefield';
 import { BATTLE_MAX_ROUNDS } from '../../core/constants';
-import type { BattleArm, BattleLane, BattleOrder, Battlefield } from '../../core/types';
+import type { BattleArm, BattleLane, BattleOrder, Battlefield, GameState } from '../../core/types';
 import { battleArtFor } from '../battleArt';
 import {
   BATTLE_ARM_LABELS,
@@ -19,6 +19,7 @@ import {
   battleFoeLabel,
   formatTroops,
 } from '../catalogue';
+import { BattleCommanders } from './BattleCommanders';
 import { BattleMap } from './BattleMap';
 
 /** 戦場になった土地の名。属州・東方属州・境外のいずれか */
@@ -42,11 +43,13 @@ const ORDERS: BattleOrder[] = ['advance', 'flank', 'withdraw'];
  * **計算式はここに書かない。** 布陣も解決も core/battlefield.ts に投げる
  */
 export function BattleScreen({
+  state,
   field,
   onDeploy,
   onFight,
   onFinish,
 }: {
+  state: GameState;
   field: Battlefield;
   onDeploy: (deployment: BattleDeployment) => void;
   onFight: (orders: BattleOrders) => void;
@@ -99,6 +102,9 @@ export function BattleScreen({
       </header>
 
       <main className="max-w-lg mx-auto px-3 py-3 space-y-3">
+        {/* 対陣。両軍を率いる者の顔をここで出す */}
+        <BattleCommanders state={state} field={field} />
+
         {/* 会戦のイメージ画。無ければ帯ごと出さない */}
         {art !== null && (
           <figure

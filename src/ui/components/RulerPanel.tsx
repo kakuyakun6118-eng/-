@@ -4,6 +4,7 @@ import { ABILITY_NEUTRAL, ADULT_AGE } from '../../core/constants';
 import type { GameState, Ruler } from '../../core/types';
 import { FACTION_LABELS, RULER_NAME_MAX_LENGTH } from '../catalogue';
 import { ChiRho } from './UnitSprite';
+import { DynastyTree } from './DynastyTree';
 import { ConsortFigure, EmperorFigure, consortOriginLabel } from './Portrait';
 
 export function RulerPanel({
@@ -16,6 +17,8 @@ export function RulerPanel({
   const { ruler, members, crisisYearsRemaining, history } = state.dynasty;
   const heirs = members.filter((m) => state.year - m.birthYear >= ADULT_AGE);
   const spouse = ruler.spouse;
+  /** 王朝の名に触れると家系図が開く */
+  const [treeOpen, setTreeOpen] = useState(false);
 
   return (
     <div className="roman-panel-dark relative overflow-hidden rounded-sm p-3">
@@ -61,10 +64,19 @@ export function RulerPanel({
 
           <div className="min-w-0 flex-1">
             <RulerName ruler={ruler} onRename={onRename} />
-            <p className="text-xs" style={{ color: 'var(--gold-bright)' }}>
-              {state.dynasty.name}朝 / 在位 {state.year - ruler.accessionYear} 年 /{' '}
-              {history.length + 1} 代目
-            </p>
+            <button
+              onClick={() => setTreeOpen(true)}
+              className="text-xs text-left"
+              style={{ color: 'var(--gold-bright)' }}
+            >
+              <span style={{ textDecoration: 'underline', textDecorationStyle: 'dotted' }}>
+                {state.dynasty.name}朝
+              </span>
+              <span> / 在位 {state.year - ruler.accessionYear} 年 / {history.length + 1} 代目</span>
+              <span className="ml-1 text-[10px]" style={{ color: 'var(--gold)' }}>
+                家系図
+              </span>
+            </button>
             {spouse && (
               <p className="text-[11px] mt-1 truncate" style={{ color: '#e8b06a' }}>
                 {consortOriginLabel(
@@ -109,6 +121,8 @@ export function RulerPanel({
 
         <GeneralRow state={state} />
       </div>
+
+      {treeOpen && <DynastyTree state={state} onClose={() => setTreeOpen(false)} />}
     </div>
   );
 }

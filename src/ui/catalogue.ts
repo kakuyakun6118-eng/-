@@ -114,6 +114,7 @@ export const TURN_EVENT_LABELS: Record<TurnEventId, string> = {
   rome_reunified: 'ローマ全土が再び一人の皇帝のもとに統一された',
   justinian_reconquest:
     'ユスティニアヌス1世が西方の回復を掲げ、ベリサリウスを西へ送り込んだ',
+  dynasty_founded: '血統が断裂し、新しい王朝が興った',
 };
 
 /** 会戦を率いる者 */

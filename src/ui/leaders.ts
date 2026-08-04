@@ -86,6 +86,50 @@ export function factionLeaderName(id: BarbarianFactionId, year: number): string 
 }
 
 /**
+ * ゲルマン諸族とは風貌が異なる勢力の出自。
+ * これらは勢力ごとに顔を固定せず、専用の絵柄から族長名の hash で引く
+ */
+const DISTINCT_ORIGINS: Partial<Record<BarbarianFactionId, 'hun' | 'mauri'>> = {
+  Huns: 'hun',
+  Mauri: 'mauri',
+};
+
+/** 族長の肖像に使う出自。フンとマウリだけは蛮族一般と分ける */
+export function factionPortraitOrigin(id: BarbarianFactionId): 'barbarian' | 'hun' | 'mauri' {
+  return DISTINCT_ORIGINS[id] ?? 'barbarian';
+}
+
+/** 専用の絵柄を持つ勢力は hash で引くので、固定の顔は使わない */
+export function hasDistinctPortraits(id: BarbarianFactionId): boolean {
+  return DISTINCT_ORIGINS[id] !== undefined;
+}
+
+/**
+ * 強大な勢力ほど老練な族長に見せる。族長は年齢を持たないので戦力で代える。
+ *
+ * 帯の境目は勢力の戦力の分布に合わせる。14勢力に割り直したとき
+ * 30/60 のままでは9勢力が若年の帯に落ち、若年の絵が2枚しかないため
+ * 同じ顔ばかりが並んだ
+ */
+export function chiefAgeBand(strength: number): 'youth' | 'adult' | 'elder' {
+  if (strength < 14) return 'youth';
+  return strength >= 45 ? 'elder' : 'adult';
+}
+
+/**
+ * 将軍の肖像に使う年代。将軍は年齢を持たないので、在職年数と軍事能力で代える。
+ *
+ * 長く在職した将軍は老将になる。それ以外は能力で分け、
+ * 練達しているほど老いた顔にする。3つの帯すべてを使うための割り当てで、
+ * 在職年数だけで決めていたときは若年の絵が一度も出なかった
+ */
+export function generalAgeBand(years: number, military: number): 'youth' | 'adult' | 'elder' {
+  if (years >= 16) return 'elder';
+  if (military <= 5) return 'youth';
+  return military <= 7 ? 'adult' : 'elder';
+}
+
+/**
  * 勢力ごとに固定した族長の顔。
  *
  * hash 任せにすると、同じ年代の帯に入った勢力どうしで顔が重なるうえ、

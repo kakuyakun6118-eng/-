@@ -1,4 +1,4 @@
-import type { Ruler, Spouse } from '../core/types';
+import type { DynastyMember, Spouse } from '../core/types';
 import manifest from './portraits.json';
 
 /**
@@ -75,7 +75,7 @@ export function ageBandOf(age: number): PortraitAge {
 }
 
 /** 君主の出自。混血や簒奪者も血統から判定する */
-export function emperorOriginOf(ruler: Ruler): PortraitOrigin {
+export function emperorOriginOf(ruler: DynastyMember): PortraitOrigin {
   if (ruler.lineage === 'roman') return 'roman';
   if (ruler.lineage === 'east') return 'east';
   return 'barbarian';
