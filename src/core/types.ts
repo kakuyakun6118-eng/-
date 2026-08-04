@@ -152,10 +152,20 @@ export interface DeathRecord {
   year: number;
   cause: 'natural' | 'assassination';
   outcome: SuccessionOutcome;
+  /**
+   * その皇帝が属した王朝の名。血統が断裂すると王朝そのものが替わるので、
+   * 家系図で代を辿るには没時の王朝を記録しておく必要がある
+   */
+  dynastyName: string;
 }
 
 export interface Dynasty {
   name: string;
+  /**
+   * 今の王朝が興った年。血統が断裂して新王朝が立つたびに更新される。
+   * 家系図の見出しに使う表示用の値で、どの計算式にも入らない
+   */
+  foundedYear: number;
   /**
    * 後継者に自動で付ける名前の候補。
    * データは JSON から読み、コードには書かない
@@ -308,7 +318,9 @@ export type TurnEventId =
   /** 東方属州をすべて手中に収めた年 */
   | 'rome_reunified'
   /** ユスティニアヌス1世が西方の回復を掲げて戦端を開いた年 */
-  | 'justinian_reconquest';
+  | 'justinian_reconquest'
+  /** 血統が断裂し、新しい王朝が興った年 */
+  | 'dynasty_founded';
 
 // ── 官職（プラエトリア長官・属州総督） ────────────────
 

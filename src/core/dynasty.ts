@@ -269,17 +269,45 @@ function succeed(
     state.legitimacy - legitimacyLoss,
   );
 
+  /*
+   * **血統が断裂したら新しい王朝が興る。**
+   *
+   * 継承危機とは「嫡子がひとりも残らず、王朝の外から担ぎ出された」
+   * ということなので、そこで前の家の代は途切れている。
+   * テオドシウス朝が Theodosius から名を取っているのと同じく、
+   * 新しい王朝は担ぎ出された当人の名を負う。
+   *
+   * 王朝が替わっても残った一族は継承候補のまま置く。この時代の
+   * 新帝は前帝の家と縁組して取り込むのが常で、候補から外すと
+   * 継承危機の頻度そのものが変わり、調整済みのバランスが動く。
+   * **これは表示上の名だけの変更で、どの計算式にも入らない**
+   */
+  const founded = outcome === 'crisis';
+  const dynastyName = founded ? newRuler.name : dynasty.name;
+  const turnEvents = founded ? [...state.turnEvents, 'dynasty_founded' as const] : state.turnEvents;
+
   const succeeded: GameState = {
     ...state,
     legitimacy: clamp(flooredLegitimacy, MIN_LEGITIMACY, MAX_LEGITIMACY),
+    turnEvents,
     dynasty: {
       ...dynasty,
+      name: dynastyName,
+      foundedYear: founded ? state.year : dynasty.foundedYear,
       namePool: outsider?.pool ?? dynasty.namePool,
       ruler: newRuler,
       members: dynasty.members.filter((m) => m.id !== successor.id),
       history: [
         ...dynasty.history,
-        { rulerId: deadRuler.id, name: deadRuler.name, year: state.year, cause, outcome },
+        {
+          rulerId: deadRuler.id,
+          name: deadRuler.name,
+          year: state.year,
+          cause,
+          outcome,
+          // 没した皇帝はまだ前の王朝の人なので、替わる前の名を記録する
+          dynastyName: dynasty.name,
+        },
       ],
       crisisYearsRemaining:
         outcome === 'crisis' ? SUCCESSION_CRISIS_DURATION : dynasty.crisisYearsRemaining,

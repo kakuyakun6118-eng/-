@@ -15,7 +15,7 @@ import type { Difficulty, DifficultySettings, Scenario } from './types';
  * 9: 東方帝（east.vassalRuler）・統一年（unifiedYear）・戦場（battlefield）を追加
  * 10: 戦場に指揮官の機動の巧拙（battlefield.maneuver）を追加
  */
-export const SAVE_VERSION = 10;
+export const SAVE_VERSION = 11;
 
 export const STARTING_YEAR = 395;
 export const ENDING_YEAR = 476;
