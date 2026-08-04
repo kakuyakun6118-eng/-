@@ -134,7 +134,7 @@ function Seat({
             <span style={{ color: 'var(--purple-deep)' }}>{official.name}</span>
           </span>
           <span className="tabular-nums shrink-0" style={{ color: 'var(--ink-soft)' }}>
-            能{official.ability}・野{official.ambition}・{year - official.appointedYear}年
+            能力{official.ability}・野心{official.ambition}・{year - official.appointedYear}年
           </span>
         </div>
         {!compact && (

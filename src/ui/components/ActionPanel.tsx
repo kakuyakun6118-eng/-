@@ -281,7 +281,7 @@ function ActionCard({
             <div className="mt-1">
               <div className="text-[11px] mb-1" style={{ color: 'var(--ink-soft)' }}>
                 属州から動員（{mobilize.length} / {MOBILIZE_MAX_PROVINCES}）—
-                守備隊の半分を戦場へ連れ出す。その属州は薄くなる
+                守備隊の半分を戦場へ連れ出す。その属州の守りは薄くなる
               </div>
               <div className="flex flex-wrap gap-1">
                 {mobilizableProvinces(state).map((id) => {

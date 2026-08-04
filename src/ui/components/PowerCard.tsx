@@ -206,7 +206,7 @@ function describe(state: GameState, target: InspectTarget): CardView {
     const homelandRows: [string, string][] =
       homeland === undefined
         ? [
-            ['本拠', '無し'],
+            ['本拠', 'なし'],
             ['戦い方', faction.raider === true ? '略奪のみ' : '移動する民'],
           ]
         : [

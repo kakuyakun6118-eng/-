@@ -398,7 +398,7 @@ export function App() {
             </span>
             {demandCount > 0 && tab !== 'act' && (
               <button onClick={() => setTab('act')} style={{ color: 'var(--oxblood)' }}>
-                要求 {demandCount} 件 未応答 →
+                未応答の要求 {demandCount} 件 →
               </button>
             )}
           </div>

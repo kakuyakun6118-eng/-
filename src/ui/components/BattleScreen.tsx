@@ -175,7 +175,7 @@ export function BattleScreen({
           <section className="roman-panel rounded-sm px-3 py-2">
             <h2 className="roman-heading text-sm">布陣</h2>
             <p className="text-[11px] mb-2" style={{ color: 'var(--ink-soft)' }}>
-              控えの駒を選び、図の戦列に触れて置く。相性は 騎兵 → 弓 → 歩兵 → 騎兵 の順に強い
+              控えの駒を選び、図の戦列に触れて置く。相性は 騎兵 → 弓兵 → 歩兵 → 騎兵 の順に強い
             </p>
 
             <div className="flex gap-1.5 flex-wrap">

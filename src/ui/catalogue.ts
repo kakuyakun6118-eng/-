@@ -74,18 +74,18 @@ export const DEMAND_LABELS: Record<BarbarianDemandType, string> = {
 };
 
 export const DEMAND_DETAILS: Record<BarbarianDemandType, string> = {
-  gold: '国庫で払う。引き揚げさせ、その軍の一部を散らす',
+  gold: '国庫から払う。引き揚げさせ、その軍の一部を散らす',
   land: 'その属州を割譲する。税基盤を永久に失う',
-  title: '官位を与えて味方に付ける。元老院の支持と正統性で払う',
+  title: '官位を与えて味方に付ける。代償は元老院の支持と正統性',
 };
 
 /**
  * 状態の差分からは読み取れない出来事の文言。
- * どちらも野戦軍が減るだけなので、書かないと理由が分からない
+ * 脱走も簒奪未遂も野戦軍が減るだけなので、書かないと理由が分からない
  */
 export const TURN_EVENT_LABELS: Record<TurnEventId, string> = {
-  desertion: '給与が尽き兵が脱走',
-  usurper_attempt: '僭称者が立ち軍の一部が離反',
+  desertion: '給金が尽き、兵が脱走した',
+  usurper_attempt: '僭称者が立ち、軍の一部が離反した',
   general_usurped: '軍司令官が帝位を狙って蜂起し、職を離れた',
   general_retired: '軍司令官が任期を終えて職を退いた',
   prefect_retired: 'プラエトリア長官が任期を終えて職を退いた',
@@ -161,7 +161,7 @@ export const BATTLE_ORDER_LABELS: Record<BattleOrder, string> = {
 
 export const BATTLE_ORDER_DETAILS: Record<BattleOrder, string> = {
   advance: '正面からぶつかる。与える損害も受ける損害も等倍',
-  flank: '隣の敵戦列の側面を突く。損害は増えるが正面が空く',
+  flank: '隣の敵戦列の側面を突く。損害は増えるが、自分の正面は手薄になる',
   withdraw: '後ろへ下がる。ほとんど反撃できないが損害は半減し、士気が戻る',
 };
 
@@ -188,11 +188,11 @@ export const TERRAIN_LABELS: Record<Terrain, string> = {
 };
 
 export const TERRAIN_DETAILS: Record<Terrain, string> = {
-  plain: '騎兵の土地。歩兵と弓は等倍',
-  hill: '歩兵が踏ん張る。騎兵の突撃は死ぬ',
+  plain: '騎兵の土地。歩兵と弓兵は等倍',
+  hill: '歩兵が踏ん張る。騎兵の突撃は通らない',
   forest: '射線が通らず騎兵も走れない。歩兵の土地',
-  desert: '重装歩兵に酷。騎兵と弓の土地',
-  river: '弓が利く。前へ出た戦列は余計に削られる',
+  desert: '重装歩兵には堪える。騎兵と弓兵の土地',
+  river: '弓兵が利く。前へ出た戦列は余計に削られる',
 };
 
 /** 軍司令官が職を離れた理由 */
@@ -287,7 +287,7 @@ export function battleFoeKey(foe: BattleFoe): string {
 }
 
 const needsGold = (cost: number) => (state: GameState) =>
-  state.treasury < cost ? `国庫が不足（${cost} 必要）` : null;
+  state.treasury < cost ? `国庫が足りない（${cost} 必要）` : null;
 
 export const ACTION_TEMPLATES: ActionTemplate[] = [
   {
@@ -377,7 +377,7 @@ export const ACTION_TEMPLATES: ActionTemplate[] = [
     id: 'military_defend',
     category: '軍事',
     label: '属州を防備',
-    detail: '守備隊を増強する',
+    detail: 'その属州の守備隊を厚くする。野戦軍は動かさないので他の戦線は薄くならない',
     cost: DEFEND_COST,
     target: 'province',
     blockedReason: needsGold(DEFEND_COST),
@@ -398,8 +398,8 @@ export const ACTION_TEMPLATES: ActionTemplate[] = [
     category: '軍事',
     label: '属州で募兵',
     detail:
-      'その土地から兵を出す。中央の徴募より安いが、穫れ高は属州の豊かさと支配度しだい。' +
-      '若者を連れていかれた土地は荒れる（支配度が下がる）',
+      'その土地から兵を出す。中央の徴募より安いが、集まる兵の数は属州の豊かさと支配度しだい。' +
+      '兵を出した土地は荒れる（支配度が下がる）',
     cost: PROVINCE_RECRUIT_COST,
     target: 'province',
     blockedReason: needsGold(PROVINCE_RECRUIT_COST),
@@ -452,7 +452,7 @@ export const ACTION_TEMPLATES: ActionTemplate[] = [
     id: 'military_suppress_usurper',
     category: '軍事',
     label: '僭称帝国を討つ',
-    detail: '離れた属州を武力で取り戻す。勝てば正統性がよく戻るが、相手もローマの軍である',
+    detail: '離れた属州を武力で取り戻す。勝てば正統性がよく戻るが、相手もローマの正規軍だ',
     cost: null,
     target: 'usurper',
     blockedReason: (state) =>
@@ -531,12 +531,12 @@ export const ACTION_TEMPLATES: ActionTemplate[] = [
     id: 'east_request_aid',
     category: '東帝国',
     label: '援軍を要請',
-    detail: '東ローマから金と兵を得るが、関係を消耗する',
+    detail: '東ローマから金と兵を得るが、東との関係は損なわれる',
     cost: null,
     target: 'none',
     blockedReason: (state) =>
       state.eastRelations < EAST_AID_MIN_RELATIONS
-        ? `東との関係が不足（${EAST_AID_MIN_RELATIONS} 必要）`
+        ? `東との関係が足りない（${EAST_AID_MIN_RELATIONS} 必要）`
         : null,
     build: () => ({ type: 'east_request_aid' }),
   },
@@ -554,7 +554,7 @@ export const ACTION_TEMPLATES: ActionTemplate[] = [
     id: 'east_improve_relations',
     category: '東帝国',
     label: '東ローマへ修好',
-    detail: '使者と贈り物を送って関係を戻す。援軍要請と帝位の承認で消耗した関係はこれで回復する',
+    detail: '使者と贈り物を送って関係を戻す。援軍要請と帝位の承認で損なった関係はこれで埋め合わせる',
     cost: EAST_IMPROVE_COST,
     target: 'none',
     blockedReason: (state) =>

@@ -212,7 +212,7 @@ export function ResultScreen({
         onClick={onRestart}
         className="roman-button mt-8 w-full rounded-sm py-3"
       >
-        もう一度
+        はじめから遊ぶ
       </button>
     </div>
   );
@@ -346,7 +346,7 @@ function reignsOf(state: GameState): Reign[] {
     from,
     to: state.year,
     name: state.dynasty.ruler.name,
-    note: state.status === 'collapsed' ? '帝国の終わり' : '在位のまま',
+    note: state.status === 'collapsed' ? '帝国の終わり' : '在位中',
   });
   return reigns;
 }

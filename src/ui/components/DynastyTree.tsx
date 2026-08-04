@@ -34,7 +34,7 @@ export function DynastyTree({ state, onClose }: { state: GameState; onClose: () 
           <h2 className="roman-title text-base">
             {dynasty.name}朝
             <span className="ml-2 text-[11px] font-normal" style={{ color: 'var(--ink-soft)' }}>
-              {dynasty.foundedYear}年 興 / 第{dynasty.history.length + 1}代
+              {dynasty.foundedYear}年 興る ／ 第{dynasty.history.length + 1}代
             </span>
           </h2>
           <button
@@ -64,7 +64,7 @@ export function DynastyTree({ state, onClose }: { state: GameState; onClose: () 
                       {house.name}朝
                       <span className="ml-1 font-normal" style={{ color: 'var(--ink-soft)' }}>
                         {house.current
-                          ? `${house.from ?? '?'}年 −`
+                          ? `${house.from ?? '?'}年〜`
                           : `${house.from === null ? '' : `${house.from}〜`}${house.to}年`}
                       </span>
                     </div>
