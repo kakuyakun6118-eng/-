@@ -210,7 +210,13 @@ export function actionKey(action: PlayerAction): string {
   // 同じ官職の候補どうしを区別する。入れないと3人の候補が同じキーになる
   if ('officialId' in action) parts.push(action.officialId);
   if ('target' in action) {
-    parts.push(action.target.kind === 'east' ? 'east' : action.target.factionId);
+    parts.push(
+      action.target.kind === 'east'
+        ? 'east'
+        : action.target.kind === 'roman'
+          ? action.target.houseId
+          : action.target.factionId,
+    );
   }
   // 会戦は「誰と戦うか」と「誰が率いるか」で別の行動になる
   if ('foe' in action) {

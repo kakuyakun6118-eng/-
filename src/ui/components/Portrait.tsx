@@ -1,6 +1,7 @@
 import { useId, useState } from 'react';
 
 import type { MarriageOrigin, Ruler, Spouse } from '../../core/types';
+import { romanHouseName } from '../../core/diplomacy';
 import {
   ageBandOf,
   consortAgeBandOf,
@@ -489,9 +490,11 @@ export function ConsortFigure({
   return <ConsortPortrait spouse={spouse} className={className} />;
 }
 
-/** 婚姻相手の呼び名 */
+/** 婚姻相手の呼び名。家門の名は core から引く */
 export function consortOriginLabel(origin: MarriageOrigin, factionLabel: string): string {
-  return origin.kind === 'east' ? '東ローマ帝室' : `${factionLabel}の族長家`;
+  if (origin.kind === 'east') return '東ローマ帝室';
+  if (origin.kind === 'roman') return `${romanHouseName(origin.houseId)}家`;
+  return `${factionLabel}の族長家`;
 }
 
 /**

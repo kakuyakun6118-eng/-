@@ -82,7 +82,19 @@ export function emperorOriginOf(ruler: Ruler): PortraitOrigin {
 }
 
 export function consortOriginOf(spouse: Spouse): PortraitOrigin {
-  return spouse.origin.kind === 'east' ? 'east' : 'barbarian';
+  if (spouse.origin.kind === 'barbarian') return 'barbarian';
+  /*
+   * ローマ貴族の娘は 'roman' の絵を引くが、consort/roman を1枚も
+   * 登録していないときは東ローマ帝室の絵に落とす。selectPortrait の
+   * 既定の緩和は出自を捨てて年代で拾うので、放っておくと蛮族の族長家の
+   * 絵が出る。同じローマ世界の貴婦人である東方の絵のほうが近い
+   */
+  if (spouse.origin.kind === 'roman') {
+    return MANIFEST.entries.some((e) => e.role === 'consort' && e.origin === 'roman')
+      ? 'roman'
+      : 'east';
+  }
+  return 'east';
 }
 
 /**

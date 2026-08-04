@@ -69,7 +69,7 @@ export function RulerPanel({
               <p className="text-[11px] mt-1 truncate" style={{ color: '#e8b06a' }}>
                 {consortOriginLabel(
                   spouse.origin,
-                  spouse.origin.kind === 'east' ? '' : FACTION_LABELS[spouse.origin.factionId],
+                  spouse.origin.kind === 'barbarian' ? FACTION_LABELS[spouse.origin.factionId] : '',
                 )}
                 と婚姻
               </p>

@@ -13,6 +13,7 @@ import {
   GENERAL_APPOINT_COST,
   MARRIAGE_COST,
   MARRIAGE_EAST_MIN_RELATIONS,
+  MARRIAGE_ROMAN_MIN_SENATE_SUPPORT,
   REORGANIZE_COST,
   SENATE_GAMES_COST,
 } from '../core/constants';
@@ -218,6 +219,9 @@ export const DIFFICULTY_LABELS = {
   veteran: '上級',
 } as const;
 
+/** 婚姻の相手の種類。相手ごとに差し出すものが違う */
+export type MarriageKind = 'roman' | 'barbarian' | 'east';
+
 export type TargetKind =
   | 'none'
   | 'province'
@@ -246,7 +250,9 @@ export interface ActionTemplate {
   build: (target: {
     province?: ProvinceId;
     faction?: BarbarianFactionId;
-    east?: boolean;
+    /** 婚姻の相手の種類。'roman' なら house で家門を選ぶ */
+    marriage?: MarriageKind;
+    house?: string;
     eastProvince?: EastProvinceId;
     foe?: BattleFoe;
     leader?: BattleLeader;
@@ -334,12 +340,17 @@ export const ACTION_TEMPLATES: ActionTemplate[] = [
       state.dynasty.ruler.spouse !== null
         ? '君主はすでに既婚'
         : needsGold(MARRIAGE_COST)(state),
-    build: ({ faction, east }) =>
-      east
-        ? { type: 'negotiate_marriage', target: { kind: 'east' } }
-        : faction
-          ? { type: 'negotiate_marriage', target: { kind: 'barbarian', factionId: faction } }
-          : null,
+    build: ({ faction, marriage, house }) => {
+      if (marriage === 'east') return { type: 'negotiate_marriage', target: { kind: 'east' } };
+      if (marriage === 'roman') {
+        return house
+          ? { type: 'negotiate_marriage', target: { kind: 'roman', houseId: house } }
+          : null;
+      }
+      return faction
+        ? { type: 'negotiate_marriage', target: { kind: 'barbarian', factionId: faction } }
+        : null;
+    },
   },
   {
     id: 'hire_foederati',
@@ -638,3 +649,4 @@ export const SCENARIO_LABELS: Record<Scenario, string> = {
 };
 
 export const MARRIAGE_EAST_REQUIREMENT = MARRIAGE_EAST_MIN_RELATIONS;
+export const MARRIAGE_ROMAN_REQUIREMENT = MARRIAGE_ROMAN_MIN_SENATE_SUPPORT;

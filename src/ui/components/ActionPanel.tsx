@@ -19,10 +19,13 @@ import {
   EAST_PROVINCE_LABELS,
   FACTION_LABELS,
   MARRIAGE_EAST_REQUIREMENT,
+  MARRIAGE_ROMAN_REQUIREMENT,
   PROVINCE_LABELS,
   type ActionTemplate,
+  type MarriageKind,
 } from '../catalogue';
 import { availableBattleLeaders, mobilizableProvinces } from '../../core/battle';
+import { romanHouses } from '../../core/diplomacy';
 import { invadableEastProvinces } from '../../core/east';
 import { consumesActionSlot } from '../../core/tick';
 import { actionKey } from '../useGame';
@@ -125,7 +128,9 @@ function ActionCard({
     ? eastProvince
     : invadable[0]?.id;
   const [faction, setFaction] = useState<BarbarianFactionId>('Visigoths');
-  const [east, setEast] = useState(false);
+  /** 婚姻の相手。既定はローマ貴族の家門（最も通りやすい縁組） */
+  const [marriage, setMarriage] = useState<MarriageKind>('roman');
+  const [house, setHouse] = useState<string>(romanHouses()[0].id);
   const [foeKey, setFoeKey] = useState<string>('');
   const [leader, setLeader] = useState<BattleLeader>('general');
   const [usurperId, setUsurperId] = useState<string>('');
@@ -150,7 +155,8 @@ function ActionCard({
   const action = template.build({
     province,
     faction: target,
-    east: template.target === 'marriage' ? east : undefined,
+    marriage: template.target === 'marriage' ? marriage : undefined,
+    house,
     eastProvince: eastTarget,
     foe,
     leader: battleLeader,
@@ -233,12 +239,26 @@ function ActionCard({
         )}
 
         {template.target === 'marriage' && (
-          <Select value={east ? 'east' : 'barbarian'} onChange={(v) => setEast(v === 'east')}>
-            <option value="barbarian">蛮族の族長家</option>
-            <option value="east">
-              東ローマ帝室（関係 {MARRIAGE_EAST_REQUIREMENT} 以上・成立しにくい）
-            </option>
-          </Select>
+          <>
+            <Select value={marriage} onChange={(v) => setMarriage(v as MarriageKind)}>
+              <option value="roman">
+                ローマ貴族の娘（元老院支持 {MARRIAGE_ROMAN_REQUIREMENT} 以上）
+              </option>
+              <option value="barbarian">蛮族の族長家</option>
+              <option value="east">
+                東ローマ帝室（関係 {MARRIAGE_EAST_REQUIREMENT} 以上・成立しにくい）
+              </option>
+            </Select>
+            {marriage === 'roman' && (
+              <Select value={house} onChange={setHouse}>
+                {romanHouses().map((h) => (
+                  <option key={h.id} value={h.id}>
+                    {h.name}家
+                  </option>
+                ))}
+              </Select>
+            )}
+          </>
         )}
 
         {template.target === 'battle' && foes.length > 0 && leaders.length > 0 && (
@@ -321,7 +341,7 @@ function ActionCard({
 
         {(template.target === 'faction' ||
           template.target === 'faction-province' ||
-          (template.target === 'marriage' && !east)) && (
+          (template.target === 'marriage' && marriage === 'barbarian')) && (
           <Select value={target ?? ''} onChange={(v) => setFaction(v as BarbarianFactionId)}>
             {factionIds.map((id) => (
               <option key={id} value={id}>
