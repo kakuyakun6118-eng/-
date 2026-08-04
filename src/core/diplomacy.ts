@@ -2,7 +2,9 @@ import type {
   BarbarianDemand,
   BarbarianFactionId,
   GameState,
+  Lineage,
   MarriageOrigin,
+  PendingMarriage,
   ProvinceId,
   Spouse,
 } from './types';
@@ -41,7 +43,13 @@ import {
   MARRIAGE_EAST_SUCCESS_BASE,
   MARRIAGE_HEIR_BORN_EAST_RELATIONS_GAIN,
   MARRIAGE_HEIR_BORN_LOYALTY_GAIN,
+  MARRIAGE_HEIR_BORN_SENATE_GAIN,
   MARRIAGE_LEGITIMACY_LOSS,
+  MARRIAGE_ROMAN_LEGITIMACY_GAIN,
+  MARRIAGE_ROMAN_MIN_SENATE_SUPPORT,
+  MARRIAGE_ROMAN_SENATE_GAIN,
+  MARRIAGE_ROMAN_SUCCESS_BASE,
+  MARRIAGE_ROMAN_TAX_BASE_LOSS,
   MAX_EAST_RELATIONS,
   MAX_FOEDERATI_LOYALTY,
   MAX_LEGITIMACY,
@@ -55,8 +63,27 @@ import {
   SETTLE_TAX_BASE_LOSS,
   TRIBUTE_LOYALTY_GAIN,
 } from './constants';
+import housesData from '../data/houses.json';
 import { diplomacyModifier } from './dynasty';
 import { clamp } from './util';
+
+/** 元老院貴族の家門。状態を持たない静的なデータ。コードに直接書かない */
+const HOUSES = (housesData as { houses: RomanHouse[] }).houses;
+
+export interface RomanHouse {
+  id: string;
+  name: string;
+}
+
+/** 家門の呼び名。表示側はこれを引く（ui にデータの読み方を書かせない） */
+export function romanHouseName(houseId: string): string {
+  return HOUSES.find((house) => house.id === houseId)?.name ?? houseId;
+}
+
+/** 縁組を申し込める家門の一覧。相手を選ばせるために表示側も引く */
+export function romanHouses(): RomanHouse[] {
+  return HOUSES;
+}
 
 /** 契約時の給金。強力な勢力ほど高い */
 export function foederatiDemandFor(strength: number): number {
@@ -248,6 +275,9 @@ export function arrangeMarriage(
   if (target.kind === 'east') {
     return marryEast(state, rng);
   }
+  if (target.kind === 'roman') {
+    return marryRoman(state, target.houseId, rng);
+  }
   return marryBarbarian(state, target.factionId, rng);
 }
 
@@ -357,10 +387,81 @@ function marryEast(state: GameState, rng: () => number): GameState {
 }
 
 /**
+ * ローマの元老院貴族の家門との婚姻。
+ *
+ * 蛮族との縁組が元老院を怒らせ、東ローマとの縁組が難物であるのに対し、
+ * こちらは最も通りやすく、元老院支持への効きも最大になる。
+ *
+ * **代わりに差し出すのは税基盤。** 大貴族の家に娘を出させるということは、
+ * その家が持つ広大な所領の免税特権を追認するということで、
+ * 元老院への譲歩と同じものを倍の量だけ恒久的に失う。
+ *
+ * この縁組だけは**子が混血にならない**。生まれた後継者は純粋なローマ人で、
+ * 即位しても MIXED_BLOOD_LEGITIMACY_PENALTY を負わない。
+ * 三者の婚姻を「支持・関係・血統」の三択にするのがこの差
+ */
+function marryRoman(state: GameState, houseId: string, rng: () => number): GameState {
+  // 帝室を後ろ盾と見なさなくなった元老院は娘を出さない
+  if (state.senateSupport < MARRIAGE_ROMAN_MIN_SENATE_SUPPORT) return state;
+
+  const paid = { ...state, treasury: state.treasury - MARRIAGE_COST };
+  if (!negotiationSucceeds(paid, MARRIAGE_ROMAN_SUCCESS_BASE, rng)) {
+    return paid;
+  }
+
+  const origin: MarriageOrigin = { kind: 'roman', houseId };
+  return {
+    ...paid,
+    senateSupport: clamp(
+      paid.senateSupport + MARRIAGE_ROMAN_SENATE_GAIN,
+      MIN_SENATE_SUPPORT,
+      MAX_SENATE_SUPPORT,
+    ),
+    legitimacy: clamp(
+      paid.legitimacy + MARRIAGE_ROMAN_LEGITIMACY_GAIN,
+      MIN_LEGITIMACY,
+      MAX_LEGITIMACY,
+    ),
+    // 持参財産に伴う免税特権の追認。恒久的に失われる
+    taxBase: clamp(paid.taxBase - MARRIAGE_ROMAN_TAX_BASE_LOSS, MIN_TAX_BASE, MAX_TAX_BASE),
+    dynasty: {
+      ...paid.dynasty,
+      ruler: { ...paid.dynasty.ruler, spouse: spouseFor(paid, origin, rng) },
+      pendingMarriages: [
+        ...paid.dynasty.pendingMarriages,
+        { origin, marriedYear: paid.year },
+      ],
+    },
+  };
+}
+
+/**
  * 子が生まれてから発生する婚姻の効果を清算する。
  * 婚姻は結んだ時点では約束にすぎず、血の繋がりができて初めて
  * 相手にとって守る価値のある同盟になる
  */
+/**
+ * その婚姻の子が生まれたか。
+ *
+ * 蛮族・東ローマとの縁組は子が混血になるので血統で引ける。
+ * ローマ貴族との縁組は子も純粋なローマ人で、婚姻前から居る子と
+ * 血統では区別が付かないため、婚姻の年より後に生まれたかで見る
+ */
+function heirBorn(
+  state: GameState,
+  pending: PendingMarriage,
+  bornOrigins: Set<Lineage>,
+): boolean {
+  if (pending.origin.kind === 'roman') {
+    return state.dynasty.members.some(
+      (member) => member.lineage === 'roman' && member.birthYear > pending.marriedYear,
+    );
+  }
+  return bornOrigins.has(
+    pending.origin.kind === 'east' ? 'east' : pending.origin.factionId,
+  );
+}
+
 export function settlePendingMarriages(state: GameState): GameState {
   const { pendingMarriages } = state.dynasty;
   if (pendingMarriages.length === 0) return state;
@@ -371,17 +472,16 @@ export function settlePendingMarriages(state: GameState): GameState {
       .map((member) => member.lineage),
   );
 
-  const remaining = pendingMarriages.filter(
-    (pending) =>
-      !bornOrigins.has(pending.origin.kind === 'east' ? 'east' : pending.origin.factionId),
-  );
+  const remaining = pendingMarriages.filter((pending) => !heirBorn(state, pending, bornOrigins));
   if (remaining.length === pendingMarriages.length) return state;
 
   const realised = pendingMarriages.filter((pending) => !remaining.includes(pending));
   let loyaltyGain = 0;
   let eastGain = 0;
+  let senateGain = 0;
   for (const pending of realised) {
     if (pending.origin.kind === 'east') eastGain += MARRIAGE_HEIR_BORN_EAST_RELATIONS_GAIN;
+    else if (pending.origin.kind === 'roman') senateGain += MARRIAGE_HEIR_BORN_SENATE_GAIN;
     else loyaltyGain += MARRIAGE_HEIR_BORN_LOYALTY_GAIN;
   }
 
@@ -396,6 +496,11 @@ export function settlePendingMarriages(state: GameState): GameState {
       state.eastRelations + eastGain,
       MIN_EAST_RELATIONS,
       MAX_EAST_RELATIONS,
+    ),
+    senateSupport: clamp(
+      state.senateSupport + senateGain,
+      MIN_SENATE_SUPPORT,
+      MAX_SENATE_SUPPORT,
     ),
     dynasty: { ...state.dynasty, pendingMarriages: remaining },
   };

@@ -168,9 +168,10 @@ function advanceCrisis(state: GameState): GameState {
 
 /**
  * 子の誕生。
- * 外国との婚姻がなくてもローマ貴族との婚姻は前提とするため、
+ * 縁組を結んでいなくても皇帝が独身であったわけではないので、
  * 配偶者の有無にかかわらず子は生まれる。
- * 配偶者がいる場合のみ混血の後継者となり、請求権を得る
+ * 外国の家との縁組を結んでいる場合のみ混血の後継者となり、請求権を得る。
+ * ローマ貴族の家門との縁組はここでは血統を変えない
  */
 function maybeBearChild(state: GameState, rng: () => number): GameState {
   const { dynasty } = state;
@@ -184,14 +185,18 @@ function maybeBearChild(state: GameState, rng: () => number): GameState {
     name: drawn.name,
     birthYear: state.year,
     abilities: rollAbilities(rng),
+    /*
+     * ローマ貴族との縁組は相手もローマ人なので子は混血にならない。
+     * 蛮族・東ローマとの縁組だけが血統を変える
+     */
     lineage:
-      spouseOrigin === null
+      spouseOrigin === null || spouseOrigin.kind === 'roman'
         ? 'roman'
         : spouseOrigin.kind === 'east'
           ? 'east'
           : spouseOrigin.factionId,
     legitimate: true,
-    mixedBlood: spouseOrigin !== null,
+    mixedBlood: spouseOrigin !== null && spouseOrigin.kind !== 'roman',
     // 混血の後継者はその勢力に対する請求権を得る
     claims: spouseOrigin?.kind === 'barbarian' ? [spouseOrigin.factionId] : [],
   };

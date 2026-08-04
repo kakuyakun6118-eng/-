@@ -931,9 +931,33 @@ export const MARRIAGE_BARBARIAN_SENATE_LOSS = 8;
 /** 東ローマとの婚姻の即時効果 */
 export const MARRIAGE_EAST_RELATIONS_GAIN = 15;
 export const MARRIAGE_EAST_LEGITIMACY_GAIN = 8;
+/**
+ * ローマの元老院貴族の家門との婚姻が成立する確率。
+ * 皇帝との縁組はこの階層にとって最上の栄誉なので、三者のうち最も通りやすい
+ */
+export const MARRIAGE_ROMAN_SUCCESS_BASE = 0.85;
+/**
+ * 縁組を申し込める最低の senateSupport。
+ * 帝室を後ろ盾と見なさなくなった元老院は娘を出さない
+ */
+export const MARRIAGE_ROMAN_MIN_SENATE_SUPPORT = 30;
+/** ローマ貴族との婚姻の即時効果 */
+export const MARRIAGE_ROMAN_SENATE_GAIN = 14;
+export const MARRIAGE_ROMAN_LEGITIMACY_GAIN = 5;
+/**
+ * 持参財産に伴う免税特権の追認。元老院への譲歩と同じだけ恒久的に失う。
+ *
+ * 当初は譲歩の倍（4）にしていたが、この縁組は譲歩と違って金と行動枠も
+ * 払ううえ君主に一度きりなので、恒久の代償まで倍にすると三者の縁組の中で
+ * 一方的に最下位になった（初級 41% 対 蛮族 44% / 東 47%）。
+ * 2 に揃えると 48% と他の二者に並ぶ
+ */
+export const MARRIAGE_ROMAN_TAX_BASE_LOSS = 2;
 /** 子が生まれたときに追加で発生する効果 */
 export const MARRIAGE_HEIR_BORN_LOYALTY_GAIN = 10;
 export const MARRIAGE_HEIR_BORN_EAST_RELATIONS_GAIN = 10;
+/** 貴族の家に帝室の血を引く子が生まれると、その家門ぐるみで王朝を支える */
+export const MARRIAGE_HEIR_BORN_SENATE_GAIN = 10;
 /** 混血の後継者が即位したときの正統性への負の補正 */
 export const MIXED_BLOOD_LEGITIMACY_PENALTY = 6;
 

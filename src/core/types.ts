@@ -99,7 +99,13 @@ export interface RulerAbilities {
 /** 婚姻相手の出自 */
 export type MarriageOrigin =
   | { kind: 'barbarian'; factionId: BarbarianFactionId }
-  | { kind: 'east' };
+  | { kind: 'east' }
+  /**
+   * 西ローマの元老院貴族の家門。houseId は data/houses.json から引く。
+   * 唯一「混血にならない」縁組で、生まれた子は純粋なローマ人として
+   * 継承の正統性を削らない
+   */
+  | { kind: 'roman'; houseId: string };
 
 /** 王朝の血統。ローマ系か、混血の場合はどの勢力の血が入っているか */
 export type Lineage = 'roman' | 'east' | BarbarianFactionId;
@@ -759,7 +765,8 @@ export interface NegotiateAcceptDemandAction {
 }
 
 /**
- * 婚姻同盟。相手は蛮族勢力の族長家または東ローマ帝室。
+ * 婚姻同盟。相手は蛮族勢力の族長家・東ローマ帝室・
+ * ローマの元老院貴族の家門のいずれか。
  * Task B の診断（枠を増やすと生存率が下がる＝枠は不足していない）に
  * 基づき、無償にせず行動枠を消費させる
  */
