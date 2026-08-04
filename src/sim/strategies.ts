@@ -15,6 +15,7 @@ import type {
   GameState,
   PlayerAction,
   PlayerActions,
+  GovernedId,
   ProvinceId,
 } from '../core/types';
 
@@ -231,12 +232,16 @@ function refillOffices(state: GameState): PlayerAction[] {
     }
   }
 
-  const vacant = (Object.keys(state.governors) as ProvinceId[])
-    .filter((id) => state.governors[id].current === null && state.governors[id].candidates.length > 0)
-    .sort((a, b) => state.provinces[b].baseTax - state.provinces[a].baseTax);
+  // 併合した郷里の席も埋める（属州と同じ扱い）
+  const vacant = (Object.keys(state.governors) as GovernedId[]).filter((id) => {
+    const seat = state.governors[id];
+    return seat !== undefined && seat.current === null && seat.candidates.length > 0;
+  });
   for (const id of vacant) {
     if (state.treasury <= GOVERNOR_APPOINT_COST * 2) break;
-    const best = [...state.governors[id].candidates].sort((a, b) => b.ability - a.ability)[0];
+    const seat = state.governors[id];
+    if (seat === undefined) continue;
+    const best = [...seat.candidates].sort((a, b) => b.ability - a.ability)[0];
     actions.push({ type: 'appoint_governor', provinceId: id, officialId: best.id });
   }
 

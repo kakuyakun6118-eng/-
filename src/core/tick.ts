@@ -79,6 +79,7 @@ import {
   applyDesertion,
   checkUsurper,
   conscript,
+  recruitInProvince,
   reinforceGarrison,
   reorganizeArmy,
 } from './military';
@@ -160,7 +161,7 @@ export function beginTurn(state: GameState, actions: PlayerActions, seed: Seed):
   return {
     ...state,
     battlefield: {
-      ...openBattlefield(state, battle.foe, battle.leader, rng),
+      ...openBattlefield(state, battle.foe, battle.leader, rng, battle.mobilize ?? []),
       pendingActions: [...actions],
     },
   };
@@ -375,9 +376,18 @@ function applyAction(
       return makePeaceWithEast(state);
     case 'persia_improve_relations':
       return improvePersiaRelations(state);
+    case 'military_recruit_province':
+      return recruitInProvince(state, action.provinceId);
     case 'military_pitched_battle':
       // tactics は戦場（battlefield.ts）で積んだ優劣。経ていなければ 1.0
-      return giveBattle(state, action.foe, action.leader, rng, action.tactics ?? 1).state;
+      return giveBattle(
+        state,
+        action.foe,
+        action.leader,
+        rng,
+        action.tactics ?? 1,
+        action.mobilize ?? [],
+      ).state;
     case 'military_suppress_usurper':
       return suppressUsurper(state, action.usurperId, rng);
     case 'conquer_homeland':

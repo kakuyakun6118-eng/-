@@ -17,6 +17,9 @@ import {
   MAX_LEGITIMACY,
   MIN_CONTROL,
   MIN_LEGITIMACY,
+  MOBILIZE_EFFICIENCY,
+  MOBILIZE_GARRISON_SHARE,
+  MOBILIZE_MAX_PROVINCES,
   PITCHED_ARMY_SHARE,
   PITCHED_CAPTURE_LEGITIMACY,
   PITCHED_CAPTURE_PROBABILITY,
@@ -118,6 +121,51 @@ function leaderModifier(state: GameState, leader: BattleLeader): number {
   return leader === 'ruler' ? militaryModifier(state) : generalDefenseModifier(state);
 }
 
+/**
+ * 会戦に動員できる属州。
+ *
+ * 守備隊が薄い属州、僭称帝国が握る属州からは連れ出せない
+ */
+export function mobilizableProvinces(state: GameState): ProvinceId[] {
+  const held = usurperHeldProvinces(state);
+  return (Object.keys(state.provinces) as ProvinceId[]).filter(
+    (id) => !held.has(id) && state.provinces[id].garrison > 0,
+  );
+}
+
+/**
+ * 動員した属州が会戦に足す戦力。
+ *
+ * 守備隊の半分を連れ出し、行軍のぶん目減りする。
+ * `openBattlefield` と `giveBattle` の両方がこの同じ値を使う
+ */
+export function mobilizedStrength(state: GameState, provinces: ProvinceId[]): number {
+  return uniqueMobilized(state, provinces).reduce(
+    (sum, id) =>
+      sum + state.provinces[id].garrison * MOBILIZE_GARRISON_SHARE * MOBILIZE_EFFICIENCY,
+    0,
+  );
+}
+
+/** 動員する属州。重複と動員できない属州を落とし、上限で切る */
+function uniqueMobilized(state: GameState, provinces: ProvinceId[]): ProvinceId[] {
+  const allowed = new Set(mobilizableProvinces(state));
+  return [...new Set(provinces)]
+    .filter((id) => allowed.has(id))
+    .slice(0, MOBILIZE_MAX_PROVINCES);
+}
+
+/** 連れ出した守備隊をその属州から差し引く */
+function payMobilization(state: GameState, provinces: ProvinceId[]): GameState {
+  const chosen = uniqueMobilized(state, provinces);
+  if (chosen.length === 0) return state;
+  const next = { ...state.provinces };
+  for (const id of chosen) {
+    next[id] = { ...next[id], garrison: next[id].garrison * (1 - MOBILIZE_GARRISON_SHARE) };
+  }
+  return { ...state, provinces: next };
+}
+
 export interface BattleResult {
   state: GameState;
   outcome: BattleOutcome;
@@ -139,24 +187,34 @@ export function giveBattle(
   leader: BattleLeader,
   rng: () => number,
   tactics = 1,
+  mobilize: ProvinceId[] = [],
 ): BattleResult {
   if (!canGiveBattle(state, foe)) return { state, outcome: 'defeat' };
   if (!availableBattleLeaders(state).includes(leader)) return { state, outcome: 'defeat' };
 
+  /*
+   * 動員した属州の守備隊も戦場に立つ。連れ出したぶんは
+   * その属州から差し引かれるので、勝っても土地は薄くなる
+   */
+  const levy = mobilizedStrength(state, mobilize);
+  const marched = payMobilization(state, mobilize);
+
   const ourBase =
-    state.fieldArmy * PITCHED_ARMY_SHARE * leaderModifier(state, leader) * tactics;
-  const theirBase = foePower(state, foe);
+    (marched.fieldArmy * PITCHED_ARMY_SHARE + levy) *
+    leaderModifier(marched, leader) *
+    tactics;
+  const theirBase = foePower(marched, foe);
   const ours = randomizedPower(ourBase, rng);
   const theirs = randomizedPower(theirBase, rng);
   const { attackerWins, margin } = resolveCombat(ours, theirs);
 
   if (attackerWins) {
-    return { state: applyVictory(state, foe, margin), outcome: 'victory' };
+    return { state: applyVictory(marched, foe, margin), outcome: 'victory' };
   }
 
   // 大敗の判定。こちらの投じた兵に対して差が大きいほど壊走に近い
   const routed = margin / Math.max(1, ourBase) >= PITCHED_ROUT_MARGIN_RATIO;
-  return applyDefeat(state, margin, leader, routed, rng);
+  return applyDefeat(marched, margin, leader, routed, rng);
 }
 
 function applyVictory(state: GameState, foe: BattleFoe, margin: number): GameState {

@@ -39,6 +39,7 @@ import {
 } from './constants';
 import { militaryModifier } from './dynasty';
 import { generalDefenseModifier } from './general';
+import { governorControlRecoveryModifier, governorDefenseModifier } from './officials';
 import { resolveCombat } from './military';
 import type { BarbarianFactionId, GameState, Homeland } from './types';
 import { clamp } from './util';
@@ -149,6 +150,7 @@ export function conquerHomeland(
   const turnEvents = [...state.turnEvents];
   let legitimacy = state.legitimacy;
   const homelands = { ...state.homelands };
+  let governors = state.governors;
   const factions = { ...state.factions };
 
   if (!attackerWins) {
@@ -162,6 +164,8 @@ export function conquerHomeland(
   const control = clamp(homeland.control - CONQUEST_CONTROL_DAMAGE, MIN_CONTROL, MAX_CONTROL);
   if (control <= MIN_CONTROL) {
     homelands[factionId] = { ...homeland, owner: 'west', control: CONQUEST_INITIAL_CONTROL };
+    // 併合した土地には総督を置ける。席は征服したこの年にできる
+    governors = { ...governors, [factionId]: { current: null, candidates: [] } };
     // 郷里を失った勢力は人が集まらなくなる
     factions[factionId] = {
       ...faction,
@@ -177,7 +181,7 @@ export function conquerHomeland(
     };
   }
 
-  return { ...state, fieldArmy, homelands, factions, legitimacy, turnEvents };
+  return { ...state, fieldArmy, homelands, factions, governors, legitimacy, turnEvents };
 }
 
 /**
@@ -187,6 +191,7 @@ export function conquerHomeland(
 export function updateHomelands(state: GameState, rng: () => number): GameState {
   const homelands = { ...state.homelands };
   const turnEvents = [...state.turnEvents];
+  let governors = state.governors;
   let changed = false;
 
   for (const id of Object.keys(homelands) as BarbarianFactionId[]) {
@@ -196,7 +201,13 @@ export function updateHomelands(state: GameState, rng: () => number): GameState 
     const faction = state.factions[id];
     // 勢力が健在なかぎり郷里を諦めない
     if (faction.stance !== 'settled' && faction.strength > 0) {
-      if (rng() < HOMELAND_RECLAIM_PROBABILITY) {
+      /*
+       * 総督を置いた土地は取り返されにくい。属州で守備隊の戦闘力に
+       * 効くのと同じ補正を、こちらでは奪還の確率に効かせる
+       * （郷里の奪還は戦闘解決を経ない一発の判定なので、
+       *   戦闘力を掛ける先が無い）
+       */
+      if (rng() < HOMELAND_RECLAIM_PROBABILITY / governorDefenseModifier(state, id)) {
         const control = clamp(
           homeland.control - HOMELAND_RECLAIM_CONTROL_DAMAGE,
           MIN_CONTROL,
@@ -204,6 +215,9 @@ export function updateHomelands(state: GameState, rng: () => number): GameState 
         );
         if (control <= MIN_CONTROL) {
           homelands[id] = { ...homeland, owner: 'barbarian', control: CONQUEST_INITIAL_CONTROL };
+          // 取り返された土地の総督の席は消える
+          governors = { ...governors };
+          delete governors[id];
           turnEvents.push('homeland_lost');
         } else {
           homelands[id] = { ...homeland, control };
@@ -216,12 +230,18 @@ export function updateHomelands(state: GameState, rng: () => number): GameState 
     if (homeland.control < MAX_CONTROL) {
       homelands[id] = {
         ...homeland,
-        control: clamp(homeland.control + HOMELAND_CONTROL_RECOVERY, MIN_CONTROL, MAX_CONTROL),
+        // 支配度の自然回復も、属州と同じく総督の能力で変わる
+        control: clamp(
+          homeland.control +
+            HOMELAND_CONTROL_RECOVERY * governorControlRecoveryModifier(state, id),
+          MIN_CONTROL,
+          MAX_CONTROL,
+        ),
       };
       changed = true;
     }
   }
 
   if (!changed && turnEvents.length === state.turnEvents.length) return state;
-  return { ...state, homelands, turnEvents };
+  return { ...state, homelands, governors, turnEvents };
 }

@@ -68,6 +68,7 @@ import type {
   Official,
   OfficialEnd,
   PrefectSeat,
+  GovernedId,
   ProvinceId,
 } from './types';
 import { proclaimUsurperEmpire } from './battle';
@@ -122,7 +123,7 @@ function rollPrefectCandidates(year: number, rng: () => number): Official[] {
 }
 
 function rollGovernorCandidates(
-  provinceId: ProvinceId,
+  provinceId: GovernedId,
   year: number,
   rng: () => number,
 ): Governor[] {
@@ -152,7 +153,7 @@ export function prefectSenateDecayRelief(state: GameState): number {
 }
 
 /** 総督がその属州の守備隊の戦闘力にかける補正 */
-export function governorDefenseModifier(state: GameState, provinceId: ProvinceId): number {
+export function governorDefenseModifier(state: GameState, provinceId: GovernedId): number {
   const governor = state.governors[provinceId]?.current ?? null;
   if (governor === null) return 1 - GOVERNOR_VACANT_DEFENSE_PENALTY;
   return 1 + (governor.ability - ABILITY_NEUTRAL) * GOVERNOR_DEFENSE_PER_POINT;
@@ -161,7 +162,7 @@ export function governorDefenseModifier(state: GameState, provinceId: ProvinceId
 /** 総督がその属州の支配度の自然回復にかける補正 */
 export function governorControlRecoveryModifier(
   state: GameState,
-  provinceId: ProvinceId,
+  provinceId: GovernedId,
 ): number {
   const governor = state.governors[provinceId]?.current ?? null;
   if (governor === null) return 1;
@@ -228,7 +229,7 @@ function vacatePrefect(state: GameState, end: OfficialEnd): GameState {
 
 export function appointGovernor(
   state: GameState,
-  provinceId: ProvinceId,
+  provinceId: GovernedId,
   officialId: string,
 ): GameState {
   const seat = state.governors[provinceId];
@@ -246,7 +247,7 @@ export function appointGovernor(
   };
 }
 
-export function dismissGovernor(state: GameState, provinceId: ProvinceId): GameState {
+export function dismissGovernor(state: GameState, provinceId: GovernedId): GameState {
   const seat = state.governors[provinceId];
   if (seat === undefined || seat.current === null) return state;
   return {
@@ -280,17 +281,16 @@ export function updateOfficials(state: GameState, rng: () => number): GameState 
   // 総督
   const governors = { ...next.governors };
   let retired = false;
-  for (const id of Object.keys(governors) as ProvinceId[]) {
-    const seat = governors[id];
-    const governor = seat.current;
+  for (const id of Object.keys(governors) as GovernedId[]) {
+    const governor = governors[id]?.current ?? null;
     if (governor !== null && next.year >= governor.retiresYear) {
       governors[id] = { current: null, candidates: [] };
       retired = true;
     }
   }
-  for (const id of Object.keys(governors) as ProvinceId[]) {
+  for (const id of Object.keys(governors) as GovernedId[]) {
     const seat = governors[id];
-    if (seat.current === null && seat.candidates.length === 0) {
+    if (seat !== undefined && seat.current === null && seat.candidates.length === 0) {
       governors[id] = { current: null, candidates: rollGovernorCandidates(id, next.year, rng) };
     }
   }
@@ -346,8 +346,13 @@ function checkGovernorRevolt(state: GameState, rng: () => number): GameState {
     GOVERNOR_REVOLT_LEGITIMACY_PRESSURE_FROM,
   );
 
-  for (const id of Object.keys(state.governors) as ProvinceId[]) {
-    const governor = state.governors[id].current;
+  /*
+   * 反乱の判定は**属州だけ**を見る。郷里にも総督は置けるが、
+   * 境外の辺境の司令が属州ごと帝国から抜けて帝位を僭称する形は
+   * 史実にも合わないので、そこは判定に入れない
+   */
+  for (const id of Object.keys(state.provinces) as ProvinceId[]) {
+    const governor = state.governors[id]?.current ?? null;
     if (governor === null) continue;
     const province = state.provinces[id];
     if (province.control <= MIN_CONTROL) continue;
@@ -468,12 +473,12 @@ export function createInitialPrefect(): PrefectSeat {
 
 export function createInitialGovernors(
   provinceIds: ProvinceId[],
-): Record<ProvinceId, GovernorSeat> {
+): Partial<Record<GovernedId, GovernorSeat>> {
   const initial = officialsData.governors as Governor[];
   return Object.fromEntries(
     provinceIds.map((id) => {
       const found = initial.find((g) => g.provinceId === id);
       return [id, { current: found ? { ...found } : null, candidates: [] } as GovernorSeat];
     }),
-  ) as Record<ProvinceId, GovernorSeat>;
+  ) as Partial<Record<GovernedId, GovernorSeat>>;
 }

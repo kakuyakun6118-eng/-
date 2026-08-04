@@ -1,7 +1,14 @@
 import type { GameState, ProvinceId } from './types';
+import { isUsurperHeld } from './battle';
 import {
   CONSCRIPT_ARMY_GAIN,
   CONSCRIPT_COST,
+  MAX_CONTROL,
+  MIN_CONTROL,
+  PROVINCE_RECRUIT_CONTROL_LOSS,
+  PROVINCE_RECRUIT_COST,
+  PROVINCE_RECRUIT_GARRISON_SHARE,
+  PROVINCE_RECRUIT_PER_BASE_TAX,
   CONSCRIPT_SENATE_LOSS,
   DEFEND_COST,
   DEFEND_GARRISON_GAIN,
@@ -58,6 +65,42 @@ export function conscript(state: GameState): GameState {
       MIN_SENATE_SUPPORT,
       MAX_SENATE_SUPPORT,
     ),
+  };
+}
+
+/**
+ * その属州で兵を募る。
+ *
+ * 中央の徴募が「金で兵を買う」のに対して、こちらは**土地から兵を出す**。
+ * 穫れ高はその属州の税収基礎と支配度に比例するので、豊かな属州を
+ * 保っているほど効く。安いが、若者を連れていかれた土地は荒れる
+ */
+export function recruitInProvince(state: GameState, provinceId: ProvinceId): GameState {
+  if (state.treasury < PROVINCE_RECRUIT_COST) return state;
+  const province = state.provinces[provinceId];
+  if (province === undefined || province.control <= MIN_CONTROL) return state;
+  // 僭称帝国が握る属州からは募れない
+  if (isUsurperHeld(state, provinceId)) return state;
+
+  const levy =
+    province.baseTax * (province.control / MAX_CONTROL) * PROVINCE_RECRUIT_PER_BASE_TAX;
+  return {
+    ...state,
+    treasury: state.treasury - PROVINCE_RECRUIT_COST,
+    fieldArmy: state.fieldArmy + levy * (1 - PROVINCE_RECRUIT_GARRISON_SHARE),
+    provinces: {
+      ...state.provinces,
+      [provinceId]: {
+        ...province,
+        // 募った兵の一部はその場に残って守りにつく
+        garrison: province.garrison + levy * PROVINCE_RECRUIT_GARRISON_SHARE,
+        control: clamp(
+          province.control - PROVINCE_RECRUIT_CONTROL_LOSS,
+          MIN_CONTROL,
+          MAX_CONTROL,
+        ),
+      },
+    },
   };
 }
 

@@ -56,6 +56,7 @@ import {
   DIFFICULTY_SETTINGS,
   PITCHED_ARMY_SHARE,
 } from './constants';
+import { mobilizedStrength } from './battle';
 import { chiefPowerModifier } from './homelands';
 import { foreignCommanderModifier } from './east';
 import type {
@@ -69,6 +70,7 @@ import type {
   BattleUnit,
   Battlefield,
   GameState,
+  ProvinceId,
   Terrain,
 } from './types';
 import { clamp } from './util';
@@ -180,8 +182,11 @@ export function openBattlefield(
   foe: BattleFoe,
   leader: BattleLeader,
   rng: () => number,
+  /** 会戦に動員する属州。連れ出した守備隊も戦場に並ぶ */
+  mobilize: ProvinceId[] = [],
 ): Battlefield {
-  const ourStrength = state.fieldArmy * PITCHED_ARMY_SHARE;
+  // 動員した守備隊も戦場に立つので、布陣する兵にそのまま足す
+  const ourStrength = state.fieldArmy * PITCHED_ARMY_SHARE + mobilizedStrength(state, mobilize);
   const theirStrength = foeStrength(state, foe);
   const placeId = battlePlace(state, foe);
 

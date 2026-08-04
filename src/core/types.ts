@@ -352,13 +352,22 @@ export interface PrefectSeat {
 
 /** 属州総督。担当する属州の統治と防衛にだけ効く */
 export interface Governor extends Official {
-  provinceId: ProvinceId;
+  /** 属州、または征服した郷里 */
+  provinceId: GovernedId;
 }
 
 export interface GovernorSeat {
   current: Governor | null;
   candidates: Governor[];
 }
+
+/**
+ * 総督を置ける土地。属州と、**征服した蛮族の郷里**。
+ *
+ * 郷里も `control` / `garrison` を持つので、属州とまったく同じ働き方で
+ * 総督が効く。奪ったまま放り出さず、統治して守れるようにする
+ */
+export type GovernedId = ProvinceId | BarbarianFactionId;
 
 export type OfficialEnd = 'retired' | 'dismissed' | 'revolted';
 
@@ -650,7 +659,11 @@ export interface GameState {
   prefect: PrefectSeat;
 
   /** 属州総督。属州ごとに1人。空位もありうる */
-  governors: Record<ProvinceId, GovernorSeat>;
+  /**
+   * 総督。属州は常に席があり、郷里は**征服した年に席ができる**
+   * （取り返されると席ごと消える）
+   */
+  governors: Partial<Record<GovernedId, GovernorSeat>>;
 
   /**
    * 僭称帝国。会戦の大敗や君主の捕縛をきっかけに現れる。
@@ -836,11 +849,22 @@ export interface EastInvadeAction {
   provinceId: EastProvinceId;
 }
 
+/** その属州で兵を募る。中央の徴募と違い、土地の豊かさと支配度で穫れ高が変わる */
+export interface MilitaryRecruitProvinceAction {
+  type: 'military_recruit_province';
+  provinceId: ProvinceId;
+}
+
 /** 野戦軍どうしの会戦を挑む */
 export interface MilitaryPitchedBattleAction {
   type: 'military_pitched_battle';
   foe: BattleFoe;
   leader: BattleLeader;
+  /**
+   * 会戦に動員する属州。守備隊の一部を戦場へ連れ出す。
+   * 勝てば分厚いが、その属州は薄くなる
+   */
+  mobilize?: ProvinceId[];
   /**
    * 戦場（戦列マップ）で積んだ優劣の倍率。攻撃側戦力に掛かる。
    * 省略すると 1.0 で、戦闘画面を経ない場合と同じ扱いになる
@@ -877,13 +901,14 @@ export interface DismissPrefectAction {
 /** 属州総督を任命する。属州と候補の両方を指定する */
 export interface AppointGovernorAction {
   type: 'appoint_governor';
-  provinceId: ProvinceId;
+  /** 属州、または征服した郷里 */
+  provinceId: GovernedId;
   officialId: string;
 }
 
 export interface DismissGovernorAction {
   type: 'dismiss_governor';
-  provinceId: ProvinceId;
+  provinceId: GovernedId;
 }
 
 /** 軍司令官を任命する。空位を埋める */
@@ -927,6 +952,7 @@ export type PlayerAction =
   | EastInvadeAction
   | EastMakePeaceAction
   | PersiaImproveRelationsAction
+  | MilitaryRecruitProvinceAction
   | MilitaryPitchedBattleAction
   | MilitarySuppressUsurperAction;
 

@@ -322,6 +322,35 @@ export const CONSCRIPT_COST = 150;
 export const CONSCRIPT_ARMY_GAIN = 15;
 export const CONSCRIPT_SENATE_LOSS = 5;
 
+/*
+ * 属州での募兵。中央の徴募（CONSCRIPT_*）と違い、
+ * **その土地の豊かさと支配度で穫れ高が変わる。** 安いが、
+ * 徴兵はその属州の支配度を削る（若者を連れていかれた土地は荒れる）。
+ *
+ * 中央の徴募が「金で兵を買う」なら、こちらは「土地から兵を出す」。
+ * 豊かな属州を持っているほど効くので、循環の罠の裏返しになる
+ */
+export const PROVINCE_RECRUIT_COST = 70;
+/** その属州の税収基礎に対する徴募量の係数。支配度にも比例する */
+export const PROVINCE_RECRUIT_PER_BASE_TAX = 0.075;
+/** 徴募でその属州が失う支配度 */
+export const PROVINCE_RECRUIT_CONTROL_LOSS = 6;
+/** 徴募でその属州の守備隊に残る割合（募った兵の一部はその場に残る） */
+export const PROVINCE_RECRUIT_GARRISON_SHARE = 0.25;
+
+/*
+ * 会戦への動員。属州の守備隊を戦場へ連れ出す。
+ *
+ * 勝てば分厚いが、その属州は薄くなる。「今日を凌ぐ判断が
+ * 10年後の帝国を殺す」構造を会戦の場でも作る
+ */
+/** 動員でその属州から連れ出す守備隊の割合 */
+export const MOBILIZE_GARRISON_SHARE = 0.5;
+/** 連れ出した守備隊が会戦の戦力になる効率。行軍で目減りする */
+export const MOBILIZE_EFFICIENCY = 0.8;
+/** 1回の会戦に動員できる属州の数 */
+export const MOBILIZE_MAX_PROVINCES = 2;
+
 // 内政
 /** 徴税強化で得られる追加収入（通常収入に対する倍率） */
 export const RAISE_TAXES_INCOME_MULTIPLIER = 0.5;
