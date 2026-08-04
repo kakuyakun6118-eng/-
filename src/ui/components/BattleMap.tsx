@@ -484,13 +484,24 @@ function NearGround({ terrain }: { terrain: Terrain }) {
 /**
  * 隊を**兵の列**として描く。兵科ごとに組み方を変える。
  *
- * - 歩兵 — 楯を並べた密集陣。2列に組む
- * - 騎兵 — 間隔を空けた1列。轡を並べて突撃に備える
- * - 弓兵 — さらに散らした散兵線
+ * - 歩兵 — 楯を並べた密集陣。3列に組む
+ * - 騎兵 — 間隔を空けた列。轡を並べて突撃に備える
+ * - 弓兵 — さらに散らした2列の散兵線
  *
  * 兵の数そのものは描けない（数万人になる）ので、
- * **列の幅**で兵力を、粒の細かさで兵科を表す
+ * **列の幅**で兵力を、粒の細かさで兵科を表す。
+ *
+ * **敵の兵は小さく描く。** 敵は図の上端＝遠く、我が軍は下端＝手前に立つ。
+ * 地の画が透視で敷かれているのに兵だけ同じ大きさで並ぶと、遠くの敵が
+ * 巨人に見えて奥行きが壊れる。列の幅は兵力の表示なので変えず、
+ * **兵ひとりの大きさだけ**を縮める
  */
+const FOE_FIGURE_SCALE = 0.78;
+
+/** 陽は左上から。地の画の陰影と向きを揃える */
+const SUN_DX = 1.15;
+const SUN_DY = 0.5;
+
 function Formation({
   unit,
   cx,
@@ -510,31 +521,55 @@ function Formation({
   const dark = foe ? '#571219' : '#182c38';
   const trim = foe ? '#e0a0a4' : '#d8ab3c';
   const left = cx - width / 2;
+  const s = foe ? FOE_FIGURE_SCALE : 1;
 
   const pieces: ReactElement[] = [];
 
+  /** 兵ひとりを置く。中身は原点まわりに描き、ここで位置と大きさを決める */
+  const man = (key: string, x: number, yy: number, shadowR: number, art: ReactElement) => (
+    <g key={key} transform={`translate(${x} ${yy}) scale(${s})`}>
+      {/* 足元の影。陽の向きに合わせて右下へ落とす */}
+      <ellipse
+        cx={SUN_DX * shadowR}
+        cy={SUN_DY * shadowR}
+        rx={shadowR * 1.15}
+        ry={shadowR * 0.42}
+        fill="rgba(30,20,8,0.30)"
+      />
+      {art}
+    </g>
+  );
+
   if (unit.arm === 'infantry') {
     /*
-     * 重装歩兵。楯を並べた密集陣を2列に組み、後列を半歩ずらす。
-     * 兜の房と槍の穂先まで描いて、遠目にも槍衾と分かるようにする
+     * 重装歩兵。楯を並べた密集陣を3列に組み、後列を半歩ずらす。
+     * 兜と槍の穂先まで描いて、遠目にも槍衾と分かるようにする
      */
-    const step = 3.7;
+    const step = 3.7 * s;
     const n = Math.max(4, Math.floor(width / step));
     for (let row = 0; row < 3; row++) {
       for (let i = 0; i < n; i++) {
         const x = left + i * step + (row % 2) * (step / 2) + 0.6;
-        const yy = y + row * 3.4;
+        const yy = y + row * 3.4 * s;
         pieces.push(
-          <g key={`i${row}-${i}`}>
-            {/* 槍。穂先を斜めに立てる */}
-            <path d={`M ${x + 2.6} ${yy + 3} l -0.4 -5`} stroke={dark} strokeWidth={0.45} />
-            <path d={`M ${x + 2.2} ${yy - 2} l 0.4 -1 l 0.4 1 z`} fill={trim} />
-            {/* 兜 */}
-            <path d={`M ${x + 0.4} ${yy} q 0.75 -1.3 1.5 0`} fill={dark} />
-            {/* 楯（スクトゥム）。縦長の長方形に真ん中の飾り */}
-            <rect x={x} y={yy} width={2.4} height={4.2} rx={0.6} fill={body} stroke={dark} strokeWidth={0.25} />
-            <path d={`M ${x + 1.2} ${yy + 0.9} l 0 2.4`} stroke={trim} strokeWidth={0.4} />
-          </g>,
+          man(
+            `i${row}-${i}`,
+            x,
+            yy,
+            2.1,
+            <>
+              {/* 槍。穂先を斜めに立てる */}
+              <path d="M 2.6 3 l -0.4 -5" stroke={dark} strokeWidth={0.45} />
+              <path d="M 2.2 -2 l 0.4 -1 l 0.4 1 z" fill={trim} />
+              {/* 兜 */}
+              <path d="M 0.4 0 q 0.75 -1.3 1.5 0" fill={dark} />
+              {/* 楯（スクトゥム）。縦長の長方形に真ん中の飾り */}
+              <rect x={0} y={0} width={2.4} height={4.2} rx={0.6} fill={body} stroke={dark} strokeWidth={0.25} />
+              {/* 楯の左端に陽が当たる */}
+              <path d="M 0.35 0.5 l 0 3.2" stroke="rgba(255,244,214,0.34)" strokeWidth={0.42} />
+              <path d="M 1.2 0.9 l 0 2.4" stroke={trim} strokeWidth={0.4} />
+            </>,
+          ),
         );
       }
     }
@@ -543,33 +578,38 @@ function Formation({
      * 騎兵。馬を横向きに描く。胴・首・頭・四肢と尾まで取り、
      * 鞍上に槍を構えた騎手を乗せる
      */
-    const step = 7.6;
+    const step = 7.6 * s;
     const n = Math.max(3, Math.floor(width / step));
     for (let i = 0; i < n; i++) {
       const x = left + i * step + 1;
       // 後列を半歩ずらして、馬体が重なっても数が読めるようにする
-      const yy = y + (i % 2) * 2.6;
+      const yy = y + (i % 2) * 2.6 * s;
       pieces.push(
-        <g key={`c${i}`}>
-          {/* 馬の胴 */}
-          <path
-            d={`M ${x + 0.4} ${yy + 6} q 0.4 -1.9 2.6 -1.9 q 2.2 0 2.8 1.7 l 0 1.1 q -2.6 0.8 -5.4 0 z`}
-            fill={body}
-          />
-          {/* 首と頭 */}
-          <path d={`M ${x + 5.6} ${yy + 5.7} l 1.6 -2 l 1.1 0.4 l -0.9 1.1 l -1.1 1.2 z`} fill={body} />
-          {/* 四肢 */}
-          <g stroke={dark} strokeWidth={0.55} strokeLinecap="round">
-            <path d={`M ${x + 1.3} ${yy + 7} l -0.3 2 M ${x + 2.7} ${yy + 7} l 0.2 2`} />
-            <path d={`M ${x + 4.6} ${yy + 7} l -0.2 2 M ${x + 5.6} ${yy + 6.9} l 0.4 2.1`} />
-          </g>
-          {/* 尾 */}
-          <path d={`M ${x + 0.4} ${yy + 5.5} q -1.2 0.6 -1.3 2.2`} fill="none" stroke={dark} strokeWidth={0.55} />
-          {/* 騎手。胴と頭、構えた槍 */}
-          <path d={`M ${x + 2.7} ${yy + 4.8} l 0 -1.9`} stroke={body} strokeWidth={1.2} strokeLinecap="round" />
-          <circle cx={x + 2.7} cy={yy + 2.2} r={0.85} fill={dark} />
-          <path d={`M ${x + 1.4} ${yy + 1.4} l 4.6 2.6`} stroke={trim} strokeWidth={0.5} />
-        </g>,
+        man(
+          `c${i}`,
+          x,
+          yy,
+          3.4,
+          <>
+            {/* 馬の胴 */}
+            <path d="M 0.4 6 q 0.4 -1.9 2.6 -1.9 q 2.2 0 2.8 1.7 l 0 1.1 q -2.6 0.8 -5.4 0 z" fill={body} />
+            {/* 背に陽が乗る */}
+            <path d="M 1.1 4.5 q 1.9 -0.9 4.3 0.1" fill="none" stroke="rgba(255,244,214,0.3)" strokeWidth={0.42} />
+            {/* 首と頭 */}
+            <path d="M 5.6 5.7 l 1.6 -2 l 1.1 0.4 l -0.9 1.1 l -1.1 1.2 z" fill={body} />
+            {/* 四肢 */}
+            <g stroke={dark} strokeWidth={0.55} strokeLinecap="round">
+              <path d="M 1.3 7 l -0.3 2 M 2.7 7 l 0.2 2" />
+              <path d="M 4.6 7 l -0.2 2 M 5.6 6.9 l 0.4 2.1" />
+            </g>
+            {/* 尾 */}
+            <path d="M 0.4 5.5 q -1.2 0.6 -1.3 2.2" fill="none" stroke={dark} strokeWidth={0.55} />
+            {/* 騎手。胴と頭、構えた槍 */}
+            <path d="M 2.7 4.8 l 0 -1.9" stroke={body} strokeWidth={1.2} strokeLinecap="round" />
+            <circle cx={2.7} cy={2.2} r={0.85} fill={dark} />
+            <path d="M 1.4 1.4 l 4.6 2.6" stroke={trim} strokeWidth={0.5} />
+          </>,
+        ),
       );
     }
   } else {
@@ -577,24 +617,30 @@ function Formation({
      * 弓兵。散らした散兵線。弓をはっきり C 字に描き、
      * 弦と矢を添えて「射る姿」に見せる
      */
-    const step = 6.2;
+    const step = 6.2 * s;
     const n = Math.max(3, Math.floor(width / step));
     for (let row = 0; row < 2; row++) {
       for (let i = 0; i < n; i++) {
         const x = left + i * step + (row % 2) * (step / 2) + 0.8;
-        const yy = y + row * 4.6 + 1;
+        const yy = y + row * 4.6 * s + 1;
         pieces.push(
-          <g key={`a${row}-${i}`}>
-            {/* 弓と弦 */}
-            <path d={`M ${x + 3.4} ${yy - 0.4} q 2 2.3 0 4.6`} fill="none" stroke={trim} strokeWidth={0.6} />
-            <path d={`M ${x + 3.4} ${yy - 0.4} l 0 4.6`} stroke={trim} strokeWidth={0.3} />
-            {/* 矢 */}
-            <path d={`M ${x + 1.9} ${yy + 1.9} l 2.8 0`} stroke={dark} strokeWidth={0.38} />
-            {/* 射手。頭・胴・踏み出した脚 */}
-            <circle cx={x + 1.5} cy={yy} r={0.9} fill={dark} />
-            <path d={`M ${x + 1.5} ${yy + 0.9} l 0 2.3`} stroke={body} strokeWidth={1.25} strokeLinecap="round" />
-            <path d={`M ${x + 1.5} ${yy + 3.2} l -0.9 1.5 M ${x + 1.5} ${yy + 3.2} l 1.1 1.4`} stroke={dark} strokeWidth={0.5} />
-          </g>,
+          man(
+            `a${row}-${i}`,
+            x,
+            yy,
+            2.0,
+            <>
+              {/* 弓と弦 */}
+              <path d="M 3.4 -0.4 q 2 2.3 0 4.6" fill="none" stroke={trim} strokeWidth={0.6} />
+              <path d="M 3.4 -0.4 l 0 4.6" stroke={trim} strokeWidth={0.3} />
+              {/* 矢 */}
+              <path d="M 1.9 1.9 l 2.8 0" stroke={dark} strokeWidth={0.38} />
+              {/* 射手。頭・胴・踏み出した脚 */}
+              <circle cx={1.5} cy={0} r={0.9} fill={dark} />
+              <path d="M 1.5 0.9 l 0 2.3" stroke={body} strokeWidth={1.25} strokeLinecap="round" />
+              <path d="M 1.5 3.2 l -0.9 1.5 M 1.5 3.2 l 1.1 1.4" stroke={dark} strokeWidth={0.5} />
+            </>,
+          ),
         );
       }
     }
@@ -602,7 +648,17 @@ function Formation({
 
   return (
     <g opacity={faded ? 0.5 : 1}>
-      {/* 足元の影。地面から浮いて見せない */}
+      {/*
+       * 隊が踏み荒らした地面。兵ひとりずつの影だけだと、
+       * 密集陣が地面の上に貼り付いた紙のように見える
+       */}
+      <ellipse
+        cx={cx + 1.5}
+        cy={y + 11}
+        rx={width / 2 + 3}
+        ry={4.2}
+        fill="rgba(120,98,62,0.22)"
+      />
       <ellipse cx={cx} cy={y + 12} rx={width / 2} ry={2.2} fill="rgba(35,25,10,0.24)" />
       {pieces}
     </g>
