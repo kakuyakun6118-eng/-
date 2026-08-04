@@ -1,6 +1,13 @@
 import { ABILITY_NEUTRAL, GOVERNOR_APPOINT_COST, PREFECT_APPOINT_COST } from '../../core/constants';
-import type { GameState, Official, PlayerAction, ProvinceId } from '../../core/types';
-import { PROVINCE_LABELS } from '../catalogue';
+import type {
+  BarbarianFactionId,
+  GameState,
+  GovernedId,
+  Official,
+  PlayerAction,
+  ProvinceId,
+} from '../../core/types';
+import { FACTION_LABELS, PROVINCE_LABELS } from '../catalogue';
 
 /**
  * 宮廷の顔ぶれ — プラエトリア長官と属州総督。
@@ -20,7 +27,13 @@ export function CourtPanel({
   selected: PlayerAction[];
   onToggle: (action: PlayerAction, key: string) => void;
 }) {
-  const provinceIds = Object.keys(state.governors) as ProvinceId[];
+  /*
+   * 席のある土地。属州は常にあり、征服した郷里は併合した年に席ができる。
+   * 郷里は属州のあとに並べて、境外の土地であることが読めるようにする
+   */
+  const seatIds = Object.keys(state.governors) as GovernedId[];
+  const provinceIds = seatIds.filter((id): id is ProvinceId => id in state.provinces);
+  const homelandIds = seatIds.filter((id) => !(id in state.provinces)) as BarbarianFactionId[];
 
   return (
     <section className="roman-panel rounded-sm p-3">
@@ -49,8 +62,25 @@ export function CourtPanel({
             key={id}
             title={`${PROVINCE_LABELS[id]} 総督`}
             note="その属州の守りと立て直しに効く"
-            official={state.governors[id].current}
-            candidates={state.governors[id].candidates}
+            official={state.governors[id]?.current ?? null}
+            candidates={state.governors[id]?.candidates ?? []}
+            cost={GOVERNOR_APPOINT_COST}
+            treasury={state.treasury}
+            year={state.year}
+            selected={selected}
+            onToggle={onToggle}
+            buildAppoint={(officialId) => ({ type: 'appoint_governor', provinceId: id, officialId })}
+            compact
+          />
+        ))}
+        {/* 征服した郷里。境外の土地なので属州のあとに並べる */}
+        {homelandIds.map((id) => (
+          <Seat
+            key={id}
+            title={`${state.homelands[id]?.name ?? FACTION_LABELS[id]} 総督`}
+            note={`${FACTION_LABELS[id]}の旧領。守りと立て直しに効く`}
+            official={state.governors[id]?.current ?? null}
+            candidates={state.governors[id]?.candidates ?? []}
             cost={GOVERNOR_APPOINT_COST}
             treasury={state.treasury}
             year={state.year}

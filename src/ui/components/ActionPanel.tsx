@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { MAX_ACTIONS_PER_TURN } from '../../core/constants';
+import { MAX_ACTIONS_PER_TURN, MOBILIZE_MAX_PROVINCES } from '../../core/constants';
 import type {
   BarbarianFactionId,
   BattleLeader,
@@ -22,7 +22,7 @@ import {
   PROVINCE_LABELS,
   type ActionTemplate,
 } from '../catalogue';
-import { availableBattleLeaders } from '../../core/battle';
+import { availableBattleLeaders, mobilizableProvinces } from '../../core/battle';
 import { invadableEastProvinces } from '../../core/east';
 import { consumesActionSlot } from '../../core/tick';
 import { actionKey } from '../useGame';
@@ -129,6 +129,8 @@ function ActionCard({
   const [foeKey, setFoeKey] = useState<string>('');
   const [leader, setLeader] = useState<BattleLeader>('general');
   const [usurperId, setUsurperId] = useState<string>('');
+  /** 会戦に動員する属州。守備隊の半分を戦場へ連れ出す */
+  const [mobilize, setMobilize] = useState<ProvinceId[]>([]);
 
   // 会戦の相手と率いる者。どちらも状況で候補が変わるので先頭に読み替える
   const foes = battleFoes(state);
@@ -152,6 +154,7 @@ function ActionCard({
     eastProvince: eastTarget,
     foe,
     leader: battleLeader,
+    mobilize,
     usurperId: usurper?.id,
   });
   const key = action ? actionKey(action) : template.id;
@@ -254,6 +257,40 @@ function ActionCard({
                 </option>
               ))}
             </Select>
+            {/* 属州からの動員。連れ出した守備隊はその属州から減る */}
+            <div className="mt-1">
+              <div className="text-[11px] mb-1" style={{ color: 'var(--ink-soft)' }}>
+                属州から動員（{mobilize.length} / {MOBILIZE_MAX_PROVINCES}）—
+                守備隊の半分を戦場へ連れ出す。その属州は薄くなる
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {mobilizableProvinces(state).map((id) => {
+                  const on = mobilize.includes(id);
+                  return (
+                    <button
+                      key={id}
+                      onClick={() =>
+                        setMobilize((current) =>
+                          current.includes(id)
+                            ? current.filter((p) => p !== id)
+                            : current.length >= MOBILIZE_MAX_PROVINCES
+                              ? current
+                              : [...current, id],
+                        )
+                      }
+                      className="roman-panel rounded-sm px-2 py-1 text-[11px]"
+                      style={
+                        on
+                          ? { borderColor: 'var(--gold)', color: 'var(--purple)', fontWeight: 600 }
+                          : { color: 'var(--ink-soft)' }
+                      }
+                    >
+                      {PROVINCE_LABELS[id]} {Math.round(state.provinces[id].garrison)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </>
         )}
 

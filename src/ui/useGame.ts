@@ -216,6 +216,8 @@ export function actionKey(action: PlayerAction): string {
   if ('foe' in action) {
     parts.push(action.foe.kind === 'barbarian' ? action.foe.factionId : action.foe.kind);
     parts.push(action.leader);
+    // 動員する属州が変われば別の行動として扱う
+    if (action.mobilize && action.mobilize.length > 0) parts.push(action.mobilize.join('+'));
   }
   if ('usurperId' in action) parts.push(action.usurperId);
   return parts.join(':');

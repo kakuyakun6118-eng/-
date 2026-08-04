@@ -1,5 +1,6 @@
 import {
   CONSCRIPT_COST,
+  PROVINCE_RECRUIT_COST,
   DEFEND_COST,
   EAST_AID_MIN_RELATIONS,
   EAST_IMPROVE_COST,
@@ -249,6 +250,8 @@ export interface ActionTemplate {
     eastProvince?: EastProvinceId;
     foe?: BattleFoe;
     leader?: BattleLeader;
+    /** 会戦に動員する属州 */
+    mobilize?: ProvinceId[];
     usurperId?: string;
   }) => PlayerAction | null;
   /** このシナリオでだけ出す。省略すると常に出す */
@@ -379,6 +382,19 @@ export const ACTION_TEMPLATES: ActionTemplate[] = [
     build: () => ({ type: 'military_conscript' }),
   },
   {
+    id: 'military_recruit_province',
+    category: '軍事',
+    label: '属州で募兵',
+    detail:
+      'その土地から兵を出す。中央の徴募より安いが、穫れ高は属州の豊かさと支配度しだい。' +
+      '若者を連れていかれた土地は荒れる（支配度が下がる）',
+    cost: PROVINCE_RECRUIT_COST,
+    target: 'province',
+    blockedReason: needsGold(PROVINCE_RECRUIT_COST),
+    build: ({ province }) =>
+      province ? { type: 'military_recruit_province', provinceId: province } : null,
+  },
+  {
     id: 'military_appoint_general',
     category: '軍事',
     label: '軍司令官を任命',
@@ -417,8 +433,8 @@ export const ACTION_TEMPLATES: ActionTemplate[] = [
         : battleFoes(state).length === 0
           ? '会戦に応じる敵がいない'
           : null,
-    build: ({ foe, leader }) =>
-      foe && leader ? { type: 'military_pitched_battle', foe, leader } : null,
+    build: ({ foe, leader, mobilize }) =>
+      foe && leader ? { type: 'military_pitched_battle', foe, leader, mobilize } : null,
   },
   {
     id: 'military_suppress_usurper',
