@@ -257,7 +257,9 @@ function describeTurn(before: GameState, after: GameState): string {
       `${record.name}${record.cause === 'assassination' ? 'が暗殺された' : 'が崩御した'}`,
       record.outcome === 'crisis'
         ? '継承危機'
-        : `${after.dynasty.ruler.name}が継承`,
+        : `${after.dynasty.ruler.name}が継承（${
+            record.outcome === 'heir' ? '嫡子' : '兄弟・傍系'
+          }）`,
     );
   }
 

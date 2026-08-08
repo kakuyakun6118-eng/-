@@ -11,6 +11,7 @@ import {
   FACTION_LABELS,
   GENERAL_END_LABELS,
   PROVINCE_LABELS,
+  SUCCESSION_LABELS,
 } from '../catalogue';
 
 /** 名前が空のまま始めたときに使う既定名。データ側の初期君主に合わせる */
@@ -337,7 +338,7 @@ function reignsOf(state: GameState): Reign[] {
       to: record.year,
       name: record.name,
       note: `${record.cause === 'assassination' ? '暗殺' : '崩御'}・${
-        record.outcome === 'crisis' ? '継承危機' : '嫡子が継承'
+        SUCCESSION_LABELS[record.outcome]
       }`,
     });
     from = record.year;

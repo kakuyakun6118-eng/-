@@ -80,7 +80,10 @@ export function DynastyTree({ state, onClose }: { state: GameState; onClose: () 
                             {record.cause === 'assassination' ? '暗殺' : '崩御'}
                           </span>
                           {record.outcome === 'crisis' && (
-                            <span style={{ color: 'var(--oxblood)' }}> ／ 嫡子なく血統は絶えた</span>
+                            <span style={{ color: 'var(--oxblood)' }}> ／ 一族が尽き血統は絶えた</span>
+                          )}
+                          {record.outcome === 'sibling' && (
+                            <span style={{ color: 'var(--ink-soft)' }}> ／ 子がなく傍系が継いだ</span>
                           )}
                         </li>
                       ))}

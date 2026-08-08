@@ -8,6 +8,8 @@ import {
   EAST_TITLE_COST,
   MAX_EAST_RELATIONS,
   MAX_PERSIA_RELATIONS,
+  MAX_TAX_BASE,
+  RESETTLE_COST,
   PERSIA_IMPROVE_COST,
   FOEDERATI_HIRE_COST,
   GENERAL_APPOINT_COST,
@@ -18,7 +20,7 @@ import {
   SENATE_GAMES_COST,
 } from '../core/constants';
 import { availableBattleLeaders, canGiveBattle } from '../core/battle';
-import { invadableEastProvinces } from '../core/east';
+import { canInvadePersia, invadableEastProvinces } from '../core/east';
 import { troopsOf } from '../core/battlefield';
 import type {
   BarbarianDemandType,
@@ -34,6 +36,7 @@ import type {
   PlayerAction,
   ProvinceId,
   Scenario,
+  SuccessionOutcome,
   Terrain,
   TurnEventId,
 } from '../core/types';
@@ -115,6 +118,9 @@ export const TURN_EVENT_LABELS: Record<TurnEventId, string> = {
   justinian_reconquest:
     'ユスティニアヌス1世が西方の回復を掲げ、ベリサリウスを西へ送り込んだ',
   dynasty_founded: '血統が断裂し、新しい王朝が興った',
+  barbarian_east_raid: '蛮族が西ではなく東ローマへ攻め入った',
+  persia_invaded: 'ペルシア本土への遠征に勝ち、その戦力を削った',
+  persia_subdued: 'ペルシアを屈服させ、介入を取り下げさせた',
 };
 
 /** 会戦を率いる者 */
@@ -193,6 +199,13 @@ export const TERRAIN_DETAILS: Record<Terrain, string> = {
   forest: '射線が通らず騎兵も走れない。歩兵の土地',
   desert: '重装歩兵には堪える。騎兵と弓兵の土地',
   river: '弓兵が利く。前へ出た戦列は余計に削られる',
+};
+
+/** 継承の結末。血の近い順に3段 */
+export const SUCCESSION_LABELS: Record<SuccessionOutcome, string> = {
+  heir: '嫡子が継承',
+  sibling: '兄弟・傍系が継承',
+  crisis: '継承危機',
 };
 
 /** 軍司令官が職を離れた理由 */
@@ -528,6 +541,20 @@ export const ACTION_TEMPLATES: ActionTemplate[] = [
     build: () => ({ type: 'domestic_grant_consulship' }),
   },
   {
+    id: 'domestic_resettle_land',
+    category: '内政',
+    label: '荒地に入植させる',
+    detail:
+      '荒れた耕地に退役兵と捕虜を入れて起こし直す。税基盤を戻せる唯一の手だが、' +
+      '大所領を接収して分け与えるので元老院の支持を失う。' +
+      '定住1件で失う7に対し戻るのは3で、削られる速さには追いつかない',
+    cost: RESETTLE_COST,
+    target: 'none',
+    blockedReason: (state) =>
+      state.taxBase >= MAX_TAX_BASE ? '起こす荒地がない' : needsGold(RESETTLE_COST)(state),
+    build: () => ({ type: 'domestic_resettle_land' }),
+  },
+  {
     id: 'east_request_aid',
     category: '東帝国',
     label: '援軍を要請',
@@ -610,6 +637,26 @@ export const ACTION_TEMPLATES: ActionTemplate[] = [
         ? '関係はすでに最良'
         : needsGold(PERSIA_IMPROVE_COST)(state),
     build: () => ({ type: 'persia_improve_relations' }),
+  },
+  {
+    id: 'persia_invade',
+    category: '東帝国',
+    label: 'ペルシアへ遠征',
+    detail:
+      'サーサーン朝の本土を突き、その戦力そのものを削る。削り切れば介入を取り下げさせられる。' +
+      'ローマを統一したあとにだけ選べる。王の軍が総出で守るので、属州を攻めるより重い',
+    cost: null,
+    target: 'none',
+    scenario: 'reunification',
+    blockedReason: (state) =>
+      !state.persia.intervened
+        ? 'ペルシアはまだ動いていない'
+        : state.persia.strength <= 0
+          ? 'ペルシアはすでに屈服している'
+          : !canInvadePersia(state)
+            ? 'ローマを統一するまで東の向こうへは手が届かない'
+            : null,
+    build: () => ({ type: 'persia_invade' }),
   },
   {
     id: 'east_make_peace',
