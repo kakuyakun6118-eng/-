@@ -37,7 +37,8 @@ export default async function Home() {
     <main className={styles.main}>
       <header className={styles.header}>
         <h1>今日のおすすめ銘柄(ウォッチリスト)</h1>
-        <nav>
+        <nav className={styles.nav}>
+          <Link href="/watch">注目アカウントの投稿 →</Link>
           <Link href="/holdings">保有株の売り時判定へ →</Link>
         </nav>
       </header>

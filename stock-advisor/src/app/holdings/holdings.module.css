@@ -17,6 +17,12 @@
   font-size: 1.4rem;
 }
 
+.nav {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
 .disclaimer {
   font-size: 0.8rem;
   opacity: 0.7;

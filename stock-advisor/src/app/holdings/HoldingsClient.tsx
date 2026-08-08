@@ -72,7 +72,10 @@ export default function HoldingsClient({ initialHoldings }: { initialHoldings: H
     <main className={styles.main}>
       <header className={styles.header}>
         <h1>保有株の売り時判定</h1>
-        <Link href="/">← 今日のおすすめへ</Link>
+        <nav className={styles.nav}>
+          <Link href="/">← 今日のおすすめへ</Link>
+          <Link href="/watch">注目アカウントの投稿 →</Link>
+        </nav>
       </header>
 
       <p className={styles.disclaimer}>

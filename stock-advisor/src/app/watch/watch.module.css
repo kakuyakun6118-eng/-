@@ -17,12 +17,6 @@
   font-size: 1.4rem;
 }
 
-.nav {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
 .warning {
   background: #fff3cd;
   color: #664d03;
@@ -37,39 +31,47 @@
   font-size: 0.8rem;
   opacity: 0.7;
   margin-bottom: 1.5rem;
+  line-height: 1.5;
 }
 
-.list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  list-style: none;
-}
-
-.card {
+.account {
   border: 1px solid rgba(128, 128, 128, 0.3);
   border-radius: 10px;
   padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
 }
 
-.cardHeader {
+.account h2 {
+  font-size: 1.05rem;
+  margin-bottom: 0.75rem;
+}
+
+.handle {
+  opacity: 0.6;
+  font-weight: 400;
+  font-size: 0.85rem;
+}
+
+.mentions {
+  list-style: none;
   display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-  margin-bottom: 0.4rem;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.mention {
+  border: 1px solid rgba(128, 128, 128, 0.2);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
 }
 
 .ticker {
   font-weight: 700;
-}
-
-.name {
-  opacity: 0.75;
+  margin-right: 0.5rem;
 }
 
 .badge {
-  margin-left: auto;
   padding: 0.15rem 0.6rem;
   border-radius: 999px;
   font-size: 0.75rem;
@@ -91,23 +93,34 @@
   color: #374151;
 }
 
-.metrics {
+.reasoning {
+  font-size: 0.85rem;
+  margin-top: 0.35rem;
+  line-height: 1.5;
+}
+
+.posts {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.post {
+  border-top: 1px solid rgba(128, 128, 128, 0.15);
+  padding-top: 0.6rem;
+  font-size: 0.9rem;
+}
+
+.postMeta {
   display: flex;
   gap: 1rem;
+  font-size: 0.75rem;
+  opacity: 0.7;
+  margin-top: 0.3rem;
+}
+
+.empty {
+  opacity: 0.6;
   font-size: 0.85rem;
-  opacity: 0.85;
-  margin-bottom: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.reasoning {
-  font-size: 0.9rem;
-  line-height: 1.5;
-  margin-bottom: 0.5rem;
-}
-
-.headlines {
-  font-size: 0.8rem;
-  opacity: 0.8;
-  padding-left: 1.1rem;
 }
