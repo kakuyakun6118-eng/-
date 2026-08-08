@@ -62,6 +62,12 @@ import {
   PERSIA_SEIZE_STRENGTH_GAIN,
   SUCCESSION_UNREST_PERSIA_MULTIPLIER,
   WEST_ARMY_LOSS_FACTOR,
+  PERSIA_HOME_DEFENSE_SHARE,
+  PERSIA_INVADE_ARMY_SHARE,
+  PERSIA_INVADE_ATTRITION_RATE,
+  PERSIA_INVADE_STRENGTH_LOSS,
+  PERSIA_SUBDUED_LEGITIMACY_GAIN,
+  PERSIA_SUBDUED_THRESHOLD,
 } from './constants';
 import { diplomacyModifier, militaryModifier } from './dynasty';
 import { isSuccessionUnrest } from './partition';
@@ -556,6 +562,77 @@ function persianTurn(state: GameState, rng: () => number): GameState {
     persia: { ...persia, strength, seizedProvinces: seized },
     turnEvents,
   };
+}
+
+/**
+ * サーサーン朝の本土へ遠征できるか。
+ *
+ * **ローマを統一したあとにだけ選べる。** 東を平らげてはじめて、
+ * 帝国は東の国境の向こうへ手を伸ばせる。動き出していないペルシアを
+ * こちらから叩くことはしない（介入していないうちは戦端が無い）
+ */
+export function canInvadePersia(state: GameState): boolean {
+  if (!isReunification(state)) return false;
+  if (!state.persia.intervened) return false;
+  if (state.persia.strength <= 0) return false;
+  return isUnified(state);
+}
+
+/**
+ * サーサーン朝の本土への遠征。
+ *
+ * 都クテシフォンはこの地図では属州ではないので落とせない。
+ * 代わりに本土を突いてその戦力そのものを削る形にしてある。
+ * 削り切ればペルシアは介入を取り下げ、東方戦線が閉じる
+ */
+export function invadePersia(state: GameState, rng: () => number): GameState {
+  if (!canInvadePersia(state)) return state;
+  const { persia } = state;
+
+  const attacker = randomizedPower(
+    state.fieldArmy * PERSIA_INVADE_ARMY_SHARE * militaryModifier(state) *
+      generalDefenseModifier(state),
+    rng,
+  );
+  // 本土なので王の軍が出張ってくる。属州を攻めるよりはるかに重い
+  const defender = randomizedPower(
+    persia.strength * PERSIA_HOME_DEFENSE_SHARE * DEFENSE_MULTIPLIER *
+      foreignCommanderModifier(persia.commander),
+    rng,
+  );
+
+  const { attackerWins, margin } = resolveCombat(attacker, defender);
+  const fieldArmy = state.fieldArmy * (1 - PERSIA_INVADE_ATTRITION_RATE);
+  const turnEvents = [...state.turnEvents];
+
+  if (!attackerWins) {
+    return {
+      ...state,
+      fieldArmy: Math.max(0, fieldArmy - margin * WEST_ARMY_LOSS_FACTOR),
+      turnEvents,
+    };
+  }
+
+  const strength = Math.max(0, persia.strength * (1 - PERSIA_INVADE_STRENGTH_LOSS));
+  turnEvents.push('persia_invaded');
+
+  // 削り切ればペルシアは介入を取り下げる。東方戦線はここで閉じる
+  if (strength < PERSIA_SUBDUED_THRESHOLD) {
+    turnEvents.push('persia_subdued');
+    return {
+      ...state,
+      fieldArmy,
+      legitimacy: clamp(
+        state.legitimacy + PERSIA_SUBDUED_LEGITIMACY_GAIN,
+        MIN_LEGITIMACY,
+        MAX_LEGITIMACY,
+      ),
+      persia: { ...persia, strength: 0, intervened: false },
+      turnEvents,
+    };
+  }
+
+  return { ...state, fieldArmy, persia: { ...persia, strength }, turnEvents };
 }
 
 /**

@@ -30,7 +30,7 @@
   },
   {
     "id": "Huns",
-    "strength": 66,
+    "strength": 96,
     "stance": "hostile",
     "location": "exterior",
     "demand": null,
@@ -38,7 +38,8 @@
       "Illyricum",
       "Italia"
     ],
-    "routeIndex": 0
+    "routeIndex": 0,
+    "collapseYear": 454
   },
   {
     "id": "Franks",

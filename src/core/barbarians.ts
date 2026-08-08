@@ -7,7 +7,11 @@ import {
   DEMAND_REFUSAL_POWER_BONUS,
   DEMAND_REFUSAL_SETTLE_CONTROL_BONUS,
   DIFFICULTY_SETTINGS,
+  EAST_RAID_CONTROL_DAMAGE,
+  EAST_RAID_GROWTH_RATE,
+  EAST_RAID_PROBABILITY,
   EXTERIOR_GROWTH_RATE,
+  FACTION_COLLAPSE_DECAY_RATE,
   FIELD_ARMY_DEFENSE_SHARE,
   FOEDERATI_DEFECTION_LOYALTY_THRESHOLD,
   FOEDERATI_DEFENSE_SHARE,
@@ -61,6 +65,8 @@ export function applyBarbarianActions(
   let taxBase = state.taxBase;
   let legitimacy = state.legitimacy;
   let africaLost = state.africaLost;
+  /** その年に東ローマを荒らした勢力。東方属州の被害はまとめて清算する */
+  const eastRaids: BarbarianFactionId[] = [];
 
   /** その属州に駐屯するフォエデラティが防衛に加える戦力 */
   const foederatiDefenseAt = (provinceId: ProvinceId): number =>
@@ -69,7 +75,17 @@ export function applyBarbarianActions(
       .reduce((sum, f) => sum + f.strength * FOEDERATI_DEFENSE_SHARE, 0);
 
   for (const factionId of Object.keys(factions) as BarbarianFactionId[]) {
-    const faction = factions[factionId];
+    let faction = factions[factionId];
+
+    /*
+     * 連合の瓦解。アッティラの死とネダオの戦いでフン連合が砕けたのと同じで、
+     * この年を過ぎた勢力は毎年戦力を落としていく。
+     * 開始戦力を上げて440年代の脅威を作るには、頂点のあとに退く道が要る
+     */
+    if (faction.collapseYear !== undefined && state.year > faction.collapseYear) {
+      faction = { ...faction, strength: faction.strength * (1 - FACTION_COLLAPSE_DECAY_RATE) };
+      factions[factionId] = faction;
+    }
 
     if (faction.stance === 'settled') continue;
 
@@ -87,6 +103,26 @@ export function applyBarbarianActions(
 
     if (location === 'exterior') {
       const nextTarget = faction.route[faction.routeIndex];
+      /*
+       * **西ではなく東ローマへ攻め入る年。**
+       *
+       * ゴートもフンも実際には東の管区（トラキア・イリュリクム）を
+       * 繰り返し荒らしている。西へ攻め入る判定より先に引き、
+       * 当たればその年は西へ来ない。
+       *
+       * 西にとっては猶予と引き換えの取引になる。攻められない代わりに、
+       * 東で掠めた勢力は通常より大きく育って戻ってくる
+       */
+      if (faction.strength >= MIN_STRENGTH_TO_ADVANCE && rng() < EAST_RAID_PROBABILITY) {
+        factions[factionId] = {
+          ...faction,
+          strength: faction.raider === true
+            ? Math.min(faction.strength * (1 + EAST_RAID_GROWTH_RATE), RAIDER_MAX_STRENGTH)
+            : faction.strength * (1 + EAST_RAID_GROWTH_RATE),
+        };
+        eastRaids.push(factionId);
+        continue;
+      }
       /*
        * 代替わりの直後は帝位が定まらず、その隙を突かれる。
        * 既存の侵入確率に係数を掛けるだけで、新しい仕組みではない
@@ -257,5 +293,44 @@ export function applyBarbarianActions(
     }
   }
 
-  return { ...state, provinces, factions, treasury, taxBase, legitimacy, africaLost };
+  const next: GameState = {
+    ...state,
+    provinces,
+    factions,
+    treasury,
+    taxBase,
+    legitimacy,
+    africaLost,
+  };
+  return applyEastRaids(next, eastRaids, rng);
+}
+
+/**
+ * 東ローマが荒らされた結果を清算する。
+ *
+ * 史実シナリオでは東は属州を持たないので、記録が残るだけで実害は無い
+ * （その年に西へ来なかったこと自体が西にとっての効果）。
+ * 統一シナリオでは東方属州が実際に削られるので、**東を併合した帝国は
+ * その国境も引き継ぐ**ことになる
+ */
+function applyEastRaids(
+  state: GameState,
+  raiders: BarbarianFactionId[],
+  rng: () => number,
+): GameState {
+  if (raiders.length === 0) return state;
+  const turnEvents = [...state.turnEvents, 'barbarian_east_raid' as const];
+  const targets = state.east.provinces;
+  if (targets.length === 0) return { ...state, turnEvents };
+
+  const provinces = [...targets];
+  for (let i = 0; i < raiders.length; i++) {
+    const index = Math.floor(rng() * provinces.length);
+    const target = provinces[index];
+    provinces[index] = {
+      ...target,
+      control: clamp(target.control - EAST_RAID_CONTROL_DAMAGE, MIN_CONTROL, MAX_CONTROL),
+    };
+  }
+  return { ...state, east: { ...state.east, provinces }, turnEvents };
 }

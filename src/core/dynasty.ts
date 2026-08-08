@@ -23,6 +23,7 @@ import {
   SUCCESSION_LEGITIMACY_FLOOR,
   SUCCESSION_LEGITIMACY_LOSS_CRISIS,
   SUCCESSION_LEGITIMACY_LOSS_HEIR,
+  SUCCESSION_LEGITIMACY_LOSS_SIBLING,
 } from './constants';
 import type {
   DynastyMember,
@@ -212,18 +213,32 @@ function maybeBearChild(state: GameState, rng: () => number): GameState {
   };
 }
 
-/** 継承。成人した嫡子がいれば継承、いなければ継承危機 */
+/**
+ * 継承。**皇帝の子が第一、いなければ兄弟や傍系、それも尽きれば断絶。**
+ *
+ * 以前は成人した一族から年長者を一律に選んでいたので、甥や従兄弟が
+ * 実子を差し置いて継ぐことがあった。ローマの帝位は選挙帝政の建前でも
+ * 実際には父から子へ渡すのが常だったので、まず子を探す。
+ *
+ * 候補の集合そのものは変えていない（子も傍系も同じ `members` にいる）ので、
+ * **断絶の頻度は動かない。** 変わるのは誰が継ぐかと、そのときの
+ * 正統性の低下幅
+ */
 function succeed(
   state: GameState,
   cause: 'natural' | 'assassination',
   rng: () => number,
 ): GameState {
   const { dynasty } = state;
-  const heir = dynasty.members
+  const eligible = dynasty.members
     .filter((m) => m.legitimate && state.year - m.birthYear >= ADULT_AGE)
-    .sort((a, b) => a.birthYear - b.birthYear)[0];
+    .sort((a, b) => a.birthYear - b.birthYear);
+  // 皇帝自身の子。兄弟や傍系より先に立つ
+  const child = eligible.find((m) => dynasty.ruler.childIds.includes(m.id));
+  const heir = child ?? eligible[0];
 
-  const outcome: SuccessionOutcome = heir ? 'heir' : 'crisis';
+  const outcome: SuccessionOutcome =
+    child !== undefined ? 'heir' : heir !== undefined ? 'sibling' : 'crisis';
   const deadRuler: Ruler = { ...dynasty.ruler, deathYear: state.year };
 
   /*
@@ -256,7 +271,9 @@ function succeed(
   let legitimacyLoss =
     outcome === 'heir'
       ? SUCCESSION_LEGITIMACY_LOSS_HEIR
-      : SUCCESSION_LEGITIMACY_LOSS_CRISIS;
+      : outcome === 'sibling'
+        ? SUCCESSION_LEGITIMACY_LOSS_SIBLING
+        : SUCCESSION_LEGITIMACY_LOSS_CRISIS;
   if (successor.mixedBlood) legitimacyLoss += MIXED_BLOOD_LEGITIMACY_PENALTY;
 
   /*

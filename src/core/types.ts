@@ -79,6 +79,15 @@ export interface BarbarianFaction {
    * 穀物供給が途絶し、生存率が中級 17% → 2% まで落ちた
    */
   raider?: boolean;
+  /**
+   * 連合が瓦解する年。これを過ぎると戦力が毎年削れていく。
+   *
+   * フンだけが持つ。アッティラの死（453年）とネダオの戦い（454年）で
+   * フン連合は実際に砕け、従っていた諸族が離れていった。
+   * 開始戦力を上げて440年代の脅威を作ると、この解体が無い模型では
+   * そのまま170ターン居座り続けて統一シナリオの6世紀が成立しない
+   */
+  collapseYear?: number;
 }
 
 // ── 君主と王朝 ────────────────────────────────────────
@@ -143,7 +152,14 @@ export interface Ruler extends DynastyMember {
   childIds: string[];
 }
 
-export type SuccessionOutcome = 'heir' | 'crisis';
+/**
+ * 継承の結末。
+ *
+ * `heir` は皇帝自身の成人した嫡子、`sibling` は子がおらず兄弟や
+ * 傍系の一族が継いだ場合、`crisis` は一族が尽きて王朝の外から
+ * 担ぎ出された場合。血の近さの順に正統性の低下が大きくなる
+ */
+export type SuccessionOutcome = 'heir' | 'sibling' | 'crisis';
 
 export interface DeathRecord {
   rulerId: string;
@@ -320,7 +336,13 @@ export type TurnEventId =
   /** ユスティニアヌス1世が西方の回復を掲げて戦端を開いた年 */
   | 'justinian_reconquest'
   /** 血統が断裂し、新しい王朝が興った年 */
-  | 'dynasty_founded';
+  | 'dynasty_founded'
+  /** 蛮族が西ではなく東ローマへ攻め入った年 */
+  | 'barbarian_east_raid'
+  /** ペルシア本土への遠征に勝った年 */
+  | 'persia_invaded'
+  /** ペルシアを屈服させ、介入を取り下げさせた年 */
+  | 'persia_subdued';
 
 // ── 官職（プラエトリア長官・属州総督） ────────────────
 
@@ -828,6 +850,18 @@ export interface DomesticGrantConsulshipAction {
   type: 'domestic_grant_consulship';
 }
 
+/**
+ * 荒地に入植させる。**税基盤を戻せる唯一の手**。
+ *
+ * 略奪と定住で失われた耕地に、退役兵と捕虜を入れて起こし直す。
+ * 国庫を大きく削り、荒れた大所領を国家が接収するので、その土地を
+ * 握っていた元老院貴族の支持を失う。元老院への譲歩
+ * （元老院 +12 / 税基盤 −2）のちょうど逆向きの取引になる
+ */
+export interface DomesticResettleLandAction {
+  type: 'domestic_resettle_land';
+}
+
 export interface EastRequestAidAction {
   type: 'east_request_aid';
 }
@@ -866,6 +900,17 @@ export interface ConquerHomelandAction {
 export interface EastInvadeAction {
   type: 'east_invade';
   provinceId: EastProvinceId;
+}
+
+/**
+ * サーサーン朝の本土へ遠征する。**ローマを統一したあとにだけ選べる。**
+ *
+ * ペルシアの都クテシフォンはこの地図では属州ではないので落とせない。
+ * 代わりに本土を突いてその戦力そのものを削る形にしてある。
+ * 削り切ればペルシアは介入を取り下げ、東方戦線が閉じる
+ */
+export interface PersiaInvadeAction {
+  type: 'persia_invade';
 }
 
 /** その属州で兵を募る。中央の徴募と違い、土地の豊かさと支配度で穫れ高が変わる */
@@ -959,6 +1004,7 @@ export type PlayerAction =
   | DomesticAppeaseSenateAction
   | DomesticHoldGamesAction
   | DomesticGrantConsulshipAction
+  | DomesticResettleLandAction
   | EastRequestAidAction
   | EastConfirmTitleAction
   | AppointPrefectAction
@@ -971,6 +1017,7 @@ export type PlayerAction =
   | EastInvadeAction
   | EastMakePeaceAction
   | PersiaImproveRelationsAction
+  | PersiaInvadeAction
   | MilitaryRecruitProvinceAction
   | MilitaryPitchedBattleAction
   | MilitarySuppressUsurperAction;

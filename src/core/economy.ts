@@ -14,6 +14,9 @@ import {
   APPEASE_SENATE_GAIN,
   APPEASE_SENATE_LEGITIMACY_GAIN,
   APPEASE_SENATE_TAX_BASE_LOSS,
+  RESETTLE_COST,
+  RESETTLE_SENATE_LOSS,
+  RESETTLE_TAX_BASE_GAIN,
   SENATE_CONSULSHIP_LEGITIMACY_LOSS,
   SENATE_CONSULSHIP_SENATE_GAIN,
   SENATE_GAMES_COST,
@@ -241,6 +244,34 @@ export function appeaseSenate(state: GameState): GameState {
       MAX_LEGITIMACY,
     ),
     taxBase: clamp(state.taxBase - APPEASE_SENATE_TAX_BASE_LOSS, MIN_TAX_BASE, MAX_TAX_BASE),
+  };
+}
+
+/**
+ * 荒地に入植させる。**税基盤を戻せる唯一の手**。
+ *
+ * 略奪と定住で失われた耕地に、退役兵と捕虜を入れて起こし直す。
+ * 荒れた大所領を国家が接収して分け与えるので、その土地を握っていた
+ * 元老院貴族の支持を失う。元老院への譲歩（元老院 +12 / 税基盤 −2）の
+ * ちょうど逆向きの取引になる。
+ *
+ * **戻る量は失う量より小さい。** 定住1件で −7 失うのに +3 しか戻らず、
+ * 削られる速さには追いつかない。「属州を失うと帝国が痩せる」という
+ * 循環の罠はそのままに、立て直す手だけを与えている
+ */
+export function resettleLand(state: GameState): GameState {
+  if (state.treasury < RESETTLE_COST) return state;
+  // すでに満ちている税基盤に入植しても起こす荒地が無い
+  if (state.taxBase >= MAX_TAX_BASE) return state;
+  return {
+    ...state,
+    treasury: state.treasury - RESETTLE_COST,
+    taxBase: clamp(state.taxBase + RESETTLE_TAX_BASE_GAIN, MIN_TAX_BASE, MAX_TAX_BASE),
+    senateSupport: clamp(
+      state.senateSupport - RESETTLE_SENATE_LOSS,
+      MIN_SENATE_SUPPORT,
+      MAX_SENATE_SUPPORT,
+    ),
   };
 }
 

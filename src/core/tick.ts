@@ -47,6 +47,7 @@ import {
   declareWarOnEast,
   improveEastRelations,
   improvePersiaRelations,
+  invadePersia,
   invadeEastProvince,
   isUnified,
   makePeaceWithEast,
@@ -70,6 +71,7 @@ import {
   calculateExpenses,
   calculateIncome,
   grantConsulship,
+  resettleLand,
   holdGames,
   raiseTaxes,
   updateControl,
@@ -362,6 +364,8 @@ function applyAction(
       return grantConsulship(state);
     case 'domestic_appease_senate':
       return appeaseSenate(state);
+    case 'domestic_resettle_land':
+      return resettleLand(state);
     case 'east_request_aid':
       return requestEastAid(state);
     case 'east_confirm_title':
@@ -376,6 +380,8 @@ function applyAction(
       return makePeaceWithEast(state);
     case 'persia_improve_relations':
       return improvePersiaRelations(state);
+    case 'persia_invade':
+      return invadePersia(state, rng);
     case 'military_recruit_province':
       return recruitInProvince(state, action.provinceId);
     case 'military_pitched_battle':

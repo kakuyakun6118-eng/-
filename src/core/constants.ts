@@ -89,6 +89,29 @@ export const MIN_STRENGTH_TO_ADVANCE = 55;
 export const ADVANCE_PROBABILITY = 0.185;
 
 /** 境外で待機している勢力の戦力成長率（ターンあたり） */
+/**
+ * 境外の勢力が、西ではなく**東ローマへ攻め入る**確率。
+ *
+ * ゴートもフンも実際には東の管区（トラキア・イリュリクム）を
+ * 繰り返し荒らしている。西へ攻め入る判定より先に引き、
+ * 当たればその年は西へ来ない。
+ *
+ * **西にとっては猶予と引き換えの取引になる。** その年は攻められないが、
+ * 東で掠めた勢力は通常より大きく育って戻ってくる
+ */
+export const EAST_RAID_PROBABILITY = 0.1;
+/** 東を荒らした年の成長率。境外での通常の成長より大きい */
+export const EAST_RAID_GROWTH_RATE = 0.065;
+/** 統一シナリオで、荒らされた東方属州が失う支配度 */
+export const EAST_RAID_CONTROL_DAMAGE = 7;
+
+/**
+ * 連合が瓦解したあとの毎年の目減り。
+ * 成長率（EXTERIOR_GROWTH_RATE）より速く削れる形にして、
+ * 数十年で脅威として消えるようにする
+ */
+export const FACTION_COLLAPSE_DECAY_RATE = 0.11;
+
 export const EXTERIOR_GROWTH_RATE = 0.05;
 
 /**
@@ -370,6 +393,22 @@ export const APPEASE_SENATE_GAIN = 12;
 export const APPEASE_SENATE_LEGITIMACY_GAIN = 4;
 /** 免税特権の追認による恒久的な税基盤の損失 */
 export const APPEASE_SENATE_TAX_BASE_LOSS = 2;
+
+/**
+ * 荒地への入植。**税基盤を戻せる唯一の手**。
+ *
+ * 略奪と定住で失われた耕地に退役兵と捕虜を入れて起こし直す。
+ * 元老院への譲歩（元老院 +12 / 税基盤 −2）のちょうど逆向きで、
+ * 荒れた大所領を国家が接収するぶん貴族の支持を失う。
+ *
+ * **戻る量は失う量より小さく取る。** 1件の定住で −7 失うのに対し
+ * 1回の入植で戻るのは +3 なので、削られる速さには追いつかない。
+ * 「属州を失うと帝国が痩せる」という循環の罠は残したまま、
+ * 立て直す手だけを与えている
+ */
+export const RESETTLE_COST = 110;
+export const RESETTLE_TAX_BASE_GAIN = 6;
+export const RESETTLE_SENATE_LOSS = 8;
 
 /*
  * 元老院の機嫌を取る手は3つ。**差し出すものをそれぞれ変える。**
@@ -894,6 +933,15 @@ export const ASSASSINATION_MAX_BONUS = 0.06;
 /** 成人した嫡子が継いだときの正統性低下 */
 export const SUCCESSION_LEGITIMACY_LOSS_HEIR = 3;
 /** 継承危機（継承者がいない）ときの正統性低下 */
+/**
+ * 子がおらず兄弟・傍系が継いだときの正統性の低下。
+ *
+ * 嫡子の継承（小）と王朝の断絶（大）の中間に置く。
+ * 血は続いているので断絶ほどではないが、直系ではないぶん
+ * 嫡子の継承よりは揺れる
+ */
+export const SUCCESSION_LEGITIMACY_LOSS_SIBLING = 8;
+
 export const SUCCESSION_LEGITIMACY_LOSS_CRISIS = 18;
 /** 継承危機が簒奪者確率を上げている年数。毎ターン1減って自然に消える */
 export const SUCCESSION_CRISIS_DURATION = 5;
@@ -1077,6 +1125,32 @@ export const PERSIA_INTERVENTION_PROBABILITY = 0.4;
  * 史実の西ローマとペルシアにはほとんど直接の往来が無かったので低く置く。
  * 東ローマとの関係（60）より冷たいところから始める
  */
+/**
+ * サーサーン朝本土への遠征。**ローマを統一したあとにだけ選べる。**
+ *
+ * 都クテシフォンはこの地図では属州ではないので落とせない。
+ * 代わりに本土を突いてその戦力そのものを削る形にしてある。
+ * 削り切ればペルシアは介入を取り下げ、東方戦線が閉じる
+ */
+export const PERSIA_INVADE_ARMY_SHARE = 0.8;
+/** 遠征そのものの損耗。境外の遠征なので属州の防衛より重い */
+export const PERSIA_INVADE_ATTRITION_RATE = 0.12;
+/**
+ * 本土を守りに出るペルシアの戦力の割合。
+ *
+ * 全戦力を DEFENSE_MULTIPLIER 込みで立てていたときは、野戦軍320で
+ * 挑んでも勝率16%、屈服させるのに平均17.6回の遠征が要り、
+ * 事実上「選べない行動」になっていた。蛮族の郷里への遠征が
+ * その勢力の戦力の半分を守りに立てるのと同じ考え方で share を置く
+ */
+export const PERSIA_HOME_DEFENSE_SHARE = 0.72;
+/** 勝ったときに削るペルシアの戦力の割合 */
+export const PERSIA_INVADE_STRENGTH_LOSS = 0.35;
+/** これを下回るとペルシアは介入を取り下げる */
+export const PERSIA_SUBDUED_THRESHOLD = 30;
+/** 屈服させたときに得る正統性 */
+export const PERSIA_SUBDUED_LEGITIMACY_GAIN = 12;
+
 export const PERSIA_INITIAL_RELATIONS = 20;
 export const MIN_PERSIA_RELATIONS = 0;
 export const MAX_PERSIA_RELATIONS = 100;
