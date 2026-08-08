@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { loadAccountActivity } from "@/lib/accountActivity";
+import { loadWatchedActivity } from "@/lib/accountActivity";
 import { POINTS } from "@/lib/theory";
 import type { TheoryScore } from "@/lib/types";
 import styles from "./watch.module.css";
@@ -57,7 +57,7 @@ function Scorecard({ score }: { score: TheoryScore }) {
 }
 
 export default async function WatchPage() {
-  const activity = await loadAccountActivity();
+  const { accounts, scores } = await loadWatchedActivity();
   const hasToken = !!process.env.X_BEARER_TOKEN;
   const hasApiKey = !!process.env.ANTHROPIC_API_KEY;
 
@@ -85,22 +85,25 @@ export default async function WatchPage() {
         値動きが本人都合(利確・撤退など)で急変するリスクがあるため、投資判断は必ずご自身の責任で行ってください。
       </p>
 
-      {activity.map((account) => (
+      <section className={styles.account}>
+        <h2>銘柄別スコア</h2>
+        {scores.length > 0 ? (
+          <ul className={styles.scorecards}>
+            {scores.map((score) => (
+              <Scorecard key={score.ticker} score={score} />
+            ))}
+          </ul>
+        ) : (
+          <p className={styles.empty}>スコア対象となる銘柄への言及は見つかりませんでした。</p>
+        )}
+      </section>
+
+      {accounts.map((account) => (
         <section key={account.handle} className={styles.account}>
           <h2>
             {account.label ?? account.handle}
             <span className={styles.handle}> @{account.handle}</span>
           </h2>
-
-          {account.scores.length > 0 ? (
-            <ul className={styles.scorecards}>
-              {account.scores.map((score) => (
-                <Scorecard key={score.ticker} score={score} />
-              ))}
-            </ul>
-          ) : (
-            <p className={styles.empty}>スコア対象となる銘柄への言及は見つかりませんでした。</p>
-          )}
 
           <details className={styles.postsToggle}>
             <summary>取得した投稿({account.posts.length}件)</summary>

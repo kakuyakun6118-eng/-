@@ -100,6 +100,66 @@
   flex-wrap: wrap;
 }
 
+.theory {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  background: rgba(128, 128, 128, 0.08);
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
+.theoryLink {
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.theoryBadge {
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.theoryBadge.strong {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.theoryBadge.watch {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.theoryBadge.neutral {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.theoryBadge.caution {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.theoryTotal {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+}
+
+.caution {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  background: #fff3cd;
+  color: #664d03;
+  border: 1px solid #ffe69c;
+  border-radius: 6px;
+  padding: 0.45rem 0.65rem;
+  margin-bottom: 0.5rem;
+}
+
 .reasoning {
   font-size: 0.9rem;
   line-height: 1.5;

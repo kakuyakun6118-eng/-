@@ -1,32 +1,20 @@
 import Link from "next/link";
-import { getWatchlist } from "@/lib/watchlist";
-import { getQuote } from "@/lib/prices";
-import { getHeadlines } from "@/lib/news";
-import { judgeImpact } from "@/lib/llm";
-import { buildRecommendation, rankRecommendations } from "@/lib/scoring";
-import type { Recommendation } from "@/lib/types";
+import { loadRecommendations } from "@/lib/recommendations";
 import styles from "./page.module.css";
 
 export const dynamic = "force-dynamic";
-
-async function loadRecommendations(): Promise<Recommendation[]> {
-  const watchlist = await getWatchlist();
-  const recs = await Promise.all(
-    watchlist.map(async (entry) => {
-      const quote = await getQuote(entry.ticker);
-      if (!quote) return null;
-      const headlines = await getHeadlines(entry.ticker, entry.name);
-      const impact = await judgeImpact(entry.ticker, entry.name, headlines);
-      return buildRecommendation(entry.ticker, entry.name, quote, impact);
-    })
-  );
-  return rankRecommendations(recs.filter((r): r is Recommendation => r !== null));
-}
 
 const VERDICT_LABEL: Record<string, string> = {
   positive: "追い風あり",
   negative: "逆風あり",
   neutral: "中立",
+};
+
+const THEORY_LABEL: Record<string, string> = {
+  strong: "有力",
+  watch: "注目",
+  neutral: "中立",
+  caution: "警戒",
 };
 
 export default async function Home() {
@@ -36,7 +24,7 @@ export default async function Home() {
   return (
     <main className={styles.main}>
       <header className={styles.header}>
-        <h1>今日のおすすめ銘柄(ウォッチリスト)</h1>
+        <h1>今日のおすすめ銘柄</h1>
         <nav className={styles.nav}>
           <Link href="/watch">注目アカウントの投稿 →</Link>
           <Link href="/holdings">保有株の売り時判定へ →</Link>
@@ -51,6 +39,7 @@ export default async function Home() {
 
       <p className={styles.disclaimer}>
         本アプリの表示はニュース要約とルールベース・LLMによる参考情報であり、投資助言ではありません。売買判断はご自身の責任で行ってください。
+        監視アカウントの言及があった銘柄は、その紫蘇の葉理論スコアも判定に含めています。
       </p>
 
       <ul className={styles.list}>
@@ -61,12 +50,33 @@ export default async function Home() {
               <span className={styles.name}>{rec.name}</span>
               <span className={`${styles.badge} ${styles[rec.verdict]}`}>{VERDICT_LABEL[rec.verdict]}</span>
             </div>
+
             <div className={styles.metrics}>
               <span>現在値 {rec.quote.price.toLocaleString()} 円</span>
               <span>前日比 {rec.quote.changePercent.toFixed(2)}%</span>
               <span>総合スコア {rec.combinedScore}</span>
             </div>
+
+            {rec.theory && (
+              <p className={styles.theory}>
+                <Link href="/watch" className={styles.theoryLink}>
+                  監視アカウントが言及
+                </Link>
+                <span className={`${styles.theoryBadge} ${styles[rec.theory.verdict]}`}>{THEORY_LABEL[rec.theory.verdict]}</span>
+                <span className={styles.theoryTotal}>
+                  紫蘇の葉理論 {rec.theory.total > 0 ? `+${rec.theory.total}` : rec.theory.total}点
+                </span>
+              </p>
+            )}
+
+            {rec.cautions.map((caution) => (
+              <p key={caution} className={styles.caution}>
+                ⚠ {caution}
+              </p>
+            ))}
+
             <p className={styles.reasoning}>{rec.impact.reasoning}</p>
+
             {rec.impact.basedOn.length > 0 && (
               <ul className={styles.headlines}>
                 {rec.impact.basedOn.slice(0, 3).map((h) => (

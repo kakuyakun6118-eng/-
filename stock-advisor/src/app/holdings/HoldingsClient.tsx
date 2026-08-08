@@ -119,6 +119,11 @@ export default function HoldingsClient({ initialHoldings }: { initialHoldings: H
                     <div className={styles.metrics}>
                       <span>現在値 {verdict.quote.price.toLocaleString()} 円</span>
                       {verdict.unrealizedPnLPercent !== null && <span>含み損益 {verdict.unrealizedPnLPercent.toFixed(1)}%</span>}
+                      {verdict.theory && (
+                        <span className={styles.theoryTag}>
+                          監視アカウント言及 / 紫蘇の葉理論 {verdict.theory.total > 0 ? `+${verdict.theory.total}` : verdict.theory.total}点
+                        </span>
+                      )}
                     </div>
                   )}
                   <p className={styles.reasoning}>{verdict.reasoning}</p>

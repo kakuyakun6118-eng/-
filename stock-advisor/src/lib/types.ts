@@ -41,8 +41,12 @@ export interface Recommendation {
   name?: string;
   quote: PriceQuote;
   impact: ImpactJudgment;
+  /** 紫蘇の葉理論 scorecard, when a watched account has mentioned this ticker. */
+  theory: TheoryScore | null;
   combinedScore: number;
   verdict: ImpactVerdict;
+  /** Warnings surfaced alongside the score rather than folded into it. */
+  cautions: string[];
 }
 
 /** 紫蘇の葉理論 verdict bands, derived from the scorecard total (-30..70). */
@@ -88,6 +92,7 @@ export interface HoldingVerdict {
   quote: PriceQuote | null;
   unrealizedPnLPercent: number | null;
   impact: ImpactJudgment | null;
+  theory: TheoryScore | null;
   action: HoldingAction;
   reasoning: string;
 }

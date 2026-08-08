@@ -176,6 +176,20 @@ export async function assessContent(ticker: string, posts: SocialPost[]): Promis
   }
 }
 
+/** The scorecard's bounds: -30 (risk only) to +70 (surge plus catalyst, no risk). */
+export const THEORY_MAX = POINTS.buzzSurge + POINTS.positiveCatalyst;
+export const THEORY_MIN = POINTS.risk;
+
+/**
+ * Rescale a scorecard total onto the -100..100 range the other signals use,
+ * so it can be blended with the news impact score. The two halves are scaled
+ * separately because the scorecard is asymmetric (-30 down, +70 up).
+ */
+export function normalizeTheoryTotal(total: number): number {
+  if (total < 0) return Math.max(-100, (total / Math.abs(THEORY_MIN)) * 100);
+  return Math.min(100, (total / THEORY_MAX) * 100);
+}
+
 /** Map the scorecard total onto a verdict band. Possible totals are -30, 0, 10, 30, 40 and 70. */
 export function verdictFor(total: number): TheoryVerdict {
   if (total >= 40) return "strong";

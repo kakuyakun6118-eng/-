@@ -160,6 +160,13 @@
   margin-bottom: 0.4rem;
 }
 
+.theoryTag {
+  background: rgba(128, 128, 128, 0.12);
+  border-radius: 999px;
+  padding: 0.1rem 0.55rem;
+  font-size: 0.78rem;
+}
+
 .reasoning {
   font-size: 0.9rem;
   line-height: 1.5;
