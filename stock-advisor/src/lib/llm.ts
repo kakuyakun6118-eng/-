@@ -1,6 +1,8 @@
+import { createHash } from "crypto";
 import Anthropic from "@anthropic-ai/sdk";
 import type { ImpactJudgment, ImpactVerdict, NewsItem } from "./types";
 import { THEORY_SYSTEM_PROMPT } from "./theoryPrompt";
+import { cacheGet, cacheSet, TTL } from "./cache";
 
 const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-5";
 
@@ -44,6 +46,13 @@ export async function judgeImpact(ticker: string, name: string | undefined, head
   const headlineList = headlines.map((h, i) => `${i + 1}. ${h.title}`).join("\n");
   const userPrompt = `銘柄: ${name ?? ticker}(${ticker})\n\n直近の見出し:\n${headlineList}\n\nこれらの見出しに基づき、report_impact ツールで判定結果を報告してください。`;
 
+  // Key on the exact headlines so new news re-judges, but a refresh doesn't.
+  const digest = createHash("sha256").update(`${MODEL}\n${headlineList}`).digest("hex").slice(0, 16);
+  const key = `judgment:${ticker}:${digest}`;
+
+  const hit = cacheGet<ImpactJudgment>(key);
+  if (hit) return hit;
+
   try {
     const resp = await getClient().messages.create({
       model: MODEL,
@@ -60,7 +69,10 @@ export async function judgeImpact(ticker: string, name: string | undefined, head
     }
     const input = toolUse.input as { score: number; verdict: ImpactVerdict; reasoning: string };
     const score = Math.max(-100, Math.min(100, Number(input.score) || 0));
-    return { ticker, score, verdict: input.verdict, reasoning: input.reasoning, basedOn: headlines };
+    const judgment: ImpactJudgment = { ticker, score, verdict: input.verdict, reasoning: input.reasoning, basedOn: headlines };
+    // Only successful judgments are cached — a transient API error must not stick for the full TTL.
+    cacheSet(key, judgment, TTL.judgment);
+    return judgment;
   } catch (err) {
     console.error(`[llm] impact judgment failed for ${ticker}`, err);
     return neutralJudgment(ticker, headlines, "LLM呼び出しでエラーが発生したため中立と判定しました。");

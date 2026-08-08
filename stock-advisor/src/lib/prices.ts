@@ -1,26 +1,29 @@
 import YahooFinance from "yahoo-finance2";
 import type { PriceQuote } from "./types";
+import { cached, TTL } from "./cache";
 
 const yahooFinance = new YahooFinance();
 
 export async function getQuote(ticker: string): Promise<PriceQuote | null> {
-  try {
-    const q = await yahooFinance.quote(ticker);
-    if (!q || q.regularMarketPrice == null) return null;
-    return {
-      ticker,
-      price: q.regularMarketPrice,
-      previousClose: q.regularMarketPreviousClose ?? q.regularMarketPrice,
-      changePercent: q.regularMarketChangePercent ?? 0,
-      volume: q.regularMarketVolume ?? 0,
-      avgVolume10d: q.averageDailyVolume10Day ?? null,
-      currency: q.currency ?? "JPY",
-      marketTime: q.regularMarketTime ? new Date(q.regularMarketTime).toISOString() : null,
-    };
-  } catch (err) {
-    console.error(`[prices] failed to fetch quote for ${ticker}`, err);
-    return null;
-  }
+  return cached(`quote:${ticker}`, TTL.quote, async () => {
+    try {
+      const q = await yahooFinance.quote(ticker);
+      if (!q || q.regularMarketPrice == null) return null;
+      return {
+        ticker,
+        price: q.regularMarketPrice,
+        previousClose: q.regularMarketPreviousClose ?? q.regularMarketPrice,
+        changePercent: q.regularMarketChangePercent ?? 0,
+        volume: q.regularMarketVolume ?? 0,
+        avgVolume10d: q.averageDailyVolume10Day ?? null,
+        currency: q.currency ?? "JPY",
+        marketTime: q.regularMarketTime ? new Date(q.regularMarketTime).toISOString() : null,
+      };
+    } catch (err) {
+      console.error(`[prices] failed to fetch quote for ${ticker}`, err);
+      return null;
+    }
+  });
 }
 
 export async function getQuotes(tickers: string[]): Promise<Map<string, PriceQuote>> {

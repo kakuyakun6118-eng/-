@@ -1,5 +1,7 @@
 import { getWatchedAccounts } from "./watchedAccounts";
-import { getRecentPosts, postsToNewsItems, type SocialPost } from "./socialSource";
+import { getRecentPosts, postsToNewsItems, normalizeTicker, type SocialPost } from "./socialSource";
+import { getWatchlist } from "./watchlist";
+import { listHoldings } from "./holdingsStore";
 import { judgeImpact } from "./llm";
 import type { ImpactJudgment } from "./types";
 
@@ -16,11 +18,15 @@ export interface AccountActivity {
 }
 
 export async function loadAccountActivity(): Promise<AccountActivity[]> {
-  const accounts = await getWatchedAccounts();
+  const [accounts, watchlist, holdings] = await Promise.all([getWatchedAccounts(), getWatchlist(), listHoldings()]);
+
+  // Bare 4-digit numbers in a post only count as codes if they're in the
+  // user's own universe — otherwise dates and prices get read as tickers.
+  const knownTickers = [...watchlist.map((w) => w.ticker), ...holdings.map((h) => h.ticker)].map(normalizeTicker);
 
   return Promise.all(
     accounts.map(async (account): Promise<AccountActivity> => {
-      const posts = await getRecentPosts(account.handle);
+      const posts = await getRecentPosts(account.handle, knownTickers);
       const tickers = [...new Set(posts.flatMap((p) => p.tickers))];
 
       const mentions = await Promise.all(

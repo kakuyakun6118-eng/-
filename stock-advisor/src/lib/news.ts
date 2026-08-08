@@ -1,5 +1,6 @@
 import Parser from "rss-parser";
 import type { NewsItem } from "./types";
+import { cached, TTL } from "./cache";
 
 const parser = new Parser();
 
@@ -39,5 +40,5 @@ const defaultSource: NewsSource = new GoogleNewsSource();
 
 export async function getHeadlines(ticker: string, name?: string): Promise<NewsItem[]> {
   const query = name ? `${name} 株価` : `${ticker} 株価`;
-  return defaultSource.fetchHeadlines(ticker, query);
+  return cached(`news:${ticker}:${query}`, TTL.news, () => defaultSource.fetchHeadlines(ticker, query));
 }
