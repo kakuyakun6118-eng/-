@@ -206,3 +206,52 @@ describe("combineScore", () => {
     expect(score.verdict).toBe("neutral");
   });
 });
+
+describe("verdictFor — a standing risk flag caps the band", () => {
+  it("never calls a risky name 有力, however high the total", () => {
+    expect(verdictFor(70, true)).toBe("watch");
+    expect(verdictFor(40, true)).toBe("watch");
+  });
+
+  it("leaves clean names unaffected", () => {
+    expect(verdictFor(70, false)).toBe("strong");
+    expect(verdictFor(40, false)).toBe("strong");
+  });
+
+  it("drops a low-scoring risky name to 中立", () => {
+    expect(verdictFor(0, true)).toBe("neutral");
+  });
+
+  it("still reports a negative total as 警戒", () => {
+    expect(verdictFor(-30, true)).toBe("caution");
+  });
+});
+
+describe("combineScore — the 40-point ambiguity", () => {
+  const surge: BuzzSurge = {
+    applies: true,
+    points: POINTS.buzzSurge,
+    mentions24h: 5,
+    baselineDaily: 1,
+    ratio: 5,
+    baselineSource: "window",
+    detail: "急増",
+  };
+  const noBuzz = computeBuzzSurge(TICKER, [], NOW);
+  const base = { positiveCatalyst: false, catalystType: null, riskFlag: false, riskType: null, reasoning: "" };
+
+  it("separates a hyped 40 from a clean 40", () => {
+    const hyped = combineScore(TICKER, surge, { ...base, positiveCatalyst: true, catalystType: "好決算", riskFlag: true, riskType: "イナゴ集め" });
+    const clean = combineScore(TICKER, noBuzz, { ...base, positiveCatalyst: true, catalystType: "好決算" });
+
+    expect(hyped.total).toBe(40);
+    expect(clean.total).toBe(40);
+    // Same score, different verdict — which was the point of the fix.
+    expect(hyped.verdict).toBe("watch");
+    expect(clean.verdict).toBe("strong");
+  });
+
+  it("keeps the perfect scorecard at 有力", () => {
+    expect(combineScore(TICKER, surge, { ...base, positiveCatalyst: true, catalystType: "好決算" }).verdict).toBe("strong");
+  });
+});

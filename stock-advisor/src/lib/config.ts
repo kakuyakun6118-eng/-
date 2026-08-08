@@ -32,3 +32,10 @@ export const X_POST_WINDOW = intFromEnv("X_POST_WINDOW", 25, 5, 100);
 
 /** How long a fetched timeline is reused before hitting X again. */
 export const X_FETCH_TTL_MS = intFromEnv("X_FETCH_TTL_MINUTES", 60, 1, 24 * 60) * 60_000;
+
+/**
+ * How many tickers are enriched at once. Each one can mean a quote, a news
+ * fetch and an LLM call, so an unbounded fan-out over a large watchlist would
+ * hit provider rate limits and spike the bill.
+ */
+export const ENRICH_CONCURRENCY = intFromEnv("ENRICH_CONCURRENCY", 4, 1, 32);

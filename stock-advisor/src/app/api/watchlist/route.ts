@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { addWatchlistEntry, getWatchlist, removeWatchlistEntry } from "@/lib/watchlist";
+import { addWatchlistEntry, getWatchlist, removeWatchlistEntry, renameWatchlistEntry } from "@/lib/watchlist";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +15,14 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "追加に失敗しました" }, { status: 400 });
   }
+}
+
+export async function PUT(req: NextRequest) {
+  const { ticker, name } = await req.json();
+  if (!ticker) return NextResponse.json({ error: "ticker は必須です" }, { status: 400 });
+  const updated = await renameWatchlistEntry(String(ticker), String(name ?? ""));
+  if (!updated) return NextResponse.json({ error: "not found" }, { status: 404 });
+  return NextResponse.json(updated);
 }
 
 export async function DELETE(req: NextRequest) {

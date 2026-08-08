@@ -1,4 +1,4 @@
-import { dataFile, readList, writeList } from "./jsonStore";
+import { dataFile, readList, updateList } from "./jsonStore";
 
 export interface WatchedAccount {
   handle: string;
@@ -27,20 +27,19 @@ export async function addWatchedAccount(handleInput: string, label?: string): Pr
   const handle = normalizeHandleInput(handleInput);
   if (!handle) throw new Error("Xのユーザー名を入力してください(例: @aleabitoreddit)");
 
-  const accounts = await getWatchedAccounts();
-  if (accounts.some((a) => a.handle.toLowerCase() === handle.toLowerCase())) {
-    throw new Error(`@${handle} は既に登録されています`);
-  }
-
   const account: WatchedAccount = { handle, ...(label?.trim() ? { label: label.trim() } : {}) };
-  await writeList(WATCHED_ACCOUNTS_FILE, [...accounts, account]);
-  return account;
+
+  return updateList<WatchedAccount, WatchedAccount>(WATCHED_ACCOUNTS_FILE, (accounts) => {
+    if (accounts.some((a) => a.handle.toLowerCase() === handle.toLowerCase())) {
+      throw new Error(`@${handle} は既に登録されています`);
+    }
+    return { items: [...accounts, account], result: account };
+  });
 }
 
 export async function removeWatchedAccount(handle: string): Promise<boolean> {
-  const accounts = await getWatchedAccounts();
-  const next = accounts.filter((a) => a.handle.toLowerCase() !== handle.toLowerCase());
-  if (next.length === accounts.length) return false;
-  await writeList(WATCHED_ACCOUNTS_FILE, next);
-  return true;
+  return updateList<WatchedAccount, boolean>(WATCHED_ACCOUNTS_FILE, (accounts) => {
+    const items = accounts.filter((a) => a.handle.toLowerCase() !== handle.toLowerCase());
+    return { items, result: items.length !== accounts.length };
+  });
 }

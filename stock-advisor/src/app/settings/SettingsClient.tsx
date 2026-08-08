@@ -18,6 +18,8 @@ export default function SettingsClient({ initialWatchlist, initialAccounts }: Pr
   const [tickerForm, setTickerForm] = useState({ ticker: "", name: "" });
   const [accountForm, setAccountForm] = useState({ handle: "", label: "" });
   const [tickerError, setTickerError] = useState<string | null>(null);
+  const [editingTicker, setEditingTicker] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
   const [accountError, setAccountError] = useState<string | null>(null);
 
   async function addTicker(e: FormEvent) {
@@ -35,6 +37,19 @@ export default function SettingsClient({ initialWatchlist, initialAccounts }: Pr
     }
     setWatchlist([...watchlist, body]);
     setTickerForm({ ticker: "", name: "" });
+  }
+
+  async function saveName(ticker: string) {
+    const res = await fetch("/api/watchlist", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ticker, name: editName }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setWatchlist(watchlist.map((w) => (w.ticker === ticker ? updated : w)));
+    }
+    setEditingTicker(null);
   }
 
   async function removeTicker(ticker: string) {
@@ -104,7 +119,37 @@ export default function SettingsClient({ initialWatchlist, initialAccounts }: Pr
           {watchlist.map((w) => (
             <li key={w.ticker} className={styles.row}>
               <span className={styles.code}>{w.ticker}</span>
-              <span className={styles.label}>{w.name ?? <em className={styles.unnamed}>(名称未設定)</em>}</span>
+              {editingTicker === w.ticker ? (
+                <>
+                  <input
+                    aria-label="銘柄名"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && saveName(w.ticker)}
+                    className={styles.inlineInput}
+                    autoFocus
+                  />
+                  <button onClick={() => saveName(w.ticker)} className={styles.saveButton}>
+                    保存
+                  </button>
+                  <button onClick={() => setEditingTicker(null)} className={styles.cancelButton}>
+                    取消
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span className={styles.label}>{w.name ?? <em className={styles.unnamed}>(名称未設定)</em>}</span>
+                  <button
+                    onClick={() => {
+                      setEditingTicker(w.ticker);
+                      setEditName(w.name ?? "");
+                    }}
+                    className={styles.editButton}
+                  >
+                    名称変更
+                  </button>
+                </>
+              )}
               <button onClick={() => removeTicker(w.ticker)} className={styles.removeButton}>
                 削除
               </button>

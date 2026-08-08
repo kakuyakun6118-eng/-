@@ -213,12 +213,20 @@ export function normalizeTheoryTotal(total: number): number {
   return Math.min(100, (total / THEORY_MAX) * 100);
 }
 
-/** Map the scorecard total onto a verdict band. Possible totals are -30, 0, 10, 30, 40 and 70. */
-export function verdictFor(total: number): TheoryVerdict {
+/**
+ * Map the scorecard onto a verdict band.
+ *
+ * The total alone is ambiguous: "surge + catalyst - risk" and "catalyst only"
+ * both come to 40, but the first is a hyped name and the second is a quiet one
+ * with real news. So a standing risk flag caps the verdict at 注目 — nothing
+ * carrying 煽り, 公募増資 or 不祥事 is ever presented as 有力.
+ */
+export function verdictFor(total: number, riskApplies = false): TheoryVerdict {
+  if (total < 0) return "caution";
+  if (riskApplies) return total >= 10 ? "watch" : "neutral";
   if (total >= 40) return "strong";
   if (total >= 10) return "watch";
-  if (total >= 0) return "neutral";
-  return "caution";
+  return "neutral";
 }
 
 /** Combine rule 1 (counted) with rules 2 and 3 (judged) into the final scorecard. */
@@ -241,7 +249,7 @@ export function combineScore(ticker: string, buzz: BuzzSurge, content: ContentAs
     catalyst,
     risk,
     total,
-    verdict: verdictFor(total),
+    verdict: verdictFor(total, risk.applies),
     reasoning: [buzz.detail, content.reasoning].filter(Boolean).join(" "),
   };
 }

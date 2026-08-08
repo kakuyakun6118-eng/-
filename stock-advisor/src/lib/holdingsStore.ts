@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { dataFile, readList, writeList } from "./jsonStore";
+import { dataFile, readList, updateList } from "./jsonStore";
 import type { Holding } from "./types";
 
 const HOLDINGS_FILE = dataFile("holdings.json");
@@ -9,25 +9,27 @@ export async function listHoldings(): Promise<Holding[]> {
 }
 
 export async function addHolding(input: Omit<Holding, "id">): Promise<Holding> {
-  const holdings = await listHoldings();
   const holding: Holding = { id: randomUUID(), ...input };
-  await writeList(HOLDINGS_FILE, [...holdings, holding]);
-  return holding;
+  return updateList<Holding, Holding>(HOLDINGS_FILE, (holdings) => ({
+    items: [...holdings, holding],
+    result: holding,
+  }));
 }
 
 export async function updateHolding(id: string, input: Partial<Omit<Holding, "id">>): Promise<Holding | null> {
-  const holdings = await listHoldings();
-  const idx = holdings.findIndex((h) => h.id === id);
-  if (idx === -1) return null;
-  holdings[idx] = { ...holdings[idx], ...input };
-  await writeList(HOLDINGS_FILE, holdings);
-  return holdings[idx];
+  return updateList<Holding, Holding | null>(HOLDINGS_FILE, (holdings) => {
+    const idx = holdings.findIndex((h) => h.id === id);
+    if (idx === -1) return { items: holdings, result: null };
+    const updated = { ...holdings[idx], ...input };
+    const items = [...holdings];
+    items[idx] = updated;
+    return { items, result: updated };
+  });
 }
 
 export async function deleteHolding(id: string): Promise<boolean> {
-  const holdings = await listHoldings();
-  const next = holdings.filter((h) => h.id !== id);
-  if (next.length === holdings.length) return false;
-  await writeList(HOLDINGS_FILE, next);
-  return true;
+  return updateList<Holding, boolean>(HOLDINGS_FILE, (holdings) => {
+    const items = holdings.filter((h) => h.id !== id);
+    return { items, result: items.length !== holdings.length };
+  });
 }

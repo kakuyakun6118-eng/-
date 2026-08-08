@@ -4,7 +4,8 @@ import { getWatchlist } from "./watchlist";
 import { listHoldings } from "./holdingsStore";
 import { scoreTicker } from "./theory";
 import { historicalBaselineDaily, jstDateKey, loadMentionHistory } from "./history";
-import { X_POST_WINDOW } from "./config";
+import { ENRICH_CONCURRENCY, X_POST_WINDOW } from "./config";
+import { mapWithConcurrency } from "./async";
 import type { TheoryScore } from "./types";
 
 export interface AccountPosts {
@@ -46,8 +47,8 @@ export async function loadWatchedActivity(): Promise<WatchedActivity> {
   const history = await loadMentionHistory();
   const today = jstDateKey(now);
 
-  const scores = await Promise.all(
-    tickers.map((ticker) => scoreTicker(ticker, allPosts, now, historicalBaselineDaily(ticker, history, today)))
+  const scores = await mapWithConcurrency(tickers, ENRICH_CONCURRENCY, (ticker) =>
+    scoreTicker(ticker, allPosts, now, historicalBaselineDaily(ticker, history, today))
   );
   scores.sort((a, b) => b.total - a.total);
 

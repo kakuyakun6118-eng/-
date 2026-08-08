@@ -126,26 +126,49 @@ export async function recordDaily(scores: TheoryScore[], prices: Map<string, num
   return { date, tickersRecorded: scores.length, snapshots };
 }
 
-export interface SnapshotOutcome extends Snapshot {
-  currentPrice: number | null;
-  /** Percent change from the price at call time to now; null when either price is missing. */
-  returnPercent: number | null;
-  daysElapsed: number;
-}
+/**
+ * Fixed holding periods, in trading sessions.
+ *
+ * Comparing every call against today's price mixes a one-day-old judgment with
+ * a three-month-old one in the same average, which says little about whether
+ * the scorecard works. Each call is instead measured over the same horizons.
+ */
+export const HORIZONS = [1, 5, 20] as const;
+export type Horizon = (typeof HORIZONS)[number];
 
-export function buildOutcome(snapshot: Snapshot, currentPrice: number | null, now = new Date()): SnapshotOutcome {
-  const returnPercent =
-    snapshot.price != null && snapshot.price > 0 && currentPrice != null ? ((currentPrice - snapshot.price) / snapshot.price) * 100 : null;
-  const daysElapsed = Math.max(0, Math.floor((now.getTime() - new Date(snapshot.recordedAt).getTime()) / (24 * 60 * 60 * 1000)));
-  return { ...snapshot, currentPrice, returnPercent, daysElapsed };
+export const HORIZON_LABEL: Record<Horizon, string> = {
+  1: "翌営業日",
+  5: "5営業日後",
+  20: "20営業日後",
+};
+
+export interface SnapshotOutcome extends Snapshot {
+  /** Adjusted close at call time — the basis for every return below. */
+  basePrice: number | null;
+  currentPrice: number | null;
+  /** Return to date. Null until both ends are known. */
+  currentReturnPercent: number | null;
+  /** Return at each fixed horizon; null while the horizon hasn't elapsed yet. */
+  horizonReturns: Record<Horizon, number | null>;
+  daysElapsed: number;
+  /** False when adjusted prices were unavailable and nothing could be measured. */
+  measured: boolean;
 }
 
 export interface VerdictStats {
   verdict: TheoryVerdict;
   count: number;
-  /** Share of calls that went up, among those with a measurable return. */
-  hitRate: number | null;
-  averageReturnPercent: number | null;
+  /** Per-horizon results, so bands are compared over equal holding periods. */
+  byHorizon: Record<Horizon, { measured: number; hitRate: number | null; averageReturnPercent: number | null }>;
+}
+
+function summarize(values: number[]): { measured: number; hitRate: number | null; averageReturnPercent: number | null } {
+  if (values.length === 0) return { measured: 0, hitRate: null, averageReturnPercent: null };
+  return {
+    measured: values.length,
+    hitRate: values.filter((v) => v > 0).length / values.length,
+    averageReturnPercent: values.reduce((s, v) => s + v, 0) / values.length,
+  };
 }
 
 /** Group past calls by verdict band so the scorecard can be checked against reality. */
@@ -153,12 +176,9 @@ export function summarizeByVerdict(outcomes: SnapshotOutcome[]): VerdictStats[] 
   const bands: TheoryVerdict[] = ["strong", "watch", "neutral", "caution"];
   return bands.map((verdict) => {
     const rows = outcomes.filter((o) => o.theoryVerdict === verdict);
-    const measured = rows.filter((o) => o.returnPercent !== null);
-    return {
-      verdict,
-      count: rows.length,
-      hitRate: measured.length > 0 ? measured.filter((o) => o.returnPercent! > 0).length / measured.length : null,
-      averageReturnPercent: measured.length > 0 ? measured.reduce((s, o) => s + o.returnPercent!, 0) / measured.length : null,
-    };
+    const byHorizon = Object.fromEntries(
+      HORIZONS.map((h) => [h, summarize(rows.map((o) => o.horizonReturns[h]).filter((v): v is number => v !== null))])
+    ) as VerdictStats["byHorizon"];
+    return { verdict, count: rows.length, byHorizon };
   });
 }

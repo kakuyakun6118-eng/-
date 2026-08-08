@@ -103,6 +103,37 @@
   font-variant-numeric: tabular-nums;
 }
 
+.groupHead {
+  text-align: center;
+  border-left: 1px solid rgba(128, 128, 128, 0.25);
+}
+
+.subHead {
+  text-align: right;
+  font-weight: 500;
+  opacity: 0.6;
+}
+
+.sample {
+  opacity: 0.55;
+  font-size: 0.75rem;
+}
+
+.tableNote {
+  font-size: 0.76rem;
+  opacity: 0.6;
+  margin-top: 0.5rem;
+}
+
+.unmeasured {
+  margin-left: 0.4rem;
+  background: rgba(128, 128, 128, 0.15);
+  border-radius: 999px;
+  padding: 0.05rem 0.45rem;
+  font-size: 0.7rem;
+  opacity: 0.8;
+}
+
 .negative {
   color: #b91c1c;
 }

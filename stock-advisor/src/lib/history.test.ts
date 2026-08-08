@@ -4,13 +4,14 @@ import {
   historicalBaselineDaily,
   mergeMentionCounts,
   mergeSnapshots,
-  buildOutcome,
   summarizeByVerdict,
+  HORIZONS,
   toSnapshot,
   MIN_HISTORY_DAYS,
   type MentionHistory,
   type Snapshot,
   type SnapshotOutcome,
+  type Horizon,
 } from "./history";
 import type { TheoryScore } from "./types";
 
@@ -140,70 +141,72 @@ describe("toSnapshot", () => {
   });
 });
 
-describe("buildOutcome", () => {
-  const now = new Date("2026-08-18T00:00:00Z");
+function outcome(overrides: Partial<SnapshotOutcome> = {}): SnapshotOutcome {
+  const horizons = Object.fromEntries(HORIZONS.map((h) => [h, null])) as Record<Horizon, number | null>;
+  return {
+    ...snap(),
+    basePrice: 100,
+    currentPrice: 100,
+    currentReturnPercent: 0,
+    horizonReturns: horizons,
+    daysElapsed: 30,
+    measured: true,
+    ...overrides,
+  };
+}
 
-  it("computes the return since the call", () => {
-    expect(buildOutcome(snap({ price: 3000 }), 3300, now).returnPercent).toBeCloseTo(10);
-  });
-
-  it("reports a loss as a negative return", () => {
-    expect(buildOutcome(snap({ price: 3000 }), 2700, now).returnPercent).toBeCloseTo(-10);
-  });
-
-  it("counts the days elapsed", () => {
-    expect(buildOutcome(snap(), 3000, now).daysElapsed).toBe(10);
-  });
-
-  it("returns null when the price at call time is unknown", () => {
-    expect(buildOutcome(snap({ price: null }), 3000, now).returnPercent).toBeNull();
-  });
-
-  it("returns null when the current price is unknown", () => {
-    expect(buildOutcome(snap(), null, now).returnPercent).toBeNull();
-  });
-
-  it("avoids dividing by a zero baseline price", () => {
-    expect(buildOutcome(snap({ price: 0 }), 3000, now).returnPercent).toBeNull();
-  });
-});
+function withReturns(verdict: SnapshotOutcome["theoryVerdict"], returns: Partial<Record<Horizon, number>>, ticker = "A"): SnapshotOutcome {
+  const horizons = Object.fromEntries(HORIZONS.map((h) => [h, returns[h] ?? null])) as Record<Horizon, number | null>;
+  return outcome({ ticker, theoryVerdict: verdict, horizonReturns: horizons });
+}
 
 describe("summarizeByVerdict", () => {
-  const now = new Date("2026-08-18T00:00:00Z");
-  const outcomes: SnapshotOutcome[] = [
-    buildOutcome(snap({ ticker: "A", theoryVerdict: "strong", price: 100 }), 110, now),
-    buildOutcome(snap({ ticker: "B", theoryVerdict: "strong", price: 100 }), 130, now),
-    buildOutcome(snap({ ticker: "C", theoryVerdict: "strong", price: 100 }), 90, now),
-    buildOutcome(snap({ ticker: "D", theoryVerdict: "caution", price: 100 }), 80, now),
-  ];
-
   it("reports every band, including empty ones", () => {
-    expect(summarizeByVerdict(outcomes).map((s) => s.verdict)).toEqual(["strong", "watch", "neutral", "caution"]);
+    expect(summarizeByVerdict([]).map((s) => s.verdict)).toEqual(["strong", "watch", "neutral", "caution"]);
   });
 
-  it("computes the share of calls that went up", () => {
-    const strong = summarizeByVerdict(outcomes).find((s) => s.verdict === "strong")!;
-    expect(strong.count).toBe(3);
-    expect(strong.hitRate).toBeCloseTo(2 / 3);
+  it("keeps each horizon's statistics separate", () => {
+    const rows = [
+      withReturns("strong", { 1: 2, 5: 10, 20: 30 }, "A"),
+      withReturns("strong", { 1: -1, 5: 5, 20: -10 }, "B"),
+    ];
+    const strong = summarizeByVerdict(rows).find((s) => s.verdict === "strong")!;
+    expect(strong.byHorizon[1].averageReturnPercent).toBeCloseTo(0.5);
+    expect(strong.byHorizon[5].averageReturnPercent).toBeCloseTo(7.5);
+    expect(strong.byHorizon[20].averageReturnPercent).toBeCloseTo(10);
   });
 
-  it("averages the returns within a band", () => {
-    const strong = summarizeByVerdict(outcomes).find((s) => s.verdict === "strong")!;
-    expect(strong.averageReturnPercent).toBeCloseTo((10 + 30 - 10) / 3);
+  it("computes the hit rate per horizon", () => {
+    const rows = [
+      withReturns("strong", { 1: 5, 20: -5 }, "A"),
+      withReturns("strong", { 1: 5, 20: 5 }, "B"),
+    ];
+    const strong = summarizeByVerdict(rows).find((s) => s.verdict === "strong")!;
+    expect(strong.byHorizon[1].hitRate).toBe(1);
+    expect(strong.byHorizon[20].hitRate).toBe(0.5);
   });
 
-  it("leaves stats null for a band with no calls", () => {
-    const watch = summarizeByVerdict(outcomes).find((s) => s.verdict === "watch")!;
-    expect(watch.count).toBe(0);
-    expect(watch.hitRate).toBeNull();
-    expect(watch.averageReturnPercent).toBeNull();
+  it("excludes calls whose horizon has not elapsed yet", () => {
+    // Recorded yesterday: the 1-day return exists, the 20-day one does not.
+    const rows = [withReturns("strong", { 1: 3 }, "A")];
+    const strong = summarizeByVerdict(rows).find((s) => s.verdict === "strong")!;
+    expect(strong.count).toBe(1);
+    expect(strong.byHorizon[1].measured).toBe(1);
+    expect(strong.byHorizon[20].measured).toBe(0);
+    expect(strong.byHorizon[20].hitRate).toBeNull();
   });
 
-  it("ignores calls whose return could not be measured", () => {
-    const withUnmeasured = [...outcomes, buildOutcome(snap({ ticker: "E", theoryVerdict: "caution", price: null }), null, now)];
-    const caution = summarizeByVerdict(withUnmeasured).find((s) => s.verdict === "caution")!;
-    expect(caution.count).toBe(2);
-    expect(caution.hitRate).toBe(0);
-    expect(caution.averageReturnPercent).toBeCloseTo(-20);
+  it("counts a call in its band even when nothing could be measured", () => {
+    const rows = [outcome({ theoryVerdict: "caution", measured: false })];
+    const caution = summarizeByVerdict(rows).find((s) => s.verdict === "caution")!;
+    expect(caution.count).toBe(1);
+    expect(caution.byHorizon[5].measured).toBe(0);
+  });
+
+  it("does not mix bands together", () => {
+    const rows = [withReturns("strong", { 5: 10 }, "A"), withReturns("caution", { 5: -10 }, "B")];
+    const summary = summarizeByVerdict(rows);
+    expect(summary.find((s) => s.verdict === "strong")!.byHorizon[5].averageReturnPercent).toBeCloseTo(10);
+    expect(summary.find((s) => s.verdict === "caution")!.byHorizon[5].averageReturnPercent).toBeCloseTo(-10);
   });
 });

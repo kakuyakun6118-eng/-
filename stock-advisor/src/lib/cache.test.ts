@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { cached, cacheGet, cacheSet, cacheClear, TTL } from "./cache";
+import { cached, cacheGet, cacheSet, cacheClear, cacheSize, MAX_ENTRIES, TTL } from "./cache";
 
 beforeEach(() => cacheClear());
 afterEach(() => vi.useRealTimers());
@@ -80,5 +80,30 @@ describe("cached", () => {
 describe("TTL presets", () => {
   it("caches LLM judgments longer than quotes, since they cost the most", () => {
     expect(TTL.judgment).toBeGreaterThan(TTL.quote);
+  });
+});
+
+describe("eviction", () => {
+  it("keeps the store bounded as new keys keep arriving", () => {
+    // Judgment keys are hash-based, so they accumulate without a bound.
+    for (let i = 0; i < MAX_ENTRIES + 500; i++) {
+      cacheSet(`judgment:${i}`, i, 60_000);
+    }
+    expect(cacheSize()).toBeLessThanOrEqual(MAX_ENTRIES);
+  });
+
+  it("drops expired entries before evicting live ones", () => {
+    vi.useFakeTimers();
+    cacheSet("short", 1, 1000);
+    vi.advanceTimersByTime(2000);
+    for (let i = 0; i < MAX_ENTRIES; i++) cacheSet(`k${i}`, i, 600_000);
+    expect(cacheGet("short")).toBeUndefined();
+    expect(cacheGet("k0")).toBe(0);
+  });
+
+  it("evicts the soonest-to-expire entries first", () => {
+    cacheSet("long-lived", "keep", 3_600_000);
+    for (let i = 0; i < MAX_ENTRIES + 200; i++) cacheSet(`k${i}`, i, 60_000);
+    expect(cacheGet("long-lived")).toBe("keep");
   });
 });

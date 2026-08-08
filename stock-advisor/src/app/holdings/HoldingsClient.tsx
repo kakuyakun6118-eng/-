@@ -20,6 +20,8 @@ export default function HoldingsClient({ initialHoldings }: { initialHoldings: H
   const [loadingVerdicts, setLoadingVerdicts] = useState(false);
   const [form, setForm] = useState({ ticker: "", name: "", shares: "", costBasis: "", note: "" });
   const [error, setError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ shares: "", costBasis: "" });
 
   async function refreshHoldings() {
     const res = await fetch("/api/holdings");
@@ -49,6 +51,30 @@ export default function HoldingsClient({ initialHoldings }: { initialHoldings: H
       return;
     }
     setForm({ ticker: "", name: "", shares: "", costBasis: "", note: "" });
+    setVerdicts(null);
+    await refreshHoldings();
+  }
+
+  function startEdit(h: Holding) {
+    setEditingId(h.id);
+    setEditForm({ shares: String(h.shares), costBasis: String(h.costBasis) });
+  }
+
+  async function saveEdit(id: string) {
+    const shares = Number(editForm.shares);
+    const costBasis = Number(editForm.costBasis);
+    if (!Number.isFinite(shares) || shares <= 0 || !Number.isFinite(costBasis) || costBasis <= 0) {
+      setError("株数と取得単価は正の数で入力してください");
+      return;
+    }
+    setError(null);
+    await fetch("/api/holdings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, shares, costBasis }),
+    });
+    setEditingId(null);
+    // The stored cost basis drives the verdicts, so they no longer apply.
     setVerdicts(null);
     await refreshHoldings();
   }
@@ -113,9 +139,39 @@ export default function HoldingsClient({ initialHoldings }: { initialHoldings: H
               <div className={styles.cardHeader}>
                 <span className={styles.ticker}>{h.ticker}</span>
                 <span className={styles.name}>{h.name}</span>
-                <span className={styles.shares}>
-                  {h.shares}株 @ {h.costBasis.toLocaleString()}円
-                </span>
+                {editingId === h.id ? (
+                  <span className={styles.editRow}>
+                    <input
+                      type="number"
+                      aria-label="株数"
+                      value={editForm.shares}
+                      onChange={(e) => setEditForm({ ...editForm, shares: e.target.value })}
+                      className={styles.editInput}
+                    />
+                    <span className={styles.editUnit}>株 @</span>
+                    <input
+                      type="number"
+                      aria-label="取得単価"
+                      value={editForm.costBasis}
+                      onChange={(e) => setEditForm({ ...editForm, costBasis: e.target.value })}
+                      className={styles.editInput}
+                    />
+                    <span className={styles.editUnit}>円</span>
+                    <button onClick={() => saveEdit(h.id)} className={styles.saveButton}>
+                      保存
+                    </button>
+                    <button onClick={() => setEditingId(null)} className={styles.cancelButton}>
+                      取消
+                    </button>
+                  </span>
+                ) : (
+                  <span className={styles.shares}>
+                    {h.shares}株 @ {h.costBasis.toLocaleString()}円
+                    <button onClick={() => startEdit(h)} className={styles.editButton}>
+                      編集
+                    </button>
+                  </span>
+                )}
                 {verdict && <span className={`${styles.badge} ${styles[verdict.action]}`}>{ACTION_LABEL[verdict.action]}</span>}
                 <button className={styles.deleteButton} onClick={() => handleDelete(h.id)}>
                   削除
