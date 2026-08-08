@@ -28,6 +28,7 @@ export default async function Home() {
         <nav className={styles.nav}>
           <Link href="/watch">注目アカウントの投稿 →</Link>
           <Link href="/holdings">保有株の売り時判定へ →</Link>
+          <Link href="/history">判定履歴 →</Link>
         </nav>
       </header>
 

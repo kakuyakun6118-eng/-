@@ -65,7 +65,10 @@ export default async function WatchPage() {
     <main className={styles.main}>
       <header className={styles.header}>
         <h1>注目アカウントの投稿(紫蘇の葉理論スコア)</h1>
-        <Link href="/">← 今日のおすすめへ</Link>
+        <nav className={styles.nav}>
+          <Link href="/">← 今日のおすすめへ</Link>
+          <Link href="/history">判定履歴 →</Link>
+        </nav>
       </header>
 
       {!hasToken && (

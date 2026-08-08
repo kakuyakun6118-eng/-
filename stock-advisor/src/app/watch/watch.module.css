@@ -17,6 +17,12 @@
   font-size: 1.4rem;
 }
 
+.nav {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
 .warning {
   background: #fff3cd;
   color: #664d03;

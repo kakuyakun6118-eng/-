@@ -60,6 +60,8 @@ export interface BuzzSurge {
   /** Mentions per day over the period before the last 24h; null when history is too short to judge. */
   baselineDaily: number | null;
   ratio: number | null;
+  /** Where the baseline came from: recorded daily history, or the fetched post window. */
+  baselineSource: "history" | "window" | null;
   detail: string;
 }
 

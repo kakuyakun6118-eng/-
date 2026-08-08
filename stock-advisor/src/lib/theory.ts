@@ -35,10 +35,18 @@ function mentionsOf(ticker: string, posts: SocialPost[]): SocialPost[] {
  * Rule 1: 話題性の急上昇 (+30).
  *
  * Counts the watched accounts' mentions of `ticker` in the last 24 hours and
- * compares them against their own earlier rate. This is measured from the
- * fetched post window — it is deliberately not an LLM guess.
+ * compares them against their own earlier rate. This is measured, not guessed.
+ *
+ * `historyBaselineDaily` is the long-run rate from recorded daily counts. When
+ * available it wins over the figure derived from the fetched post window, which
+ * can only reach as far back as one API call returns.
  */
-export function computeBuzzSurge(ticker: string, posts: SocialPost[], now: Date = new Date()): BuzzSurge {
+export function computeBuzzSurge(
+  ticker: string,
+  posts: SocialPost[],
+  now: Date = new Date(),
+  historyBaselineDaily: number | null = null
+): BuzzSurge {
   const nowMs = now.getTime();
   const cutoff = nowMs - DAY_MS;
 
@@ -52,22 +60,33 @@ export function computeBuzzSurge(ticker: string, posts: SocialPost[], now: Date 
     mentions24h: recent.length,
     baselineDaily: null,
     ratio: null,
+    baselineSource: null,
     detail,
   });
 
   if (posts.length === 0) return miss("投稿を取得できていないため、話題性は判定できません。");
 
-  // How far back the fetched window reaches decides whether a baseline exists.
-  const windowStart = Math.min(...posts.map((p) => new Date(p.createdAt).getTime()));
-  const baselineDays = (cutoff - windowStart) / DAY_MS;
+  let baselineDaily: number;
+  let baselineSource: "history" | "window";
 
-  if (baselineDays < MIN_BASELINE_DAYS) {
-    return miss(
-      `比較対象となる過去の投稿履歴が${MIN_BASELINE_DAYS}日分に満たないため、話題性の急上昇は判定できません(直近24時間の言及${recent.length}件)。`
-    );
+  if (historyBaselineDaily !== null) {
+    baselineDaily = historyBaselineDaily;
+    baselineSource = "history";
+  } else {
+    // How far back the fetched window reaches decides whether a baseline exists.
+    const windowStart = Math.min(...posts.map((p) => new Date(p.createdAt).getTime()));
+    const baselineDays = (cutoff - windowStart) / DAY_MS;
+
+    if (baselineDays < MIN_BASELINE_DAYS) {
+      return miss(
+        `比較対象となる過去の投稿履歴が${MIN_BASELINE_DAYS}日分に満たないため、話題性の急上昇は判定できません(直近24時間の言及${recent.length}件)。`
+      );
+    }
+    baselineDaily = older.length / baselineDays;
+    baselineSource = "window";
   }
 
-  const baselineDaily = older.length / baselineDays;
+  const sourceNote = baselineSource === "history" ? "記録済みの日次履歴" : "取得した投稿ウィンドウ";
 
   if (baselineDaily === 0) {
     const applies = recent.length >= MIN_MENTIONS_WITHOUT_BASELINE;
@@ -77,8 +96,9 @@ export function computeBuzzSurge(ticker: string, posts: SocialPost[], now: Date 
       mentions24h: recent.length,
       baselineDaily: 0,
       ratio: null,
+      baselineSource,
       detail: applies
-        ? `これまで言及のなかった銘柄が直近24時間で${recent.length}件言及されました(新規の話題)。`
+        ? `これまで言及のなかった銘柄が直近24時間で${recent.length}件言及されました(新規の話題。基準: ${sourceNote})。`
         : `過去の言及がなく、直近24時間の言及も${recent.length}件のみのため、急上昇とは判定しませんでした(${MIN_MENTIONS_WITHOUT_BASELINE}件以上で該当)。`,
     };
   }
@@ -92,7 +112,8 @@ export function computeBuzzSurge(ticker: string, posts: SocialPost[], now: Date 
     mentions24h: recent.length,
     baselineDaily,
     ratio,
-    detail: `直近24時間の言及${recent.length}件に対し、通常は1日あたり約${baselineDaily.toFixed(1)}件(${ratio.toFixed(1)}倍)。${
+    baselineSource,
+    detail: `直近24時間の言及${recent.length}件に対し、通常は1日あたり約${baselineDaily.toFixed(1)}件(${ratio.toFixed(1)}倍、基準: ${sourceNote})。${
       applies ? `${SURGE_MULTIPLIER}倍以上のため該当します。` : `${SURGE_MULTIPLIER}倍に届かないため該当しません。`
     }`,
   };
@@ -223,8 +244,13 @@ export function combineScore(ticker: string, buzz: BuzzSurge, content: ContentAs
   };
 }
 
-export async function scoreTicker(ticker: string, posts: SocialPost[], now?: Date): Promise<TheoryScore> {
-  const buzz = computeBuzzSurge(ticker, posts, now);
+export async function scoreTicker(
+  ticker: string,
+  posts: SocialPost[],
+  now?: Date,
+  historyBaselineDaily: number | null = null
+): Promise<TheoryScore> {
+  const buzz = computeBuzzSurge(ticker, posts, now, historyBaselineDaily);
   const content = await assessContent(ticker, posts);
   return combineScore(ticker, buzz, content);
 }

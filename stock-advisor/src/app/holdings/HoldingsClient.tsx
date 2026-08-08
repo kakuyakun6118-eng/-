@@ -75,6 +75,7 @@ export default function HoldingsClient({ initialHoldings }: { initialHoldings: H
         <nav className={styles.nav}>
           <Link href="/">← 今日のおすすめへ</Link>
           <Link href="/watch">注目アカウントの投稿 →</Link>
+          <Link href="/history">判定履歴 →</Link>
         </nav>
       </header>
 

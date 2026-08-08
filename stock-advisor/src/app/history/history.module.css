@@ -1,0 +1,158 @@
+.main {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.header h1 {
+  font-size: 1.4rem;
+}
+
+.nav {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.disclaimer {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  line-height: 1.6;
+  margin-bottom: 1.25rem;
+}
+
+.recordRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.75rem;
+}
+
+.recordControl {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.recordButton {
+  padding: 0.45rem 1rem;
+  border-radius: 6px;
+  border: none;
+  background: #2563eb;
+  color: white;
+  cursor: pointer;
+}
+
+.recordButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.recordMessage,
+.recordNote {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+.section {
+  margin-bottom: 2rem;
+}
+
+.section h2 {
+  font-size: 1.05rem;
+  margin-bottom: 0.75rem;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.table th,
+.table td {
+  padding: 0.45rem 0.7rem;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+  text-align: left;
+}
+
+.table th {
+  font-weight: 600;
+  opacity: 0.75;
+  font-size: 0.78rem;
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.negative {
+  color: #b91c1c;
+}
+
+.ticker {
+  font-weight: 600;
+}
+
+.name {
+  opacity: 0.7;
+  margin-left: 0.4rem;
+}
+
+.riskTag {
+  margin-left: 0.4rem;
+  background: #fee2e2;
+  color: #991b1b;
+  border-radius: 999px;
+  padding: 0.05rem 0.45rem;
+  font-size: 0.72rem;
+}
+
+.badge {
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge.strong {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badge.watch {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.badge.neutral {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.badge.caution {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.empty {
+  opacity: 0.7;
+  font-size: 0.85rem;
+}

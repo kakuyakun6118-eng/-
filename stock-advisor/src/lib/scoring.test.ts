@@ -5,7 +5,7 @@ import type { Holding, ImpactJudgment, PriceQuote, TheoryScore } from "./types";
 function theory(overrides: Partial<TheoryScore> = {}): TheoryScore {
   return {
     ticker: "7203.T",
-    buzz: { applies: false, points: 0, mentions24h: 0, baselineDaily: null, ratio: null, detail: "" },
+    buzz: { applies: false, points: 0, mentions24h: 0, baselineDaily: null, ratio: null, baselineSource: null, detail: "" },
     catalyst: { applies: false, points: 0, type: null },
     risk: { applies: false, points: 0, type: null },
     total: 0,
@@ -17,14 +17,14 @@ function theory(overrides: Partial<TheoryScore> = {}): TheoryScore {
 
 /** The scorecard's best case: surge + catalyst, no risk. */
 const STRONG = theory({
-  buzz: { applies: true, points: 30, mentions24h: 5, baselineDaily: 1, ratio: 5, detail: "急増" },
+  buzz: { applies: true, points: 30, mentions24h: 5, baselineDaily: 1, ratio: 5, baselineSource: "window", detail: "急増" },
   catalyst: { applies: true, points: 40, type: "好決算" },
   total: 70,
   verdict: "strong",
 });
 
 const HYPE = theory({
-  buzz: { applies: true, points: 30, mentions24h: 5, baselineDaily: 1, ratio: 5, detail: "急増" },
+  buzz: { applies: true, points: 30, mentions24h: 5, baselineDaily: 1, ratio: 5, baselineSource: "window", detail: "急増" },
   risk: { applies: true, points: -30, type: "イナゴ集め" },
   total: 0,
   verdict: "neutral",

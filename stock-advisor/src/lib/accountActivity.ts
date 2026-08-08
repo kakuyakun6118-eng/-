@@ -3,6 +3,7 @@ import { getRecentPosts, normalizeTicker, type SocialPost } from "./socialSource
 import { getWatchlist } from "./watchlist";
 import { listHoldings } from "./holdingsStore";
 import { scoreTicker } from "./theory";
+import { historicalBaselineDaily, jstDateKey, loadMentionHistory } from "./history";
 import type { TheoryScore } from "./types";
 
 export interface AccountPosts {
@@ -45,7 +46,15 @@ export async function loadWatchedActivity(): Promise<WatchedActivity> {
   // the pooled posts rather than once per account.
   const allPosts = accounts.flatMap((a) => a.posts);
   const tickers = [...new Set(allPosts.flatMap((p) => p.tickers))];
-  const scores = await Promise.all(tickers.map((ticker) => scoreTicker(ticker, allPosts)));
+
+  // Recorded daily counts give rule 1 a baseline that outlives one API window.
+  const now = new Date();
+  const history = await loadMentionHistory();
+  const today = jstDateKey(now);
+
+  const scores = await Promise.all(
+    tickers.map((ticker) => scoreTicker(ticker, allPosts, now, historicalBaselineDaily(ticker, history, today)))
+  );
   scores.sort((a, b) => b.total - a.total);
 
   return { accounts, allPosts, scores };

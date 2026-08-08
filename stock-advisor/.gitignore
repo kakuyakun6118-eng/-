@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# recorded judgment history (personal trading data, generated at runtime)
+/data/history/*.json

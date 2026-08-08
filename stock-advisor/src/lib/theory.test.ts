@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { computeBuzzSurge, combineScore, verdictFor, POINTS, SURGE_MULTIPLIER, MIN_MENTIONS_WITHOUT_BASELINE } from "./theory";
 import type { SocialPost } from "./socialSource";
-import type { ContentAssessment } from "./types";
+import type { BuzzSurge, ContentAssessment } from "./types";
 
 const NOW = new Date("2026-08-08T12:00:00Z");
 const TICKER = "7203.T";
@@ -93,6 +93,48 @@ describe("computeBuzzSurge — rule 1 (話題性の急上昇)", () => {
   });
 });
 
+describe("computeBuzzSurge — recorded-history baseline", () => {
+  it("uses the supplied history baseline instead of the post window", () => {
+    // The window alone would show 2 older mentions over ~9 days (≈0.2/day).
+    const older = [post(24 * 5), post(24 * 8)];
+    const buzz = computeBuzzSurge(TICKER, [WINDOW_ANCHOR, ...older, post(1), post(2)], NOW, 4);
+    expect(buzz.baselineSource).toBe("history");
+    expect(buzz.baselineDaily).toBe(4);
+    expect(buzz.ratio).toBeCloseTo(0.5);
+    expect(buzz.applies).toBe(false);
+  });
+
+  it("marks the baseline as window-derived when no history is given", () => {
+    const older = Array.from({ length: 9 }, (_, i) => post(24 * (i + 2)));
+    expect(computeBuzzSurge(TICKER, [WINDOW_ANCHOR, ...older, post(1)], NOW).baselineSource).toBe("window");
+  });
+
+  it("judges even when the window is too short, once history is available", () => {
+    // Only a few hours of window — normally undecidable.
+    const buzz = computeBuzzSurge(TICKER, [post(1), post(2), post(3)], NOW, 0.5);
+    expect(buzz.baselineSource).toBe("history");
+    expect(buzz.applies).toBe(true);
+    expect(buzz.points).toBe(POINTS.buzzSurge);
+  });
+
+  it("still needs posts before it will judge anything", () => {
+    const buzz = computeBuzzSurge(TICKER, [], NOW, 2);
+    expect(buzz.applies).toBe(false);
+    expect(buzz.baselineSource).toBeNull();
+  });
+
+  it("treats a zero history baseline as the new-topic case", () => {
+    const buzz = computeBuzzSurge(TICKER, [WINDOW_ANCHOR, post(1), post(2)], NOW, 0);
+    expect(buzz.baselineDaily).toBe(0);
+    expect(buzz.applies).toBe(true);
+    expect(buzz.detail).toContain("新規の話題");
+  });
+
+  it("names the baseline source in the explanation", () => {
+    expect(computeBuzzSurge(TICKER, [WINDOW_ANCHOR, post(1)], NOW, 1).detail).toContain("記録済みの日次履歴");
+  });
+});
+
 describe("verdictFor", () => {
   it.each([
     [70, "strong"],
@@ -108,7 +150,15 @@ describe("verdictFor", () => {
 
 describe("combineScore", () => {
   const noBuzz = computeBuzzSurge(TICKER, [], NOW);
-  const surge = { applies: true, points: POINTS.buzzSurge, mentions24h: 5, baselineDaily: 1, ratio: 5, detail: "急増" };
+  const surge: BuzzSurge = {
+    applies: true,
+    points: POINTS.buzzSurge,
+    mentions24h: 5,
+    baselineDaily: 1,
+    ratio: 5,
+    baselineSource: "window",
+    detail: "急増",
+  };
 
   function content(overrides: Partial<ContentAssessment> = {}): ContentAssessment {
     return { positiveCatalyst: false, catalystType: null, riskFlag: false, riskType: null, reasoning: "理由", ...overrides };
