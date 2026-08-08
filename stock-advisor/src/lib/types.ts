@@ -45,6 +45,42 @@ export interface Recommendation {
   verdict: ImpactVerdict;
 }
 
+/** 紫蘇の葉理論 verdict bands, derived from the scorecard total (-30..70). */
+export type TheoryVerdict = "strong" | "watch" | "neutral" | "caution";
+
+/** Rule 1: 話題性の急上昇 (+30). Counted, not inferred. */
+export interface BuzzSurge {
+  applies: boolean;
+  points: number;
+  mentions24h: number;
+  /** Mentions per day over the period before the last 24h; null when history is too short to judge. */
+  baselineDaily: number | null;
+  ratio: number | null;
+  detail: string;
+}
+
+/** Rules 2 and 3, which require reading what the posts say. */
+export interface ContentAssessment {
+  positiveCatalyst: boolean;
+  catalystType: string | null;
+  riskFlag: boolean;
+  riskType: string | null;
+  reasoning: string;
+}
+
+export interface TheoryScore {
+  ticker: string;
+  /** Rule 1: 話題性の急上昇 (+30) */
+  buzz: BuzzSurge;
+  /** Rule 2: ポジティブ感 (+40) */
+  catalyst: { applies: boolean; points: number; type: string | null };
+  /** Rule 3: リスクの有無 (-30) */
+  risk: { applies: boolean; points: number; type: string | null };
+  total: number;
+  verdict: TheoryVerdict;
+  reasoning: string;
+}
+
 export type HoldingAction = "sell" | "hold" | "watch";
 
 export interface HoldingVerdict {

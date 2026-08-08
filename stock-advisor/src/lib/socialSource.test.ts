@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { extractTickers, normalizeTicker, postsToNewsItems, type SocialPost } from "./socialSource";
+import { extractTickers, normalizeTicker } from "./socialSource";
 
 const UNIVERSE = ["7203.T", "6758.T", "2025.T"];
 
@@ -71,30 +71,5 @@ describe("extractTickers — bare numbers", () => {
 
   it("handles several codes in one post", () => {
     expect(extractTickers("7203 と 6758 を買った", UNIVERSE).sort()).toEqual(["6758.T", "7203.T"]);
-  });
-});
-
-describe("postsToNewsItems", () => {
-  const posts: SocialPost[] = [
-    { handle: "someone", id: "1", text: "7203 に注目", url: "https://x.com/someone/status/1", createdAt: "2026-08-01T00:00:00Z", tickers: ["7203.T"] },
-    { handle: "someone", id: "2", text: "6758 の話", url: "https://x.com/someone/status/2", createdAt: "2026-08-02T00:00:00Z", tickers: ["6758.T"] },
-  ];
-
-  it("keeps only posts mentioning the given ticker", () => {
-    const items = postsToNewsItems("7203.T", posts);
-    expect(items).toHaveLength(1);
-    expect(items[0].link).toBe("https://x.com/someone/status/1");
-  });
-
-  it("attributes the source to the account handle", () => {
-    expect(postsToNewsItems("7203.T", posts)[0].source).toBe("X @someone");
-  });
-
-  it("carries the post text through verbatim as the title", () => {
-    expect(postsToNewsItems("7203.T", posts)[0].title).toBe("7203 に注目");
-  });
-
-  it("returns nothing for an unmentioned ticker", () => {
-    expect(postsToNewsItems("9999.T", posts)).toEqual([]);
   });
 });

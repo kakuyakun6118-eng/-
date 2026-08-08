@@ -1,4 +1,3 @@
-import type { NewsItem } from "./types";
 import { cached, TTL } from "./cache";
 
 /**
@@ -129,17 +128,4 @@ export async function getRecentPosts(handle: string, knownTickers: Iterable<stri
     createdAt: t.created_at,
     tickers: extractTickers(t.text, knownTickers),
   }));
-}
-
-/** Turn the subset of posts mentioning `ticker` into NewsItems the existing LLM judgment pipeline can consume. */
-export function postsToNewsItems(ticker: string, posts: SocialPost[]): NewsItem[] {
-  return posts
-    .filter((p) => p.tickers.includes(ticker))
-    .map((p) => ({
-      ticker,
-      title: p.text,
-      link: p.url,
-      pubDate: p.createdAt,
-      source: `X @${p.handle}`,
-    }));
 }

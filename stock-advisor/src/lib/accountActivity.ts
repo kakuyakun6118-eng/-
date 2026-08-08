@@ -1,21 +1,23 @@
 import { getWatchedAccounts } from "./watchedAccounts";
-import { getRecentPosts, postsToNewsItems, normalizeTicker, type SocialPost } from "./socialSource";
+import { getRecentPosts, normalizeTicker, type SocialPost } from "./socialSource";
 import { getWatchlist } from "./watchlist";
 import { listHoldings } from "./holdingsStore";
-import { judgeImpact } from "./llm";
-import type { ImpactJudgment } from "./types";
-
-export interface TickerMention {
-  ticker: string;
-  impact: ImpactJudgment;
-}
+import { scoreTicker } from "./theory";
+import type { TheoryScore } from "./types";
 
 export interface AccountActivity {
   handle: string;
   label?: string;
   posts: SocialPost[];
-  mentions: TickerMention[];
+  scores: TheoryScore[];
 }
+
+/**
+ * Rule 1 of the theory compares the last 24h against the accounts' own
+ * baseline, so the window has to reach back well past a single day. 100 is
+ * the X API's per-request maximum for a user timeline.
+ */
+const POST_WINDOW = 100;
 
 export async function loadAccountActivity(): Promise<AccountActivity[]> {
   const [accounts, watchlist, holdings] = await Promise.all([getWatchedAccounts(), getWatchlist(), listHoldings()]);
@@ -26,18 +28,14 @@ export async function loadAccountActivity(): Promise<AccountActivity[]> {
 
   return Promise.all(
     accounts.map(async (account): Promise<AccountActivity> => {
-      const posts = await getRecentPosts(account.handle, knownTickers);
+      const posts = await getRecentPosts(account.handle, knownTickers, POST_WINDOW);
       const tickers = [...new Set(posts.flatMap((p) => p.tickers))];
+      const scores = await Promise.all(tickers.map((ticker) => scoreTicker(ticker, posts)));
 
-      const mentions = await Promise.all(
-        tickers.map(async (ticker): Promise<TickerMention> => {
-          const items = postsToNewsItems(ticker, posts);
-          const impact = await judgeImpact(ticker, undefined, items);
-          return { ticker, impact };
-        })
-      );
+      // Lead with the strongest scorecard.
+      scores.sort((a, b) => b.total - a.total);
 
-      return { handle: account.handle, label: account.label, posts, mentions };
+      return { handle: account.handle, label: account.label, posts, scores };
     })
   );
 }

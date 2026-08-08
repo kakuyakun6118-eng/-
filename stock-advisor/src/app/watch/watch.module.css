@@ -52,23 +52,35 @@
   font-size: 0.85rem;
 }
 
-.mentions {
+.scorecards {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
   margin-bottom: 1rem;
 }
 
-.mention {
-  border: 1px solid rgba(128, 128, 128, 0.2);
+.scorecard {
+  border: 1px solid rgba(128, 128, 128, 0.25);
   border-radius: 8px;
-  padding: 0.5rem 0.75rem;
+  padding: 0.75rem 0.9rem;
+}
+
+.scoreHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
 }
 
 .ticker {
   font-weight: 700;
-  margin-right: 0.5rem;
+}
+
+.total {
+  margin-left: auto;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .badge {
@@ -78,14 +90,14 @@
   font-weight: 600;
 }
 
-.badge.positive {
+.badge.strong {
   background: #d1fae5;
   color: #065f46;
 }
 
-.badge.negative {
-  background: #fee2e2;
-  color: #991b1b;
+.badge.watch {
+  background: #dbeafe;
+  color: #1e40af;
 }
 
 .badge.neutral {
@@ -93,10 +105,66 @@
   color: #374151;
 }
 
+.badge.caution {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.rules {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.rule {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.15rem 0.5rem;
+  align-items: baseline;
+  font-size: 0.85rem;
+}
+
+.ruleOff {
+  opacity: 0.55;
+}
+
+.ruleMark {
+  font-size: 0.7rem;
+}
+
+.ruleLabel {
+  font-weight: 600;
+}
+
+.rulePoints {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.ruleDetail {
+  grid-column: 2 / -1;
+  font-size: 0.8rem;
+  opacity: 0.85;
+  line-height: 1.5;
+}
+
 .reasoning {
   font-size: 0.85rem;
-  margin-top: 0.35rem;
-  line-height: 1.5;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(128, 128, 128, 0.15);
+  line-height: 1.6;
+}
+
+.postsToggle {
+  font-size: 0.85rem;
+}
+
+.postsToggle summary {
+  cursor: pointer;
+  opacity: 0.75;
 }
 
 .posts {
@@ -104,6 +172,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  margin-top: 0.6rem;
 }
 
 .post {

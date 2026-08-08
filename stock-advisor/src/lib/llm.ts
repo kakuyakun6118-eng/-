@@ -1,7 +1,7 @@
 import { createHash } from "crypto";
 import Anthropic from "@anthropic-ai/sdk";
 import type { ImpactJudgment, ImpactVerdict, NewsItem } from "./types";
-import { THEORY_SYSTEM_PROMPT } from "./theoryPrompt";
+import { NEWS_SYSTEM_PROMPT } from "./newsPrompt";
 import { cacheGet, cacheSet, TTL } from "./cache";
 
 const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-5";
@@ -57,7 +57,7 @@ export async function judgeImpact(ticker: string, name: string | undefined, head
     const resp = await getClient().messages.create({
       model: MODEL,
       max_tokens: 512,
-      system: THEORY_SYSTEM_PROMPT,
+      system: NEWS_SYSTEM_PROMPT,
       tools: [REPORT_TOOL],
       tool_choice: { type: "tool", name: "report_impact" },
       messages: [{ role: "user", content: userPrompt }],

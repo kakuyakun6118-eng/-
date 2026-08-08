@@ -1,29 +1,81 @@
 import Link from "next/link";
 import { loadAccountActivity } from "@/lib/accountActivity";
+import { POINTS } from "@/lib/theory";
+import type { TheoryScore } from "@/lib/types";
 import styles from "./watch.module.css";
 
 export const dynamic = "force-dynamic";
 
-const VERDICT_LABEL: Record<string, string> = {
-  positive: "追い風あり",
-  negative: "逆風あり",
+const VERDICT_LABEL: Record<TheoryScore["verdict"], string> = {
+  strong: "有力",
+  watch: "注目",
   neutral: "中立",
+  caution: "警戒",
 };
+
+function RuleRow({ label, points, applies, detail }: { label: string; points: number; applies: boolean; detail: string }) {
+  return (
+    <li className={`${styles.rule} ${applies ? styles.ruleOn : styles.ruleOff}`}>
+      <span className={styles.ruleMark} aria-hidden="true">
+        {applies ? "●" : "○"}
+      </span>
+      <span className={styles.ruleLabel}>{label}</span>
+      <span className={styles.rulePoints}>{applies ? `${points > 0 ? "+" : ""}${points}` : "0"}</span>
+      <p className={styles.ruleDetail}>{detail}</p>
+    </li>
+  );
+}
+
+function Scorecard({ score }: { score: TheoryScore }) {
+  return (
+    <li className={styles.scorecard}>
+      <div className={styles.scoreHeader}>
+        <span className={styles.ticker}>{score.ticker}</span>
+        <span className={`${styles.badge} ${styles[score.verdict]}`}>{VERDICT_LABEL[score.verdict]}</span>
+        <span className={styles.total}>{score.total > 0 ? `+${score.total}` : score.total}点</span>
+      </div>
+
+      <ul className={styles.rules}>
+        <RuleRow label="話題性の急上昇" points={POINTS.buzzSurge} applies={score.buzz.applies} detail={score.buzz.detail} />
+        <RuleRow
+          label={`ポジティブ感${score.catalyst.type ? `(${score.catalyst.type})` : ""}`}
+          points={POINTS.positiveCatalyst}
+          applies={score.catalyst.applies}
+          detail={score.catalyst.applies ? "具体的な好材料に基づく言及と判定されました。" : "具体的な好材料は確認できませんでした。"}
+        />
+        <RuleRow
+          label={`リスク${score.risk.type ? `(${score.risk.type})` : ""}`}
+          points={POINTS.risk}
+          applies={score.risk.applies}
+          detail={score.risk.applies ? "減点要素が検出されました。" : "減点要素は検出されませんでした。"}
+        />
+      </ul>
+
+      <p className={styles.reasoning}>{score.reasoning}</p>
+    </li>
+  );
+}
 
 export default async function WatchPage() {
   const activity = await loadAccountActivity();
   const hasToken = !!process.env.X_BEARER_TOKEN;
+  const hasApiKey = !!process.env.ANTHROPIC_API_KEY;
 
   return (
     <main className={styles.main}>
       <header className={styles.header}>
-        <h1>注目アカウントの投稿</h1>
+        <h1>注目アカウントの投稿(紫蘇の葉理論スコア)</h1>
         <Link href="/">← 今日のおすすめへ</Link>
       </header>
 
       {!hasToken && (
         <p className={styles.warning}>
           X_BEARER_TOKEN が未設定のため投稿を取得できません。.env.local に X API の Bearer Token を設定してください。
+        </p>
+      )}
+      {hasToken && !hasApiKey && (
+        <p className={styles.warning}>
+          ANTHROPIC_API_KEY が未設定のため、ポジティブ感・リスクの判定はスキップされます(話題性の急上昇のみ集計されます)。
         </p>
       )}
 
@@ -40,32 +92,33 @@ export default async function WatchPage() {
             <span className={styles.handle}> @{account.handle}</span>
           </h2>
 
-          {account.mentions.length > 0 && (
-            <ul className={styles.mentions}>
-              {account.mentions.map((m) => (
-                <li key={m.ticker} className={styles.mention}>
-                  <span className={styles.ticker}>{m.ticker}</span>
-                  <span className={`${styles.badge} ${styles[m.impact.verdict]}`}>{VERDICT_LABEL[m.impact.verdict]}</span>
-                  <p className={styles.reasoning}>{m.impact.reasoning}</p>
-                </li>
+          {account.scores.length > 0 ? (
+            <ul className={styles.scorecards}>
+              {account.scores.map((score) => (
+                <Scorecard key={score.ticker} score={score} />
               ))}
             </ul>
+          ) : (
+            <p className={styles.empty}>スコア対象となる銘柄への言及は見つかりませんでした。</p>
           )}
 
-          <ul className={styles.posts}>
-            {account.posts.map((p) => (
-              <li key={p.id} className={styles.post}>
-                <p>{p.text}</p>
-                <div className={styles.postMeta}>
-                  <span>{new Date(p.createdAt).toLocaleString("ja-JP")}</span>
-                  <a href={p.url} target="_blank" rel="noreferrer">
-                    元投稿を見る
-                  </a>
-                </div>
-              </li>
-            ))}
-            {account.posts.length === 0 && <li className={styles.empty}>投稿が見つかりませんでした。</li>}
-          </ul>
+          <details className={styles.postsToggle}>
+            <summary>取得した投稿({account.posts.length}件)</summary>
+            <ul className={styles.posts}>
+              {account.posts.map((p) => (
+                <li key={p.id} className={styles.post}>
+                  <p>{p.text}</p>
+                  <div className={styles.postMeta}>
+                    <span>{new Date(p.createdAt).toLocaleString("ja-JP")}</span>
+                    <a href={p.url} target="_blank" rel="noreferrer">
+                      元投稿を見る
+                    </a>
+                  </div>
+                </li>
+              ))}
+              {account.posts.length === 0 && <li className={styles.empty}>投稿が見つかりませんでした。</li>}
+            </ul>
+          </details>
         </section>
       ))}
     </main>
