@@ -1,36 +1,17 @@
-import { promises as fs } from "fs";
-import path from "path";
 import { randomUUID } from "crypto";
+import { dataFile, readList, writeList } from "./jsonStore";
 import type { Holding } from "./types";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const HOLDINGS_FILE = path.join(DATA_DIR, "holdings.json");
-
-async function ensureFile() {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  try {
-    await fs.access(HOLDINGS_FILE);
-  } catch {
-    await fs.writeFile(HOLDINGS_FILE, "[]\n", "utf-8");
-  }
-}
+const HOLDINGS_FILE = dataFile("holdings.json");
 
 export async function listHoldings(): Promise<Holding[]> {
-  await ensureFile();
-  const raw = await fs.readFile(HOLDINGS_FILE, "utf-8");
-  return JSON.parse(raw) as Holding[];
-}
-
-async function saveHoldings(holdings: Holding[]): Promise<void> {
-  await ensureFile();
-  await fs.writeFile(HOLDINGS_FILE, JSON.stringify(holdings, null, 2) + "\n", "utf-8");
+  return readList<Holding>(HOLDINGS_FILE);
 }
 
 export async function addHolding(input: Omit<Holding, "id">): Promise<Holding> {
   const holdings = await listHoldings();
   const holding: Holding = { id: randomUUID(), ...input };
-  holdings.push(holding);
-  await saveHoldings(holdings);
+  await writeList(HOLDINGS_FILE, [...holdings, holding]);
   return holding;
 }
 
@@ -39,7 +20,7 @@ export async function updateHolding(id: string, input: Partial<Omit<Holding, "id
   const idx = holdings.findIndex((h) => h.id === id);
   if (idx === -1) return null;
   holdings[idx] = { ...holdings[idx], ...input };
-  await saveHoldings(holdings);
+  await writeList(HOLDINGS_FILE, holdings);
   return holdings[idx];
 }
 
@@ -47,6 +28,6 @@ export async function deleteHolding(id: string): Promise<boolean> {
   const holdings = await listHoldings();
   const next = holdings.filter((h) => h.id !== id);
   if (next.length === holdings.length) return false;
-  await saveHoldings(next);
+  await writeList(HOLDINGS_FILE, next);
   return true;
 }
