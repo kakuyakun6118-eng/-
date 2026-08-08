@@ -1,0 +1,160 @@
+.main {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.header h1 {
+  font-size: 1.4rem;
+}
+
+.disclaimer {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  margin-bottom: 1.25rem;
+}
+
+.form {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.form input {
+  padding: 0.45rem 0.6rem;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  min-width: 0;
+  flex: 1 1 140px;
+}
+
+.form button {
+  padding: 0.45rem 1rem;
+  border-radius: 6px;
+  border: none;
+  background: #2563eb;
+  color: white;
+  cursor: pointer;
+}
+
+.error {
+  color: #b91c1c;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.checkButton {
+  margin-bottom: 1.25rem;
+  padding: 0.5rem 1.1rem;
+  border-radius: 6px;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.checkButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  list-style: none;
+}
+
+.card {
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.ticker {
+  font-weight: 700;
+}
+
+.name {
+  opacity: 0.75;
+}
+
+.shares {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.badge {
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge.sell {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.badge.watch {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badge.hold {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.deleteButton {
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  color: #b91c1c;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.note {
+  font-size: 0.85rem;
+  opacity: 0.7;
+  margin-top: 0.3rem;
+}
+
+.verdictBody {
+  margin-top: 0.6rem;
+  border-top: 1px solid rgba(128, 128, 128, 0.2);
+  padding-top: 0.6rem;
+}
+
+.metrics {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.85rem;
+  opacity: 0.85;
+  margin-bottom: 0.4rem;
+}
+
+.reasoning {
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
