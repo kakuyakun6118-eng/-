@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { ImpactJudgment, ImpactVerdict, NewsItem } from "./types";
 import { NEWS_SYSTEM_PROMPT } from "./newsPrompt";
 import { cacheGet, cacheSet, TTL } from "./cache";
+import { recordFailure } from "./dataHealth";
 
 const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-5";
 
@@ -75,6 +76,7 @@ export async function judgeImpact(ticker: string, name: string | undefined, head
     return judgment;
   } catch (err) {
     console.error(`[llm] impact judgment failed for ${ticker}`, err);
+    recordFailure("llm", err);
     return neutralJudgment(ticker, headlines, "LLM呼び出しでエラーが発生したため中立と判定しました。");
   }
 }

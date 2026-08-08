@@ -42,3 +42,6 @@ next-env.d.ts
 
 # recorded judgment history (personal trading data, generated at runtime)
 /data/history/*.json
+
+# holdings are personal financial data (positions and cost basis)
+/data/holdings.json

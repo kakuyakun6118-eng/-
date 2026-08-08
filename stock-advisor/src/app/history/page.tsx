@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { loadHistoryView } from "@/lib/historyService";
 import { MIN_HISTORY_DAYS } from "@/lib/history";
+import DataIssueBanner from "../DataIssueBanner";
+import { recentIssues } from "@/lib/dataHealth";
 import RecordButton from "./RecordButton";
 import styles from "./history.module.css";
 
@@ -31,6 +33,8 @@ export default async function HistoryPage() {
           <Link href="/settings">設定 →</Link>
         </nav>
       </header>
+
+      <DataIssueBanner issues={recentIssues()} />
 
       <p className={styles.disclaimer}>
         過去の判定を、その時点の株価と現在値で比較したものです。サンプル数が少ないうちの勝率は偶然に大きく左右されるため、

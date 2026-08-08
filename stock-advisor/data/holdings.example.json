@@ -1,0 +1,10 @@
+[
+  {
+    "id": "example-1",
+    "ticker": "7203.T",
+    "name": "トヨタ自動車",
+    "shares": 100,
+    "costBasis": 2500,
+    "note": "このファイルは雛形です。実際の保有株は /holdings から登録すると data/holdings.json に保存されます(Git管理対象外)。"
+  }
+]

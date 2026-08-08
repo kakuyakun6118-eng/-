@@ -1,0 +1,29 @@
+.banner {
+  background: #fef2f2;
+  color: #7f1d1d;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 0.7rem 0.95rem;
+  margin-bottom: 1rem;
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+
+.heading {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.list {
+  padding-left: 1.1rem;
+  margin-bottom: 0.35rem;
+}
+
+.list li {
+  overflow-wrap: anywhere;
+}
+
+.note {
+  opacity: 0.85;
+  font-size: 0.8rem;
+}

@@ -1,6 +1,7 @@
 import Parser from "rss-parser";
 import type { NewsItem } from "./types";
 import { cached, TTL } from "./cache";
+import { recordFailure } from "./dataHealth";
 
 const parser = new Parser();
 
@@ -31,6 +32,7 @@ export class GoogleNewsSource implements NewsSource {
       }));
     } catch (err) {
       console.error(`[news] failed to fetch headlines for ${ticker} (${query})`, err);
+      recordFailure("news", err);
       return [];
     }
   }

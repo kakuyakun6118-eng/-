@@ -1,4 +1,5 @@
 import { cached, TTL } from "./cache";
+import { recordFailure } from "./dataHealth";
 
 /**
  * Fetches an X (Twitter) account's own public posts via the X API v2.
@@ -116,6 +117,7 @@ export async function getRecentPosts(handle: string, knownTickers: Iterable<stri
       return data.data ?? [];
     } catch (err) {
       console.error(`[social] failed to fetch posts for @${handle}`, err);
+      recordFailure("social", err);
       return [];
     }
   });

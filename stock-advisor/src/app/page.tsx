@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { loadRecommendations } from "@/lib/recommendations";
+import DataIssueBanner from "./DataIssueBanner";
+import { recentIssues } from "@/lib/dataHealth";
 import styles from "./page.module.css";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +34,8 @@ export default async function Home() {
           <Link href="/settings">設定 →</Link>
         </nav>
       </header>
+
+      <DataIssueBanner issues={recentIssues()} />
 
       {!hasApiKey && (
         <p className={styles.warning}>

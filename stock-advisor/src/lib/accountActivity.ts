@@ -4,6 +4,7 @@ import { getWatchlist } from "./watchlist";
 import { listHoldings } from "./holdingsStore";
 import { scoreTicker } from "./theory";
 import { historicalBaselineDaily, jstDateKey, loadMentionHistory } from "./history";
+import { X_POST_WINDOW } from "./config";
 import type { TheoryScore } from "./types";
 
 export interface AccountPosts {
@@ -20,13 +21,6 @@ export interface WatchedActivity {
   scores: TheoryScore[];
 }
 
-/**
- * Rule 1 of the theory compares the last 24h against the accounts' own
- * baseline, so the window has to reach back well past a single day. 100 is
- * the X API's per-request maximum for a user timeline.
- */
-const POST_WINDOW = 100;
-
 export async function loadWatchedActivity(): Promise<WatchedActivity> {
   const [watched, watchlist, holdings] = await Promise.all([getWatchedAccounts(), getWatchlist(), listHoldings()]);
 
@@ -38,7 +32,7 @@ export async function loadWatchedActivity(): Promise<WatchedActivity> {
     watched.map(async (account) => ({
       handle: account.handle,
       label: account.label,
-      posts: await getRecentPosts(account.handle, knownTickers, POST_WINDOW),
+      posts: await getRecentPosts(account.handle, knownTickers, X_POST_WINDOW),
     }))
   );
 

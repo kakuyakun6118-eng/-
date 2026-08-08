@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { loadWatchedActivity } from "@/lib/accountActivity";
 import { POINTS } from "@/lib/theory";
+import DataIssueBanner from "../DataIssueBanner";
+import { recentIssues } from "@/lib/dataHealth";
 import type { TheoryScore } from "@/lib/types";
 import styles from "./watch.module.css";
 
@@ -71,6 +73,8 @@ export default async function WatchPage() {
           <Link href="/settings">設定 →</Link>
         </nav>
       </header>
+
+      <DataIssueBanner issues={recentIssues()} />
 
       {!hasToken && (
         <p className={styles.warning}>

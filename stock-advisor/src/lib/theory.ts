@@ -4,6 +4,7 @@ import type { BuzzSurge, ContentAssessment, TheoryScore, TheoryVerdict } from ".
 import type { SocialPost } from "./socialSource";
 import { THEORY_SYSTEM_PROMPT } from "./theoryPrompt";
 import { cacheGet, cacheSet, TTL } from "./cache";
+import { recordFailure } from "./dataHealth";
 
 /** Point values, straight from the scorecard. */
 export const POINTS = {
@@ -193,6 +194,7 @@ export async function assessContent(ticker: string, posts: SocialPost[]): Promis
     return assessment;
   } catch (err) {
     console.error(`[theory] content assessment failed for ${ticker}`, err);
+    recordFailure("llm", err);
     return { ...UNJUDGED, reasoning: "LLM呼び出しでエラーが発生したため、内容判定を行えませんでした。" };
   }
 }

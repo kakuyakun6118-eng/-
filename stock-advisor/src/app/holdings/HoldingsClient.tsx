@@ -3,6 +3,8 @@
 import { useState, FormEvent } from "react";
 import Link from "next/link";
 import type { Holding, HoldingVerdict } from "@/lib/types";
+import type { DataIssue } from "@/lib/dataHealth";
+import DataIssueBanner from "../DataIssueBanner";
 import styles from "./holdings.module.css";
 
 const ACTION_LABEL: Record<string, string> = {
@@ -14,6 +16,7 @@ const ACTION_LABEL: Record<string, string> = {
 export default function HoldingsClient({ initialHoldings }: { initialHoldings: Holding[] }) {
   const [holdings, setHoldings] = useState<Holding[]>(initialHoldings);
   const [verdicts, setVerdicts] = useState<HoldingVerdict[] | null>(null);
+  const [issues, setIssues] = useState<DataIssue[]>([]);
   const [loadingVerdicts, setLoadingVerdicts] = useState(false);
   const [form, setForm] = useState({ ticker: "", name: "", shares: "", costBasis: "", note: "" });
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +63,9 @@ export default function HoldingsClient({ initialHoldings }: { initialHoldings: H
     setLoadingVerdicts(true);
     try {
       const res = await fetch("/api/holdings/verdicts");
-      setVerdicts(await res.json());
+      const body = await res.json();
+      setVerdicts(body.verdicts);
+      setIssues(body.issues ?? []);
     } finally {
       setLoadingVerdicts(false);
     }
@@ -79,6 +84,8 @@ export default function HoldingsClient({ initialHoldings }: { initialHoldings: H
           <Link href="/settings">設定 →</Link>
         </nav>
       </header>
+
+      <DataIssueBanner issues={issues} />
 
       <p className={styles.disclaimer}>
         表示される「売却検討」「継続保有」等はニュース要約とルールベース・LLMによる参考情報であり、投資助言ではありません。売買判断はご自身の責任で行ってください。

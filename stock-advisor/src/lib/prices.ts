@@ -1,6 +1,7 @@
 import YahooFinance from "yahoo-finance2";
 import type { PriceQuote } from "./types";
 import { cached, TTL } from "./cache";
+import { recordFailure } from "./dataHealth";
 
 const yahooFinance = new YahooFinance();
 
@@ -21,6 +22,7 @@ export async function getQuote(ticker: string): Promise<PriceQuote | null> {
       };
     } catch (err) {
       console.error(`[prices] failed to fetch quote for ${ticker}`, err);
+      recordFailure("prices", err);
       return null;
     }
   });
