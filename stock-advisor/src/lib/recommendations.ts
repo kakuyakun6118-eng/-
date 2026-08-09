@@ -1,5 +1,5 @@
 import { getWatchlist } from "./watchlist";
-import { getTheoryScoresByTicker } from "./accountActivity";
+import { getTheoryScoresByTicker } from "./theoryService";
 import { getQuote } from "./prices";
 import { getHeadlines } from "./news";
 import { judgeImpact } from "./llm";
@@ -9,9 +9,10 @@ import { ENRICH_CONCURRENCY } from "./config";
 import type { Recommendation } from "./types";
 
 /**
- * Today's candidates: the static watchlist plus anything the watched accounts
- * have brought up. A stock Serenity is talking about is a candidate whether or
- * not it was already on the list — that's the point of watching the account.
+ * Today's candidates are the watchlist.
+ *
+ * There is no discovery source any more: without a social feed to mine, a
+ * stock has to be on the list before it can be scored. Add names via /settings.
  */
 export async function loadRecommendations(): Promise<Recommendation[]> {
   const [watchlist, theoryScores] = await Promise.all([getWatchlist(), getTheoryScoresByTicker()]);

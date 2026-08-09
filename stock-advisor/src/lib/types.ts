@@ -56,12 +56,12 @@ export type TheoryVerdict = "strong" | "watch" | "neutral" | "caution";
 export interface BuzzSurge {
   applies: boolean;
   points: number;
-  mentions24h: number;
-  /** Mentions per day over the period before the last 24h; null when history is too short to judge. */
+  articles24h: number;
+  /** Articles per day over the period before the last 24h; null when history is too short to judge. */
   baselineDaily: number | null;
   ratio: number | null;
-  /** Where the baseline came from: recorded daily history, or the fetched post window. */
-  baselineSource: "history" | "window" | null;
+  /** Where the baseline came from: recorded daily history, or the fetched news feed. */
+  baselineSource: "history" | "feed" | null;
   detail: string;
 }
 

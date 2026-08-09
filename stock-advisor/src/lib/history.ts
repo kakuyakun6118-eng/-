@@ -5,9 +5,9 @@ import type { TheoryScore, TheoryVerdict } from "./types";
 /**
  * Two records kept over time:
  *
- * - `mentions.json` gives rule 1 a baseline that isn't limited to whatever the
- *   X API happens to return in one call. The 100-post window can cover only a
- *   few days for a chatty account; recorded daily counts accumulate instead.
+ * - `mentions.json` gives rule 1 a baseline that isn't limited to whatever one
+ *   news request happens to return. A single feed may only reach back a few
+ *   days for a widely covered stock; recorded daily counts accumulate instead.
  * - `snapshots.json` stores each judgment with the price at the time, so a call
  *   can be checked against what the stock actually did afterwards.
  */
@@ -19,7 +19,7 @@ const SNAPSHOTS_FILE = path.join(HISTORY_DIR, "snapshots.json");
 /** Recorded days needed before the history baseline is trusted over the post window. */
 export const MIN_HISTORY_DAYS = 3;
 
-/** date (YYYY-MM-DD, JST) → ticker → mentions counted that day */
+/** date (YYYY-MM-DD, JST) → ticker → articles counted that day */
 export type MentionHistory = Record<string, Record<string, number>>;
 
 export interface Snapshot {
@@ -27,7 +27,7 @@ export interface Snapshot {
   recordedAt: string;
   ticker: string;
   name?: string;
-  mentions24h: number;
+  articles24h: number;
   theoryTotal: number;
   theoryVerdict: TheoryVerdict;
   buzzApplies: boolean;
@@ -65,7 +65,7 @@ export async function loadSnapshots(): Promise<Snapshot[]> {
 }
 
 /**
- * Average mentions per recorded day, over the days before `today`.
+ * Average articles per recorded day, over the days before `today`.
  *
  * Days the recorder never ran are simply absent — the average is over observed
  * days, not elapsed ones, since nothing is known about the gaps.
@@ -77,7 +77,7 @@ export function historicalBaselineDaily(ticker: string, history: MentionHistory,
   return total / days.length;
 }
 
-/** Merge one day's mention counts, replacing that day's entry (counts are already 24h totals). */
+/** Merge one day's article counts, replacing that day's entry (counts are already 24h totals). */
 export function mergeMentionCounts(history: MentionHistory, date: string, counts: Record<string, number>): MentionHistory {
   return { ...history, [date]: counts };
 }
@@ -93,7 +93,7 @@ export function toSnapshot(score: TheoryScore, date: string, recordedAt: string,
     recordedAt,
     ticker: score.ticker,
     name,
-    mentions24h: score.buzz.mentions24h,
+    articles24h: score.buzz.articles24h,
     theoryTotal: score.total,
     theoryVerdict: score.verdict,
     buzzApplies: score.buzz.applies,
@@ -114,7 +114,7 @@ export async function recordDaily(scores: TheoryScore[], prices: Map<string, num
   const date = jstDateKey(now);
   const recordedAt = now.toISOString();
 
-  const counts = Object.fromEntries(scores.map((s) => [s.ticker, s.buzz.mentions24h]));
+  const counts = Object.fromEntries(scores.map((s) => [s.ticker, s.buzz.articles24h]));
   const snapshots = scores.map((s) => toSnapshot(s, date, recordedAt, prices.get(s.ticker) ?? null, names.get(s.ticker)));
 
   const [history, existing] = await Promise.all([loadMentionHistory(), loadSnapshots()]);

@@ -105,7 +105,7 @@ export default function HoldingsClient({ initialHoldings }: { initialHoldings: H
         <h1>保有株の売り時判定</h1>
         <nav className={styles.nav}>
           <Link href="/">← 今日のおすすめへ</Link>
-          <Link href="/watch">注目アカウントの投稿 →</Link>
+          <Link href="/theory">紫蘇の葉理論スコア →</Link>
           <Link href="/history">判定履歴 →</Link>
           <Link href="/settings">設定 →</Link>
         </nav>
@@ -186,7 +186,7 @@ export default function HoldingsClient({ initialHoldings }: { initialHoldings: H
                       {verdict.unrealizedPnLPercent !== null && <span>含み損益 {verdict.unrealizedPnLPercent.toFixed(1)}%</span>}
                       {verdict.theory && (
                         <span className={styles.theoryTag}>
-                          監視アカウント言及 / 紫蘇の葉理論 {verdict.theory.total > 0 ? `+${verdict.theory.total}` : verdict.theory.total}点
+                          紫蘇の葉理論 {verdict.theory.total > 0 ? `+${verdict.theory.total}` : verdict.theory.total}点
                         </span>
                       )}
                     </div>

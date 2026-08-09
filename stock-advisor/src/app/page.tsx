@@ -28,7 +28,7 @@ export default async function Home() {
       <header className={styles.header}>
         <h1>今日のおすすめ銘柄</h1>
         <nav className={styles.nav}>
-          <Link href="/watch">注目アカウントの投稿 →</Link>
+          <Link href="/theory">紫蘇の葉理論スコア →</Link>
           <Link href="/holdings">保有株の売り時判定へ →</Link>
           <Link href="/history">判定履歴 →</Link>
           <Link href="/settings">設定 →</Link>
@@ -45,7 +45,7 @@ export default async function Home() {
 
       <p className={styles.disclaimer}>
         本アプリの表示はニュース要約とルールベース・LLMによる参考情報であり、投資助言ではありません。売買判断はご自身の責任で行ってください。
-        監視アカウントの言及があった銘柄は、その紫蘇の葉理論スコアも判定に含めています。
+        紫蘇の葉理論スコア(ニュース記事数の急増・好材料・リスク)も判定に含めています。
       </p>
 
       <ul className={styles.list}>
@@ -65,13 +65,11 @@ export default async function Home() {
 
             {rec.theory && (
               <p className={styles.theory}>
-                <Link href="/watch" className={styles.theoryLink}>
-                  監視アカウントが言及
+                <Link href="/theory" className={styles.theoryLink}>
+                  紫蘇の葉理論
                 </Link>
                 <span className={`${styles.theoryBadge} ${styles[rec.theory.verdict]}`}>{THEORY_LABEL[rec.theory.verdict]}</span>
-                <span className={styles.theoryTotal}>
-                  紫蘇の葉理論 {rec.theory.total > 0 ? `+${rec.theory.total}` : rec.theory.total}点
-                </span>
+                <span className={styles.theoryTotal}>{rec.theory.total > 0 ? `+${rec.theory.total}` : rec.theory.total}点</span>
               </p>
             )}
 

@@ -12,7 +12,7 @@ export interface Notification {
   dedupeKey: string;
 }
 
-/** Risk types that are hard news about the company rather than tone of voice. */
+/** Risk types that are hard news about the company rather than tone of coverage. */
 const MATERIAL_RISKS = new Set(["公募増資", "不祥事"]);
 
 const DISCLAIMER = "※ 投資助言ではありません。売買判断はご自身の責任で行ってください。";
@@ -41,7 +41,7 @@ export function buildNotifications(recommendations: Recommendation[], verdicts: 
         ticker,
         name,
         severity: "alert",
-        title: `⚠ 保有株に「${risk.type}」の言及`,
+        title: `⚠ 保有株に「${risk.type}」の報道`,
         lines: [label(ticker, name), v.reasoning],
         dedupeKey: `holding-risk:${ticker}:${risk.type}`,
       });
@@ -66,7 +66,7 @@ export function buildNotifications(recommendations: Recommendation[], verdicts: 
       ticker: rec.ticker,
       name: rec.name,
       severity: "info",
-      title: `📈 監視アカウント発の有力銘柄(紫蘇の葉理論 +${rec.theory.total}点)`,
+      title: `📈 紫蘇の葉理論で有力(+${rec.theory.total}点)`,
       lines: [
         `${label(rec.ticker, rec.name)} 現在値 ${rec.quote.price.toLocaleString()}円(前日比 ${rec.quote.changePercent.toFixed(2)}%)`,
         rec.theory.reasoning,

@@ -2,7 +2,7 @@ import { listHoldings } from "./holdingsStore";
 import { getQuote } from "./prices";
 import { getHeadlines } from "./news";
 import { judgeImpact } from "./llm";
-import { getTheoryScoresByTicker } from "./accountActivity";
+import { getTheoryScoresByTicker } from "./theoryService";
 import { buildHoldingVerdict } from "./scoring";
 import { mapWithConcurrency } from "./async";
 import { ENRICH_CONCURRENCY } from "./config";

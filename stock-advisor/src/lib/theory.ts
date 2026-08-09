@@ -1,7 +1,6 @@
 import { createHash } from "crypto";
 import Anthropic from "@anthropic-ai/sdk";
-import type { BuzzSurge, ContentAssessment, TheoryScore, TheoryVerdict } from "./types";
-import type { SocialPost } from "./socialSource";
+import type { BuzzSurge, ContentAssessment, NewsItem, TheoryScore, TheoryVerdict } from "./types";
 import { THEORY_SYSTEM_PROMPT } from "./theoryPrompt";
 import { cacheGet, cacheSet, TTL } from "./cache";
 import { recordFailure } from "./dataHealth";
@@ -13,116 +12,123 @@ export const POINTS = {
   risk: -30,
 } as const;
 
-/** Rule 1's threshold: 24h mentions must be at least this many times the baseline. */
+/** Rule 1's threshold: 24h coverage must be at least this many times the baseline. */
 export const SURGE_MULTIPLIER = 3;
 
 /**
- * With no prior mentions the "3x" ratio is undefined, so a brand-new topic
- * needs at least this many mentions in 24h to count as a surge. Without the
- * floor, one stray post would score the full +30.
+ * A surge needs this many articles in 24h regardless of the ratio.
+ *
+ * Thinly covered stocks sit at a fraction of an article per day, so a single
+ * routine piece clears "3x" on its own. The absolute floor stops one article
+ * from scoring the full +30, and also covers the case where the baseline is
+ * zero and the ratio is undefined.
  */
-export const MIN_MENTIONS_WITHOUT_BASELINE = 2;
+export const MIN_ARTICLES_FOR_SURGE = 2;
 
 /** Baseline needs at least this much history behind the 24h window to mean anything. */
 export const MIN_BASELINE_DAYS = 1;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-function mentionsOf(ticker: string, posts: SocialPost[]): SocialPost[] {
-  return posts.filter((p) => p.tickers.includes(ticker));
+function publishedAt(item: NewsItem): number | null {
+  if (!item.pubDate) return null;
+  const t = new Date(item.pubDate).getTime();
+  return Number.isFinite(t) ? t : null;
 }
 
 /**
  * Rule 1: 話題性の急上昇 (+30).
  *
- * Counts the watched accounts' mentions of `ticker` in the last 24 hours and
- * compares them against their own earlier rate. This is measured, not guessed.
+ * Counts articles about `ticker` in the last 24 hours and compares them
+ * against the stock's usual rate of coverage. This is measured, not guessed.
  *
  * `historyBaselineDaily` is the long-run rate from recorded daily counts. When
- * available it wins over the figure derived from the fetched post window, which
- * can only reach as far back as one API call returns.
+ * available it wins over the figure derived from the fetched feed, which only
+ * reaches as far back as one request returns.
  */
 export function computeBuzzSurge(
   ticker: string,
-  posts: SocialPost[],
+  articles: NewsItem[],
   now: Date = new Date(),
   historyBaselineDaily: number | null = null
 ): BuzzSurge {
-  const nowMs = now.getTime();
-  const cutoff = nowMs - DAY_MS;
+  const cutoff = now.getTime() - DAY_MS;
 
-  const mentions = mentionsOf(ticker, posts);
-  const recent = mentions.filter((p) => new Date(p.createdAt).getTime() > cutoff);
-  const older = mentions.filter((p) => new Date(p.createdAt).getTime() <= cutoff);
+  const dated = articles.map((a) => ({ item: a, at: publishedAt(a) })).filter((a): a is { item: NewsItem; at: number } => a.at !== null);
+  const recent = dated.filter((a) => a.at > cutoff);
+  const older = dated.filter((a) => a.at <= cutoff);
 
   const miss = (detail: string): BuzzSurge => ({
     applies: false,
     points: 0,
-    mentions24h: recent.length,
+    articles24h: recent.length,
     baselineDaily: null,
     ratio: null,
     baselineSource: null,
     detail,
   });
 
-  if (posts.length === 0) return miss("投稿を取得できていないため、話題性は判定できません。");
+  if (dated.length === 0) return miss("日付付きの記事を取得できていないため、話題性は判定できません。");
 
   let baselineDaily: number;
-  let baselineSource: "history" | "window";
+  let baselineSource: "history" | "feed";
 
   if (historyBaselineDaily !== null) {
     baselineDaily = historyBaselineDaily;
     baselineSource = "history";
   } else {
-    // How far back the fetched window reaches decides whether a baseline exists.
-    const windowStart = Math.min(...posts.map((p) => new Date(p.createdAt).getTime()));
-    const baselineDays = (cutoff - windowStart) / DAY_MS;
+    // How far back the fetched feed reaches decides whether a baseline exists.
+    const feedStart = Math.min(...dated.map((a) => a.at));
+    const baselineDays = (cutoff - feedStart) / DAY_MS;
 
     if (baselineDays < MIN_BASELINE_DAYS) {
-      return miss(
-        `比較対象となる過去の投稿履歴が${MIN_BASELINE_DAYS}日分に満たないため、話題性の急上昇は判定できません(直近24時間の言及${recent.length}件)。`
-      );
+      return miss(`比較対象となる過去の記事が${MIN_BASELINE_DAYS}日分に満たないため、話題性の急上昇は判定できません(直近24時間の記事${recent.length}件)。`);
     }
     baselineDaily = older.length / baselineDays;
-    baselineSource = "window";
+    baselineSource = "feed";
   }
 
-  const sourceNote = baselineSource === "history" ? "記録済みの日次履歴" : "取得した投稿ウィンドウ";
+  const sourceNote = baselineSource === "history" ? "記録済みの日次履歴" : "取得したニュースフィード";
+
+  const enoughArticles = recent.length >= MIN_ARTICLES_FOR_SURGE;
 
   if (baselineDaily === 0) {
-    const applies = recent.length >= MIN_MENTIONS_WITHOUT_BASELINE;
     return {
-      applies,
-      points: applies ? POINTS.buzzSurge : 0,
-      mentions24h: recent.length,
+      applies: enoughArticles,
+      points: enoughArticles ? POINTS.buzzSurge : 0,
+      articles24h: recent.length,
       baselineDaily: 0,
       ratio: null,
       baselineSource,
-      detail: applies
-        ? `これまで言及のなかった銘柄が直近24時間で${recent.length}件言及されました(新規の話題。基準: ${sourceNote})。`
-        : `過去の言及がなく、直近24時間の言及も${recent.length}件のみのため、急上昇とは判定しませんでした(${MIN_MENTIONS_WITHOUT_BASELINE}件以上で該当)。`,
+      detail: enoughArticles
+        ? `これまで報道のなかった銘柄が直近24時間で${recent.length}件報じられました(新規の話題。基準: ${sourceNote})。`
+        : `過去の報道がなく、直近24時間の記事も${recent.length}件のみのため、急上昇とは判定しませんでした(${MIN_ARTICLES_FOR_SURGE}件以上で該当)。`,
     };
   }
 
   const ratio = recent.length / baselineDaily;
-  const applies = ratio >= SURGE_MULTIPLIER;
+  const applies = ratio >= SURGE_MULTIPLIER && enoughArticles;
+
+  const why = applies
+    ? `${SURGE_MULTIPLIER}倍以上のため該当します。`
+    : ratio < SURGE_MULTIPLIER
+      ? `${SURGE_MULTIPLIER}倍に届かないため該当しません。`
+      : `${SURGE_MULTIPLIER}倍を超えていますが、記事が${MIN_ARTICLES_FOR_SURGE}件に満たないため該当としません(普段の報道が少ない銘柄では1件でも倍率が跳ね上がるため)。`;
 
   return {
     applies,
     points: applies ? POINTS.buzzSurge : 0,
-    mentions24h: recent.length,
+    articles24h: recent.length,
     baselineDaily,
     ratio,
     baselineSource,
-    detail: `直近24時間の言及${recent.length}件に対し、通常は1日あたり約${baselineDaily.toFixed(1)}件(${ratio.toFixed(1)}倍、基準: ${sourceNote})。${
-      applies ? `${SURGE_MULTIPLIER}倍以上のため該当します。` : `${SURGE_MULTIPLIER}倍に届かないため該当しません。`
-    }`,
+    detail: `直近24時間の記事${recent.length}件に対し、通常は1日あたり約${baselineDaily.toFixed(1)}件(${ratio.toFixed(1)}倍、基準: ${sourceNote})。${why}`,
   };
 }
 
 const ASSESSMENT_TOOL: Anthropic.Tool = {
   name: "report_content_assessment",
-  description: "投稿内容の好材料判定とリスク判定の結果を報告する",
+  description: "ニュース内容の好材料判定とリスク判定の結果を報告する",
   input_schema: {
     type: "object",
     properties: {
@@ -131,10 +137,10 @@ const ASSESSMENT_TOOL: Anthropic.Tool = {
         type: ["string", "null"],
         enum: ["業績予想の上方修正", "新技術・新サービス", "好決算", "その他", null],
       },
-      riskFlag: { type: "boolean", description: "イナゴ集め・公募増資・不祥事などの減点要素があるか" },
+      riskFlag: { type: "boolean", description: "過熱・煽り、公募増資、不祥事などの減点要素があるか" },
       riskType: {
         type: ["string", "null"],
-        enum: ["イナゴ集め", "公募増資", "不祥事", "その他", null],
+        enum: ["過熱・煽り", "公募増資", "不祥事", "その他", null],
       },
       reasoning: { type: "string", description: "日本語での判定理由(2〜3文)" },
     },
@@ -150,27 +156,32 @@ const UNJUDGED: ContentAssessment = {
   reasoning: "",
 };
 
-/** Rules 2 and 3: read the posts and decide whether they carry a real catalyst and/or a risk flag. */
-export async function assessContent(ticker: string, posts: SocialPost[]): Promise<ContentAssessment> {
-  const mentions = mentionsOf(ticker, posts);
-  if (mentions.length === 0) {
-    return { ...UNJUDGED, reasoning: "この銘柄への言及が見つからなかったため、内容判定は行いませんでした。" };
+let client: Anthropic | null = null;
+function getClient(apiKey: string): Anthropic {
+  if (!client) client = new Anthropic({ apiKey });
+  return client;
+}
+
+/** Rules 2 and 3: read the headlines and decide whether they carry a real catalyst and/or a risk flag. */
+export async function assessContent(ticker: string, headlines: NewsItem[]): Promise<ContentAssessment> {
+  if (headlines.length === 0) {
+    return { ...UNJUDGED, reasoning: "この銘柄のニュースが見つからなかったため、内容判定は行いませんでした。" };
   }
-  if (!process.env.ANTHROPIC_API_KEY) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
     return { ...UNJUDGED, reasoning: "ANTHROPIC_API_KEY が未設定のため、内容判定(ポジティブ感・リスク)をスキップしました。" };
   }
 
-  const postList = mentions.map((p, i) => `${i + 1}. [@${p.handle} / ${p.createdAt}] ${p.text}`).join("\n");
+  const list = headlines.map((h, i) => `${i + 1}. ${h.title}`).join("\n");
   const model = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-5";
-  const digest = createHash("sha256").update(`${model}\n${postList}`).digest("hex").slice(0, 16);
+  const digest = createHash("sha256").update(`${model}\n${list}`).digest("hex").slice(0, 16);
   const key = `theory:${ticker}:${digest}`;
 
   const hit = cacheGet<ContentAssessment>(key);
   if (hit) return hit;
 
   try {
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const resp = await client.messages.create({
+    const resp = await getClient(apiKey).messages.create({
       model,
       max_tokens: 512,
       system: THEORY_SYSTEM_PROMPT,
@@ -179,7 +190,7 @@ export async function assessContent(ticker: string, posts: SocialPost[]): Promis
       messages: [
         {
           role: "user",
-          content: `銘柄コード: ${ticker}\n\n監視アカウントによる該当銘柄への言及:\n${postList}\n\nこれらの投稿について report_content_assessment ツールで判定を報告してください。`,
+          content: `銘柄コード: ${ticker}\n\n直近のニュース見出し:\n${list}\n\nこれらについて report_content_assessment ツールで判定を報告してください。`,
         },
       ],
     });
@@ -219,7 +230,7 @@ export function normalizeTheoryTotal(total: number): number {
  * The total alone is ambiguous: "surge + catalyst - risk" and "catalyst only"
  * both come to 40, but the first is a hyped name and the second is a quiet one
  * with real news. So a standing risk flag caps the verdict at 注目 — nothing
- * carrying 煽り, 公募増資 or 不祥事 is ever presented as 有力.
+ * carrying 過熱・煽り, 公募増資 or 不祥事 is ever presented as 有力.
  */
 export function verdictFor(total: number, riskApplies = false): TheoryVerdict {
   if (total < 0) return "caution";
@@ -256,11 +267,11 @@ export function combineScore(ticker: string, buzz: BuzzSurge, content: ContentAs
 
 export async function scoreTicker(
   ticker: string,
-  posts: SocialPost[],
+  feed: NewsItem[],
   now?: Date,
   historyBaselineDaily: number | null = null
 ): Promise<TheoryScore> {
-  const buzz = computeBuzzSurge(ticker, posts, now, historyBaselineDaily);
-  const content = await assessContent(ticker, posts);
+  const buzz = computeBuzzSurge(ticker, feed, now, historyBaselineDaily);
+  const content = await assessContent(ticker, feed.slice(0, 8));
   return combineScore(ticker, buzz, content);
 }

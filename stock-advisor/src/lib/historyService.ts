@@ -1,5 +1,4 @@
-import { loadWatchedActivity } from "./accountActivity";
-import { getWatchlist } from "./watchlist";
+import { loadCoverage } from "./theoryService";
 import { getQuote } from "./prices";
 import { closeAfterTradingDays, closeOnOrAfter, getDailyCloses, percentChange, type DailyClose } from "./priceHistory";
 import { mapWithConcurrency } from "./async";
@@ -18,15 +17,16 @@ import {
 
 /** Capture today's mention counts and judgments, with the price at call time. */
 export async function recordToday(): Promise<RecordResult> {
-  const [{ scores }, watchlist] = await Promise.all([loadWatchedActivity(), getWatchlist()]);
+  const coverage = await loadCoverage();
+  const scores = coverage.map((c) => c.score);
 
-  const quotes = await mapWithConcurrency(scores, ENRICH_CONCURRENCY, (s) => getQuote(s.ticker));
+  const quotes = await mapWithConcurrency(coverage, ENRICH_CONCURRENCY, (c) => getQuote(c.ticker));
   const prices = new Map<string, number>();
   quotes.forEach((q, i) => {
-    if (q) prices.set(scores[i].ticker, q.price);
+    if (q) prices.set(coverage[i].ticker, q.price);
   });
 
-  const names = new Map(watchlist.filter((w) => w.name).map((w) => [w.ticker, w.name!]));
+  const names = new Map(coverage.filter((c) => c.name).map((c) => [c.ticker, c.name!]));
 
   return recordDaily(scores, prices, names);
 }

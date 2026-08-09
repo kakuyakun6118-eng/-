@@ -1,5 +1,3 @@
-import { X_FETCH_TTL_MS } from "./config";
-
 /**
  * Small in-memory TTL cache.
  *
@@ -26,11 +24,6 @@ export const TTL = {
   news: 15 * 60_000,
   /** LLM judgments are the expensive ones — cache them hardest. */
   judgment: 30 * 60_000,
-  /**
-   * X bills by posts retrieved, so this TTL directly sets the monthly bill.
-   * Configurable via X_FETCH_TTL_MINUTES — see src/lib/config.ts.
-   */
-  social: X_FETCH_TTL_MS,
 } as const;
 
 /** Returns the live entry, or undefined if absent/expired. Lets callers distinguish a cached `undefined` from a miss. */

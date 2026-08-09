@@ -5,19 +5,19 @@ import type { Holding, HoldingVerdict, PriceQuote, Recommendation, TheoryScore }
 function theory(overrides: Partial<TheoryScore> = {}): TheoryScore {
   return {
     ticker: "7203.T",
-    buzz: { applies: false, points: 0, mentions24h: 0, baselineDaily: null, ratio: null, baselineSource: null, detail: "" },
+    buzz: { applies: false, points: 0, articles24h: 0, baselineDaily: null, ratio: null, baselineSource: null, detail: "" },
     catalyst: { applies: false, points: 0, type: null },
     risk: { applies: false, points: 0, type: null },
     total: 0,
     verdict: "neutral",
-    reasoning: "言及の要約",
+    reasoning: "理論スコアの根拠",
     ...overrides,
   };
 }
 
 const STRONG = theory({ total: 70, verdict: "strong", catalyst: { applies: true, points: 40, type: "好決算" } });
 const DILUTION = theory({ total: -30, verdict: "caution", risk: { applies: true, points: -30, type: "公募増資" } });
-const HYPE = theory({ total: 0, verdict: "neutral", risk: { applies: true, points: -30, type: "イナゴ集め" } });
+const HYPE = theory({ total: 0, verdict: "neutral", risk: { applies: true, points: -30, type: "過熱・煽り" } });
 
 function quote(): PriceQuote {
   return {

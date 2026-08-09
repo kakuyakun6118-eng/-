@@ -33,7 +33,7 @@ export default async function HistoryPage() {
         <h1>判定履歴と答え合わせ</h1>
         <nav className={styles.nav}>
           <Link href="/">← 今日のおすすめへ</Link>
-          <Link href="/watch">注目アカウントの投稿 →</Link>
+          <Link href="/theory">紫蘇の葉理論スコア →</Link>
           <Link href="/settings">設定 →</Link>
         </nav>
       </header>

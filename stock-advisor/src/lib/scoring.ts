@@ -17,22 +17,22 @@ function technicalScore(quote: PriceQuote): number {
 const WEIGHTS = { impact: 0.6, technical: 0.4 } as const;
 
 /**
- * When a watched account has spoken about the stock, its scorecard becomes a
+ * When the theory scorecard has something to say about the stock, it becomes a
  * first-class signal and the other two are scaled back to make room.
  */
 const WEIGHTS_WITH_THEORY = { impact: 0.4, technical: 0.25, theory: 0.35 } as const;
 
 /**
- * Watched-account hype is exactly the risk the theory deducts for, so it is
- * surfaced on the recommendation rather than being buried inside the score.
+ * Hype is exactly the risk the theory deducts for, so it is surfaced on the
+ * recommendation rather than being buried inside the score.
  */
 function cautionsFor(theory: TheoryScore | null): string[] {
   if (!theory?.risk.applies) return [];
   const label = theory.risk.type ?? "リスク";
-  if (label === "イナゴ集め") {
-    return ["監視アカウントの投稿に過熱感のある煽り表現が含まれます。値動きが投稿者側の都合(利確・撤退)で急変する恐れがあります。"];
+  if (label === "過熱・煽り") {
+    return ["報道が過熱・煽り基調です。材料の実体より人気が先行している可能性があり、急落に注意してください。"];
   }
-  return [`監視アカウントの投稿に「${label}」に該当する減点要素が含まれます。`];
+  return [`報道に「${label}」に該当する減点要素が含まれます。`];
 }
 
 export function buildRecommendation(
@@ -77,18 +77,18 @@ export function buildHoldingVerdict(
   const unrealizedPnLPercent = quote ? ((quote.price - holding.costBasis) / holding.costBasis) * 100 : null;
   const pnlText = unrealizedPnLPercent !== null ? `含み損益 ${unrealizedPnLPercent.toFixed(1)}%。` : "現在値を取得できませんでした。";
   const impactText = impact ? impact.reasoning : "ニュース材料は未取得です。";
-  const theoryText = theory ? `監視アカウントの言及: ${theory.reasoning}` : "";
+  const theoryText = theory ? `理論スコア: ${theory.reasoning}` : "";
 
   const base = { holding, quote, unrealizedPnLPercent, impact, theory };
   const say = (...parts: string[]) => parts.filter(Boolean).join(" ");
 
-  // A watched account reporting dilution or misconduct on something you hold is
-  // a concrete negative, so it outranks the price-based rules below.
+  // Reported dilution or misconduct on something you hold is a concrete
+  // negative, so it outranks the price-based rules below.
   if (theory?.risk.applies && MATERIAL_RISKS.has(theory.risk.type ?? "")) {
     return {
       ...base,
       action: "sell",
-      reasoning: say(`監視アカウントが「${theory.risk.type}」に該当する内容に言及しています。売却を検討する余地があります。`, pnlText, theoryText),
+      reasoning: say(`「${theory.risk.type}」に該当する報道があります。売却を検討する余地があります。`, pnlText, theoryText),
     };
   }
 
@@ -101,7 +101,7 @@ export function buildHoldingVerdict(
     return {
       ...base,
       action: "watch",
-      reasoning: say("監視アカウントの言及に減点要素があり、過熱による急変に注意が必要です。", pnlText, theoryText),
+      reasoning: say("報道に減点要素があり、過熱による急変に注意が必要です。", pnlText, theoryText),
     };
   }
 

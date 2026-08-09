@@ -1,32 +1,30 @@
 import { describe, it, expect } from "vitest";
-import { computeBuzzSurge, combineScore, verdictFor, POINTS, SURGE_MULTIPLIER, MIN_MENTIONS_WITHOUT_BASELINE } from "./theory";
-import type { SocialPost } from "./socialSource";
-import type { BuzzSurge, ContentAssessment } from "./types";
+import { computeBuzzSurge, combineScore, verdictFor, POINTS, SURGE_MULTIPLIER, MIN_ARTICLES_FOR_SURGE } from "./theory";
+import type { BuzzSurge, ContentAssessment, NewsItem } from "./types";
 
 const NOW = new Date("2026-08-08T12:00:00Z");
 const TICKER = "7203.T";
 
-/** `hoursAgo` back from NOW. */
-function post(hoursAgo: number, tickers: string[] = [TICKER], id = String(Math.random())): SocialPost {
+/** An article published `hoursAgo` before NOW. */
+function post(hoursAgo: number, ticker = TICKER, id = String(Math.random())): NewsItem {
   return {
-    handle: "someone",
-    id,
-    text: `${tickers.join(" ")} の話`,
-    url: `https://x.com/someone/status/${id}`,
-    createdAt: new Date(NOW.getTime() - hoursAgo * 60 * 60 * 1000).toISOString(),
-    tickers,
+    ticker,
+    title: `${ticker} の記事 ${id}`,
+    link: `https://news.example/${id}`,
+    pubDate: new Date(NOW.getTime() - hoursAgo * 60 * 60 * 1000).toISOString(),
+    source: "テスト通信",
   };
 }
 
-/** A 10-day window of context so a baseline can be established. */
-const WINDOW_ANCHOR = post(24 * 10, ["9999.T"]);
+/** A 10-day-old article, so the feed reaches back far enough for a baseline. */
+const WINDOW_ANCHOR = post(24 * 10);
 
 describe("computeBuzzSurge — rule 1 (話題性の急上昇)", () => {
   it("reports nothing to judge when no posts were fetched", () => {
     const buzz = computeBuzzSurge(TICKER, [], NOW);
     expect(buzz.applies).toBe(false);
     expect(buzz.points).toBe(0);
-    expect(buzz.detail).toContain("投稿を取得できていない");
+    expect(buzz.detail).toContain("日付付きの記事を取得できていない");
   });
 
   it("refuses to judge when the window has under a day of history behind it", () => {
@@ -36,66 +34,69 @@ describe("computeBuzzSurge — rule 1 (話題性の急上昇)", () => {
     expect(buzz.detail).toContain("判定できません");
   });
 
-  it("counts only the last 24 hours as recent mentions", () => {
+  it("counts only the last 24 hours as recent articles", () => {
     const buzz = computeBuzzSurge(TICKER, [WINDOW_ANCHOR, post(1), post(23), post(25), post(48)], NOW);
-    expect(buzz.mentions24h).toBe(2);
+    expect(buzz.articles24h).toBe(2);
   });
 
-  it("awards +30 when mentions reach the 3x threshold", () => {
-    // 9 older mentions over a 9-day baseline = 1.0/day; 3 in 24h = 3.0x.
-    const older = Array.from({ length: 9 }, (_, i) => post(24 * (i + 2)));
-    const buzz = computeBuzzSurge(TICKER, [WINDOW_ANCHOR, ...older, post(1), post(2), post(3)], NOW);
+  it("awards +30 when coverage reaches the 3x threshold", () => {
+    // 3 older articles across a 9-day baseline = 0.33/day; 3 in 24h = 9x.
+    const older = [post(24 * 3), post(24 * 6), WINDOW_ANCHOR];
+    const buzz = computeBuzzSurge(TICKER, [...older, post(1), post(2), post(3)], NOW);
     expect(buzz.ratio).toBeGreaterThanOrEqual(SURGE_MULTIPLIER);
     expect(buzz.applies).toBe(true);
     expect(buzz.points).toBe(POINTS.buzzSurge);
   });
 
-  it("awards nothing when mentions stay under the threshold", () => {
-    const older = Array.from({ length: 9 }, (_, i) => post(24 * (i + 2)));
-    const buzz = computeBuzzSurge(TICKER, [WINDOW_ANCHOR, ...older, post(1), post(2)], NOW);
+  it("awards nothing when coverage stays under the threshold", () => {
+    // 27 older articles across 9 days = 3/day; 3 in 24h is only 1x.
+    const older = Array.from({ length: 27 }, (_, i) => post(24 * (2 + (i % 9))));
+    const buzz = computeBuzzSurge(TICKER, [WINDOW_ANCHOR, ...older, post(1), post(2), post(3)], NOW);
     expect(buzz.ratio).toBeLessThan(SURGE_MULTIPLIER);
     expect(buzz.applies).toBe(false);
     expect(buzz.points).toBe(0);
   });
 
-  it("treats a previously unmentioned ticker with enough posts as a new topic", () => {
-    const posts = [WINDOW_ANCHOR, ...Array.from({ length: MIN_MENTIONS_WITHOUT_BASELINE }, (_, i) => post(i + 1))];
-    const buzz = computeBuzzSurge(TICKER, posts, NOW);
+  it("treats a stock with no recorded coverage as a new topic", () => {
+    // A zero baseline can only come from recorded history: a per-ticker feed
+    // that reaches back a day always contains at least one older article.
+    const buzz = computeBuzzSurge(TICKER, [WINDOW_ANCHOR, post(1), post(2)], NOW, 0);
     expect(buzz.baselineDaily).toBe(0);
     expect(buzz.applies).toBe(true);
     expect(buzz.detail).toContain("新規の話題");
   });
 
-  it("does not let a single stray post score the full surge", () => {
+  it("applies once the article floor is reached", () => {
+    const feed = [WINDOW_ANCHOR, ...Array.from({ length: MIN_ARTICLES_FOR_SURGE }, (_, i) => post(i + 1))];
+    const buzz = computeBuzzSurge(TICKER, feed, NOW);
+    expect(buzz.articles24h).toBe(MIN_ARTICLES_FOR_SURGE);
+    expect(buzz.applies).toBe(true);
+  });
+
+  it("does not let a single article score the full surge on a thinly covered stock", () => {
+    // 1 article against a 0.1/day baseline is nominally 9x, but one article is
+    // not a surge — this is the false positive the absolute floor exists for.
     const buzz = computeBuzzSurge(TICKER, [WINDOW_ANCHOR, post(1)], NOW);
-    expect(buzz.mentions24h).toBe(1);
+    expect(buzz.articles24h).toBe(1);
+    expect(buzz.ratio).toBeGreaterThan(SURGE_MULTIPLIER);
     expect(buzz.applies).toBe(false);
     expect(buzz.points).toBe(0);
+    expect(buzz.detail).toContain("件に満たないため");
   });
 
-  it("ignores mentions of other tickers when counting", () => {
-    const buzz = computeBuzzSurge(TICKER, [WINDOW_ANCHOR, post(1, ["6758.T"]), post(2, ["6758.T"])], NOW);
-    expect(buzz.mentions24h).toBe(0);
-    expect(buzz.applies).toBe(false);
-  });
 
-  it("counts a post that mentions several tickers toward each of them", () => {
-    const posts = [WINDOW_ANCHOR, post(1, [TICKER, "6758.T"]), post(2, [TICKER, "6758.T"])];
-    expect(computeBuzzSurge(TICKER, posts, NOW).mentions24h).toBe(2);
-    expect(computeBuzzSurge("6758.T", posts, NOW).mentions24h).toBe(2);
-  });
 
   it("explains its arithmetic in the detail text", () => {
     const older = Array.from({ length: 9 }, (_, i) => post(24 * (i + 2)));
     const buzz = computeBuzzSurge(TICKER, [WINDOW_ANCHOR, ...older, post(1), post(2), post(3)], NOW);
-    expect(buzz.detail).toContain("直近24時間の言及3件");
+    expect(buzz.detail).toContain("直近24時間の記事3件");
     expect(buzz.detail).toContain("倍");
   });
 });
 
 describe("computeBuzzSurge — recorded-history baseline", () => {
-  it("uses the supplied history baseline instead of the post window", () => {
-    // The window alone would show 2 older mentions over ~9 days (≈0.2/day).
+  it("uses the supplied history baseline instead of the feed", () => {
+    // The feed alone would show 3 older articles over ~9 days (≈0.3/day).
     const older = [post(24 * 5), post(24 * 8)];
     const buzz = computeBuzzSurge(TICKER, [WINDOW_ANCHOR, ...older, post(1), post(2)], NOW, 4);
     expect(buzz.baselineSource).toBe("history");
@@ -104,30 +105,23 @@ describe("computeBuzzSurge — recorded-history baseline", () => {
     expect(buzz.applies).toBe(false);
   });
 
-  it("marks the baseline as window-derived when no history is given", () => {
+  it("marks the baseline as feed-derived when no history is given", () => {
     const older = Array.from({ length: 9 }, (_, i) => post(24 * (i + 2)));
-    expect(computeBuzzSurge(TICKER, [WINDOW_ANCHOR, ...older, post(1)], NOW).baselineSource).toBe("window");
+    expect(computeBuzzSurge(TICKER, [WINDOW_ANCHOR, ...older, post(1)], NOW).baselineSource).toBe("feed");
   });
 
-  it("judges even when the window is too short, once history is available", () => {
-    // Only a few hours of window — normally undecidable.
+  it("judges even when the feed is too short, once history is available", () => {
+    // Only a few hours of feed — normally undecidable.
     const buzz = computeBuzzSurge(TICKER, [post(1), post(2), post(3)], NOW, 0.5);
     expect(buzz.baselineSource).toBe("history");
     expect(buzz.applies).toBe(true);
     expect(buzz.points).toBe(POINTS.buzzSurge);
   });
 
-  it("still needs posts before it will judge anything", () => {
+  it("still needs articles before it will judge anything", () => {
     const buzz = computeBuzzSurge(TICKER, [], NOW, 2);
     expect(buzz.applies).toBe(false);
     expect(buzz.baselineSource).toBeNull();
-  });
-
-  it("treats a zero history baseline as the new-topic case", () => {
-    const buzz = computeBuzzSurge(TICKER, [WINDOW_ANCHOR, post(1), post(2)], NOW, 0);
-    expect(buzz.baselineDaily).toBe(0);
-    expect(buzz.applies).toBe(true);
-    expect(buzz.detail).toContain("新規の話題");
   });
 
   it("names the baseline source in the explanation", () => {
@@ -153,10 +147,10 @@ describe("combineScore", () => {
   const surge: BuzzSurge = {
     applies: true,
     points: POINTS.buzzSurge,
-    mentions24h: 5,
+    articles24h: 5,
     baselineDaily: 1,
     ratio: 5,
-    baselineSource: "window",
+    baselineSource: "feed",
     detail: "急増",
   };
 
@@ -165,7 +159,7 @@ describe("combineScore", () => {
   }
 
   it("totals all three rules when everything fires", () => {
-    const score = combineScore(TICKER, surge, content({ positiveCatalyst: true, catalystType: "好決算", riskFlag: true, riskType: "イナゴ集め" }));
+    const score = combineScore(TICKER, surge, content({ positiveCatalyst: true, catalystType: "好決算", riskFlag: true, riskType: "過熱・煽り" }));
     expect(score.total).toBe(POINTS.buzzSurge + POINTS.positiveCatalyst + POINTS.risk);
     expect(score.total).toBe(40);
   });
@@ -201,7 +195,7 @@ describe("combineScore", () => {
   });
 
   it("treats hype without a catalyst as a straight deduction", () => {
-    const score = combineScore(TICKER, surge, content({ riskFlag: true, riskType: "イナゴ集め" }));
+    const score = combineScore(TICKER, surge, content({ riskFlag: true, riskType: "過熱・煽り" }));
     expect(score.total).toBe(0);
     expect(score.verdict).toBe("neutral");
   });
@@ -231,17 +225,17 @@ describe("combineScore — the 40-point ambiguity", () => {
   const surge: BuzzSurge = {
     applies: true,
     points: POINTS.buzzSurge,
-    mentions24h: 5,
+    articles24h: 5,
     baselineDaily: 1,
     ratio: 5,
-    baselineSource: "window",
+    baselineSource: "feed",
     detail: "急増",
   };
   const noBuzz = computeBuzzSurge(TICKER, [], NOW);
   const base = { positiveCatalyst: false, catalystType: null, riskFlag: false, riskType: null, reasoning: "" };
 
   it("separates a hyped 40 from a clean 40", () => {
-    const hyped = combineScore(TICKER, surge, { ...base, positiveCatalyst: true, catalystType: "好決算", riskFlag: true, riskType: "イナゴ集め" });
+    const hyped = combineScore(TICKER, surge, { ...base, positiveCatalyst: true, catalystType: "好決算", riskFlag: true, riskType: "過熱・煽り" });
     const clean = combineScore(TICKER, noBuzz, { ...base, positiveCatalyst: true, catalystType: "好決算" });
 
     expect(hyped.total).toBe(40);

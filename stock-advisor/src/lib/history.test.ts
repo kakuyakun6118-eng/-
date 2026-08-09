@@ -88,7 +88,7 @@ function snap(overrides: Partial<Snapshot> = {}): Snapshot {
     date: "2026-08-08",
     recordedAt: "2026-08-08T00:00:00Z",
     ticker: "7203.T",
-    mentions24h: 3,
+    articles24h: 3,
     theoryTotal: 70,
     theoryVerdict: "strong",
     buzzApplies: true,
@@ -116,7 +116,7 @@ describe("mergeSnapshots", () => {
 describe("toSnapshot", () => {
   const score: TheoryScore = {
     ticker: "7203.T",
-    buzz: { applies: true, points: 30, mentions24h: 4, baselineDaily: 1, ratio: 4, baselineSource: "history", detail: "" },
+    buzz: { applies: true, points: 30, articles24h: 4, baselineDaily: 1, ratio: 4, baselineSource: "history", detail: "" },
     catalyst: { applies: true, points: 40, type: "好決算" },
     risk: { applies: false, points: 0, type: null },
     total: 70,
@@ -130,7 +130,7 @@ describe("toSnapshot", () => {
 
   it("keeps the mention count and scorecard outcome", () => {
     const s = toSnapshot(score, "2026-08-08", "2026-08-08T00:00:00Z", 3000, "トヨタ");
-    expect(s.mentions24h).toBe(4);
+    expect(s.articles24h).toBe(4);
     expect(s.theoryVerdict).toBe("strong");
     expect(s.catalystType).toBe("好決算");
     expect(s.name).toBe("トヨタ");
