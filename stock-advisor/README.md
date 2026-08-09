@@ -19,17 +19,68 @@
 
 ## セットアップ
 
+必要なもの: **Node.js 20.9 以上**(v22で動作確認)。それ以外の事前準備はありません。
+
 ```bash
-cd stock-advisor
+# リポジトリ名が "-" のため、クローン先の名前を明示します
+# (そうしないと `cd -` が「直前のディレクトリへ移動」と解釈されます)
+git clone -b claude/stock-impact-analysis-system-xh9ky8 https://github.com/kakuyakun6118-eng/-.git stock-advisor-app
+cd stock-advisor-app/stock-advisor
 npm install
-cp .env.example .env.local
-# .env.local に ANTHROPIC_API_KEY を設定
 npm run dev
 ```
 
-[http://localhost:3000](http://localhost:3000) で起動します。`ANTHROPIC_API_KEY` が未設定の場合、ニュース影響度判定はスキップされ「中立」表示になります(アプリ自体は動作します)。
+[http://localhost:3000](http://localhost:3000) が開きます。**APIキーなしでもこの時点で動きます**(株価・ニュース記事数・話題性の判定まで)。
 
-テストは `npm test` で実行できます(ネットワーク不要)。
+### LLM判定を有効にする
+
+「ポジティブ感」「リスク」の判定と、ニュース影響度の解釈にはClaude APIが要ります。
+
+```bash
+cp .env.example .env.local
+# .env.local を開いて ANTHROPIC_API_KEY=sk-ant-... を記入
+```
+
+キーは [console.anthropic.com](https://console.anthropic.com/) で取得します。記入後、開発サーバーを再起動してください。未設定の場合はその旨が画面上に表示され、該当判定はスキップされます(アプリは止まりません)。
+
+**必要な有料APIはこれだけです。** ニュースはGoogle News、株価はYahoo Financeから取得しており、いずれもアカウント登録もキーも不要です。
+
+### 最初にすること
+
+1. **`/settings`** でウォッチリストを編集します。初期状態でトヨタ・ソニーなど10銘柄が入っています。銘柄コードは `7203` でも `7203.T` でも `【7203】` でも構いません。
+2. **`/holdings`** に保有株(銘柄コード・株数・取得単価)を登録します。`data/holdings.json` に保存され、Git管理外です。
+3. **`/`** に戻ると、総合スコア順に並んだ銘柄が表示されます。
+4. **`/history`** の「今日の判定を記録」を押して記録を始めます。3日分貯まると話題性の基準値が履歴ベースに切り替わり、精度が上がります。
+
+### 本番として動かす
+
+```bash
+npm run build
+npm start
+```
+
+### 自動実行(任意)
+
+日次の記録と通知はプロセス外からの定期実行が前提です。アプリを起動しているだけでは自動送信されません。
+
+```bash
+# 毎営業日 15:30 JST(大引け後)に判定を記録
+30 15 * * 1-5 curl -fsS -X POST http://localhost:3000/api/history/record
+
+# 平日 9:00〜15:00 の毎時0分に通知
+0 9-15 * * 1-5 curl -fsS -X POST http://localhost:3000/api/notify
+```
+
+通知先(Discord / LINE)の設定は後述します。`APP_TOKEN` を設定した場合は `-H "Authorization: Bearer $APP_TOKEN"` を足してください。
+
+### 開発用コマンド
+
+| コマンド | 内容 |
+| --- | --- |
+| `npm run dev` | 開発サーバー |
+| `npm test` | 型チェック + テスト185件(ネットワーク不要) |
+| `npm run lint` | ESLint |
+| `npm run build` | 本番ビルド |
 
 ### キャッシュについて
 
