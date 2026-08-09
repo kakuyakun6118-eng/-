@@ -31,6 +31,16 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/*
+ * A flex item's automatic minimum size is its content, so a wide table pushes
+ * the page past the viewport and the table's own `overflow-x: auto` never gets
+ * a chance to scroll. On a phone that turns into a page-wide bleed.
+ */
+body > * {
+  min-width: 0;
+  width: 100%;
+}
+
 * {
   box-sizing: border-box;
   padding: 0;
