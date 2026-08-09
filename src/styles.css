@@ -1,0 +1,382 @@
+:root {
+  color-scheme: light;
+  --brand: #2b6cb0;
+  --brand-dark: #1a4971;
+  --bg: #f7f8fa;
+  --card-bg: #ffffff;
+  --text: #1a202c;
+  --muted: #718096;
+  --border: #e2e8f0;
+  --danger: #e53e3e;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.app-header {
+  padding: calc(env(safe-area-inset-top) + 12px) 16px 12px;
+  background: var(--brand);
+  color: white;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.header-note {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+  opacity: 0.9;
+}
+
+.app-main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px calc(env(safe-area-inset-bottom) + 84px);
+}
+
+.loading {
+  text-align: center;
+  color: var(--muted);
+  margin-top: 40px;
+}
+
+.tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  background: var(--card-bg);
+  border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tab-button {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 0 8px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.tab-button.active {
+  color: var(--brand);
+}
+
+.tab-icon {
+  font-size: 1.2rem;
+}
+
+.tab-content h2 {
+  margin: 4px 0 12px;
+}
+
+.tab-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  gap: 8px;
+}
+
+.tab-header-row h2,
+.tab-header-row h3 {
+  margin: 0;
+}
+
+.empty-state {
+  color: var(--muted);
+  font-size: 0.9rem;
+  padding: 16px 0;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: var(--brand);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.btn-secondary {
+  background: var(--border);
+  color: var(--text);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 0.9rem;
+}
+
+.btn-small {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 0.78rem;
+  color: var(--text);
+}
+
+.btn-danger {
+  color: var(--danger);
+  border-color: #fed7d7;
+}
+
+.place-group h3 {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 18px 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.place-card,
+.hotel-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+
+.place-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.category-tag {
+  font-size: 0.7rem;
+  background: #ebf4ff;
+  color: var(--brand-dark);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.place-area,
+.place-note {
+  margin: 4px 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.maps-link {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 0.82rem;
+  color: var(--brand);
+  text-decoration: none;
+}
+
+.place-card-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.place-form,
+.schedule-item-form,
+.quick-schedule-form,
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.place-form label,
+.schedule-item-form label,
+.quick-schedule-form label,
+.settings-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.settings-form h3 {
+  margin: 8px 0 -2px;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: 0.95rem;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: white;
+  color: var(--text);
+}
+
+.form-row {
+  display: flex;
+  gap: 10px;
+}
+
+.form-row > label {
+  flex: 1;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.day-pills {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.day-pill {
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.day-pill.active {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: white;
+}
+
+.schedule-list,
+.itinerary-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.schedule-item,
+.itinerary-item {
+  display: flex;
+  gap: 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  align-items: flex-start;
+}
+
+.schedule-item-editing {
+  margin-bottom: 10px;
+}
+
+.schedule-item-time,
+.itinerary-time {
+  flex: 0 0 56px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--brand-dark);
+  padding-top: 2px;
+}
+
+.schedule-item-body,
+.itinerary-body {
+  flex: 1;
+}
+
+.duration-tag {
+  margin-left: 8px;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.schedule-item-note {
+  margin: 4px 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.schedule-item-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.itinerary-day {
+  margin-bottom: 20px;
+}
+
+.itinerary-day h3 {
+  border-bottom: 2px solid var(--brand);
+  padding-bottom: 4px;
+  margin-bottom: 10px;
+}
+
+.hotel-card h3 {
+  margin: 0 0 4px;
+}
+
+.hotel-dates {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.share-status {
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  margin-bottom: 14px;
+}
+
+.share-status.ok {
+  background: #f0fff4;
+  color: #276749;
+}
+
+.share-status.warn {
+  background: #fffaf0;
+  color: #975a16;
+}
