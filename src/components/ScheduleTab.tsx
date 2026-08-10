@@ -3,6 +3,7 @@ import { TripStore } from "../hooks/useTrip";
 import { dateRange, formatDateLabel, sortScheduleItems } from "../utils/date";
 import { ScheduleItemForm } from "./ScheduleItemForm";
 import { mapsSearchUrl } from "../utils/maps";
+import { CrowdBadge } from "./AutoPlanTab";
 
 export function ScheduleTab({ trip }: { trip: TripStore }) {
   const dates = dateRange(trip.tripInfo.startDate, trip.tripInfo.endDate);
@@ -80,15 +81,18 @@ export function ScheduleTab({ trip }: { trip: TripStore }) {
               <div className="schedule-item-body">
                 <strong>{item.title}</strong>
                 {item.duration && <span className="duration-tag">{item.duration}分</span>}
+                {item.crowdLevel && <CrowdBadge level={item.crowdLevel} />}
                 {item.note && <p className="schedule-item-note">{item.note}</p>}
-                <a
-                  className="maps-link"
-                  href={item.mapsUrl || mapsSearchUrl(item.title)}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  🗺️ マップで見る
-                </a>
+                {(item.placeId || item.mapsUrl || !item.auto) && (
+                  <a
+                    className="maps-link"
+                    href={item.mapsUrl || mapsSearchUrl(item.title)}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    🗺️ マップで見る
+                  </a>
+                )}
               </div>
               <div className="schedule-item-actions">
                 <button className="btn-small" onClick={() => setEditingId(item.id)}>

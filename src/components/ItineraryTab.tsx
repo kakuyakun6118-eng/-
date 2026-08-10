@@ -1,6 +1,16 @@
 import { TripStore } from "../hooks/useTrip";
 import { dateRange, formatDateLabel, sortScheduleItems } from "../utils/date";
 import { mapsSearchUrl } from "../utils/maps";
+import { Scene, sceneForIndex } from "./Scene";
+import { CrowdBadge } from "./AutoPlanTab";
+
+/**
+ * Auto-generated meal placeholders ("ランチ(自由)") aren't real venues, so a
+ * map search for their title would just be noise.
+ */
+function hasLocation(item: { placeId?: string; mapsUrl?: string; auto?: boolean }): boolean {
+  return Boolean(item.placeId || item.mapsUrl || !item.auto);
+}
 
 function buildShareText(trip: TripStore): string {
   const dates = dateRange(trip.tripInfo.startDate, trip.tripInfo.endDate);
@@ -74,11 +84,17 @@ export function ItineraryTab({ trip }: { trip: TripStore }) {
         </div>
       )}
 
-      {dates.map((date) => {
+      {dates.map((date, index) => {
         const items = sortScheduleItems(trip.scheduleItems.filter((i) => i.date === date));
         return (
           <section key={date} className="itinerary-day">
-            <h3>{formatDateLabel(date)}</h3>
+            <div className="day-banner">
+              <Scene scene={sceneForIndex(index)} />
+              <div className="day-banner-label">
+                <span className="day-banner-num">DAY {index + 1}</span>
+                <span className="day-banner-date">{formatDateLabel(date)}</span>
+              </div>
+            </div>
             {items.length === 0 ? (
               <p className="empty-state">予定なし</p>
             ) : (
@@ -89,15 +105,18 @@ export function ItineraryTab({ trip }: { trip: TripStore }) {
                     <div className="itinerary-body">
                       <strong>{item.title}</strong>
                       {item.duration && <span className="duration-tag">{item.duration}分</span>}
+                      {item.crowdLevel && <CrowdBadge level={item.crowdLevel} />}
                       {item.note && <p className="schedule-item-note">{item.note}</p>}
-                      <a
-                        className="maps-link"
-                        href={item.mapsUrl || mapsSearchUrl(item.title)}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        🗺️ ナビ
-                      </a>
+                      {hasLocation(item) && (
+                        <a
+                          className="maps-link"
+                          href={item.mapsUrl || mapsSearchUrl(item.title)}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          🗺️ ナビ
+                        </a>
+                      )}
                     </div>
                   </li>
                 ))}

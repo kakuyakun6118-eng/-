@@ -6,7 +6,11 @@ import {
   Place,
   PRIORITY_LABELS,
   Priority,
+  Slot,
+  SLOT_LABELS,
 } from "../types";
+
+const WEEKDAY_NAMES = ["日", "月", "火", "水", "木", "金", "土"];
 
 export function PlaceForm({
   initial,
@@ -24,6 +28,19 @@ export function PlaceForm({
   const [mapsUrl, setMapsUrl] = useState(initial?.mapsUrl ?? "");
   const [note, setNote] = useState(initial?.note ?? "");
 
+  const [showAdvanced, setShowAdvanced] = useState(
+    Boolean(initial?.closedDays?.length || initial?.durationMin || initial?.bestSlot),
+  );
+  const [closedDays, setClosedDays] = useState<number[]>(initial?.closedDays ?? []);
+  const [durationMin, setDurationMin] = useState(initial?.durationMin?.toString() ?? "");
+  const [bestSlot, setBestSlot] = useState<Slot | "">(initial?.bestSlot ?? "");
+  const [needsReservation, setNeedsReservation] = useState(initial?.needsReservation ?? false);
+
+  const toggleClosedDay = (day: number) =>
+    setClosedDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort(),
+    );
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
@@ -34,6 +51,10 @@ export function PlaceForm({
       area: area.trim() || undefined,
       mapsUrl: mapsUrl.trim() || undefined,
       note: note.trim() || undefined,
+      closedDays: closedDays.length ? closedDays : undefined,
+      durationMin: durationMin ? Number(durationMin) : undefined,
+      bestSlot: bestSlot || undefined,
+      needsReservation: needsReservation || undefined,
     });
   };
 
@@ -101,6 +122,70 @@ export function PlaceForm({
           rows={2}
         />
       </label>
+
+      <button
+        type="button"
+        className="link-button"
+        onClick={() => setShowAdvanced((v) => !v)}
+      >
+        {showAdvanced ? "▾" : "▸"} AI提案の詳細設定(定休日・所要時間)
+      </button>
+
+      {showAdvanced && (
+        <div className="advanced-block">
+          <p className="hint">
+            未入力なら、場所の名前とカテゴリから自動で推定します。分かっている場合はここで上書きできます。
+          </p>
+
+          <span className="field-label">定休日</span>
+          <div className="weekday-row">
+            {WEEKDAY_NAMES.map((label, day) => (
+              <button
+                type="button"
+                key={day}
+                className={`weekday-chip ${closedDays.includes(day) ? "active" : ""}`}
+                onClick={() => toggleClosedDay(day)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div className="form-row">
+            <label>
+              所要時間(分)
+              <input
+                type="number"
+                min={15}
+                step={15}
+                value={durationMin}
+                onChange={(e) => setDurationMin(e.target.value)}
+                placeholder="自動"
+              />
+            </label>
+            <label>
+              おすすめ時間帯
+              <select value={bestSlot} onChange={(e) => setBestSlot(e.target.value as Slot | "")}>
+                <option value="">自動</option>
+                {Object.entries(SLOT_LABELS).map(([key, label]) => (
+                  <option key={key} value={key}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={needsReservation}
+              onChange={(e) => setNeedsReservation(e.target.checked)}
+            />
+            事前予約が必要
+          </label>
+        </div>
+      )}
 
       <div className="form-actions">
         <button type="button" className="btn-secondary" onClick={onCancel}>
