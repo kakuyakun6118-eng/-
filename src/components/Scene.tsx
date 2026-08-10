@@ -10,26 +10,37 @@ import { useState } from "react";
 export type SceneKey =
   | "skyline"
   | "bridge"
-  | "park"
   | "times-square"
   | "liberty"
+  | "downtown"
+  | "stadium"
+  | "park"
   | "brownstone";
 
+/**
+ * Rotation order for day banners. Scenes that ship with a real photo come
+ * first, so a week-long trip shows photos on as many days as possible before
+ * falling back to illustrations.
+ */
 export const SCENE_KEYS: SceneKey[] = [
   "skyline",
   "bridge",
-  "park",
   "times-square",
   "liberty",
+  "downtown",
+  "stadium",
+  "park",
   "brownstone",
 ];
 
 export const SCENE_LABELS: Record<SceneKey, string> = {
   skyline: "マンハッタンの摩天楼",
-  bridge: "ブルックリン・ブリッジ",
-  park: "セントラルパーク",
+  bridge: "イーストリバーの橋と夜景",
   "times-square": "タイムズスクエア",
   liberty: "自由の女神",
+  downtown: "ワンワールドとダウンタウン",
+  stadium: "ヤンキースタジアム",
+  park: "セントラルパーク",
   brownstone: "ブラウンストーンの街並み",
 };
 
@@ -269,12 +280,50 @@ function BrownstoneScene() {
   );
 }
 
+function StadiumScene() {
+  return (
+    <svg viewBox="0 0 400 160" preserveAspectRatio="xMidYMid slice" role="img" aria-label="ヤンキースタジアム">
+      <Sky id="st" from="#3a5f8f" mid="#7ba2c9" to="#c9dced" />
+      <rect width="400" height="160" fill="url(#st)" />
+      <g fill="#1f3350" opacity="0.35">
+        <rect x="150" y="12" width="16" height="26" />
+        <rect x="172" y="6" width="12" height="32" />
+        <rect x="220" y="14" width="14" height="24" />
+      </g>
+      <rect y="38" width="400" height="24" fill="#22364f" />
+      <g fill="#e8eef5" opacity="0.5">
+        {Array.from({ length: 40 }, (_, i) => (
+          <rect key={i} x={i * 10 + 2} y="42" width="6" height="16" rx="1" />
+        ))}
+      </g>
+      <rect y="60" width="400" height="100" fill="#4c9a4e" />
+      <path d="M200 150 L60 92 Q200 58 340 92 Z" fill="#5cb35e" />
+      <path d="M200 146 L92 96 Q200 70 308 96 Z" fill="#b98b56" />
+      <path d="M200 138 L120 100 Q200 82 280 100 Z" fill="#63bd65" />
+      <g fill="#f2f5f7">
+        <circle cx="200" cy="140" r="3.5" />
+        <circle cx="160" cy="112" r="2.5" />
+        <circle cx="240" cy="112" r="2.5" />
+        <circle cx="200" cy="98" r="2.5" />
+      </g>
+      <circle cx="200" cy="118" r="7" fill="#b98b56" />
+      <g fill="#ffffff" opacity="0.9">
+        <rect x="16" y="66" width="30" height="12" rx="2" />
+        <rect x="354" y="66" width="30" height="12" rx="2" />
+      </g>
+    </svg>
+  );
+}
+
 const SCENES: Record<SceneKey, () => JSX.Element> = {
   skyline: SkylineScene,
   bridge: BridgeScene,
-  park: ParkScene,
   "times-square": TimesSquareScene,
   liberty: LibertyScene,
+  // The downtown photo is another skyline, so it shares the skyline artwork.
+  downtown: SkylineScene,
+  stadium: StadiumScene,
+  park: ParkScene,
   brownstone: BrownstoneScene,
 };
 
@@ -289,7 +338,7 @@ export function Scene({ scene, className }: { scene: SceneKey; className?: strin
   const photoUrl = `${import.meta.env.BASE_URL}photos/${scene}.jpg`;
 
   return (
-    <div className={`scene ${className ?? ""}`}>
+    <div className={`scene ${className ?? ""}`} data-scene={scene}>
       {!photoFailed && (
         <img
           className="scene-photo"

@@ -141,6 +141,12 @@ body {
   object-fit: cover;
 }
 
+/* The statue sits high in its frame, so a centred crop clips the crown in the
+   short day banners. Bias the visible window upward for that photo only. */
+.scene[data-scene="liberty"] .scene-photo {
+  object-position: center 30%;
+}
+
 .hero {
   position: relative;
   height: 132px;

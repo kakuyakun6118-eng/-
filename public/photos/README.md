@@ -6,13 +6,16 @@
 | ファイル名 | 使われる場所 | 状態 |
 | --- | --- | --- |
 | `skyline.jpg` | ヘッダー、AI提案タブ、しおりのDAY 1 | ✅ 配置済み |
-| `bridge.jpg` | しおりのDAY 2 | イラスト表示中 |
-| `park.jpg` | しおりのDAY 3 | イラスト表示中 |
-| `times-square.jpg` | しおりのDAY 4 | イラスト表示中 |
-| `liberty.jpg` | しおりのDAY 5 | イラスト表示中 |
-| `brownstone.jpg` | しおりのDAY 6 | イラスト表示中 |
+| `bridge.jpg` | しおりのDAY 2 | ✅ 配置済み |
+| `times-square.jpg` | しおりのDAY 3 | ✅ 配置済み |
+| `liberty.jpg` | しおりのDAY 4 | ✅ 配置済み |
+| `downtown.jpg` | しおりのDAY 5 | ✅ 配置済み |
+| `stadium.jpg` | しおりのDAY 6 | ✅ 配置済み |
+| `park.jpg` | しおりのDAY 7 | イラスト表示中 |
+| `brownstone.jpg` | しおりのDAY 8以降 | イラスト表示中 |
 
-残り5枚も置くと、しおり全体が写真で統一されます。
+今回の旅程(9/18〜9/24 = 7日間)では、DAY 7 だけがイラストです。
+セントラルパークの写真を `park.jpg` として置くと全日程が写真になります。
 
 ## おすすめのサイズ
 
