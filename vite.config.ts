@@ -29,7 +29,8 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,png,svg,ico}"],
+        // jpg is included so photos dropped into public/photos work offline.
+        globPatterns: ["**/*.{js,css,html,png,jpg,svg,ico}"],
       },
     }),
   ],

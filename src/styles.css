@@ -33,6 +33,11 @@ body {
 
 .app-header {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  /* Enough room for the banner art to read as a photo behind the titles. */
+  min-height: calc(env(safe-area-inset-top) + 172px);
   padding: calc(env(safe-area-inset-top) + 14px) 16px 12px;
   /* Matches the ground colour of the skyline artwork so the illustration
      blends into the header instead of showing a seam. */
@@ -41,11 +46,12 @@ body {
   overflow: hidden;
 }
 
-/* Scene art sits behind the header text. */
-.header-scene {
+/* Scene art sits behind the header text. The doubled class keeps this ahead of
+   the generic `.scene { position: relative }` rule declared further down. */
+.scene.header-scene {
   position: absolute;
   inset: 0;
-  opacity: 0.85;
+  opacity: 0.9;
 }
 
 .app-header::after {
