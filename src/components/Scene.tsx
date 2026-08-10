@@ -49,6 +49,97 @@ export function sceneForIndex(index: number): SceneKey {
   return SCENE_KEYS[index % SCENE_KEYS.length];
 }
 
+/**
+ * Keywords that tie a scheduled stop to the matching photo, so a day that
+ * visits the Statue of Liberty is headed by the Liberty photo.
+ */
+const SCENE_KEYWORDS: [SceneKey, string[]][] = [
+  ["liberty", ["自由の女神", "statue of liberty", "リバティ", "ellis", "エリス島"]],
+  ["stadium", ["ヤンキース", "yankee", "スタジアム", "stadium", "メッツ", "mets", "野球", "citi field"]],
+  [
+    "bridge",
+    ["ブルックリン・ブリッジ", "ブルックリンブリッジ", "brooklyn bridge", "マンハッタン・ブリッジ", "manhattan bridge", "ダンボ", "dumbo", "橋"],
+  ],
+  [
+    "times-square",
+    ["タイムズスクエア", "タイムズ・スクエア", "times square", "ブロードウェイ", "broadway", "ミュージカル", "劇場"],
+  ],
+  [
+    "park",
+    ["セントラルパーク", "セントラル・パーク", "central park", "ハイライン", "high line", "ブライアントパーク", "bryant park", "公園", "動物園", "zoo"],
+  ],
+  [
+    "downtown",
+    ["ワンワールド", "one world", "world trade", "ワールドトレード", "9/11", "911", "グラウンド・ゼロ", "ウォール", "wall st", "バッテリー", "battery", "ダウンタウン", "downtown"],
+  ],
+  [
+    "skyline",
+    ["エンパイア", "empire state", "トップ・オブ・ザ・ロック", "top of the rock", "サミット", "summit", "展望", "ロックフェラー", "rockefeller", "夜景"],
+  ],
+  [
+    "brownstone",
+    ["ハーレム", "harlem", "ウィリアムズバーグ", "williamsburg", "ソーホー", "soho", "ビレッジ", "village", "チェルシー", "chelsea", "街歩き"],
+  ],
+];
+
+/**
+ * Scenes that currently ship with a real photo in `public/photos`.
+ * Add a scene here when you add its .jpg, so day banners prefer it over a
+ * scene that would only render as an illustration.
+ */
+export const PHOTO_SCENES: SceneKey[] = [
+  "skyline",
+  "bridge",
+  "times-square",
+  "liberty",
+  "downtown",
+  "stadium",
+  "park",
+];
+
+/** Scenes matching a piece of text, most specific first. */
+function scenesFor(text: string): SceneKey[] {
+  const haystack = text.toLowerCase();
+  return SCENE_KEYWORDS.filter(([, words]) =>
+    words.some((w) => haystack.includes(w.toLowerCase())),
+  ).map(([scene]) => scene);
+}
+
+/**
+ * Chooses banner art for each day of the trip: a day whose plan mentions a
+ * landmark gets that landmark's photo, and days without a match fall back to
+ * unused scenes so the itinerary never repeats itself unnecessarily.
+ *
+ * @param dayTexts one combined string of the day's stops, per day
+ */
+export function assignScenes(dayTexts: string[]): SceneKey[] {
+  const result: (SceneKey | null)[] = dayTexts.map(() => null);
+  const used = new Set<SceneKey>();
+
+  dayTexts.forEach((text, i) => {
+    const candidates = scenesFor(text).filter((scene) => !used.has(scene));
+    // A landmark that has a photo beats one that would only draw an
+    // illustration, so a matched day still looks like the rest of the book.
+    const match = candidates.find((scene) => PHOTO_SCENES.includes(scene));
+    if (match) {
+      result[i] = match;
+      used.add(match);
+    }
+  });
+
+  // Days with no landmark of their own take whatever art is still unused.
+  let cursor = 0;
+  result.forEach((scene, i) => {
+    if (scene) return;
+    while (cursor < SCENE_KEYS.length && used.has(SCENE_KEYS[cursor])) cursor++;
+    const fallback = SCENE_KEYS[cursor] ?? sceneForIndex(i);
+    result[i] = fallback;
+    used.add(fallback);
+  });
+
+  return result as SceneKey[];
+}
+
 function Sky({ from, mid, to, id }: { from: string; mid: string; to: string; id: string }) {
   return (
     <defs>

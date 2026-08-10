@@ -1,7 +1,7 @@
 import { TripStore } from "../hooks/useTrip";
 import { dateRange, formatDateLabel, sortScheduleItems } from "../utils/date";
 import { mapsSearchUrl } from "../utils/maps";
-import { Scene, sceneForIndex } from "./Scene";
+import { assignScenes, Scene } from "./Scene";
 import { CrowdBadge } from "./AutoPlanTab";
 
 /**
@@ -38,6 +38,16 @@ function buildShareText(trip: TripStore): string {
 
 export function ItineraryTab({ trip }: { trip: TripStore }) {
   const dates = dateRange(trip.tripInfo.startDate, trip.tripInfo.endDate);
+
+  // Each day's banner follows what is actually planned that day.
+  const scenes = assignScenes(
+    dates.map((date) =>
+      trip.scheduleItems
+        .filter((i) => i.date === date)
+        .map((i) => i.title)
+        .join(" "),
+    ),
+  );
 
   const handleShare = async () => {
     const text = buildShareText(trip);
@@ -89,7 +99,7 @@ export function ItineraryTab({ trip }: { trip: TripStore }) {
         return (
           <section key={date} className="itinerary-day">
             <div className="day-banner">
-              <Scene scene={sceneForIndex(index)} />
+              <Scene scene={scenes[index]} />
               <div className="day-banner-label">
                 <span className="day-banner-num">DAY {index + 1}</span>
                 <span className="day-banner-date">{formatDateLabel(date)}</span>

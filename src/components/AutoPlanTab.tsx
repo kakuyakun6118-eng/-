@@ -4,7 +4,7 @@ import { DEFAULT_PLAN_OPTIONS, PlanOptions } from "../types";
 import { autoSchedule, PlanResult } from "../scheduler/autoSchedule";
 import { CROWD_LABELS } from "../scheduler/nycKnowledge";
 import { formatDateLabel } from "../utils/date";
-import { Scene, sceneForIndex } from "./Scene";
+import { assignScenes, Scene } from "./Scene";
 
 export function CrowdBadge({ level }: { level: number }) {
   return (
@@ -34,6 +34,11 @@ export function AutoPlanTab({ trip }: { trip: TripStore }) {
     }
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [result]);
+
+  const previewScenes = useMemo(
+    () => assignScenes(byDate.map(([, items]) => items.map((i) => i.title).join(" "))),
+    [byDate],
+  );
 
   const generate = () => {
     setApplied(false);
@@ -157,7 +162,7 @@ export function AutoPlanTab({ trip }: { trip: TripStore }) {
           {byDate.map(([date, items], index) => (
             <section key={date} className="plan-day">
               <div className="plan-day-banner">
-                <Scene scene={sceneForIndex(index)} />
+                <Scene scene={previewScenes[index]} />
                 <span className="plan-day-label">{formatDateLabel(date)}</span>
               </div>
               <ol className="plan-list">
