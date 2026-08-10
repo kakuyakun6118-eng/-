@@ -192,8 +192,11 @@ button {
   color: var(--muted);
 }
 
+/* Always breaks onto its own line so it never crowds a short title or the
+   duration tag next to it. */
 .maps-link {
-  display: inline-block;
+  display: block;
+  width: fit-content;
   margin-top: 6px;
   font-size: 0.82rem;
   color: var(--brand);
