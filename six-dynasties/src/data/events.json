@@ -1,0 +1,580 @@
+[
+  {
+    "id": "jia_regency",
+    "year": 291,
+    "title": "賈后の専権",
+    "description": "皇后賈南風が楊駿を誅し、朝政を握った。宗室は外戚の専横を見て兵を蓄え始める。",
+    "condition": { "year": 291 },
+    "effects": [
+      { "field": "princeLoyalty", "delta": -10 },
+      { "field": "mandate", "delta": -5 },
+      { "field": "gentry", "delta": -4 }
+    ],
+    "onceOnly": true,
+    "harmful": true
+  },
+  {
+    "id": "qiwannian",
+    "year": 296,
+    "title": "斉万年の乱",
+    "description": "関中の氐・羌が斉万年を推して叛いた。周処は戦死し、雍州は荒れる。",
+    "condition": { "minYear": 296, "maxYear": 299 },
+    "effects": [
+      { "field": "provinces.Yong.control", "delta": -14 },
+      { "field": "factions.Di.strength", "delta": 8 },
+      { "field": "factions.Qiang.strength", "delta": 8 },
+      { "field": "treasury", "delta": -60 }
+    ],
+    "onceOnly": true,
+    "harmful": true,
+    "probability": 0.8
+  },
+  {
+    "id": "zhaowang_usurp",
+    "year": 300,
+    "title": "趙王倫の簒奪",
+    "description": "趙王倫が賈后を廃して自ら帝位に即いた。諸王はこれを口実に一斉に兵を挙げる。八王の乱がここに始まる。",
+    "condition": { "minYear": 300, "maxYear": 302 },
+    "effects": [
+      { "field": "mandate", "delta": -14 },
+      { "field": "princeLoyalty", "delta": -20 },
+      { "field": "centralArmy", "delta": -12 }
+    ],
+    "onceOnly": true,
+    "harmful": true,
+    "probability": 0.85
+  },
+  {
+    "id": "liter_rebellion",
+    "year": 301,
+    "title": "李特の流民反乱",
+    "description": "関中を逃れて蜀へ入った流民が李特を推して叛いた。益州は朝廷の手を離れかける。",
+    "condition": { "minYear": 301, "maxYear": 304 },
+    "effects": [
+      { "field": "provinces.Yi.control", "delta": -20 },
+      { "field": "factions.Ba.strength", "delta": 14 },
+      { "field": "taxBase", "delta": -3 }
+    ],
+    "onceOnly": true,
+    "harmful": true,
+    "probability": 0.85
+  },
+  {
+    "id": "zhangchang",
+    "year": 303,
+    "title": "張昌の乱",
+    "description": "荊州で張昌が挙兵し、江漢の諸郡が呼応した。",
+    "condition": { "minYear": 303, "maxYear": 306 },
+    "effects": [
+      { "field": "provinces.Jing.control", "delta": -14 },
+      { "field": "treasury", "delta": -50 }
+    ],
+    "onceOnly": true,
+    "harmful": true,
+    "probability": 0.7
+  },
+  {
+    "id": "liuyuan_rises",
+    "year": 304,
+    "title": "劉淵、漢を建つ",
+    "description": "南匈奴の五部大都督劉淵が離石に拠って漢王を称した。漢の劉氏の後裔を名乗り、中原の民を招く。塞内に容れた民が、いま国を建てた。",
+    "condition": { "minYear": 304, "maxYear": 308 },
+    "effects": [
+      { "field": "factions.Xiongnu.strength", "delta": 34 },
+      { "field": "provinces.Bing.control", "delta": -26 },
+      { "field": "mandate", "delta": -6 }
+    ],
+    "onceOnly": true,
+    "harmful": true,
+    "probability": 0.9
+  },
+  {
+    "id": "shile_rises",
+    "year": 307,
+    "title": "石勒、群盗を率いる",
+    "description": "羯の奴隷から身を起こした石勒が、河北の流民と群盗をまとめて劉淵に帰した。",
+    "condition": { "minYear": 307, "maxYear": 311 },
+    "effects": [
+      { "field": "factions.Jie.strength", "delta": 26 },
+      { "field": "provinces.Ji.control", "delta": -12 }
+    ],
+    "onceOnly": true,
+    "harmful": true,
+    "probability": 0.85
+  },
+  {
+    "id": "yongjia",
+    "year": 311,
+    "title": "永嘉の乱",
+    "description": "匈奴の軍が洛陽を陥れ、懐帝を捕らえた。王公士民三万余が殺され、廟社は灰となる。中原の士族は争って南へ逃れた。",
+    "condition": {
+      "minYear": 311,
+      "maxYear": 316,
+      "stateConditions": [{ "field": "capital", "operator": "eq", "value": "Si" }]
+    },
+    "effects": [
+      { "field": "provinces.Si.control", "delta": -55 },
+      { "field": "mandate", "delta": -18 },
+      { "field": "taxBase", "delta": -10 },
+      { "field": "centralArmy", "delta": -25 }
+    ],
+    "onceOnly": true,
+    "harmful": true,
+    "probability": 0.85
+  },
+  {
+    "id": "changan_falls",
+    "year": 316,
+    "title": "長安陥落",
+    "description": "愍帝が劉曜に降り、西晋は滅びた。北の朝廷はここで途絶える。",
+    "condition": {
+      "minYear": 316,
+      "maxYear": 322,
+      "stateConditions": [{ "field": "provinces.Yong.control", "operator": "lt", "value": 55 }]
+    },
+    "effects": [
+      { "field": "provinces.Yong.control", "delta": -45 },
+      { "field": "mandate", "delta": -12 },
+      { "field": "taxBase", "delta": -6 }
+    ],
+    "onceOnly": true,
+    "harmful": true,
+    "probability": 0.8
+  },
+  {
+    "id": "wangdao",
+    "year": 318,
+    "title": "王与馬、天下を共にす",
+    "description": "琅邪王氏の王導が南渡した士族と江南の豪族を取り持ち、朝廷を支えた。門閥が政を分かち持つ形がここに定まる。",
+    "condition": {
+      "minYear": 317,
+      "maxYear": 325,
+      "stateConditions": [{ "field": "crossedSouthYear", "operator": "neq", "value": 0 }]
+    },
+    "effects": [
+      { "field": "gentry", "delta": 16 },
+      { "field": "mandate", "delta": 6 }
+    ],
+    "onceOnly": true,
+    "harmful": false
+  },
+  {
+    "id": "wangdun",
+    "year": 322,
+    "title": "王敦の乱",
+    "description": "荊州を鎮する王敦が「君側の奸を除く」と称して建康へ下った。方鎮に兵を預けた報いがここに出る。",
+    "condition": { "minYear": 322, "maxYear": 328 },
+    "effects": [
+      { "field": "mandate", "delta": -10 },
+      { "field": "provinces.Jing.control", "delta": -16 },
+      { "field": "centralArmy", "delta": -10 }
+    ],
+    "onceOnly": true,
+    "harmful": true,
+    "probability": 0.75
+  },
+  {
+    "id": "sujun",
+    "year": 327,
+    "title": "蘇峻の乱",
+    "description": "流民帥蘇峻が建康を陥れ、宮室を焼いた。台城は灰になり、朝廷の府庫は空になる。",
+    "condition": { "minYear": 327, "maxYear": 332 },
+    "effects": [
+      { "field": "provinces.Yang.control", "delta": -20 },
+      { "field": "treasury", "delta": -120 },
+      { "field": "centralArmy", "delta": -12 }
+    ],
+    "onceOnly": true,
+    "harmful": true,
+    "probability": 0.7
+  },
+  {
+    "id": "shihu_terror",
+    "year": 335,
+    "title": "石虎の暴政",
+    "description": "後趙の石虎が鄴に都を移し、民を役して宮を築いた。河北の戸口は逃散するが、その軍は中原に並ぶものがない。",
+    "condition": { "minYear": 335, "maxYear": 345 },
+    "effects": [{ "field": "factions.Jie.strength", "delta": 30 }],
+    "onceOnly": true,
+    "harmful": true,
+    "probability": 0.8
+  },
+  {
+    "id": "huanwen_shu",
+    "year": 347,
+    "title": "桓温、成漢を滅ぼす",
+    "description": "桓温が三峡を遡って成都に入り、李勢を降した。蜀は四十余年ぶりに朝廷へ帰す。",
+    "condition": {
+      "minYear": 347,
+      "maxYear": 355,
+      "stateConditions": [{ "field": "provinces.Yi.control", "operator": "lt", "value": 40 }]
+    },
+    "effects": [
+      { "field": "provinces.Yi.control", "delta": 36 },
+      { "field": "mandate", "delta": 10 },
+      { "field": "factions.Ba.strength", "delta": -30 }
+    ],
+    "onceOnly": true,
+    "harmful": false,
+    "probability": 0.7
+  },
+  {
+    "id": "ranmin",
+    "year": 350,
+    "title": "冉閔の殺胡令",
+    "description": "後趙の将冉閔が羯を鏖殺し、鄴に魏を建てた。二十万が死に、華北の胡漢はここで断ち切られる。",
+    "condition": { "minYear": 350, "maxYear": 354 },
+    "effects": [
+      { "field": "factions.Jie.strength", "delta": -45 },
+      { "field": "provinces.Ji.control", "delta": -10 },
+      { "field": "tribalLoyalty", "delta": -18 }
+    ],
+    "onceOnly": true,
+    "harmful": true,
+    "probability": 0.85
+  },
+  {
+    "id": "huanwen_beifa",
+    "year": 354,
+    "title": "桓温の北伐",
+    "description": "桓温が灞上に至り、関中の父老は牛酒を捧げて迎えた。だが糧が尽き、麦の熟すのを待てずに引き返す。",
+    "condition": { "minYear": 354, "maxYear": 370 },
+    "effects": [
+      { "field": "mandate", "delta": 6 },
+      { "field": "treasury", "delta": -110 },
+      { "field": "centralArmy", "delta": -8 }
+    ],
+    "onceOnly": true,
+    "harmful": false,
+    "probability": 0.6
+  },
+  {
+    "id": "fujian_unifies",
+    "year": 376,
+    "title": "前秦、華北を統一す",
+    "description": "苻堅と王猛が涼を平らげ代を滅ぼし、淮水の北をひとつにした。南に残るのは江南のみとなる。",
+    "condition": { "minYear": 376, "maxYear": 382 },
+    "effects": [
+      { "field": "factions.Di.strength", "delta": 40 },
+      { "field": "mandate", "delta": -6 }
+    ],
+    "onceOnly": true,
+    "harmful": true,
+    "probability": 0.75
+  },
+  {
+    "id": "feishui",
+    "year": 383,
+    "title": "淝水の戦い",
+    "description": "百万と号した前秦の軍が淝水に崩れた。謝玄の北府兵が追い、風声鶴唳みな敵と疑う。江南はこの一戦で命脈を保つ。",
+    "condition": {
+      "minYear": 383,
+      "maxYear": 390,
+      "stateConditions": [{ "field": "provinces.Yang.control", "operator": "gt", "value": 25 }]
+    },
+    "effects": [
+      { "field": "factions.Di.strength", "delta": -70 },
+      { "field": "mandate", "delta": 18 },
+      { "field": "gentry", "delta": 10 }
+    ],
+    "onceOnly": true,
+    "harmful": false,
+    "probability": 0.8
+  },
+  {
+    "id": "sunen",
+    "year": 399,
+    "title": "孫恩の乱",
+    "description": "五斗米道の孫恩が会稽に叛き、八郡が呼応した。三呉の富は海賊に掠められ、士族の荘園は焼かれる。",
+    "condition": { "minYear": 399, "maxYear": 404 },
+    "effects": [
+      { "field": "provinces.Yang.control", "delta": -18 },
+      { "field": "taxBase", "delta": -6 },
+      { "field": "gentry", "delta": -8 }
+    ],
+    "onceOnly": true,
+    "harmful": true,
+    "probability": 0.75
+  },
+  {
+    "id": "huanxuan",
+    "year": 403,
+    "title": "桓玄の簒奪",
+    "description": "桓温の子桓玄が建康に入り、帝を廃して楚を建てた。翌年、劉裕がこれを討つ。",
+    "condition": { "minYear": 403, "maxYear": 407 },
+    "effects": [
+      { "field": "mandate", "delta": -16 },
+      { "field": "gentry", "delta": -6 },
+      { "field": "centralArmy", "delta": -10 }
+    ],
+    "onceOnly": true,
+    "harmful": true,
+    "probability": 0.7
+  },
+  {
+    "id": "liuyu_north",
+    "year": 417,
+    "title": "劉裕、長安を回復す",
+    "description": "劉裕が後秦を滅ぼして関中に入った。晋の旗が長安に立つのは百年ぶりである。だが留守の将は争い、得た地はまた失われる。",
+    "condition": {
+      "minYear": 416,
+      "maxYear": 422,
+      "stateConditions": [{ "field": "provinces.Yong.control", "operator": "lt", "value": 30 }]
+    },
+    "effects": [
+      { "field": "provinces.Yong.control", "delta": 28 },
+      { "field": "mandate", "delta": 14 },
+      { "field": "factions.Qiang.strength", "delta": -40 }
+    ],
+    "onceOnly": true,
+    "harmful": false,
+    "probability": 0.55
+  },
+  {
+    "id": "wei_unifies_north",
+    "year": 439,
+    "title": "北魏、華北を統一す",
+    "description": "太武帝拓跋燾が北涼を滅ぼし、五胡の十六国は終わった。南北は二つの朝廷に定まる。",
+    "condition": { "minYear": 439, "maxYear": 448 },
+    "effects": [
+      { "field": "factions.Tuoba.strength", "delta": 55 },
+      { "field": "mandate", "delta": -5 }
+    ],
+    "onceOnly": true,
+    "harmful": true,
+    "probability": 0.8
+  },
+  {
+    "id": "yuanjia_beifa",
+    "year": 450,
+    "title": "元嘉の北伐、瓜歩に至る",
+    "description": "王玄謨の北伐は破れ、拓跋燾は逆に長江の北岸瓜歩に至って建康を望んだ。淮南の六州は人煙を絶つ。",
+    "condition": { "minYear": 450, "maxYear": 458 },
+    "effects": [
+      { "field": "provinces.Yu.control", "delta": -26 },
+      { "field": "taxBase", "delta": -9 },
+      { "field": "centralArmy", "delta": -22 },
+      { "field": "mandate", "delta": -10 }
+    ],
+    "onceOnly": true,
+    "harmful": true,
+    "probability": 0.8
+  },
+  {
+    "id": "huaibei_lost",
+    "year": 466,
+    "title": "淮北四州を失う",
+    "description": "宋の内訌に乗じて北魏が青・冀・徐・兗を取った。淮水がそのまま国境になる。",
+    "condition": { "minYear": 466, "maxYear": 474 },
+    "effects": [
+      { "field": "provinces.Qing.control", "delta": -30 },
+      { "field": "provinces.Yu.control", "delta": -14 },
+      { "field": "taxBase", "delta": -6 }
+    ],
+    "onceOnly": true,
+    "harmful": true,
+    "probability": 0.75
+  },
+  {
+    "id": "xiaowen_luoyang",
+    "year": 494,
+    "title": "孝文帝、洛陽へ遷都す",
+    "description": "北魏が平城を棄てて洛陽に移り、胡服と胡語を禁じて姓を改めた。北の朝廷が中華の正統を名乗り始める。",
+    "condition": { "minYear": 494, "maxYear": 500 },
+    "effects": [
+      { "field": "mandate", "delta": -8 },
+      { "field": "factions.Tuoba.strength", "delta": 20 }
+    ],
+    "onceOnly": true,
+    "harmful": true,
+    "probability": 0.8
+  },
+  {
+    "id": "zhongli",
+    "year": 507,
+    "title": "鍾離の大捷",
+    "description": "韋叡と曹景宗が淮水の堤を切り、北魏の大軍を溺れさせた。斬首と溺死は十数万に及ぶ。",
+    "condition": { "minYear": 507, "maxYear": 515 },
+    "effects": [
+      { "field": "mandate", "delta": 12 },
+      { "field": "gentry", "delta": 6 }
+    ],
+    "onceOnly": true,
+    "harmful": false,
+    "probability": 0.55
+  },
+  {
+    "id": "liuzhen",
+    "year": 523,
+    "title": "六鎮の乱",
+    "description": "北辺を守る六つの鎮が叛いた。洛陽に移った朝廷から見捨てられた鎮兵の恨みが、北朝を内から裂いていく。",
+    "condition": { "minYear": 523, "maxYear": 530 },
+    "effects": [{ "field": "factions.Tuoba.strength", "delta": -45 }],
+    "onceOnly": true,
+    "harmful": false,
+    "probability": 0.85
+  },
+  {
+    "id": "chenqingzhi",
+    "year": 529,
+    "title": "陳慶之、洛陽に入る",
+    "description": "白袍七千を率いた陳慶之が四十七戦して勝ち、洛陽に入った。「千軍万馬、白袍を避けよ」と童謡に歌われる。",
+    "condition": { "minYear": 529, "maxYear": 534 },
+    "effects": [
+      { "field": "mandate", "delta": 14 },
+      { "field": "gentry", "delta": 5 }
+    ],
+    "onceOnly": true,
+    "harmful": false,
+    "probability": 0.45
+  },
+  {
+    "id": "houjing",
+    "year": 548,
+    "title": "侯景の乱",
+    "description": "降将侯景が寿陽から挙兵し、台城を囲むこと百三十日。武帝は餓えて死に、建康の戸口十に一を残さず、江南の門閥はここで滅びた。",
+    "condition": { "minYear": 548, "maxYear": 555 },
+    "effects": [
+      { "field": "provinces.Yang.control", "delta": -42 },
+      { "field": "taxBase", "delta": -18 },
+      { "field": "centralArmy", "delta": -35 },
+      { "field": "gentry", "delta": -30 },
+      { "field": "mandate", "delta": -18 },
+      { "field": "treasury", "delta": -150 }
+    ],
+    "onceOnly": true,
+    "harmful": true,
+    "probability": 0.85
+  },
+  {
+    "id": "jiangling",
+    "year": 554,
+    "title": "江陵陥落",
+    "description": "西魏が江陵を陥れ、元帝は文籍十四万巻を焼いて降った。士民数万が長安へ連れ去られる。",
+    "condition": { "minYear": 554, "maxYear": 560 },
+    "effects": [
+      { "field": "provinces.Jing.control", "delta": -34 },
+      { "field": "taxBase", "delta": -8 },
+      { "field": "gentry", "delta": -10 }
+    ],
+    "onceOnly": true,
+    "harmful": true,
+    "probability": 0.7
+  },
+  {
+    "id": "zhou_conquers_qi",
+    "year": 577,
+    "title": "北周、北斉を滅ぼす",
+    "description": "武帝宇文邕が鄴に入り、東西に裂けていた北朝がふたたびひとつになった。南に残された時は少ない。",
+    "condition": { "minYear": 577, "maxYear": 581 },
+    "effects": [{ "field": "mandate", "delta": -8 }],
+    "onceOnly": true,
+    "harmful": true,
+    "probability": 0.85
+  },
+  {
+    "id": "wuming_defeat",
+    "year": 578,
+    "title": "呉明徹、淮南に敗る",
+    "description": "陳の呂梁の役に敗れ、淮南の地はことごとく北に帰した。南朝の兵はこれより長江を出ない。",
+    "condition": { "minYear": 578, "maxYear": 584 },
+    "effects": [
+      { "field": "centralArmy", "delta": -20 },
+      { "field": "provinces.Yu.control", "delta": -20 },
+      { "field": "mandate", "delta": -6 }
+    ],
+    "onceOnly": true,
+    "harmful": true,
+    "probability": 0.7
+  },
+  {
+    "id": "tudan",
+    "year": 364,
+    "title": "庚戌土断",
+    "description": "桓温が僑州僑郡の戸を土地に結び直した。隠された戸が現れ、税と兵の源が戻る。",
+    "condition": {
+      "minYear": 364,
+      "maxYear": 380,
+      "stateConditions": [{ "field": "taxBase", "operator": "lt", "value": 60 }]
+    },
+    "effects": [
+      { "field": "taxBase", "delta": 8 },
+      { "field": "gentry", "delta": -8 }
+    ],
+    "onceOnly": true,
+    "harmful": false,
+    "probability": 0.5
+  },
+  {
+    "id": "beifu_army",
+    "year": 377,
+    "title": "北府兵の創設",
+    "description": "謝玄が京口に募って北来の流民を兵とした。江南の朝廷がはじめて自前の精鋭を持つ。",
+    "condition": {
+      "minYear": 377,
+      "maxYear": 385,
+      "stateConditions": [{ "field": "crossedSouthYear", "operator": "neq", "value": 0 }]
+    },
+    "effects": [
+      { "field": "centralArmy", "delta": 24 },
+      { "field": "treasury", "delta": -60 }
+    ],
+    "onceOnly": true,
+    "harmful": false,
+    "probability": 0.7
+  },
+  {
+    "id": "great_plague",
+    "year": 310,
+    "title": "大疫と蝗",
+    "description": "旱と蝗が続き、疫が加わった。中原の民は草根を食い、道に相食む。",
+    "condition": { "minYear": 305, "maxYear": 320 },
+    "effects": [
+      { "field": "taxBase", "delta": -7 },
+      { "field": "treasury", "delta": -70 }
+    ],
+    "onceOnly": true,
+    "harmful": true,
+    "probability": 0.6
+  },
+  {
+    "id": "yellow_river_flood",
+    "year": 425,
+    "title": "河決す",
+    "description": "黄河が堤を切り、数十郡が水に沈んだ。流民は南へ下り、北の戸口は減る。",
+    "condition": { "minYear": 400, "maxYear": 520 },
+    "effects": [
+      { "field": "taxBase", "delta": -5 },
+      { "field": "treasury", "delta": -80 }
+    ],
+    "onceOnly": true,
+    "harmful": true,
+    "probability": 0.4
+  },
+  {
+    "id": "buddhism_spreads",
+    "year": 402,
+    "title": "廬山の白蓮社",
+    "description": "慧遠が廬山に結社し、士大夫がこぞって帰依した。寺は田と戸を蓄え、租税を逃れる者がその蔭に隠れる。",
+    "condition": { "minYear": 400, "maxYear": 460 },
+    "effects": [
+      { "field": "gentry", "delta": 10 },
+      { "field": "mandate", "delta": 5 },
+      { "field": "taxBase", "delta": -5 }
+    ],
+    "onceOnly": true,
+    "harmful": false,
+    "probability": 0.6
+  },
+  {
+    "id": "sui_founded",
+    "year": 581,
+    "title": "楊堅、隋を建つ",
+    "description": "北周の外戚楊堅が禅を受けて隋を建てた。開皇の政は整い、北の力は南の比ではない。",
+    "condition": { "minYear": 581, "maxYear": 583 },
+    "effects": [{ "field": "mandate", "delta": -6 }],
+    "onceOnly": true,
+    "harmful": true,
+    "probability": 1
+  }
+]

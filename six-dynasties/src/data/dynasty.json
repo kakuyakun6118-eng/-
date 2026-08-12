@@ -1,0 +1,110 @@
+{
+  "houseName": "晋",
+  "foundedYear": 265,
+  "ruler": {
+    "id": "hui",
+    "name": "恵帝衷",
+    "age": 32,
+    "abilities": {
+      "military": 1,
+      "administration": 1,
+      "charisma": 2
+    },
+    "relation": "self",
+    "lineage": "han",
+    "lifespan": 48
+  },
+  "members": [
+    {
+      "id": "huai",
+      "name": "豫章王熾",
+      "age": 8,
+      "abilities": {
+        "military": 3,
+        "administration": 5,
+        "charisma": 4
+      },
+      "relation": "kin",
+      "lineage": "han",
+      "lifespan": 30
+    },
+    {
+      "id": "yue",
+      "name": "呉王晏",
+      "age": 10,
+      "abilities": {
+        "military": 2,
+        "administration": 3,
+        "charisma": 3
+      },
+      "relation": "kin",
+      "lineage": "han",
+      "lifespan": 30
+    },
+    {
+      "id": "rui",
+      "name": "琅邪王睿",
+      "age": 15,
+      "abilities": {
+        "military": 4,
+        "administration": 6,
+        "charisma": 7
+      },
+      "relation": "kin",
+      "lineage": "han",
+      "lifespan": 47
+    }
+  ],
+  "history": [],
+  "namePool": [
+    "懐帝熾",
+    "愍帝鄴",
+    "元帝睿",
+    "明帝紹",
+    "成帝衍",
+    "康帝岳",
+    "穆帝聃",
+    "哀帝丕",
+    "廃帝奕",
+    "簡文帝昱",
+    "孝武帝曜",
+    "安帝徳宗",
+    "恭帝徳文",
+    "武帝裕",
+    "文帝義隆",
+    "孝武帝駿",
+    "明帝彧",
+    "高帝道成",
+    "武帝賾",
+    "明帝鸞",
+    "武帝衍",
+    "簡文帝綱",
+    "元帝繹",
+    "敬帝方智",
+    "武帝霸先",
+    "文帝蒨",
+    "宣帝頊",
+    "後主叔宝",
+    "哀帝業",
+    "順帝準",
+    "和帝宝融",
+    "少帝義符"
+  ],
+  "housePool": [
+    "宋",
+    "斉",
+    "梁",
+    "陳",
+    "漢",
+    "楚",
+    "呉",
+    "越",
+    "魏",
+    "周",
+    "唐",
+    "燕"
+  ],
+  "abilitiesAdjusted": false,
+  "consort": null,
+  "pendingMarriages": []
+}

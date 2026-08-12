@@ -1,0 +1,141 @@
+{
+  "comment": "史実の人物をその在職・在位の年に迎える。年ごとの戦力の推移をこの模型は持たないので、脅威の山と谷は開始戦力ではなく指導者の能力で表す",
+  "marshals": [
+    { "name": "劉琨", "from": 307, "to": 318, "military": 7 },
+    { "name": "祖逖", "from": 313, "to": 321, "military": 8 },
+    { "name": "陶侃", "from": 322, "to": 334, "military": 9 },
+    { "name": "庾亮", "from": 334, "to": 340, "military": 5 },
+    { "name": "桓温", "from": 345, "to": 373, "military": 8 },
+    { "name": "謝安", "from": 377, "to": 385, "military": 7 },
+    { "name": "謝玄", "from": 383, "to": 388, "military": 9 },
+    { "name": "劉牢之", "from": 389, "to": 402, "military": 7 },
+    { "name": "劉裕", "from": 404, "to": 420, "military": 10 },
+    { "name": "檀道済", "from": 420, "to": 436, "military": 8 },
+    { "name": "沈慶之", "from": 445, "to": 465, "military": 7 },
+    { "name": "蕭道成", "from": 469, "to": 479, "military": 8 },
+    { "name": "陳顕達", "from": 480, "to": 500, "military": 6 },
+    { "name": "韋叡", "from": 505, "to": 520, "military": 8 },
+    { "name": "陳慶之", "from": 525, "to": 536, "military": 9 },
+    { "name": "王僧弁", "from": 548, "to": 555, "military": 7 },
+    { "name": "陳霸先", "from": 550, "to": 559, "military": 9 },
+    { "name": "呉明徹", "from": 569, "to": 578, "military": 7 },
+    { "name": "蕭摩訶", "from": 579, "to": 589, "military": 7 }
+  ],
+  "chieftains": {
+    "Xiongnu": [
+      { "name": "劉淵", "from": 304, "to": 310, "military": 9 },
+      { "name": "劉聡", "from": 310, "to": 318, "military": 8 },
+      { "name": "劉曜", "from": 318, "to": 329, "military": 7 }
+    ],
+    "Jie": [
+      { "name": "石勒", "from": 307, "to": 333, "military": 10 },
+      { "name": "石虎", "from": 334, "to": 349, "military": 8 }
+    ],
+    "Di": [
+      { "name": "苻洪", "from": 344, "to": 350, "military": 6 },
+      { "name": "苻健", "from": 351, "to": 355, "military": 7 },
+      { "name": "苻堅", "from": 357, "to": 385, "military": 9 },
+      { "name": "苻登", "from": 386, "to": 394, "military": 6 }
+    ],
+    "Qiang": [
+      { "name": "姚萇", "from": 384, "to": 393, "military": 7 },
+      { "name": "姚興", "from": 394, "to": 416, "military": 8 },
+      { "name": "姚泓", "from": 416, "to": 417, "military": 4 }
+    ],
+    "Ba": [
+      { "name": "李特", "from": 301, "to": 303, "military": 7 },
+      { "name": "李雄", "from": 304, "to": 334, "military": 7 },
+      { "name": "李勢", "from": 343, "to": 347, "military": 3 }
+    ],
+    "Lushui": [{ "name": "沮渠蒙遜", "from": 401, "to": 433, "military": 8 }],
+    "Dingling": [{ "name": "翟遼", "from": 388, "to": 391, "military": 6 }],
+    "Qifu": [
+      { "name": "乞伏国仁", "from": 385, "to": 388, "military": 6 },
+      { "name": "乞伏乾帰", "from": 388, "to": 412, "military": 7 }
+    ],
+    "Tuoba": [
+      { "name": "拓跋猗盧", "from": 295, "to": 316, "military": 7 },
+      { "name": "拓跋什翼犍", "from": 338, "to": 376, "military": 6 },
+      { "name": "拓跋珪", "from": 386, "to": 409, "military": 9 },
+      { "name": "拓跋嗣", "from": 409, "to": 423, "military": 7 },
+      { "name": "拓跋燾", "from": 424, "to": 452, "military": 10 },
+      { "name": "献文帝弘", "from": 465, "to": 471, "military": 6 },
+      { "name": "孝文帝宏", "from": 471, "to": 499, "military": 7 },
+      { "name": "宣武帝恪", "from": 499, "to": 515, "military": 5 }
+    ],
+    "Murong": [
+      { "name": "慕容廆", "from": 294, "to": 333, "military": 8 },
+      { "name": "慕容皝", "from": 333, "to": 348, "military": 8 },
+      { "name": "慕容儁", "from": 348, "to": 360, "military": 8 },
+      { "name": "慕容恪", "from": 360, "to": 367, "military": 9 },
+      { "name": "慕容垂", "from": 384, "to": 396, "military": 10 },
+      { "name": "慕容宝", "from": 396, "to": 398, "military": 4 }
+    ],
+    "Yuwen": [{ "name": "宇文乞得帰", "from": 320, "to": 344, "military": 5 }],
+    "Rouran": [
+      { "name": "社崙", "from": 402, "to": 410, "military": 7 },
+      { "name": "大檀", "from": 414, "to": 429, "military": 7 },
+      { "name": "吐賀真", "from": 444, "to": 464, "military": 6 }
+    ],
+    "Goguryeo": [
+      { "name": "美川王", "from": 300, "to": 331, "military": 7 },
+      { "name": "故国原王", "from": 331, "to": 371, "military": 5 },
+      { "name": "好太王", "from": 391, "to": 413, "military": 9 },
+      { "name": "長寿王", "from": 413, "to": 491, "military": 7 }
+    ],
+    "Tuyuhun": [
+      { "name": "吐延", "from": 317, "to": 329, "military": 5 },
+      { "name": "葉延", "from": 329, "to": 351, "military": 5 },
+      { "name": "樹洛干", "from": 405, "to": 417, "military": 6 },
+      { "name": "誇呂", "from": 540, "to": 591, "military": 6 }
+    ]
+  },
+  "northRulers": [
+    { "name": "苻堅", "from": 357, "to": 385, "military": 9 },
+    { "name": "拓跋珪", "from": 386, "to": 409, "military": 9 },
+    { "name": "拓跋嗣", "from": 409, "to": 423, "military": 7 },
+    { "name": "拓跋燾", "from": 424, "to": 452, "military": 10 },
+    { "name": "文成帝濬", "from": 452, "to": 465, "military": 5 },
+    { "name": "献文帝弘", "from": 465, "to": 471, "military": 6 },
+    { "name": "孝文帝宏", "from": 471, "to": 499, "military": 7 },
+    { "name": "宣武帝恪", "from": 499, "to": 515, "military": 5 },
+    { "name": "爾朱栄", "from": 528, "to": 530, "military": 9 },
+    { "name": "高歓", "from": 534, "to": 547, "military": 9 },
+    { "name": "宇文泰", "from": 547, "to": 556, "military": 9 },
+    { "name": "高洋", "from": 556, "to": 559, "military": 7 },
+    { "name": "宇文邕", "from": 560, "to": 578, "military": 9 },
+    { "name": "楊堅", "from": 581, "to": 604, "military": 8 }
+  ],
+  "northNames": {
+    "Xiongnu": "漢趙",
+    "Jie": "趙",
+    "Di": "秦",
+    "Qiang": "秦",
+    "Ba": "成漢",
+    "Lushui": "涼",
+    "Dingling": "魏",
+    "Qifu": "秦",
+    "Tuoba": "魏",
+    "Murong": "燕",
+    "Yuwen": "周",
+    "Rouran": "柔然",
+    "Goguryeo": "高句麗",
+    "Tuyuhun": "吐谷渾"
+  },
+  "kingdomNames": {
+    "Xiongnu": "漢趙",
+    "Jie": "後趙",
+    "Di": "前秦",
+    "Qiang": "後秦",
+    "Ba": "成漢",
+    "Lushui": "北涼",
+    "Dingling": "翟魏",
+    "Qifu": "西秦",
+    "Tuoba": "代",
+    "Murong": "前燕",
+    "Yuwen": "宇文部",
+    "Rouran": "柔然",
+    "Goguryeo": "高句麗",
+    "Tuyuhun": "吐谷渾"
+  }
+}

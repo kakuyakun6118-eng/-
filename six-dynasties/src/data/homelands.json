@@ -1,0 +1,8 @@
+[
+  { "id": "Tuoba", "control": 100, "baseTax": 55, "garrison": 22, "owner": "tribe" },
+  { "id": "Murong", "control": 100, "baseTax": 48, "garrison": 20, "owner": "tribe" },
+  { "id": "Yuwen", "control": 100, "baseTax": 34, "garrison": 14, "owner": "tribe" },
+  { "id": "Rouran", "control": 100, "baseTax": 30, "garrison": 16, "owner": "tribe" },
+  { "id": "Goguryeo", "control": 100, "baseTax": 52, "garrison": 20, "owner": "tribe" },
+  { "id": "Tuyuhun", "control": 100, "baseTax": 28, "garrison": 12, "owner": "tribe" }
+]

@@ -1,0 +1,255 @@
+[
+  {
+    "id": "Xiongnu",
+    "strength": 46,
+    "strengthMax": 130,
+    "stance": "hostile",
+    "location": "Bing",
+    "reach": [
+      "Bing",
+      "Si",
+      "Ji",
+      "Yong"
+    ],
+    "demand": null,
+    "interior": true,
+    "raider": false,
+    "collapseYear": 329,
+    "foundedYear": null,
+    "kingdomName": null
+  },
+  {
+    "id": "Jie",
+    "strength": 24,
+    "strengthMax": 150,
+    "stance": "hostile",
+    "location": "Ji",
+    "reach": [
+      "Ji",
+      "Si",
+      "Qing",
+      "You",
+      "Yu"
+    ],
+    "demand": null,
+    "interior": true,
+    "raider": false,
+    "collapseYear": 351,
+    "foundedYear": null,
+    "kingdomName": null
+  },
+  {
+    "id": "Di",
+    "strength": 34,
+    "strengthMax": 190,
+    "stance": "hostile",
+    "location": "Yong",
+    "reach": [
+      "Yong",
+      "Liang",
+      "Si",
+      "Yi"
+    ],
+    "demand": null,
+    "interior": true,
+    "raider": false,
+    "collapseYear": 394,
+    "foundedYear": null,
+    "kingdomName": null
+  },
+  {
+    "id": "Qiang",
+    "strength": 30,
+    "strengthMax": 120,
+    "stance": "hostile",
+    "location": "Yong",
+    "reach": [
+      "Yong",
+      "Liang",
+      "Si"
+    ],
+    "demand": null,
+    "interior": true,
+    "raider": false,
+    "collapseYear": 417,
+    "foundedYear": null,
+    "kingdomName": null
+  },
+  {
+    "id": "Ba",
+    "strength": 22,
+    "strengthMax": 80,
+    "stance": "hostile",
+    "location": "Yi",
+    "reach": [
+      "Yi",
+      "Ning",
+      "Jing"
+    ],
+    "demand": null,
+    "interior": true,
+    "raider": false,
+    "collapseYear": 347,
+    "foundedYear": null,
+    "kingdomName": null
+  },
+  {
+    "id": "Lushui",
+    "strength": 18,
+    "strengthMax": 70,
+    "stance": "hostile",
+    "location": "Liang",
+    "reach": [
+      "Liang",
+      "Yong"
+    ],
+    "demand": null,
+    "interior": true,
+    "raider": false,
+    "collapseYear": 439,
+    "foundedYear": null,
+    "kingdomName": null
+  },
+  {
+    "id": "Dingling",
+    "strength": 16,
+    "strengthMax": 55,
+    "stance": "hostile",
+    "location": "Ji",
+    "reach": [
+      "Ji",
+      "Qing",
+      "Yu"
+    ],
+    "demand": null,
+    "interior": true,
+    "raider": false,
+    "collapseYear": 392,
+    "foundedYear": null,
+    "kingdomName": null
+  },
+  {
+    "id": "Qifu",
+    "strength": 18,
+    "strengthMax": 60,
+    "stance": "hostile",
+    "location": "Liang",
+    "reach": [
+      "Liang",
+      "Yong"
+    ],
+    "demand": null,
+    "interior": true,
+    "raider": false,
+    "collapseYear": 431,
+    "foundedYear": null,
+    "kingdomName": null
+  },
+  {
+    "id": "Tuoba",
+    "strength": 52,
+    "strengthMax": 240,
+    "stance": "hostile",
+    "location": "exterior",
+    "reach": [
+      "Bing",
+      "Ji",
+      "You",
+      "Si",
+      "Yong"
+    ],
+    "demand": null,
+    "interior": false,
+    "raider": false,
+    "collapseYear": null,
+    "foundedYear": null,
+    "kingdomName": null
+  },
+  {
+    "id": "Murong",
+    "strength": 48,
+    "strengthMax": 150,
+    "stance": "hostile",
+    "location": "exterior",
+    "reach": [
+      "You",
+      "Ji",
+      "Qing"
+    ],
+    "demand": null,
+    "interior": false,
+    "raider": false,
+    "collapseYear": 409,
+    "foundedYear": null,
+    "kingdomName": null
+  },
+  {
+    "id": "Yuwen",
+    "strength": 26,
+    "strengthMax": 70,
+    "stance": "hostile",
+    "location": "exterior",
+    "reach": [
+      "You",
+      "Ji"
+    ],
+    "demand": null,
+    "interior": false,
+    "raider": false,
+    "collapseYear": 344,
+    "foundedYear": null,
+    "kingdomName": null
+  },
+  {
+    "id": "Rouran",
+    "strength": 30,
+    "strengthMax": 90,
+    "stance": "hostile",
+    "location": "exterior",
+    "reach": [
+      "Bing",
+      "You",
+      "Liang"
+    ],
+    "demand": null,
+    "interior": false,
+    "raider": true,
+    "collapseYear": 555,
+    "foundedYear": null,
+    "kingdomName": null
+  },
+  {
+    "id": "Goguryeo",
+    "strength": 28,
+    "strengthMax": 110,
+    "stance": "hostile",
+    "location": "exterior",
+    "reach": [
+      "You"
+    ],
+    "demand": null,
+    "interior": false,
+    "raider": false,
+    "collapseYear": null,
+    "foundedYear": null,
+    "kingdomName": null
+  },
+  {
+    "id": "Tuyuhun",
+    "strength": 20,
+    "strengthMax": 70,
+    "stance": "hostile",
+    "location": "exterior",
+    "reach": [
+      "Liang",
+      "Yong",
+      "Yi"
+    ],
+    "demand": null,
+    "interior": false,
+    "raider": false,
+    "collapseYear": null,
+    "foundedYear": null,
+    "kingdomName": null
+  }
+]

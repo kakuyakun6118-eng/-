@@ -1,0 +1,242 @@
+@import 'tailwindcss';
+
+/*
+ * 六朝の外観。
+ *
+ * 絹本と竹簡の地に、墨と朱で字を置く。要のところにだけ金泥を差す。
+ * 書体は明朝／セリフに寄せる。標準搭載の書体で得られ、
+ * 外部フォントを読み込まずに済むため
+ */
+:root {
+  --silk: #e7dcc6;
+  --silk-dim: #d5c7a8;
+  --bamboo: #c8b48b;
+  --ink: #241f1a;
+  --ink-soft: #5c5044;
+  --gold: #9c7a26;
+  --gold-bright: #d0a63f;
+  --cinnabar: #9b2d20;
+  --cinnabar-deep: #6d1d15;
+  --imperial: #2e3f57;
+  --imperial-deep: #1b2637;
+  --jade: #4a6f5d;
+}
+
+html {
+  color-scheme: light;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  overscroll-behavior-y: none;
+  color: var(--ink);
+  font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', 'Songti SC', 'SimSun',
+    'Times New Roman', serif;
+  /* 絹の斑と、上下に落ちる陰。単色の紙に見せない */
+  background-color: var(--silk);
+  background-image:
+    radial-gradient(ellipse at 18% 8%, rgba(255, 255, 255, 0.55), transparent 55%),
+    radial-gradient(ellipse at 82% 84%, rgba(120, 96, 58, 0.2), transparent 60%),
+    linear-gradient(
+      180deg,
+      rgba(80, 62, 36, 0.12),
+      transparent 18%,
+      transparent 84%,
+      rgba(80, 62, 36, 0.16)
+    );
+  background-attachment: fixed;
+}
+
+/** 碑の題。字間を広げ、彫り込みに寄せる */
+.han-title {
+  letter-spacing: 0.2em;
+  font-weight: 700;
+  color: var(--imperial-deep);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.han-heading {
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  color: var(--imperial);
+}
+
+/** 絹の板。細い金の枠と、紙の厚みを出す影 */
+.han-panel {
+  background-color: rgba(250, 244, 230, 0.84);
+  border: 1px solid var(--gold);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.55),
+    0 1px 3px rgba(60, 48, 28, 0.25);
+}
+
+/** 濃い板。帝と都督など格の高い区画に使う */
+.han-panel-dark {
+  background-image: linear-gradient(160deg, #35485f, #1b2637);
+  border: 1px solid var(--gold);
+  box-shadow:
+    inset 0 0 0 1px rgba(208, 166, 63, 0.35),
+    0 2px 6px rgba(18, 24, 34, 0.42);
+  color: var(--silk);
+}
+
+/** 朱の板。急を要する区画に使う */
+.han-panel-alert {
+  background-color: rgba(155, 45, 32, 0.08);
+  border: 1px solid var(--cinnabar);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+}
+
+/** 金泥の押し出し。年送りの一手に使う */
+.han-button {
+  background-image: linear-gradient(180deg, var(--gold-bright), var(--gold) 55%, #775c17);
+  border: 1px solid #5f4a12;
+  color: #2a2110;
+  letter-spacing: 0.14em;
+  font-weight: 700;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.38);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.22),
+    0 2px 4px rgba(60, 48, 28, 0.3);
+}
+
+.han-button:active {
+  background-image: linear-gradient(180deg, var(--gold), #775c17);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.han-button:disabled {
+  background-image: linear-gradient(180deg, #b9ac8e, #9c9077);
+  border-color: #7d7360;
+  color: #4a4436;
+  text-shadow: none;
+  box-shadow: none;
+}
+
+/** 竹簡の区画。字を刻んだように見せる */
+.han-tablet {
+  background-image: linear-gradient(175deg, #dccdaa, #c3b088);
+  border: 1px solid #836c3f;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -2px 5px rgba(90, 72, 40, 0.25);
+}
+
+/** 朱印。年号や国号を囲む */
+.han-seal {
+  background-color: var(--cinnabar);
+  color: #f6ece0;
+  border: 1px solid var(--cinnabar-deep);
+  letter-spacing: 0.08em;
+  box-shadow: inset 0 0 0 1px rgba(246, 236, 224, 0.35);
+}
+
+/** 細い金の区切り。中央を膨らませて古い罫線に見せる */
+.han-rule {
+  height: 1px;
+  background-image: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+
+/**
+ * 回紋（雷文）。青銅器と織物の縁飾りの定番で、
+ * 直線だけで描けるため画像を持たずに CSS の繰り返しで作れる
+ */
+.han-fret {
+  height: 10px;
+  background-color: var(--imperial-deep);
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      var(--gold-bright) 0 2px,
+      transparent 2px 4px,
+      var(--gold-bright) 4px 6px,
+      transparent 6px 12px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 6px,
+      var(--gold-bright) 6px 8px,
+      transparent 8px 12px
+    );
+  background-size: 12px 4px, 12px 10px;
+  background-position: 0 2px, 0 0;
+  background-repeat: repeat-x;
+}
+
+/*
+ * 地図と戦場の演出。
+ * SMIL の begin="0s" は SVG 文書の読み込み時点を起点にするため、
+ * ターン進行後に挿入される要素では再生済みになってしまう。
+ * CSS アニメーションは要素が現れた時点から始まるのでこちらを使う
+ */
+@keyframes march-advance {
+  from {
+    transform: translate(0px, 0px);
+  }
+  to {
+    transform: translate(var(--march-dx), var(--march-dy));
+  }
+}
+
+@keyframes battle-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes battle-core {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes banner-wave {
+  0%,
+  100% {
+    transform: skewY(0deg);
+  }
+  50% {
+    transform: skewY(6deg);
+  }
+}
+
+.battle-core {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: battle-core 1.2s ease-in-out infinite;
+}
+
+.battle-pop {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: battle-pop 0.5s ease-out both;
+}
+
+.banner-wave {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: banner-wave 3.4s ease-in-out infinite;
+}
+
+/* 自分の中心を軸に変形する要素 */
+.self-origin {
+  transform-box: fill-box;
+  transform-origin: center;
+}

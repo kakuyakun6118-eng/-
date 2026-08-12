@@ -1,0 +1,82 @@
+[
+  {
+    "id": "runan",
+    "name": "汝南王亮",
+    "province": "Yu",
+    "troops": 14,
+    "ambition": 4,
+    "inRevolt": false,
+    "fromYear": 291,
+    "untilYear": 291
+  },
+  {
+    "id": "chu",
+    "name": "楚王瑋",
+    "province": "Jing",
+    "troops": 16,
+    "ambition": 8,
+    "inRevolt": false,
+    "fromYear": 291,
+    "untilYear": 291
+  },
+  {
+    "id": "zhao",
+    "name": "趙王倫",
+    "province": "Yong",
+    "troops": 22,
+    "ambition": 10,
+    "inRevolt": false,
+    "fromYear": 291,
+    "untilYear": 301
+  },
+  {
+    "id": "qi",
+    "name": "斉王冏",
+    "province": "Qing",
+    "troops": 20,
+    "ambition": 7,
+    "inRevolt": false,
+    "fromYear": 291,
+    "untilYear": 302
+  },
+  {
+    "id": "changsha",
+    "name": "長沙王乂",
+    "province": "Si",
+    "troops": 18,
+    "ambition": 5,
+    "inRevolt": false,
+    "fromYear": 296,
+    "untilYear": 304
+  },
+  {
+    "id": "chengdu",
+    "name": "成都王穎",
+    "province": "Ji",
+    "troops": 26,
+    "ambition": 9,
+    "inRevolt": false,
+    "fromYear": 291,
+    "untilYear": 306
+  },
+  {
+    "id": "hejian",
+    "name": "河間王顒",
+    "province": "Yong",
+    "troops": 22,
+    "ambition": 8,
+    "inRevolt": false,
+    "fromYear": 296,
+    "untilYear": 306
+  },
+  {
+    "id": "donghai",
+    "name": "東海王越",
+    "province": "Yu",
+    "troops": 24,
+    "ambition": 9,
+    "inRevolt": false,
+    "fromYear": 300,
+    "untilYear": 311
+  }
+]

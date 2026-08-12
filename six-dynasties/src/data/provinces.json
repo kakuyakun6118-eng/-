@@ -1,0 +1,137 @@
+[
+  {
+    "id": "Si",
+    "control": 96,
+    "baseTax": 190,
+    "baseTaxMax": 256,
+    "garrison": 26,
+    "region": "north",
+    "holder": null
+  },
+  {
+    "id": "Yong",
+    "control": 92,
+    "baseTax": 150,
+    "baseTaxMax": 202,
+    "garrison": 24,
+    "region": "north",
+    "holder": null
+  },
+  {
+    "id": "Liang",
+    "control": 82,
+    "baseTax": 70,
+    "baseTaxMax": 94,
+    "garrison": 16,
+    "region": "north",
+    "holder": null
+  },
+  {
+    "id": "Bing",
+    "control": 84,
+    "baseTax": 95,
+    "baseTaxMax": 128,
+    "garrison": 18,
+    "region": "north",
+    "holder": null
+  },
+  {
+    "id": "Ji",
+    "control": 94,
+    "baseTax": 200,
+    "baseTaxMax": 270,
+    "garrison": 26,
+    "region": "north",
+    "holder": null
+  },
+  {
+    "id": "You",
+    "control": 88,
+    "baseTax": 105,
+    "baseTaxMax": 142,
+    "garrison": 20,
+    "region": "north",
+    "holder": null
+  },
+  {
+    "id": "Qing",
+    "control": 92,
+    "baseTax": 140,
+    "baseTaxMax": 189,
+    "garrison": 18,
+    "region": "north",
+    "holder": null
+  },
+  {
+    "id": "Yu",
+    "control": 92,
+    "baseTax": 155,
+    "baseTaxMax": 209,
+    "garrison": 20,
+    "region": "north",
+    "holder": null
+  },
+  {
+    "id": "Yang",
+    "control": 90,
+    "baseTax": 130,
+    "baseTaxMax": 377,
+    "garrison": 18,
+    "region": "south",
+    "holder": null
+  },
+  {
+    "id": "Jing",
+    "control": 90,
+    "baseTax": 145,
+    "baseTaxMax": 420,
+    "garrison": 22,
+    "region": "south",
+    "holder": null
+  },
+  {
+    "id": "Jiang",
+    "control": 88,
+    "baseTax": 90,
+    "baseTaxMax": 261,
+    "garrison": 14,
+    "region": "south",
+    "holder": null
+  },
+  {
+    "id": "Yi",
+    "control": 84,
+    "baseTax": 120,
+    "baseTaxMax": 348,
+    "garrison": 18,
+    "region": "south",
+    "holder": null
+  },
+  {
+    "id": "Ning",
+    "control": 74,
+    "baseTax": 45,
+    "baseTaxMax": 130,
+    "garrison": 10,
+    "region": "south",
+    "holder": null
+  },
+  {
+    "id": "Guang",
+    "control": 78,
+    "baseTax": 60,
+    "baseTaxMax": 174,
+    "garrison": 10,
+    "region": "south",
+    "holder": null
+  },
+  {
+    "id": "Jiao",
+    "control": 70,
+    "baseTax": 40,
+    "baseTaxMax": 116,
+    "garrison": 8,
+    "region": "south",
+    "holder": null
+  }
+]

@@ -1,0 +1,21 @@
+{
+  "comment": "門閥士族の家門。家門ごとの差は無く、選ぶのは名前だけ。コードに直接書かない",
+  "houses": [
+    { "id": "langya_wang", "name": "琅邪王氏" },
+    { "id": "chenjun_xie", "name": "陳郡謝氏" },
+    { "id": "yingchuan_yu", "name": "潁川庾氏" },
+    { "id": "qiaoguo_huan", "name": "譙国桓氏" },
+    { "id": "taiyuan_wang", "name": "太原王氏" },
+    { "id": "chenjun_yuan", "name": "陳郡袁氏" },
+    { "id": "lanling_xiao", "name": "蘭陵蕭氏" },
+    { "id": "wujun_lu", "name": "呉郡陸氏" },
+    { "id": "wujun_gu", "name": "呉郡顧氏" },
+    { "id": "kuaiji_kong", "name": "会稽孔氏" },
+    { "id": "taishan_yang", "name": "泰山羊氏" },
+    { "id": "hongnong_yang", "name": "弘農楊氏" },
+    { "id": "hedong_pei", "name": "河東裴氏" },
+    { "id": "qinghe_cui", "name": "清河崔氏" },
+    { "id": "fanyang_lu", "name": "范陽盧氏" },
+    { "id": "boling_cui", "name": "博陵崔氏" }
+  ]
+}

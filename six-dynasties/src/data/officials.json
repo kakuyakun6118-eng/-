@@ -1,0 +1,39 @@
+{
+  "comment": "この時代の朝廷に録尚書事も刺史もいなかったことはないので、空位は退任や反乱の結果としてのみ起きるものとして扱う",
+  "chancellor": {
+    "id": "zhang_hua",
+    "name": "張華",
+    "competence": 9,
+    "ambition": 3,
+    "tenure": 9,
+    "gentryBorn": true
+  },
+  "inspectors": [
+    { "provinceId": "Si", "id": "he_qiao", "name": "和嶠", "competence": 7, "ambition": 3, "tenure": 8, "gentryBorn": true },
+    { "provinceId": "Yong", "id": "sima_ya", "name": "解系", "competence": 5, "ambition": 4, "tenure": 6, "gentryBorn": true },
+    { "provinceId": "Liang", "id": "zhang_gui", "name": "張軌", "competence": 8, "ambition": 6, "tenure": 11, "gentryBorn": true },
+    { "provinceId": "Bing", "id": "liu_kun", "name": "劉琨", "competence": 6, "ambition": 5, "tenure": 10, "gentryBorn": true },
+    { "provinceId": "Ji", "id": "wang_bin", "name": "王斌", "competence": 5, "ambition": 5, "tenure": 7, "gentryBorn": false },
+    { "provinceId": "You", "id": "wang_jun", "name": "王浚", "competence": 6, "ambition": 9, "tenure": 12, "gentryBorn": true },
+    { "provinceId": "Qing", "id": "gou_xi", "name": "苟晞", "competence": 8, "ambition": 7, "tenure": 9, "gentryBorn": false },
+    { "provinceId": "Yu", "id": "liu_qiao", "name": "劉喬", "competence": 5, "ambition": 5, "tenure": 6, "gentryBorn": true },
+    { "provinceId": "Yang", "id": "zhou_jun", "name": "周浚", "competence": 6, "ambition": 3, "tenure": 7, "gentryBorn": true },
+    { "provinceId": "Jing", "id": "liu_hong", "name": "劉弘", "competence": 9, "ambition": 2, "tenure": 10, "gentryBorn": true },
+    { "provinceId": "Jiang", "id": "hua_yi", "name": "華軼", "competence": 5, "ambition": 6, "tenure": 8, "gentryBorn": true },
+    { "provinceId": "Yi", "id": "zhao_xin", "name": "趙廞", "competence": 4, "ambition": 8, "tenure": 6, "gentryBorn": false },
+    { "provinceId": "Ning", "id": "li_yi", "name": "李毅", "competence": 6, "ambition": 3, "tenure": 9, "gentryBorn": false },
+    { "provinceId": "Guang", "id": "teng_xiu", "name": "滕脩", "competence": 5, "ambition": 3, "tenure": 7, "gentryBorn": true },
+    { "provinceId": "Jiao", "id": "tao_huang", "name": "陶璜", "competence": 7, "ambition": 2, "tenure": 8, "gentryBorn": false }
+  ],
+  "surnames": [
+    "王", "謝", "桓", "庾", "袁", "蕭", "陸", "顧", "孔", "羊", "裴", "崔", "盧", "劉",
+    "張", "李", "周", "何", "沈", "朱", "殷", "郗", "褚", "虞", "杜", "毛", "檀", "到",
+    "范", "徐", "紀", "任", "戴", "傅", "習", "宗", "薛", "韋", "柳", "江"
+  ],
+  "givenNames": [
+    "導", "敦", "彬", "羲之", "献之", "安", "玄", "石", "琰", "亮", "翼", "冰", "宏",
+    "温", "沖", "豁", "秀", "湛", "泰", "誕", "曇首", "義恭", "弘", "邁", "峻", "約",
+    "彦回", "景仁", "叔宝", "宝巻", "融", "藻", "曄", "勔", "睿", "延之", "希逸",
+    "道済", "慶之", "霸先", "明徹", "文育", "頊", "叡", "顗", "峤", "鑒", "允", "浩"
+  ]
+}
