@@ -43,6 +43,8 @@ import {
   TAX_BASE_MAX,
   TAX_BASE_RECOVERY,
   TAX_BASE_REFERENCE,
+  WALL_REPAIR,
+  WALL_REPAIR_PER_POINT,
   TAX_RATE,
   modifiersOf,
 } from './constants';
@@ -120,6 +122,7 @@ export function createInitialState(
     unifiedYear: null,
 
     difficulty,
+    retiredPrinceIds: [],
     firedEventIds: [],
     turnEvents: [],
     status: 'ongoing',
@@ -198,6 +201,29 @@ export function updateControl(state: GameState): GameState {
     provinces[id] = { ...province, control: clamp(province.control + recovery, 0, CONTROL_MAX) };
   }
   return { ...state, provinces };
+}
+
+/**
+ * 城の修復。囲まれていない年に少しずつ耐久が戻る。
+ *
+ * 刺史がいれば戻りが速い。囲まれているあいだは戻らないので、
+ * 攻め続けられている城は年ごとに削られていく
+ */
+export function repairWalls(state: GameState, besieged: ReadonlySet<ProvinceId>): GameState {
+  const provinces = { ...state.provinces };
+  let changed = false;
+
+  for (const id of Object.keys(provinces) as ProvinceId[]) {
+    const province = provinces[id];
+    if (province.holder !== null || besieged.has(id)) continue;
+    if (province.wall >= province.wallMax) continue;
+
+    const inspector = state.inspectors[id];
+    const repair = WALL_REPAIR * (1 + (inspector?.competence ?? 0) * WALL_REPAIR_PER_POINT);
+    provinces[id] = { ...province, wall: Math.min(province.wallMax, province.wall + repair) };
+    changed = true;
+  }
+  return changed ? { ...state, provinces } : state;
 }
 
 /**

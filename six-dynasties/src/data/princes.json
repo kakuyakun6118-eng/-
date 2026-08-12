@@ -4,6 +4,11 @@
     "name": "汝南王亮",
     "province": "Yu",
     "troops": 14,
+    "abilities": {
+      "military": 3,
+      "administration": 5,
+      "charisma": 4
+    },
     "ambition": 4,
     "inRevolt": false,
     "fromYear": 291,
@@ -14,6 +19,11 @@
     "name": "楚王瑋",
     "province": "Jing",
     "troops": 16,
+    "abilities": {
+      "military": 6,
+      "administration": 2,
+      "charisma": 3
+    },
     "ambition": 8,
     "inRevolt": false,
     "fromYear": 291,
@@ -24,6 +34,11 @@
     "name": "趙王倫",
     "province": "Yong",
     "troops": 22,
+    "abilities": {
+      "military": 4,
+      "administration": 2,
+      "charisma": 2
+    },
     "ambition": 10,
     "inRevolt": false,
     "fromYear": 291,
@@ -34,6 +49,11 @@
     "name": "斉王冏",
     "province": "Qing",
     "troops": 20,
+    "abilities": {
+      "military": 5,
+      "administration": 4,
+      "charisma": 5
+    },
     "ambition": 7,
     "inRevolt": false,
     "fromYear": 291,
@@ -44,6 +64,11 @@
     "name": "長沙王乂",
     "province": "Si",
     "troops": 18,
+    "abilities": {
+      "military": 7,
+      "administration": 5,
+      "charisma": 6
+    },
     "ambition": 5,
     "inRevolt": false,
     "fromYear": 296,
@@ -54,6 +79,11 @@
     "name": "成都王穎",
     "province": "Ji",
     "troops": 26,
+    "abilities": {
+      "military": 5,
+      "administration": 3,
+      "charisma": 6
+    },
     "ambition": 9,
     "inRevolt": false,
     "fromYear": 291,
@@ -64,6 +94,11 @@
     "name": "河間王顒",
     "province": "Yong",
     "troops": 22,
+    "abilities": {
+      "military": 6,
+      "administration": 4,
+      "charisma": 4
+    },
     "ambition": 8,
     "inRevolt": false,
     "fromYear": 296,
@@ -74,6 +109,11 @@
     "name": "東海王越",
     "province": "Yu",
     "troops": 24,
+    "abilities": {
+      "military": 5,
+      "administration": 6,
+      "charisma": 5
+    },
     "ambition": 9,
     "inRevolt": false,
     "fromYear": 300,

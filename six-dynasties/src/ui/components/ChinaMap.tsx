@@ -67,6 +67,90 @@ function CapitalBanner({ x, y }: { x: number; y: number }) {
   );
 }
 
+/**
+ * 主要都市。**城壁の高いところが大城**で、洛陽・長安・鄴・建康・江陵・成都がこれにあたる。
+ * 都は旗を立て、大城は二重の輪で描き分ける
+ */
+const MAJOR_CITIES = new Set<ProvinceId>(['Si', 'Yong', 'Ji', 'Yang', 'Jing', 'Yi']);
+
+/**
+ * 城。**地図の上には点と名だけを置く。**
+ *
+ * 耐久の帯と数まで図に描き込んだときは、中原のように城が密なところで
+ * 州名・支配度・城名・耐久・「囲まれている」が四重五重に重なって読めなかった。
+ * 耐久は図の下の一覧（CityPanel）で読ませ、図では囲まれている城にだけ
+ * 細い帯を出して危うさを伝える
+ */
+function City({
+  x,
+  y,
+  name,
+  wall,
+  wallMax,
+  major,
+  isCapital,
+  besieged,
+  held,
+}: {
+  x: number;
+  y: number;
+  name: string;
+  wall: number;
+  wallMax: number;
+  major: boolean;
+  isCapital: boolean;
+  besieged: boolean;
+  held: boolean;
+}) {
+  const radius = isCapital ? 3.8 : major ? 3 : 2;
+  const ratio = wallMax <= 0 ? 0 : Math.max(0, Math.min(1, wall / wallMax));
+
+  return (
+    <g pointerEvents="none">
+      {major && (
+        <circle cx={x} cy={y} r={radius + 2.2} fill="none" stroke="#2c2419" strokeWidth="0.7" opacity="0.7" />
+      )}
+      <circle
+        cx={x}
+        cy={y}
+        r={radius}
+        fill={isCapital ? 'var(--gold-bright)' : major ? '#f6ecd6' : '#e6dcc4'}
+        stroke="#2c2419"
+        strokeWidth="0.9"
+      />
+      {/* 大城と都だけ名を出す。小さな城まで書くと図が字で埋まる */}
+      {(major || isCapital) && (
+        <text
+          x={x}
+          y={y - radius - 3.5}
+          textAnchor="middle"
+          fontSize="10.5"
+          fontWeight="700"
+          fill="#241f1a"
+          stroke="#f2e8d4"
+          strokeWidth="2.4"
+          paintOrder="stroke"
+        >
+          {name}
+        </text>
+      )}
+      {/* 囲まれている城だけ、残りの耐久を細い帯で見せる */}
+      {held && besieged && (
+        <>
+          <rect x={x - 11} y={y + radius + 2} width="22" height="2.4" fill="rgba(20,16,12,0.45)" />
+          <rect
+            x={x - 11}
+            y={y + radius + 2}
+            width={22 * ratio}
+            height="2.4"
+            fill={ratio > 0.5 ? 'var(--gold)' : 'var(--cinnabar)'}
+          />
+        </>
+      )}
+    </g>
+  );
+}
+
 /** 交戦の印。敵が踏み込んでいる州に置く */
 function ClashMark({ x, y }: { x: number; y: number }) {
   return (
@@ -212,23 +296,25 @@ export function ChinaMap({
 
           return (
             <g key={`l-${id}`} pointerEvents="none">
-              {/* 治所 */}
-              <circle
-                cx={seat[0]}
-                cy={seat[1]}
-                r={isCapital ? 3.4 : 2.2}
-                fill={isCapital ? 'var(--gold-bright)' : '#f0e6d2'}
-                stroke="#2c2419"
-                strokeWidth="0.8"
+              <City
+                x={seat[0]}
+                y={seat[1]}
+                name={PROVINCE_SEATS[id]}
+                wall={province.wall}
+                wallMax={province.wallMax}
+                major={MAJOR_CITIES.has(id)}
+                isCapital={isCapital}
+                besieged={foes.length > 0}
+                held={province.holder === null}
               />
               {isCapital && <CapitalBanner x={seat[0]} y={seat[1]} />}
-              {foes.length > 0 && <ClashMark x={seat[0] + 12} y={seat[1] - 10} />}
+              {foes.length > 0 && <ClashMark x={seat[0] + 14} y={seat[1] - 12} />}
 
               <text
                 x={label[0]}
                 y={label[1]}
                 textAnchor="middle"
-                fontSize="15"
+                fontSize="14"
                 fontWeight="700"
                 fill={province.holder === null && province.control > 45 ? '#f4ecd9' : '#241f1a'}
                 stroke={province.holder === null && province.control > 45 ? 'none' : '#f0e6d2'}
@@ -289,7 +375,83 @@ export function MapLegend({ state }: { state: GameState }) {
           <span style={{ color: 'var(--ink-soft)' }}>{item.label}</span>
         </span>
       ))}
+      <span className="text-[11px] w-full" style={{ color: 'var(--ink-soft)' }}>
+        二重の輪は<strong style={{ color: 'var(--ink)' }}>大城</strong>（洛陽・長安・鄴・建康・江陵・成都）。
+        囲まれている城には残りの耐久が帯で出る
+      </span>
     </div>
+  );
+}
+
+/**
+ * 主要都市の一覧。
+ *
+ * 城の耐久は図に描き込むと字が重なって読めないので、ここで読ませる。
+ * **支配度が尽きてから耐久が削られ、尽きた城が陥ちる**
+ */
+export function CityPanel({ state }: { state: GameState }) {
+  const rows = (Object.keys(PROVINCE_PATHS) as ProvinceId[])
+    .map((id) => ({ id, province: state.provinces[id], major: MAJOR_CITIES.has(id) }))
+    .sort((a, b) => {
+      // 危うい城を上に。次に大城
+      const risk = (r: typeof a) =>
+        r.province.holder !== null ? 2 : r.province.wall / Math.max(1, r.province.wallMax);
+      return risk(a) - risk(b) || (a.major ? 0 : 1) - (b.major ? 0 : 1);
+    });
+
+  return (
+    <section className="han-panel rounded-sm px-3 py-2">
+      <h2 className="han-heading text-sm">主要都市と城の耐久</h2>
+      <ul className="mt-1.5 space-y-1">
+        {rows.map(({ id, province, major }) => {
+          const ratio = province.wallMax <= 0 ? 0 : province.wall / province.wallMax;
+          const lost = province.holder !== null;
+          const tone = lost
+            ? 'var(--ink-soft)'
+            : ratio > 0.6
+              ? 'var(--jade)'
+              : ratio > 0.3
+                ? 'var(--gold)'
+                : 'var(--cinnabar)';
+          return (
+            <li key={id} className="flex items-center gap-2 text-[12px]">
+              <span className="w-16 shrink-0">
+                <span className="font-semibold" style={{ color: major ? 'var(--ink)' : 'var(--ink-soft)' }}>
+                  {PROVINCE_SEATS[id]}
+                </span>
+                {state.capital === id && (
+                  <span className="ml-1 text-[10px]" style={{ color: 'var(--gold)' }}>
+                    都
+                  </span>
+                )}
+              </span>
+              <span className="w-10 shrink-0 text-[11px]" style={{ color: 'var(--ink-soft)' }}>
+                {PROVINCE_LABELS[id]}
+              </span>
+              <span className="flex-1 h-2 rounded-[1px]" style={{ backgroundColor: 'rgba(0,0,0,0.12)' }}>
+                <span
+                  className="block h-2 rounded-[1px]"
+                  style={{ width: `${Math.max(0, Math.min(1, ratio)) * 100}%`, backgroundColor: tone }}
+                />
+              </span>
+              <span className="w-20 shrink-0 text-right tabular-nums text-[11px]" style={{ color: tone }}>
+                {!lost || province.holder === null
+                  ? `城 ${Math.round(province.wall)}／${province.wallMax}`
+                  : province.holder === 'north'
+                    ? (state.north?.name ?? '北朝')
+                    : province.holder === 'prince'
+                      ? '藩王'
+                      : FACTION_LABELS[province.holder]}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="mt-1.5 text-[11px]" style={{ color: 'var(--ink-soft)' }}>
+        支配度が尽きてから城の耐久が削られ、尽きた城が陥ちて州を失う。
+        「軍事 → 守りを固める」で城も繕える
+      </p>
+    </section>
   );
 }
 

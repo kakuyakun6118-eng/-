@@ -5,7 +5,7 @@ import { consumesActionSlot } from '../core/tick';
 import type { GameState, ProvinceId } from '../core/types';
 import { ActionPanel } from './components/ActionPanel';
 import { BattleScreen } from './components/BattleScreen';
-import { ChinaMap, MapLegend, type InspectTarget } from './components/ChinaMap';
+import { ChinaMap, CityPanel, MapLegend, type InspectTarget } from './components/ChinaMap';
 import {
   ChroniclePanel,
   NorthPanel,
@@ -113,7 +113,8 @@ function FrontsPanel({ state }: { state: GameState }) {
           <li key={row.id} className="text-[12px] flex items-baseline gap-1.5">
             <span className="font-semibold shrink-0">{PROVINCE_LABELS[row.id]}</span>
             <span className="tabular-nums shrink-0" style={{ color: 'var(--ink-soft)' }}>
-              支配 {Math.round(row.province.control)}／州兵 {Math.round(row.province.garrison)}
+              支配 {Math.round(row.province.control)}／城 {Math.round(row.province.wall)}／州兵{' '}
+              {Math.round(row.province.garrison)}
             </span>
             <span className="truncate" style={{ color: 'var(--cinnabar)' }}>
               {row.revolt && '宗室の挙兵 '}
@@ -270,7 +271,7 @@ export function App() {
               </div>
               <div className="text-[12px] mt-0.5" style={{ color: 'var(--ink-soft)' }}>
                 {province.holder === null
-                  ? `支配 ${Math.round(province.control)}／戸口 ${Math.round(province.baseTax)}／州兵 ${Math.round(province.garrison)}`
+                  ? `支配 ${Math.round(province.control)}／城 ${Math.round(province.wall)}／${Math.round(province.wallMax)}／戸口 ${Math.round(province.baseTax)}／州兵 ${Math.round(province.garrison)}`
                   : province.holder === 'north'
                     ? `${state.north?.name ?? '北朝'}の手にある`
                     : province.holder === 'prince'
@@ -295,6 +296,7 @@ export function App() {
 
           <div className="mt-2 space-y-2">
             <FrontsPanel state={state} />
+            <CityPanel state={state} />
             <NorthPanel state={state} />
           </div>
         </section>

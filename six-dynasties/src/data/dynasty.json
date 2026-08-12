@@ -106,5 +106,24 @@
   ],
   "abilitiesAdjusted": false,
   "consort": null,
-  "pendingMarriages": []
+  "pendingMarriages": [],
+  "princeTitlePool": [
+    "武陵王",
+    "江夏王",
+    "竟陵王",
+    "建安王",
+    "臨川王",
+    "始興王",
+    "廬陵王",
+    "彭城王",
+    "南康王",
+    "晋安王",
+    "衡陽王",
+    "桂陽王",
+    "鄱陽王",
+    "湘東王",
+    "邵陵王",
+    "長沙王",
+    "安成王"
+  ]
 }

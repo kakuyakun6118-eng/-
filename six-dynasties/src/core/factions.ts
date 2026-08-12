@@ -11,6 +11,9 @@ import {
   KINGDOM_CONTROL_THRESHOLD,
   KINGDOM_PROBABILITY,
   MARSHAL_GLORY_PER_POINT,
+  PROCLAIM_MANDATE_LOSS,
+  WALL_LOSS_PER_ADVANTAGE,
+  provincesToProclaim,
   MIN_STRENGTH_TO_ADVANCE,
   RAIDER_MAX_STRENGTH,
   REPULSE_MANDATE_GAIN,
@@ -19,6 +22,7 @@ import {
   modifiersOf,
 } from './constants';
 import type {
+  Abilities,
   Demand,
   DemandType,
   Faction,
@@ -34,6 +38,8 @@ interface LeaderEntry {
   from: number;
   to: number;
   military: number;
+  administration: number;
+  charisma: number;
 }
 
 const CHIEFTAINS = leadersData.chieftains as Record<string, LeaderEntry[]>;
@@ -50,12 +56,27 @@ const KINGDOM_NAMES = leadersData.kingdomNames as Record<string, string>;
 export function chieftainOf(
   factionId: FactionId,
   year: number,
-): { name: string; military: number } | null {
+): { name: string; abilities: Abilities } | null {
   const entries = CHIEFTAINS[factionId];
   if (entries === undefined) return null;
   const found = entries.find((entry) => year >= entry.from && year <= entry.to);
-  return found ? { name: found.name, military: found.military } : null;
+  if (found === undefined) return null;
+  return {
+    name: found.name,
+    abilities: {
+      military: found.military,
+      administration: found.administration,
+      charisma: found.charisma,
+    },
+  };
 }
+
+/** 名の伝わらない年の首長。三能力は民ごとに定まった並みの値にする */
+export const DEFAULT_CHIEFTAIN_ABILITIES: Abilities = {
+  military: 5,
+  administration: 5,
+  charisma: 5,
+};
 
 export function kingdomNameOf(factionId: FactionId): string {
   return KINGDOM_NAMES[factionId] ?? '';
@@ -64,7 +85,7 @@ export function kingdomNameOf(factionId: FactionId): string {
 /** 攻める側の戦力。首領の能力と難易度が掛かる */
 function offenceStrength(state: GameState, faction: Faction): number {
   const chieftain = chieftainOf(faction.id, state.year);
-  const leaderFactor = 1 + (chieftain?.military ?? 5) * 0.035;
+  const leaderFactor = 1 + (chieftain?.abilities.military ?? 5) * 0.035;
   return faction.strength * leaderFactor * modifiersOf(state.difficulty).foePowerMultiplier;
 }
 
@@ -188,11 +209,23 @@ function resolveInvasions(
     const advantage = total <= 0 ? 0 : (attack - defence) / total;
 
     if (advantage > 0) {
+      /*
+       * 支配度が残っているうちは野を削り、尽きてはじめて城を攻める。
+       * **州は城が落ちるまで手放さない**
+       */
+      const control = clamp100(province.control - advantage * CONTROL_LOSS_PER_ADVANTAGE);
+      const wall =
+        control > 0
+          ? province.wall
+          : Math.max(0, province.wall - advantage * WALL_LOSS_PER_ADVANTAGE);
       provinces[provinceId] = {
         ...province,
-        control: clamp100(province.control - advantage * CONTROL_LOSS_PER_ADVANTAGE),
+        control,
+        wall,
         garrison: Math.max(0, province.garrison * (1 - advantage * 0.35)),
       };
+      // 城を攻めている者を控える。落ちたときに誰の手へ渡るかをここから引く
+      modifiers.besieged.set(provinceId, id);
       // 掠めるだけの民は、奪ったその年のうちに塞外へ引き揚げる
       if (faction.raider) factions[id] = { ...faction, location: 'exterior' };
     } else {
@@ -209,37 +242,48 @@ function resolveInvasions(
   }
 
   next = { ...next, provinces, factions, mandate: clamp100(next.mandate + mandateGain) };
-  return applyProvinceLosses(next);
+  return applyProvinceLosses(next, modifiers);
 }
 
-/** 支配度が尽きた州はその年に握った者の手へ渡る */
-function applyProvinceLosses(state: GameState): GameState {
+/**
+ * 城が落ちた州はその年に攻めていた者の手へ渡る。
+ *
+ * **攻めた者がいなければ落ちない。** 誰が城を攻めたかを見ずに
+ * 「支配度が尽きた州は北朝のもの」としていたときは、嶺南の交州が
+ * 内から荒れただけで北朝領になる局が出た
+ */
+export function applyProvinceLosses(state: GameState, modifiers: TurnModifiers): GameState {
   let next = state;
   const provinces = { ...next.provinces };
   let taxBaseLoss = 0;
   let mandateLoss = 0;
+  let cityFell = false;
 
   for (const id of Object.keys(provinces) as ProvinceId[]) {
     const province = provinces[id];
-    if (province.holder !== null || province.control > 0) continue;
+    if (province.holder !== null) continue;
+    if (province.control > 0 || province.wall > 0) continue;
 
-    // その州に踏み込んでいる勢力のうち、いちばん強い者が握る
-    const claimant = Object.values(next.factions)
-      .filter((f) => f.stance === 'hostile' && f.location === id)
-      .sort((a, b) => b.strength - a.strength)[0];
-    provinces[id] = {
-      ...province,
-      control: 0,
-      holder: claimant ? claimant.id : (next.north !== null ? 'north' : null),
-    };
-    if (provinces[id].holder === null) {
-      // 誰も握らなかった州は荒れたまま朝廷に残る
-      provinces[id] = { ...provinces[id], control: 1 };
+    // その年に城を攻めていた者。いなければ踏み込んでいる勢力のうち最も強い者
+    const besieger = modifiers.besieged.get(id);
+    const claimant =
+      besieger ??
+      Object.values(next.factions)
+        .filter((f) => f.stance === 'hostile' && f.location === id)
+        .sort((a, b) => b.strength - a.strength)[0]?.id;
+
+    if (claimant === undefined) {
+      // 攻めた者がいない。城は荒れたまま朝廷に残る
+      provinces[id] = { ...province, control: 1, wall: Math.max(1, province.wallMax * 0.15) };
       continue;
     }
+    provinces[id] = { ...province, control: 0, wall: 0, holder: claimant };
     taxBaseLoss += TAX_BASE_LOSS_PER_PROVINCE;
     mandateLoss += 4;
+    cityFell = true;
   }
+
+  if (cityFell) next = { ...next, turnEvents: [...next.turnEvents, 'city_fell'] };
 
   if (taxBaseLoss === 0) return next;
   return {
@@ -295,6 +339,51 @@ function foundKingdoms(state: GameState, rng: () => number): GameState {
 
   if (!changed) return state;
   return { ...state, factions, taxBase: clamp(taxBase, 0, 100), mandate: clamp100(mandate) };
+}
+
+/**
+ * 帝を称する。
+ *
+ * **野心が高い民は一州を得ただけで帝号を称し、低い民も三州で必ず称する。**
+ * 劉淵は并州の一角で漢王を称し、石勒も襄国ひとつから趙王を名乗った。
+ * 称された時点で朝廷の天命は削られる — 天下に帝が二人いることになるため
+ */
+export function checkProclamations(state: GameState): GameState {
+  const held = new Map<FactionId, number>();
+  for (const province of Object.values(state.provinces)) {
+    const holder = province.holder;
+    if (holder === null || holder === 'north' || holder === 'prince') continue;
+    held.set(holder, (held.get(holder) ?? 0) + 1);
+  }
+
+  const factions = { ...state.factions };
+  let mandateLoss = 0;
+  let proclaimed = false;
+
+  for (const [id, count] of held) {
+    const faction = factions[id];
+    if (faction === undefined || faction.proclaimedYear !== null) continue;
+    if (count < provincesToProclaim(faction.ambition)) continue;
+
+    const chieftain = chieftainOf(id, state.year);
+    factions[id] = {
+      ...faction,
+      proclaimedYear: state.year,
+      // 名の伝わらない年に称した帝は null。呼び名は表示側が補う
+      emperorName: chieftain?.name ?? null,
+      kingdomName: faction.kingdomName ?? kingdomNameOf(id),
+    };
+    mandateLoss += PROCLAIM_MANDATE_LOSS;
+    proclaimed = true;
+  }
+
+  if (!proclaimed) return state;
+  return {
+    ...state,
+    factions,
+    mandate: clamp100(state.mandate - mandateLoss),
+    turnEvents: [...state.turnEvents, 'faction_proclaimed'],
+  };
 }
 
 /**

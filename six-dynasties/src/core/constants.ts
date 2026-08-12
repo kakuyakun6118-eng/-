@@ -113,6 +113,22 @@ export const REPULSE_MANDATE_GAIN = 1.6;
 /** 都督が有能なほど、撃退の功は将のものになって天命に入らない */
 export const MARSHAL_GLORY_PER_POINT = 0.09;
 
+// ── 城攻め ────────────────────────────────────────────
+
+/**
+ * 支配度が尽きたあと、城の耐久を削る係数。
+ *
+ * 州は支配度が0になった時点では落ちない。そこから城攻めが始まり、
+ * 耐久が尽きてはじめて落ちる。洛陽が一年で陥ちないための緩衝でもある
+ */
+export const WALL_LOSS_PER_ADVANTAGE = 78;
+/** 囲まれていない年に戻る耐久 */
+export const WALL_REPAIR = 1.6;
+/** 「守りを固める」で戻る耐久 */
+export const WALL_REPAIR_ACTION = 18;
+/** 刺史の能力1あたり、修復に掛かる補正 */
+export const WALL_REPAIR_PER_POINT = 0.06;
+
 // ── 胡族 ──────────────────────────────────────────────
 
 /** 塞外にいる勢力が年ごとに育つ率 */
@@ -133,6 +149,21 @@ export const INVASION_BASE_PROBABILITY = 0.3;
 export const KINGDOM_CONTROL_THRESHOLD = 16;
 /** 建国に踏み切る確率 */
 export const KINGDOM_PROBABILITY = 0.42;
+
+/**
+ * 帝を称するのに要る州の数。野心で決まる。
+ *
+ * **野心が高ければ一州で称し、低くても三州を得れば必ず称する。**
+ * 劉淵は并州の一角で漢王を称し、石勒も襄国ひとつから趙王を名乗った
+ */
+export function provincesToProclaim(ambition: number): number {
+  if (ambition >= 9) return 1;
+  if (ambition >= 6) return 2;
+  return 3;
+}
+
+/** 胡族が帝を称した年に朝廷が失う天命 */
+export const PROCLAIM_MANDATE_LOSS = 9;
 
 /** 義従胡の給。戦力に比例する */
 export const AUXILIARY_PAY_PER_STRENGTH = 0.42;
@@ -193,6 +224,18 @@ export const EXECUTE_LOYALTY_LOSS = 22;
 export const EMPOWER_GARRISON_GAIN = 14;
 export const EMPOWER_AMBITION_GAIN = 2;
 export const EMPOWER_LOYALTY_GAIN = 6;
+
+/**
+ * 挙兵した王が都へ攻め上る確率。
+ *
+ * 都を陥とせばその王が帝位に即く。趙王倫が実際にそうしたように、
+ * **宗室の乱は王朝の外へ出ない** — 局は続き、帝が入れ替わる
+ */
+export const PRINCE_MARCH_PROBABILITY = 0.35;
+/** 王が即位したときに戻る天命 */
+export const PRINCE_ENTHRONE_MANDATE = 44;
+/** 王が即位したときに失う士族の支持 */
+export const PRINCE_ENTHRONE_GENTRY_LOSS = 14;
 
 /** 討伐に投じる中軍の割合 */
 export const SUPPRESS_ARMY_SHARE = 0.65;

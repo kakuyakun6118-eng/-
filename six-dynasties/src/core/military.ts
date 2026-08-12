@@ -23,6 +23,7 @@ import {
   USURPATION_BASE,
   USURPATION_MARSHAL_PER_POINT,
   USURPATION_THRESHOLD,
+  WALL_REPAIR_ACTION,
 } from './constants';
 import { defenceStrength } from './battle';
 import type { GameState, ProvinceId } from './types';
@@ -61,7 +62,12 @@ export function reinforceGarrison(state: GameState, provinceId: ProvinceId): Gam
     treasury: state.treasury - DEFEND_COST,
     provinces: {
       ...state.provinces,
-      [provinceId]: { ...province, garrison: province.garrison + DEFEND_GARRISON_GAIN },
+      [provinceId]: {
+        ...province,
+        garrison: province.garrison + DEFEND_GARRISON_GAIN,
+        // 兵を入れるついでに城も繕う
+        wall: Math.min(province.wallMax, province.wall + WALL_REPAIR_ACTION),
+      },
     },
   };
 }
@@ -209,6 +215,7 @@ export function recoverProvince(
         ...province,
         holder: null,
         control: EXPEDITION_RECOVERED_CONTROL,
+        wall: Math.max(8, province.wallMax * 0.35),
         garrison: Math.max(6, province.garrison * 0.4),
       },
     },
@@ -249,6 +256,7 @@ export function suppressPrince(
   return {
     ...next,
     princes: next.princes.filter((p) => p.id !== princeId),
+    retiredPrinceIds: [...next.retiredPrinceIds, princeId],
     provinces:
       province && province.holder === 'prince'
         ? {

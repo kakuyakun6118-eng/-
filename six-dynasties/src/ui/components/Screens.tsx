@@ -37,12 +37,13 @@ export function TitleScreen({
           </p>
           <div className="han-rule my-3" />
           <p className="text-[12px] leading-relaxed text-left" style={{ color: 'var(--ink-soft)' }}>
+            <strong style={{ color: 'var(--ink)' }}>あなたは中華の皇帝である。</strong>
             晋は魏の孤立を戒めて宗室に兵を与えた。国境はそれで守れたが、
             与えた兵はそのまま帝位を狙う手勢になった。
             塞内にはすでに匈奴・羯・氐・羌が住んでいる。
             <br />
             <br />
-            あなたは朝廷の実権者として、1年に2つだけ手を打つ。
+            打てる手は1年に2つだけ。
             <strong style={{ color: 'var(--ink)' }}>
               中央が兵を握れば辺境が落ち、辺境に兵を預ければ中央が倒れる。
             </strong>
@@ -50,6 +51,13 @@ export function TitleScreen({
             <br />
             <br />
             都を失えば朝廷は江南へ移る。それは敗北ではない — 東晋はそこから百年続いた。
+            <br />
+            <br />
+            <strong style={{ color: 'var(--ink)' }}>藩王が洛陽を陥とせば、その王が帝位に即く。</strong>
+            異民族の首長も、州を得れば帝を称して国号を号する — 野心の高い民は一州で、
+            低い民も三州で必ず。天下に帝が並び立つのがこの三百年である。
+            <br />
+            <br />
             589年までに天下をひとつにできなければ、統一するのは北の隋になる。
           </p>
         </header>
@@ -103,7 +111,7 @@ export function TitleScreen({
           />
           <p className="mt-1 text-[11px]" style={{ color: 'var(--ink-soft)' }}>
             291年の帝は恵帝。史書に「何ぞ肉糜を食らわざる」と伝わる人物で、
-            能力はいずれも最低に置いてある
+            軍事・統治・人望のいずれも最低に置いてある
           </p>
         </section>
 

@@ -17,8 +17,12 @@ import {
   PRINCE_REVOLT_BASE,
   PRINCE_REVOLT_GARRISON_SHARE,
   PRINCE_REVOLT_MANDATE_LOSS,
+  PRINCE_MARCH_PROBABILITY,
+  PRINCE_ENTHRONE_MANDATE,
+  PRINCE_ENTHRONE_GENTRY_LOSS,
 } from './constants';
-import type { GameState, Prince, ProvinceId } from './types';
+import { defenceStrength } from './battle';
+import type { DeathRecord, GameState, Person, Prince, ProvinceId } from './types';
 import { clamp100, heldProvinceIds, pick, randomInt } from './util';
 
 const HISTORICAL_PRINCES = princesData as Prince[];
@@ -36,11 +40,22 @@ const MAX_PRINCES = 5;
  */
 export function updatePrinceRoster(state: GameState, rng: () => number): GameState {
   // 舞台を去る年を過ぎた王は退場する（挙兵中の者はそのまま残す）
+  const leaving = state.princes.filter((p) => !p.inRevolt && state.year > p.untilYear);
   let princes = state.princes.filter((p) => p.inRevolt || state.year <= p.untilYear);
+
+  /*
+   * 一度舞台を去った王は二度と現れない。
+   *
+   * これが無かったときは、誅殺した趙王倫が翌年また封国を得て現れ、
+   * 史実の在世年のあいだじゅう何度でも復活した（去った理由を
+   * 覚えず、その年の名簿にいないことだけを見ていたため）
+   */
+  const retired = new Set([...state.retiredPrinceIds, ...leaving.map((p) => p.id)]);
 
   // 史実の八王をその年に迎える
   for (const historical of HISTORICAL_PRINCES) {
     if (state.year < historical.fromYear || state.year > historical.untilYear) continue;
+    if (retired.has(historical.id)) continue;
     if (princes.some((p) => p.id === historical.id)) continue;
     if (princes.length >= MAX_PRINCES) break;
     princes = [...princes, { ...historical }];
@@ -54,18 +69,27 @@ export function updatePrinceRoster(state: GameState, rng: () => number): GameSta
     const held = heldProvinceIds(state).filter(
       (id) => !princes.some((p) => p.province === id) && id !== state.capital,
     );
+    const titles = [...state.dynasty.princeTitlePool];
     for (const member of kin) {
       if (princes.length >= 3) break;
+      if (retired.has(`kin_${member.id}`)) continue;
       if (princes.some((p) => p.id === `kin_${member.id}`)) continue;
       const province = pick(rng, held);
       if (province === null) break;
+      // 封国の号で呼ぶ。王朝名を冠すると、即位したときに号が食い違う
+      const title = titles.shift() ?? `${member.name}王`;
       princes = [
         ...princes,
         {
           id: `kin_${member.id}`,
-          name: `${state.dynasty.houseName}の${member.name}`,
+          name: title,
           province,
           troops: randomInt(rng, 10, 20),
+          abilities: {
+            military: randomInt(rng, 2, 8),
+            administration: randomInt(rng, 2, 8),
+            charisma: randomInt(rng, 2, 8),
+          },
           ambition: randomInt(rng, 3, 9),
           inRevolt: false,
           fromYear: state.year,
@@ -75,7 +99,17 @@ export function updatePrinceRoster(state: GameState, rng: () => number): GameSta
     }
   }
 
-  return princes === state.princes ? state : { ...state, princes };
+  if (princes === state.princes && retired.size === state.retiredPrinceIds.length) return state;
+  const used = princes.filter((p) => p.id.startsWith('kin_')).map((p) => p.name);
+  return {
+    ...state,
+    princes,
+    retiredPrinceIds: [...retired],
+    dynasty: {
+      ...state.dynasty,
+      princeTitlePool: state.dynasty.princeTitlePool.filter((t) => !used.includes(t)),
+    },
+  };
 }
 
 /**
@@ -193,6 +227,7 @@ export function executePrince(state: GameState, princeId: string): GameState {
   return {
     ...state,
     princes: state.princes.filter((p) => p.id !== princeId),
+    retiredPrinceIds: [...state.retiredPrinceIds, princeId],
     // 王の手勢はその州の守備隊に編入される
     provinces:
       province === undefined
@@ -232,6 +267,73 @@ export function empowerPrince(state: GameState, princeId: string): GameState {
       [prince.province]: { ...province, garrison: province.garrison + EMPOWER_GARRISON_GAIN },
     },
     princeLoyalty: clamp100(state.princeLoyalty + EMPOWER_LOYALTY_GAIN),
+  };
+}
+
+/**
+ * 挙兵した王が都へ攻め上る。
+ *
+ * **都を陥とせばその王が帝位に即く。** 趙王倫が実際にそうしたように、
+ * 宗室の乱は王朝の外へは出ない — 局は続き、帝が入れ替わるだけである。
+ * 前の帝は廃され、担いだ兵はそのまま新しい中軍になる
+ */
+export function checkPrinceMarchOnCapital(state: GameState, rng: () => number): GameState {
+  const marchers = state.princes.filter((p) => p.inRevolt);
+  if (marchers.length === 0) return state;
+
+  const capital = state.provinces[state.capital];
+  if (capital === undefined || capital.holder === 'prince') return state;
+
+  // いちばん兵を集めた王が都を衝く
+  const prince = marchers.sort((a, b) => b.troops - a.troops)[0];
+  const defence = defenceStrength(state, state.capital, new Set()) + state.centralArmy * 0.6;
+  const attack = prince.troops * (1 + prince.abilities.military * 0.04);
+  if (attack <= defence) return state;
+  if (rng() >= PRINCE_MARCH_PROBABILITY) return state;
+
+  const record: DeathRecord = {
+    name: state.dynasty.ruler.name,
+    houseName: state.dynasty.houseName,
+    year: state.year,
+    age: state.dynasty.ruler.age,
+    cause: 'assassination',
+    outcome: 'crisis',
+  };
+
+  const enthroned: Person = {
+    id: `prince_${prince.id}`,
+    name: prince.name,
+    age: randomInt(rng, 30, 52),
+    lifespan: randomInt(rng, 34, 70),
+    abilities: prince.abilities,
+    relation: 'self',
+    lineage: 'han',
+  };
+
+  const province = state.provinces[prince.province];
+  return {
+    ...state,
+    // 担いだ兵はそのまま中軍になる
+    centralArmy: state.centralArmy * 0.5 + prince.troops * 0.7,
+    mandate: clamp100(Math.max(state.mandate, PRINCE_ENTHRONE_MANDATE)),
+    gentry: clamp100(state.gentry - PRINCE_ENTHRONE_GENTRY_LOSS),
+    princeLoyalty: clamp100(state.princeLoyalty - 18),
+    // 即位した王は諸王ではなくなる。ほかの王は挙兵をいったん収める
+    princes: state.princes
+      .filter((p) => p.id !== prince.id)
+      .map((p) => ({ ...p, inRevolt: false })),
+    retiredPrinceIds: [...state.retiredPrinceIds, prince.id],
+    provinces:
+      province?.holder === 'prince'
+        ? { ...state.provinces, [prince.province]: { ...province, holder: null, control: Math.max(20, province.control) } }
+        : state.provinces,
+    dynasty: {
+      ...state.dynasty,
+      ruler: enthroned,
+      history: [...state.dynasty.history, record],
+      consort: null,
+    },
+    turnEvents: [...state.turnEvents, 'prince_took_capital'],
   };
 }
 

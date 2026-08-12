@@ -174,14 +174,19 @@ interface Outcome {
   mandate: number;
   taxBase: number;
   kingdoms: number;
+  proclaimed: number;
+  princeTookCapital: boolean;
+  citiesLost: number;
 }
 
 function runOne(difficulty: Difficulty, seed: number): Outcome {
   let state = freshState(difficulty);
   const rng = createRng(seed);
+  let princeSeized = false;
 
   while (state.status === 'ongoing' && state.year < ENDING_YEAR) {
     state = tick(state, chooseActions(state, rng), seed + state.turn);
+    if (state.turnEvents.includes('prince_took_capital')) princeSeized = true;
   }
   const score = evaluateScore(state);
   return {
@@ -198,6 +203,9 @@ function runOne(difficulty: Difficulty, seed: number): Outcome {
     mandate: state.mandate,
     taxBase: state.taxBase,
     kingdoms: Object.values(state.factions).filter((f) => f.stance === 'enfeoffed').length,
+    proclaimed: Object.values(state.factions).filter((f) => f.proclaimedYear !== null).length,
+    princeTookCapital: princeSeized,
+    citiesLost: Object.values(state.provinces).filter((p) => p.holder !== null).length,
   };
 }
 
@@ -235,4 +243,7 @@ for (const difficulty of difficulties) {
   console.log(`  南征が始まった局 ${pct(count((o) => o.northOffensive))}`);
   console.log(`  終局の天命 平均 ${mean(outcomes.map((o) => o.mandate)).toFixed(0)} / 戸口 ${mean(outcomes.map((o) => o.taxBase)).toFixed(0)}`);
   console.log(`  胡族の建国 平均 ${mean(outcomes.map((o) => o.kingdoms)).toFixed(1)} 国`);
+  console.log(`  帝を称した胡族 平均 ${mean(outcomes.map((o) => o.proclaimed)).toFixed(1)} 勢力`);
+  console.log(`  藩王が帝位に即いた局 ${pct(count((o) => o.princeTookCapital))}`);
+  console.log(`  失った州 平均 ${mean(outcomes.map((o) => o.citiesLost)).toFixed(1)}`);
 }

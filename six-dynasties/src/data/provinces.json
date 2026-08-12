@@ -5,6 +5,8 @@
     "baseTax": 190,
     "baseTaxMax": 256,
     "garrison": 26,
+    "wall": 72,
+    "wallMax": 72,
     "region": "north",
     "holder": null
   },
@@ -14,6 +16,8 @@
     "baseTax": 150,
     "baseTaxMax": 202,
     "garrison": 24,
+    "wall": 68,
+    "wallMax": 68,
     "region": "north",
     "holder": null
   },
@@ -23,6 +27,8 @@
     "baseTax": 70,
     "baseTaxMax": 94,
     "garrison": 16,
+    "wall": 42,
+    "wallMax": 42,
     "region": "north",
     "holder": null
   },
@@ -32,6 +38,8 @@
     "baseTax": 95,
     "baseTaxMax": 128,
     "garrison": 18,
+    "wall": 48,
+    "wallMax": 48,
     "region": "north",
     "holder": null
   },
@@ -41,6 +49,8 @@
     "baseTax": 200,
     "baseTaxMax": 270,
     "garrison": 26,
+    "wall": 65,
+    "wallMax": 65,
     "region": "north",
     "holder": null
   },
@@ -50,6 +60,8 @@
     "baseTax": 105,
     "baseTaxMax": 142,
     "garrison": 20,
+    "wall": 50,
+    "wallMax": 50,
     "region": "north",
     "holder": null
   },
@@ -59,6 +71,8 @@
     "baseTax": 140,
     "baseTaxMax": 189,
     "garrison": 18,
+    "wall": 50,
+    "wallMax": 50,
     "region": "north",
     "holder": null
   },
@@ -68,6 +82,8 @@
     "baseTax": 155,
     "baseTaxMax": 209,
     "garrison": 20,
+    "wall": 53,
+    "wallMax": 53,
     "region": "north",
     "holder": null
   },
@@ -77,6 +93,8 @@
     "baseTax": 130,
     "baseTaxMax": 377,
     "garrison": 18,
+    "wall": 68,
+    "wallMax": 68,
     "region": "south",
     "holder": null
   },
@@ -86,6 +104,8 @@
     "baseTax": 145,
     "baseTaxMax": 420,
     "garrison": 22,
+    "wall": 59,
+    "wallMax": 59,
     "region": "south",
     "holder": null
   },
@@ -95,6 +115,8 @@
     "baseTax": 90,
     "baseTaxMax": 261,
     "garrison": 14,
+    "wall": 43,
+    "wallMax": 43,
     "region": "south",
     "holder": null
   },
@@ -104,6 +126,8 @@
     "baseTax": 120,
     "baseTaxMax": 348,
     "garrison": 18,
+    "wall": 61,
+    "wallMax": 61,
     "region": "south",
     "holder": null
   },
@@ -113,6 +137,8 @@
     "baseTax": 45,
     "baseTaxMax": 130,
     "garrison": 10,
+    "wall": 32,
+    "wallMax": 32,
     "region": "south",
     "holder": null
   },
@@ -122,6 +148,8 @@
     "baseTax": 60,
     "baseTaxMax": 174,
     "garrison": 10,
+    "wall": 36,
+    "wallMax": 36,
     "region": "south",
     "holder": null
   },
@@ -131,6 +159,8 @@
     "baseTax": 40,
     "baseTaxMax": 116,
     "garrison": 8,
+    "wall": 29,
+    "wallMax": 29,
     "region": "south",
     "holder": null
   }

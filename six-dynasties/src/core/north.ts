@@ -13,6 +13,7 @@ import {
   NORTH_REBUILD,
   NORTH_SPLIT_STRENGTH_LOSS,
   NORTH_TEMPO_PER_POINT,
+  WALL_LOSS_PER_ADVANTAGE,
   modifiersOf,
 } from './constants';
 import type { FactionId, GameState, NorthernCourt, ProvinceId, TurnModifiers } from './types';
@@ -193,6 +194,13 @@ export function updateNorthernCourt(
   const advantage = total <= 0 ? 0 : (attack - defence) / total;
 
   if (advantage > 0) {
+    // 胡族の侵攻と同じく、支配度が尽きてはじめて城を攻める
+    const control = clamp100(province.control - advantage * CONTROL_LOSS_PER_ADVANTAGE);
+    const wall =
+      control > 0
+        ? province.wall
+        : Math.max(0, province.wall - advantage * WALL_LOSS_PER_ADVANTAGE);
+    modifiers.besieged.set(targetId, 'north');
     return {
       ...next,
       north,
@@ -200,7 +208,8 @@ export function updateNorthernCourt(
         ...next.provinces,
         [targetId]: {
           ...province,
-          control: clamp100(province.control - advantage * CONTROL_LOSS_PER_ADVANTAGE),
+          control,
+          wall,
           garrison: Math.max(0, province.garrison * (1 - advantage * 0.4)),
         },
       },

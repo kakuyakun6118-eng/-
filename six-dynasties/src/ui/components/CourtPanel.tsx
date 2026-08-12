@@ -1,7 +1,8 @@
 import { useState } from 'react';
 
-import { chieftainOf } from '../../core/factions';
-import type { GameState } from '../../core/types';
+import { DEFAULT_CHIEFTAIN_ABILITIES, chieftainOf } from '../../core/factions';
+import { provincesToProclaim } from '../../core/constants';
+import type { Abilities, GameState } from '../../core/types';
 import { FACTION_LABELS, PROVINCE_LABELS, STANCE_LABELS } from '../catalogue';
 
 function Stat({ label, value }: { label: string; value: string | number }) {
@@ -14,6 +15,35 @@ function Stat({ label, value }: { label: string; value: string | number }) {
         {value}
       </div>
     </div>
+  );
+}
+
+/** 能力の三つ組。諸王と首長で使い回す小さな並び */
+function AbilityRow({ abilities, ambition }: { abilities: Abilities; ambition?: number }) {
+  const cells: { label: string; value: number; tone?: string }[] = [
+    { label: '軍', value: abilities.military },
+    { label: '政', value: abilities.administration },
+    { label: '望', value: abilities.charisma },
+  ];
+  if (ambition !== undefined) cells.push({ label: '野', value: ambition, tone: 'var(--cinnabar)' });
+
+  return (
+    <span className="inline-flex gap-1 align-middle">
+      {cells.map((cell) => (
+        <span
+          key={cell.label}
+          className="text-[10px] tabular-nums px-1 rounded-[2px]"
+          style={{
+            backgroundColor: 'rgba(0,0,0,0.06)',
+            border: '1px solid var(--bamboo)',
+            color: cell.tone ?? 'var(--ink)',
+          }}
+        >
+          {cell.label}
+          {cell.value}
+        </span>
+      ))}
+    </span>
   );
 }
 
@@ -137,21 +167,29 @@ export function PrincePanel({ state }: { state: GameState }) {
       <h2 className="han-heading text-sm">宗室の諸王</h2>
       <ul className="mt-1.5 space-y-1">
         {state.princes.map((prince) => (
-          <li key={prince.id} className="text-[12px] flex items-baseline gap-1.5">
-            <span className="font-semibold shrink-0">{prince.name}</span>
-            <span className="tabular-nums shrink-0" style={{ color: 'var(--ink-soft)' }}>
-              {PROVINCE_LABELS[prince.province]}／兵 {Math.round(prince.troops)}／野心{' '}
-              {prince.ambition}
-            </span>
-            {prince.inRevolt && (
-              <span className="font-bold" style={{ color: 'var(--cinnabar)' }}>
-                挙兵
+          <li key={prince.id} className="text-[12px]">
+            <div className="flex items-baseline gap-1.5 flex-wrap">
+              <span className="font-semibold shrink-0">{prince.name}</span>
+              <AbilityRow abilities={prince.abilities} ambition={prince.ambition} />
+              <span className="tabular-nums" style={{ color: 'var(--ink-soft)' }}>
+                {PROVINCE_LABELS[prince.province]}／兵 {Math.round(prince.troops)}
               </span>
+              {prince.inRevolt && (
+                <span className="font-bold" style={{ color: 'var(--cinnabar)' }}>
+                  挙兵
+                </span>
+              )}
+            </div>
+            {prince.inRevolt && (
+              <div className="text-[11px]" style={{ color: 'var(--cinnabar)' }}>
+                兵を集めて都を衝く。陥とせばこの王が帝位に即く
+              </div>
             )}
           </li>
         ))}
       </ul>
       <p className="mt-1.5 text-[11px]" style={{ color: 'var(--ink-soft)' }}>
+        軍＝軍事、政＝統治、望＝人望、野＝野心。
         兵権を与えれば国境は守れるが、与えた兵はそのまま位を狙う手勢になる。
         削れば中央は強くなるが、帰順が落ちて挙兵を招く
       </p>
@@ -165,36 +203,51 @@ export function TribePanel({ state }: { state: GameState }) {
   return (
     <section className="han-panel rounded-sm px-3 py-2">
       <h2 className="han-heading text-sm">胡族</h2>
+      <p className="text-[11px] mt-0.5" style={{ color: 'var(--ink-soft)' }}>
+        野心が高い民は一州で帝を称し、低い民も三州を得れば必ず称する
+      </p>
       <ul className="mt-1.5 space-y-1">
         {factions.map((faction) => {
           const chieftain = chieftainOf(faction.id, state.year);
           return (
-            <li key={faction.id} className="text-[12px] flex items-baseline gap-1.5">
-              <span className="font-semibold shrink-0">{FACTION_LABELS[faction.id]}</span>
-              <span className="tabular-nums shrink-0" style={{ color: 'var(--ink-soft)' }}>
-                兵 {Math.round(faction.strength)}
-              </span>
-              <span
-                className="shrink-0"
-                style={{
-                  color:
-                    faction.stance === 'hostile'
-                      ? 'var(--cinnabar)'
-                      : faction.stance === 'auxiliary'
-                        ? 'var(--jade)'
-                        : 'var(--ink-soft)',
-                }}
-              >
-                {faction.stance === 'enfeoffed'
-                  ? (faction.kingdomName ?? '建国')
-                  : STANCE_LABELS[faction.stance]}
-              </span>
-              <span className="truncate" style={{ color: 'var(--ink-soft)' }}>
-                {faction.location === 'exterior'
-                  ? '塞外'
-                  : PROVINCE_LABELS[faction.location]}
-                {chieftain && `／${chieftain.name}（軍事${chieftain.military}）`}
-              </span>
+            <li key={faction.id} className="text-[12px]">
+              <div className="flex items-baseline gap-1.5 flex-wrap">
+                <span className="font-semibold shrink-0">{FACTION_LABELS[faction.id]}</span>
+                {faction.proclaimedYear !== null && (
+                  <span
+                    className="han-seal rounded-[2px] px-1 text-[10px] font-bold shrink-0"
+                    title={`${faction.proclaimedYear}年に帝を称した`}
+                  >
+                    {faction.kingdomName ?? '帝'}
+                  </span>
+                )}
+                <AbilityRow
+                  abilities={chieftain?.abilities ?? DEFAULT_CHIEFTAIN_ABILITIES}
+                  ambition={faction.ambition}
+                />
+                <span className="tabular-nums" style={{ color: 'var(--ink-soft)' }}>
+                  兵 {Math.round(faction.strength)}
+                </span>
+                <span
+                  style={{
+                    color:
+                      faction.stance === 'hostile'
+                        ? 'var(--cinnabar)'
+                        : faction.stance === 'auxiliary'
+                          ? 'var(--jade)'
+                          : 'var(--ink-soft)',
+                  }}
+                >
+                  {STANCE_LABELS[faction.stance]}
+                </span>
+              </div>
+              <div className="text-[11px]" style={{ color: 'var(--ink-soft)' }}>
+                {faction.location === 'exterior' ? '塞外' : PROVINCE_LABELS[faction.location]}
+                {chieftain && `／首長 ${chieftain.name}`}
+                {faction.proclaimedYear === null
+                  ? `／${provincesToProclaim(faction.ambition)}州を得れば帝を称する`
+                  : `／${faction.emperorName ?? '首長'}が${faction.proclaimedYear}年に帝を称した`}
+              </div>
             </li>
           );
         })}

@@ -51,6 +51,15 @@ export interface Province {
   baseTaxMax: number;
   /** 州兵。中軍とは別に、その州に貼り付いている */
   garrison: number;
+  /**
+   * 治所の城の耐久。
+   *
+   * 支配度が尽きても州はすぐには落ちない。**そこから城攻めが始まる。**
+   * 洛陽・長安・建康のような大城は高く、辺境の城は低い。
+   * 囲まれていない年は少しずつ修復される
+   */
+  wall: number;
+  wallMax: number;
   region: Region;
   holder: ProvinceHolder | null;
 }
@@ -131,6 +140,16 @@ export interface Faction {
    * 奪った年のうちに塞外へ引き揚げ、塞外での成長にも上限がある
    */
   raider: boolean;
+  /**
+   * 野心 1〜10。**帝を称するのに要る州の数を決める。**
+   *
+   * 野心が高い民は一州を得ただけで帝号を称し、低い民も三州を得れば必ず称する。
+   * 匈奴の劉淵も羯の石勒も、中原の一角を得た時点で皇帝を名乗った
+   */
+  ambition: number;
+  /** 帝を称した年と、その帝の名。まだなら null */
+  proclaimedYear: number | null;
+  emperorName: string | null;
   /** 頂点を過ぎたら崩れ始める年。持たない勢力は null */
   collapseYear: number | null;
   /** 建国した年と国号。`enfeoffed` になったときに記録する */
@@ -169,6 +188,8 @@ export interface Prince {
   troops: number;
   /** 野心 1〜10。挙兵の確率にのみ効き、職務には効かない */
   ambition: number;
+  /** 能力。皇帝と同じ三つ。即位したときはそのまま帝の能力になる */
+  abilities: Abilities;
   /** 挙兵しているか */
   inRevolt: boolean;
   /** 世に出る年。それまでは登場しない */
@@ -237,6 +258,14 @@ export interface Dynasty {
   namePool: string[];
   /** 新しい王朝の号の候補 */
   housePool: string[];
+  /**
+   * 宗室に与える封国の号の候補。
+   *
+   * 生まれた王を「晋の元帝睿」のように王朝名＋帝号で呼んでいたときは、
+   * その王が即位したあと**王朝が宋なのに帝の名が「晋の…」のまま**になった。
+   * 王は在世中の呼び名（武陵王・江夏王…）で呼ぶ
+   */
+  princeTitlePool: string[];
   /** 設定から能力を変更したか。スコアの比較を無効にするための印 */
   abilitiesAdjusted: boolean;
   /** 皇后を迎えているか。婚姻外交の重複を防ぐ */
@@ -429,6 +458,13 @@ export interface GameState {
   unifiedYear: number | null;
 
   difficulty: Difficulty;
+  /**
+   * 舞台を去った諸王の id。
+   *
+   * これが無かったときは、誅殺した王が翌年また封国を得て現れた
+   * （史実の在世年のあいだじゅう何度でも復活した）
+   */
+  retiredPrinceIds: string[];
   /** onceOnly なイベントの再発火防止用 */
   firedEventIds: string[];
   /** その年に起きた出来事。表示のためだけに毎ターン作り直す */
@@ -449,6 +485,9 @@ export type TurnEventId =
   | 'north_offensive'
   | 'prince_revolt'
   | 'prince_suppressed'
+  | 'prince_took_capital'
+  | 'faction_proclaimed'
+  | 'city_fell'
   | 'usurpation'
   | 'abdication'
   | 'succession_crisis'
@@ -635,6 +674,13 @@ export interface TurnModifiers {
   pacified: Set<FactionId>;
   /** 中軍を差し向けた州 */
   reinforced: Set<ProvinceId>;
+  /**
+   * その年に城を攻めた者。州が落ちたとき誰の手に渡るかをここから引く。
+   *
+   * これが無かったときは、攻めた者のいない州が支配度を失っただけで
+   * 北朝のものになった（嶺南の交州が北朝領になる局が出た）
+   */
+  besieged: Map<ProvinceId, ProvinceHolder>;
 }
 
 // ── 乱数とコアループ ──────────────────────────────────

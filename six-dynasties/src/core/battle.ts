@@ -237,6 +237,7 @@ export function giveBattle(
       next = {
         ...next,
         princes: next.princes.filter((p) => p.id !== foe.princeId),
+        retiredPrinceIds: [...next.retiredPrinceIds, foe.princeId],
         turnEvents: [...next.turnEvents, 'prince_suppressed'],
       };
       if (prince) {

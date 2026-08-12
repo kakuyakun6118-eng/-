@@ -39,6 +39,7 @@ import {
   confirmPrivilege,
   developProvinces,
   grantRank,
+  repairWalls,
   holdConversation,
   moveCapital,
   raiseTaxes,
@@ -48,7 +49,12 @@ import {
   updateControl,
 } from './economy';
 import { applyHistoricalEvents } from './events';
-import { applyFactionActions, updateDemands } from './factions';
+import {
+  applyFactionActions,
+  applyProvinceLosses,
+  checkProclamations,
+  updateDemands,
+} from './factions';
 import {
   applyDeployAttrition,
   applyDesertion,
@@ -73,6 +79,7 @@ import {
   updateOfficials,
 } from './officials';
 import {
+  checkPrinceMarchOnCapital,
   checkPrinceRevolts,
   curtailPrinces,
   empowerPrince,
@@ -211,7 +218,11 @@ export function tick(state: GameState, actions: PlayerActions, seed: Seed): Game
   next = checkAuxiliaryDefection(next);
 
   // 3. プレイヤー行動の適用
-  const modifiers: TurnModifiers = { pacified: new Set(), reinforced: new Set() };
+  const modifiers: TurnModifiers = {
+    pacified: new Set(),
+    reinforced: new Set(),
+    besieged: new Map(),
+  };
   let slotsUsed = 0;
   for (const action of actions) {
     if (consumesActionSlot(action)) {
@@ -228,8 +239,12 @@ export function tick(state: GameState, actions: PlayerActions, seed: Seed): Game
   // 4B. 北朝。華北をまとめた勢力は、州ごとの敵ではなくもう一つの朝廷になる
   next = maybeFoundNorthernCourt(next);
   next = updateNorthernCourt(next, rng, modifiers);
+  // 北朝が攻め落とした城もここで持ち主が決まる
+  next = applyProvinceLosses(next, modifiers);
   next = updateHomelands(next, rng);
   next = growRevolts(next);
+  // 兵を集めた王は都を衝く。陥とせばその王が帝位に即く
+  next = checkPrinceMarchOnCapital(next, rng);
 
   // 5. 都の攻防
   next = applyCapitalFall(state, next);
@@ -240,6 +255,9 @@ export function tick(state: GameState, actions: PlayerActions, seed: Seed): Game
   next = updateControl(next);
   next = developProvinces(next);
   next = recoverHouseholds(next);
+  next = repairWalls(next, new Set(modifiers.besieged.keys()));
+  // 州を得た胡族は帝を称する。要る州の数は野心で決まる
+  next = checkProclamations(next);
 
   // 7. 天命の判定
   next = applyDecay(next);
