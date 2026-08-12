@@ -11,3 +11,4 @@ dist/
 # src/ui/public/portraits/ の素材は対象にしない
 /*.png
 /scratch-*
+rome.html
