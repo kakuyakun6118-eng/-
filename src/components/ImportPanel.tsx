@@ -32,6 +32,8 @@ interface Draft {
   alternatives?: string[];
   /** Already in the trip — pre-unchecked so it isn't added twice. */
   duplicate?: boolean;
+  /** Google had no name for this pin. */
+  unnamed?: boolean;
   include: boolean;
 }
 
@@ -46,7 +48,9 @@ function toDraft(p: ImportedPlace, alternatives?: string[]): Draft {
     mapsUrl: p.mapsUrl,
     note: p.note,
     alternatives,
-    include: true,
+    unnamed: p.unnamed,
+    // Nameless pins start unticked so they never quietly join the trip.
+    include: !p.unnamed,
   };
 }
 
@@ -87,7 +91,7 @@ export function ImportPanel({
         if (!key || seen.has(key)) continue;
         seen.add(key);
         const duplicate = registered.has(key);
-        next.push({ ...item, duplicate, include: !duplicate });
+        next.push({ ...item, duplicate, include: item.include && !duplicate });
       }
       return [...prev, ...next];
     });
@@ -342,6 +346,7 @@ export function ImportPanel({
                 />
               </label>
               {d.duplicate && <span className="dup-tag">登録済み</span>}
+              {d.unnamed && <span className="dup-tag">名前なし</span>}
 
               {d.alternatives && d.alternatives.length > 0 && (
                 <div className="alt-row">
