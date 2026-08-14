@@ -9,8 +9,9 @@ import {
 import {
   guessCategory,
   ImportedPlace,
+  normalizeName,
+  parseImportFile,
   parsePastedList,
-  parsePlacesCsv,
   placeNameFromMapsUrl,
 } from "../utils/importers";
 import { guessArea, readPlaceFromImage } from "../utils/ocr";
@@ -28,6 +29,8 @@ interface Draft {
   note?: string;
   /** Other OCR candidates, so a wrong guess is one tap from being fixed. */
   alternatives?: string[];
+  /** Already in the trip — pre-unchecked so it isn't added twice. */
+  duplicate?: boolean;
   include: boolean;
 }
 
@@ -47,9 +50,12 @@ function toDraft(p: ImportedPlace, alternatives?: string[]): Draft {
 }
 
 export function ImportPanel({
+  existingNames,
   onImport,
   onClose,
 }: {
+  /** Names already in the trip, used to flag duplicates. */
+  existingNames: string[];
   onImport: (places: NewPlace[]) => Promise<void> | void;
   onClose: () => void;
 }) {
@@ -65,7 +71,23 @@ export function ImportPanel({
       return;
     }
     setError(null);
-    setDrafts((prev) => [...prev, ...items]);
+
+    setDrafts((prev) => {
+      // Selecting both Takeout exports yields the same place twice, so drop
+      // repeats inside this batch and flag ones already in the trip.
+      const seen = new Set(prev.map((d) => normalizeName(d.name)));
+      const registered = new Set(existingNames.map(normalizeName));
+      const next: Draft[] = [];
+
+      for (const item of items) {
+        const key = normalizeName(item.name);
+        if (!key || seen.has(key)) continue;
+        seen.add(key);
+        const duplicate = registered.has(key);
+        next.push({ ...item, duplicate, include: !duplicate });
+      }
+      return [...prev, ...next];
+    });
   };
 
   const handleScreenshots = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -99,12 +121,16 @@ export function ImportPanel({
   };
 
   const handleCsv = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const files = Array.from(e.target.files ?? []);
     e.target.value = "";
-    if (!file) return;
+    if (files.length === 0) return;
     try {
-      const text = await file.text();
-      addDrafts(parsePlacesCsv(text).map((p) => toDraft(p)));
+      const found: Draft[] = [];
+      for (const file of files) {
+        const text = await file.text();
+        found.push(...parseImportFile(text).map((p) => toDraft(p)));
+      }
+      addDrafts(found);
     } catch {
       setError("ファイルを読み込めませんでした。");
     }
@@ -158,7 +184,7 @@ export function ImportPanel({
             <span className="import-mode-icon">📄</span>
             <span>
               <strong>Googleマップの保存リストから</strong>
-              <small>いちばん確実。全部の場所を一度に取り込めます</small>
+              <small>いちばん確実。CSV / JSON のどちらでも、全部の場所を一度に</small>
             </span>
           </button>
           <button className="import-mode" onClick={() => setMode("paste")}>
@@ -185,22 +211,40 @@ export function ImportPanel({
           </button>
           <ol className="howto">
             <li>
-              パソコンかスマホのブラウザで{" "}
+              ブラウザで{" "}
               <a href="https://takeout.google.com/" target="_blank" rel="noreferrer">
                 Google データエクスポート
               </a>{" "}
               を開く
             </li>
-            <li>「選択をすべて解除」→ <strong>マップ(自分の場所)</strong> だけにチェック</li>
-            <li>エクスポートを作成してダウンロード(数分〜数十分でメールが届きます)</li>
-            <li>zipを展開すると保存リストのCSVが入っています。それを下のボタンで選択</li>
+            <li>
+              「選択をすべて解除」→ <strong>保存済み</strong> と{" "}
+              <strong>マップ(自分の場所)</strong> の2つにチェック
+              <br />
+              <small>
+                前者は行きたい場所リストのCSV、後者は保存した場所のJSONです。
+                どちらの形式でも取り込めるので、両方選んでおくと確実です
+              </small>
+            </li>
+            <li>エクスポートを作成(数分〜数十分でダウンロードのメールが届きます)</li>
+            <li>
+              zipを展開し、中の <code>.csv</code> か <code>.json</code> を下のボタンで選択
+              <br />
+              <small>複数まとめて選べます</small>
+            </li>
           </ol>
           <label className="file-button">
-            CSVファイルを選ぶ
-            <input type="file" accept=".csv,text/csv" onChange={handleCsv} hidden />
+            CSV / JSON を選ぶ(複数可)
+            <input
+              type="file"
+              accept=".csv,.json,text/csv,application/json"
+              multiple
+              onChange={handleCsv}
+              hidden
+            />
           </label>
           <p className="hint">
-            名前の列があるCSVなら形式は問いません。マップのURL列があれば一緒に取り込みます。
+            名前の列があるCSVなら形式は問いません。マップのURLや住所があれば一緒に取り込みます。
           </p>
         </div>
       )}
@@ -272,6 +316,7 @@ export function ImportPanel({
                   placeholder="場所の名前"
                 />
               </label>
+              {d.duplicate && <span className="dup-tag">登録済み</span>}
 
               {d.alternatives && d.alternatives.length > 0 && (
                 <div className="alt-row">

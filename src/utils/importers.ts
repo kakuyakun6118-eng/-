@@ -92,6 +92,95 @@ export function parsePlacesCsv(text: string): ImportedPlace[] {
 }
 
 /**
+ * Reads Google Takeout's JSON export of saved places.
+ *
+ * Takeout hands out different shapes depending on which product you tick:
+ * "保存済み" gives a CSV per list, while "マップ(自分の場所)" gives a GeoJSON
+ * FeatureCollection. Both are accepted so the user does not have to know which
+ * one they downloaded.
+ */
+export function parsePlacesJson(text: string): ImportedPlace[] {
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    return [];
+  }
+
+  const out: ImportedPlace[] = [];
+
+  const pushFrom = (entry: Record<string, unknown>) => {
+    const props = (entry.properties ?? entry) as Record<string, unknown>;
+    const location = (props.location ?? {}) as Record<string, unknown>;
+
+    const name =
+      (typeof location.name === "string" && location.name) ||
+      (typeof props.name === "string" && props.name) ||
+      (typeof props.title === "string" && props.title) ||
+      (typeof entry.title === "string" && entry.title) ||
+      "";
+    if (!name.trim()) return;
+
+    const url =
+      (typeof props.google_maps_url === "string" && props.google_maps_url) ||
+      (typeof props.url === "string" && props.url) ||
+      undefined;
+    const address =
+      (typeof location.address === "string" && location.address) || undefined;
+
+    out.push({
+      name: name.trim(),
+      mapsUrl: url,
+      note: address,
+      area: address ? areaFromAddress(address) : undefined,
+    });
+  };
+
+  const root = data as Record<string, unknown>;
+  const features = root?.features;
+  if (Array.isArray(features)) {
+    features.forEach((f) => pushFrom(f as Record<string, unknown>));
+  } else if (Array.isArray(data)) {
+    data.forEach((f) => pushFrom(f as Record<string, unknown>));
+  }
+
+  return out;
+}
+
+const KNOWN_AREAS = [
+  "Midtown", "Upper East Side", "Upper West Side", "Chelsea", "SoHo", "Tribeca",
+  "Brooklyn", "Harlem", "Queens", "Williamsburg", "Lower East Side",
+  "Greenwich Village", "East Village", "West Village", "Manhattan",
+];
+
+function areaFromAddress(address: string): string | undefined {
+  const lower = address.toLowerCase();
+  return KNOWN_AREAS.find((a) => lower.includes(a.toLowerCase()));
+}
+
+/**
+ * Loose key for spotting the same place twice. Takeout's two exports overlap,
+ * so an import of both products would otherwise register everything twice.
+ * Case, width, spacing and punctuation are all ignored.
+ */
+export function normalizeName(name: string): string {
+  return name
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[\s'’"“”.,!?・･\-–—_/()[\]{}]/g, "");
+}
+
+/** Picks the right parser by looking at the file contents, not its name. */
+export function parseImportFile(text: string): ImportedPlace[] {
+  const trimmed = text.trimStart();
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    const fromJson = parsePlacesJson(text);
+    if (fromJson.length > 0) return fromJson;
+  }
+  return parsePlacesCsv(text);
+}
+
+/**
  * Reads a pasted list. Each line is one place; a Google Maps URL on the line
  * (or on its own after the name) is picked up automatically.
  */

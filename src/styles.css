@@ -806,6 +806,16 @@ textarea {
   font-weight: 600;
 }
 
+.dup-tag {
+  align-self: flex-start;
+  background: #fffaf0;
+  color: #975a16;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
 .alt-row {
   display: flex;
   flex-wrap: wrap;

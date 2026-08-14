@@ -37,6 +37,7 @@ export function PlacesTab({ trip }: { trip: TripStore }) {
 
       {importing && (
         <ImportPanel
+          existingNames={trip.places.map((p) => p.name)}
           onClose={() => setImporting(false)}
           onImport={async (places) => {
             for (const place of places) {
