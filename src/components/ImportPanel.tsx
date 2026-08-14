@@ -15,6 +15,7 @@ import {
   placeNameFromMapsUrl,
 } from "../utils/importers";
 import { guessArea, readPlaceFromImage } from "../utils/ocr";
+import { readImportableFiles } from "../utils/zip";
 
 type Mode = "menu" | "screenshot" | "paste" | "csv";
 
@@ -64,6 +65,8 @@ export function ImportPanel({
   const [busy, setBusy] = useState<string | null>(null);
   const [pasteText, setPasteText] = useState("");
   const [error, setError] = useState<string | null>(null);
+  /** Which files inside the archive actually yielded places. */
+  const [sources, setSources] = useState<string[]>([]);
 
   const addDrafts = (items: Draft[]) => {
     if (items.length === 0) {
@@ -124,16 +127,29 @@ export function ImportPanel({
     const files = Array.from(e.target.files ?? []);
     e.target.value = "";
     if (files.length === 0) return;
+
+    setError(null);
+    const found: Draft[] = [];
+    const readFiles: string[] = [];
     try {
-      const found: Draft[] = [];
-      for (const file of files) {
-        const text = await file.text();
-        found.push(...parseImportFile(text).map((p) => toDraft(p)));
+      for (const [i, file] of files.entries()) {
+        setBusy(`ファイルを読み込み中… (${i + 1}/${files.length})`);
+        // Zips are expanded here, so the Takeout download works untouched.
+        for (const part of await readImportableFiles(file)) {
+          const parsed = parseImportFile(part.text);
+          if (parsed.length > 0) readFiles.push(`${part.name} (${parsed.length}件)`);
+          found.push(...parsed.map((p) => toDraft(p)));
+        }
       }
-      addDrafts(found);
-    } catch {
-      setError("ファイルを読み込めませんでした。");
+    } catch (err) {
+      console.error("import failed", err);
+      setError("ファイルを読み込めませんでした。zipが壊れていないかご確認ください。");
+      setBusy(null);
+      return;
     }
+    setBusy(null);
+    setSources(readFiles);
+    addDrafts(found);
   };
 
   const handlePaste = () => {
@@ -228,23 +244,26 @@ export function ImportPanel({
             </li>
             <li>エクスポートを作成(数分〜数十分でダウンロードのメールが届きます)</li>
             <li>
-              zipを展開し、中の <code>.csv</code> か <code>.json</code> を下のボタンで選択
+              届いた <strong>zipファイルをそのまま</strong> 下のボタンで選ぶ
               <br />
-              <small>複数まとめて選べます</small>
+              <small>
+                解凍は不要です。中から場所のデータだけを自動で探して取り込みます
+              </small>
             </li>
           </ol>
           <label className="file-button">
-            CSV / JSON を選ぶ(複数可)
+            zip / CSV / JSON を選ぶ(複数可)
             <input
               type="file"
-              accept=".csv,.json,text/csv,application/json"
+              accept=".zip,.csv,.json,application/zip,text/csv,application/json"
               multiple
               onChange={handleCsv}
               hidden
             />
           </label>
           <p className="hint">
-            名前の列があるCSVなら形式は問いません。マップのURLや住所があれば一緒に取り込みます。
+            解凍済みの <code>.csv</code> / <code>.json</code> を直接選んでも構いません。
+            名前の列があるCSVなら形式は問いません。
           </p>
         </div>
       )}
@@ -290,6 +309,12 @@ export function ImportPanel({
 
       {busy && <p className="busy-line">{busy}</p>}
       {error && <p className="warn-line warn">{error}</p>}
+
+      {sources.length > 0 && (
+        <p className="source-line">
+          読み込んだファイル: {sources.join(" / ")}
+        </p>
+      )}
 
       {drafts.length > 0 && (
         <div className="draft-list">

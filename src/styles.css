@@ -806,6 +806,14 @@ textarea {
   font-weight: 600;
 }
 
+.source-line {
+  font-size: 0.76rem;
+  color: var(--muted);
+  margin: 10px 0 0;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
 .dup-tag {
   align-self: flex-start;
   background: #fffaf0;
