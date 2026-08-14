@@ -3,12 +3,14 @@ import { TripStore } from "../hooks/useTrip";
 import { CATEGORY_LABELS, Place, PRIORITY_LABELS, Priority } from "../types";
 import { PlaceForm } from "./PlaceForm";
 import { AddToScheduleForm } from "./AddToScheduleForm";
+import { ImportPanel } from "./ImportPanel";
 import { mapsSearchUrl } from "../utils/maps";
 
 const PRIORITY_ORDER: Priority[] = ["must", "want", "if-time"];
 
 export function PlacesTab({ trip }: { trip: TripStore }) {
   const [adding, setAdding] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [schedulingId, setSchedulingId] = useState<string | null>(null);
 
@@ -21,12 +23,28 @@ export function PlacesTab({ trip }: { trip: TripStore }) {
     <div className="tab-content">
       <div className="tab-header-row">
         <h2>行きたい場所 ({trip.places.length})</h2>
-        {!adding && (
-          <button className="btn-primary" onClick={() => setAdding(true)}>
-            + 追加
-          </button>
+        {!adding && !importing && (
+          <div className="header-actions">
+            <button className="btn-secondary" onClick={() => setImporting(true)}>
+              ⬇ まとめて取り込み
+            </button>
+            <button className="btn-primary" onClick={() => setAdding(true)}>
+              + 追加
+            </button>
+          </div>
         )}
       </div>
+
+      {importing && (
+        <ImportPanel
+          onClose={() => setImporting(false)}
+          onImport={async (places) => {
+            for (const place of places) {
+              await trip.addPlace(place);
+            }
+          }}
+        />
+      )}
 
       {adding && (
         <PlaceForm
@@ -38,9 +56,10 @@ export function PlacesTab({ trip }: { trip: TripStore }) {
         />
       )}
 
-      {trip.places.length === 0 && !adding && (
+      {trip.places.length === 0 && !adding && !importing && (
         <p className="empty-state">
-          Googleマップでピンを立てた場所を、ここに1つずつ追加してください。
+          Googleマップの保存リストからまとめて取り込むか、1つずつ追加してください。
+          「⬇ まとめて取り込み」が手早いです。
         </p>
       )}
 
