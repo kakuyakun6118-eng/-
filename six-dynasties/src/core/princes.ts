@@ -52,11 +52,19 @@ export function updatePrinceRoster(state: GameState, rng: () => number): GameSta
    */
   const retired = new Set([...state.retiredPrinceIds, ...leaving.map((p) => p.id)]);
 
-  // 史実の八王をその年に迎える
+  /*
+   * 史実の八王をその年に迎える。
+   *
+   * **封国が朝廷の手にあるときだけ現れる。** 州の持ち主を見ずに迎えていたときは、
+   * すでに氐に落ちた雍州に趙王倫が現れ、挙兵した瞬間にその州を胡族から
+   * 奪い返してしまった（土地を持たない皇帝が生まれる原因にもなっていた）
+   */
+  const courtHeld = new Set(heldProvinceIds(state));
   for (const historical of HISTORICAL_PRINCES) {
     if (state.year < historical.fromYear || state.year > historical.untilYear) continue;
     if (retired.has(historical.id)) continue;
     if (princes.some((p) => p.id === historical.id)) continue;
+    if (!courtHeld.has(historical.province)) continue;
     if (princes.length >= MAX_PRINCES) break;
     princes = [...princes, { ...historical }];
   }
@@ -66,7 +74,7 @@ export function updatePrinceRoster(state: GameState, rng: () => number): GameSta
     const kin = state.dynasty.members.filter(
       (member) => member.relation === 'kin' && member.age >= ADULT_AGE,
     );
-    const held = heldProvinceIds(state).filter(
+    const held = [...courtHeld].filter(
       (id) => !princes.some((p) => p.province === id) && id !== state.capital,
     );
     const titles = [...state.dynasty.princeTitlePool];
@@ -138,24 +146,25 @@ export function checkPrinceRevolts(state: GameState, rng: () => number): GameSta
     if (rng() >= chance) continue;
 
     const province = next.provinces[prince.province];
-    const fromGarrison = province ? province.garrison * PRINCE_REVOLT_GARRISON_SHARE : 0;
+    // 朝廷の手を離れている州は、王が挙兵しても王のものにはならない
+    const canSeize = province !== undefined && province.holder === null;
+    const fromGarrison = canSeize ? province.garrison * PRINCE_REVOLT_GARRISON_SHARE : 0;
     const fromArmy = next.centralArmy * PRINCE_REVOLT_ARMY_SHARE;
 
     princes[i] = { ...prince, inRevolt: true, troops: prince.troops + fromGarrison + fromArmy };
     next = {
       ...next,
       centralArmy: Math.max(0, next.centralArmy - fromArmy),
-      provinces:
-        province === undefined
-          ? next.provinces
-          : {
-              ...next.provinces,
-              [prince.province]: {
-                ...province,
-                garrison: province.garrison - fromGarrison,
-                holder: 'prince',
-              },
+      provinces: !canSeize
+        ? next.provinces
+        : {
+            ...next.provinces,
+            [prince.province]: {
+              ...province,
+              garrison: province.garrison - fromGarrison,
+              holder: 'prince',
             },
+          },
     };
     revolted = true;
   }
@@ -310,7 +319,23 @@ export function checkPrinceMarchOnCapital(state: GameState, rng: () => number): 
     lineage: 'han',
   };
 
-  const province = state.provinces[prince.province];
+  /*
+   * 挙兵を収めた王の州も朝廷へ戻す。
+   *
+   * 即位した王の州だけ戻していたときは、ほかの王は挙兵を解いたのに
+   * その州が藩王の手のまま残り、誰も拠っていない州が永久に失われた
+   */
+  const provinces = { ...state.provinces };
+  for (const other of state.princes) {
+    const held = provinces[other.province];
+    if (held?.holder !== 'prince') continue;
+    provinces[other.province] = {
+      ...held,
+      holder: null,
+      control: Math.max(20, held.control),
+    };
+  }
+
   return {
     ...state,
     // 担いだ兵はそのまま中軍になる
@@ -323,10 +348,7 @@ export function checkPrinceMarchOnCapital(state: GameState, rng: () => number): 
       .filter((p) => p.id !== prince.id)
       .map((p) => ({ ...p, inRevolt: false })),
     retiredPrinceIds: [...state.retiredPrinceIds, prince.id],
-    provinces:
-      province?.holder === 'prince'
-        ? { ...state.provinces, [prince.province]: { ...province, holder: null, control: Math.max(20, province.control) } }
-        : state.provinces,
+    provinces,
     dynasty: {
       ...state.dynasty,
       ruler: enthroned,

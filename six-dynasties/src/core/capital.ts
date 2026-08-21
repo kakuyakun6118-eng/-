@@ -6,6 +6,7 @@ import {
   CROSS_SOUTH_MANDATE_LOSS,
   CROSS_SOUTH_PROVINCE,
   CROSS_SOUTH_TAX_BASE_LOSS,
+  SEAT_NAMES,
   TAX_BASE_MAX,
 } from './constants';
 import type { GameState, ProvinceId } from './types';
@@ -84,6 +85,54 @@ export function checkSouthwardCrossing(state: GameState): GameState {
     turnEvents: [...state.turnEvents, 'crossed_south'],
   };
 }
+
+/**
+ * 都を失ったままの朝廷を、保っている州へ移す。
+ *
+ * `applyCapitalFall` は都が陥ちた**その年**にしか働かないので、
+ * 移る先が無かった年をやり過ごすと、以後ずっと敵の手にある都に座ったまま
+ * 毎年 `applyCapitalPressure` を受け続けた（実測で3616年ぶん）。
+ * **毎年やり直す。** 移る先は保っている州のうち、都を置ける大城を先に、
+ * 無ければ最も豊かで落ち着いた州を選ぶ
+ */
+export function relocateIfCapitalLost(state: GameState): GameState {
+  const capital = state.provinces[state.capital];
+  if (capital !== undefined && capital.holder === null) return state;
+
+  const held = Object.values(state.provinces).filter((p) => p.holder === null && p.control > 0);
+  if (held.length === 0) return state;
+
+  const score = (id: ProvinceId): number => {
+    const province = state.provinces[id];
+    // 歴代の都が置かれた大城を優先し、次に豊かで落ち着いた州
+    return (CAPITAL_NAMES[id] !== undefined ? 100000 : 0) + province.baseTax * province.control;
+  };
+  const refuge = held.map((p) => p.id).sort((a, b) => score(b) - score(a))[0];
+
+  const crossing =
+    state.crossedSouthYear === null && state.provinces[refuge].region === 'south';
+
+  const moved: GameState = {
+    ...state,
+    capital: refuge,
+    capitalName: SEAT_NAMES[refuge],
+    mandate: clamp100(state.mandate - MOVE_CAPITAL_MANDATE_LOSS_ON_FLIGHT),
+    turnEvents: [...state.turnEvents, 'capital_moved'],
+  };
+  if (!crossing) return moved;
+
+  return {
+    ...moved,
+    crossedSouthYear: moved.year,
+    mandate: clamp100(moved.mandate - CROSS_SOUTH_MANDATE_LOSS),
+    taxBase: clamp(moved.taxBase - CROSS_SOUTH_TAX_BASE_LOSS, 0, TAX_BASE_MAX),
+    gentry: clamp100(moved.gentry + CROSS_SOUTH_GENTRY_GAIN),
+    turnEvents: [...moved.turnEvents, 'crossed_south'],
+  };
+}
+
+/** 追われて都を移すときに失う天命。自ら選んで遷都するより軽い */
+const MOVE_CAPITAL_MANDATE_LOSS_ON_FLIGHT = 3;
 
 /** 都を敵に押さえられているあいだ、州は動揺し続ける */
 export function applyCapitalPressure(state: GameState): GameState {

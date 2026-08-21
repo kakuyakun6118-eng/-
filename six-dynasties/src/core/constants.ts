@@ -510,14 +510,40 @@ export const SURVIVAL_MIN_PROVINCES = 2;
 
 // ── 都 ────────────────────────────────────────────────
 
-/** 都の置ける州と、そこに立つ都城の名 */
-export const CAPITAL_NAMES: Partial<Record<ProvinceId, string>> = {
+/**
+ * 各州の治所。**都を移す先はここから引く。**
+ *
+ * 「都の置ける6州」だけを持っていたときは、その6州をすべて失った朝廷が
+ * 敵の手にある都に座ったまま動けず、毎年 CAPITAL_PRESSURE を受け続けた
+ * （398年に江陵を失ってから終局まで都無しで進む局が出た）。
+ * 梁の元帝が江陵に、陳が建康に拠ったように、朝廷は保っている州のどこにでも移れる
+ */
+export const SEAT_NAMES: Record<ProvinceId, string> = {
   Si: '洛陽',
   Yong: '長安',
+  Liang: '姑臧',
+  Bing: '晋陽',
   Ji: '鄴',
+  You: '薊',
+  Qing: '臨淄',
+  Yu: '寿春',
   Yang: '建康',
   Jing: '江陵',
+  Jiang: '尋陽',
   Yi: '成都',
+  Ning: '味県',
+  Guang: '番禺',
+  Jiao: '龍編',
+};
+
+/** 自ら選んで都を置ける州。歴代の都が置かれた大城 */
+export const CAPITAL_NAMES: Partial<Record<ProvinceId, string>> = {
+  Si: SEAT_NAMES.Si,
+  Yong: SEAT_NAMES.Yong,
+  Ji: SEAT_NAMES.Ji,
+  Yang: SEAT_NAMES.Yang,
+  Jing: SEAT_NAMES.Jing,
+  Yi: SEAT_NAMES.Yi,
 };
 
 /** 南渡。北の都をすべて失ったとき、朝廷は江南へ移る */

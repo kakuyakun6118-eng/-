@@ -175,6 +175,8 @@ interface Outcome {
   taxBase: number;
   kingdoms: number;
   proclaimed: number;
+  everProclaimed: number;
+  peakProclaimed: number;
   princeTookCapital: boolean;
   citiesLost: number;
 }
@@ -183,10 +185,20 @@ function runOne(difficulty: Difficulty, seed: number): Outcome {
   let state = freshState(difficulty);
   const rng = createRng(seed);
   let princeSeized = false;
+  // 帝を称したことのある勢力（延べ）と、同時に並び立った最大の数
+  const everProclaimed = new Set<string>();
+  let peakProclaimed = 0;
 
   while (state.status === 'ongoing' && state.year < ENDING_YEAR) {
     state = tick(state, chooseActions(state, rng), seed + state.turn);
     if (state.turnEvents.includes('prince_took_capital')) princeSeized = true;
+    let now = 0;
+    for (const f of Object.values(state.factions)) {
+      if (f.proclaimedYear === null) continue;
+      everProclaimed.add(f.id);
+      now++;
+    }
+    peakProclaimed = Math.max(peakProclaimed, now);
   }
   const score = evaluateScore(state);
   return {
@@ -204,6 +216,8 @@ function runOne(difficulty: Difficulty, seed: number): Outcome {
     taxBase: state.taxBase,
     kingdoms: Object.values(state.factions).filter((f) => f.stance === 'enfeoffed').length,
     proclaimed: Object.values(state.factions).filter((f) => f.proclaimedYear !== null).length,
+    everProclaimed: everProclaimed.size,
+    peakProclaimed,
     princeTookCapital: princeSeized,
     citiesLost: Object.values(state.provinces).filter((p) => p.holder !== null).length,
   };
@@ -243,7 +257,7 @@ for (const difficulty of difficulties) {
   console.log(`  南征が始まった局 ${pct(count((o) => o.northOffensive))}`);
   console.log(`  終局の天命 平均 ${mean(outcomes.map((o) => o.mandate)).toFixed(0)} / 戸口 ${mean(outcomes.map((o) => o.taxBase)).toFixed(0)}`);
   console.log(`  胡族の建国 平均 ${mean(outcomes.map((o) => o.kingdoms)).toFixed(1)} 国`);
-  console.log(`  帝を称した胡族 平均 ${mean(outcomes.map((o) => o.proclaimed)).toFixed(1)} 勢力`);
+  console.log(`  帝を称した胡族 延べ ${mean(outcomes.map((o) => o.everProclaimed)).toFixed(1)} 勢力／同時に最大 ${mean(outcomes.map((o) => o.peakProclaimed)).toFixed(1)}／終局に残る ${mean(outcomes.map((o) => o.proclaimed)).toFixed(1)}`);
   console.log(`  藩王が帝位に即いた局 ${pct(count((o) => o.princeTookCapital))}`);
   console.log(`  失った州 平均 ${mean(outcomes.map((o) => o.citiesLost)).toFixed(1)}`);
 }

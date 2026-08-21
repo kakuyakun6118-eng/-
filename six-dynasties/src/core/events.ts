@@ -1,6 +1,6 @@
 import eventsData from '../data/events.json';
 import { modifiersOf } from './constants';
-import type { GameState, HistoricalEvent, StateCondition } from './types';
+import type { FactionId, GameState, HistoricalEvent, StateCondition } from './types';
 import { clamp, clamp100, readPath, writePath } from './util';
 
 const EVENTS = eventsData as HistoricalEvent[];
@@ -91,15 +91,31 @@ export function applyHistoricalEvents(state: GameState, rng: () => number): Game
       const delta = effect.delta < 0 && event.harmful ? effect.delta * severity : effect.delta;
       const raw = current + delta;
 
-      const leaf = effect.field.split('.').pop() ?? '';
+      const parts = effect.field.split('.');
+      const leaf = parts[parts.length - 1] ?? '';
+      /*
+       * 胡族の戦力は**その民の天井を超えさせない。**
+       *
+       * 歴史イベントの増分（石虎の暴政 +30、前秦の華北統一 +40 など）を
+       * 素通ししていたときは、成長の側で天井を守っていても
+       * 羯が 167／150 まで膨らんだ。天井はその民が史実で届いた高さなので、
+       * どの経路から増えても超えてはいけない
+       */
+      const strengthCap =
+        leaf === 'strength' && parts[0] === 'factions'
+          ? (next.factions[parts[1] as FactionId]?.strengthMax ?? Number.MAX_SAFE_INTEGER)
+          : Number.MAX_SAFE_INTEGER;
+
       const bounded =
         BOUNDED_FIELDS.has(effect.field) || leaf === 'control'
           ? clamp100(raw)
-          : leaf === 'strength' || leaf === 'garrison'
-            ? Math.max(0, raw)
-            : effect.field === 'treasury'
-              ? raw
-              : clamp(raw, 0, Number.MAX_SAFE_INTEGER);
+          : leaf === 'strength'
+            ? clamp(raw, 0, strengthCap)
+            : leaf === 'garrison'
+              ? Math.max(0, raw)
+              : effect.field === 'treasury'
+                ? raw
+                : clamp(raw, 0, Number.MAX_SAFE_INTEGER);
       next = writePath(next, effect.field, bounded);
     }
 

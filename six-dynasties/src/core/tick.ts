@@ -11,7 +11,12 @@ import {
   openBattlefield,
 } from './battlefield';
 import type { BattleDeployment, BattleOrders } from './types';
-import { applyCapitalFall, applyCapitalPressure, checkSouthwardCrossing } from './capital';
+import {
+  applyCapitalFall,
+  applyCapitalPressure,
+  checkSouthwardCrossing,
+  relocateIfCapitalLost,
+} from './capital';
 import {
   ARMY_COLLAPSE_THRESHOLD,
   ENDING_YEAR,
@@ -248,6 +253,8 @@ export function tick(state: GameState, actions: PlayerActions, seed: Seed): Game
 
   // 5. 都の攻防
   next = applyCapitalFall(state, next);
+  // 陥ちた年に移り先が無かった朝廷も、保っている州があれば毎年やり直す
+  next = relocateIfCapitalLost(next);
   next = checkSouthwardCrossing(next);
   next = applyCapitalPressure(next);
 
@@ -256,8 +263,6 @@ export function tick(state: GameState, actions: PlayerActions, seed: Seed): Game
   next = developProvinces(next);
   next = recoverHouseholds(next);
   next = repairWalls(next, new Set(modifiers.besieged.keys()));
-  // 州を得た胡族は帝を称する。要る州の数は野心で決まる
-  next = checkProclamations(next);
 
   // 7. 天命の判定
   next = applyDecay(next);
@@ -274,6 +279,13 @@ export function tick(state: GameState, actions: PlayerActions, seed: Seed): Game
 
   // 9. 歴史イベントの発火判定
   next = applyHistoricalEvents(next, rng);
+
+  /*
+   * 帝号の判定は**その年の州の持ち主がすべて決まったあと**に置く。
+   * 支配度の更新の直後に置いていたときは、そのあとの宗室の挙兵で
+   * 州の持ち主が変わり、土地を持たない帝が一年ぶん残った
+   */
+  next = checkProclamations(next);
 
   // はじめて胡族に州を奪われた年を記録する。統一の判定はここから先で意味を持つ
   if (next.fragmentedYear === null && isFragmented(next)) {

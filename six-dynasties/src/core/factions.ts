@@ -359,6 +359,22 @@ export function checkProclamations(state: GameState): GameState {
   const factions = { ...state.factions };
   let mandateLoss = 0;
   let proclaimed = false;
+  let changed = false;
+
+  /*
+   * **州を1つも持たない者は帝ではいられない。**
+   *
+   * 返上させていなかったときは、北朝に取り込まれた勢力や北伐で追い払った
+   * 勢力が土地を持たないまま帝号を名乗り続け、朝廷の一覧に
+   * 「州を持たない皇帝」が何人も並んだ（実測で延べ53262年ぶん）
+   */
+  for (const id of Object.keys(factions) as FactionId[]) {
+    const faction = factions[id];
+    if (faction.proclaimedYear === null) continue;
+    if ((held.get(id) ?? 0) > 0) continue;
+    factions[id] = { ...faction, proclaimedYear: null, emperorName: null };
+    changed = true;
+  }
 
   for (const [id, count] of held) {
     const faction = factions[id];
@@ -375,14 +391,17 @@ export function checkProclamations(state: GameState): GameState {
     };
     mandateLoss += PROCLAIM_MANDATE_LOSS;
     proclaimed = true;
+    changed = true;
   }
 
-  if (!proclaimed) return state;
+  if (!changed) return state;
   return {
     ...state,
     factions,
     mandate: clamp100(state.mandate - mandateLoss),
-    turnEvents: [...state.turnEvents, 'faction_proclaimed'],
+    turnEvents: proclaimed
+      ? [...state.turnEvents, 'faction_proclaimed']
+      : state.turnEvents,
   };
 }
 
