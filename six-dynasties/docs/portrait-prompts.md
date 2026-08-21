@@ -1,219 +1,269 @@
-# 顔グラフィックの発注書（Gemini 向け）
+# 顔グラフィックの発注書（画像生成AI向け）
 
 いま画面に出ている顔は SVG で組み立てたもので、`public/portraits/` に
-下記の名前で PNG を置くと**そちらが優先して使われる**（無い分は SVG のまま）。
+下記の名前で画像を置くと**そちらが優先して使われる**（無い分は SVG のまま）。
+一枚ずつ足していける。
+
+## 0. 画質の基準
+
+**濃密な半写実のデジタル絵画。** 肌の質感、髪の一本一本、絹の織り、金線細工の粒、
+革と鉄の擦れまで描き込む。宮殿の内部を大きくぼかした暖色の背景に、
+蝋燭のような温かい光を前から当てる。**平坦な塗りにも、線画にも、アニメ絵にもしない。**
+
+- 一枚に**一人だけ。** 並べた見本（シート）ではなく、一人ずつ別のファイルにする
+- 背景は**入れたまま**でよい（切り抜き不要）。宮殿の奥行きごと画の一部として使う
+- 文字・落款・透かしを**一切入れない**
 
 ## 1. 納品の形式
 
 | 項目 | 指定 |
 |---|---|
-| 形式 | PNG（透過でなくてよい） |
-| 寸法 | 正方形 1:1、1024×1024 以上 |
-| 構図 | 胸から上の正面向き。**全カット同じ寸法・同じ切り取り** |
-| 背景 | 完全な単色 `#E7DCC6`（模様・枠・影を入れない） |
-| 文字 | 一切入れない（落款・署名・透かしも不可） |
+| 形式 | PNG または JPEG。原寸のままでよい（表示用の縮小はこちらでやる） |
+| 寸法 | 縦長 3:4、1024×1365 以上。**全カット同じ比率・同じ切り取り** |
+| 構図 | 胸から上。正面向き。頭頂の冠が上端のすぐ内側に収まる |
+| 枚数 | 1ファイル1人。複数人を並べた画像は使えない |
 | 置き場 | `six-dynasties/public/portraits/<ファイル名>` |
 
-**渡し方はリポジトリへのコミット。** チャットに貼った画像はこちらで
-ファイルとして保存できないので、アプリに組み込めない。GitHub の web 画面から
+**渡し方はリポジトリへのコミット。** チャットに貼った画像はこちらでファイルとして
+保存できないので、アプリに組み込めない。GitHub の web 画面から
 `six-dynasties/public/portraits/` に upload するのがいちばん早い。
 
-## 2. 共通スタイル（毎回そのまま貼る）
+## 2. 揃った画風にするための手順
+
+画像生成は一枚ごとに絵柄が振れる。**次の順で作ると揃う。**
+
+1. まず **`emperor_mid_1.png` を一枚作る**（下の共通スタイル＋帝の指定）。
+   気に入るまでこれだけを引き直す。これが**基準画**になる
+2. 二枚目以降は、**基準画を添付した上で**次を添える
 
 ```
-You are generating one image in a matching set of character portraits for a
+Use the attached image as the reference for style, rendering quality, lighting,
+colour grading, background treatment and camera framing. Keep all of them
+identical. Change ONLY the person and the costume described below.
+This must be a clearly different individual: different face shape, different
+eyes, different nose, different brow, different build and age.
+```
+
+3. 同じ会話の中で続けて生成する（会話を変えると絵柄が飛ぶ）
+
+## 3. 共通スタイル（毎回そのまま貼る）
+
+```
+You are generating one portrait in a matching set of character portraits for a
 historical strategy game set in China, 291-589 AD (Western Jin, the Sixteen
 Kingdoms, the Northern and Southern dynasties).
 
-STYLE — identical for every image in the set:
-- Traditional Chinese silk-scroll court portrait. Fine ink contour lines, flat
-  mineral pigment, restrained shading. NOT photorealistic, NOT anime, NOT 3D.
-- Head-and-shoulders bust, front view, calm and dignified, mouth closed,
-  eyes toward the viewer. No action pose, no weapon raised, no hands visible.
-- Composition, identical in every image: head centered; the top of the headwear
-  sits about 6% below the top edge; the shoulders are cut off by the bottom edge.
-- Background: one completely flat color #E7DCC6. No pattern, no gradient,
-  no border, no frame, no cast shadow, no vignette.
-- Palette: ink #241F1A, silk #E7DCC6, gold #D0A63F, cinnabar #9B2D20,
-  indigo #1B2637, jade #4A6F5D, muted earth brown. No neon, no pastel.
-- No text, no letters, no seal, no signature, no watermark.
-- Output: PNG, square 1:1, 1024x1024.
+STYLE — identical in every image of the set:
+- Ultra-detailed semi-realistic digital painting: the look of a key visual for a
+  Chinese historical drama, or a high-end strategy-game character portrait.
+  Real skin texture, individual hair strands, woven silk, gold filigree, worn
+  leather and oxidised iron. NOT flat illustration, NOT anime, NOT line art,
+  NOT a cartoon, NOT a 3D game screenshot.
+- Rendering: extremely high detail, sharp focus on the eyes, subsurface
+  scattering in the skin, physically based materials — silk sheen, brushed gold,
+  polished pearl, soft fur, scratched steel.
+- Lighting: warm cinematic candlelight from the front left, a soft golden rim
+  light along the hair and shoulders, gentle shadow on the far cheek.
+  Rich golds, deep reds, dark browns. No flash, no cold blue light, no neon.
+- Background: the interior of an ancient Chinese palace hall — carved wooden
+  pillars, gilded screens, hanging lanterns, distant candle flames — thrown far
+  out of focus with a shallow depth of field and creamy bokeh. The background is
+  always present, always blurred, and never competes with the face.
+- Framing, identical in every image: head-and-shoulders bust, the subject facing
+  the viewer, head centred, the top of the headdress just inside the top edge,
+  the crop ending at mid-chest. Eye line about 40% down from the top.
+- Expression: composed and dignified, mouth closed, eyes to the camera.
+  No smile, no shouting, no action pose, no raised hands, no weapon held up.
+- ONE person only. No collage, no grid, no side-by-side variants, no panels.
+- No text, no letters, no numbers, no signature, no seal, no watermark, no frame.
+- Output: PNG, portrait 3:4, at least 1024x1365.
 
 SUBJECT:
-<ここに下の「一枚ごとの指定」を貼る>
+<ここに「一枚ごとの指定」を貼る>
 ```
 
-## 3. 一枚ごとの指定（第一便・40枚）
+**除外指定（negative prompt が使える場合）**
 
-同じ役で複数枚要るのは、**人物ごとに顔を変えるため。** 「前の一枚とは別人。
-顔の形・目鼻立ち・体格を変える」と添えて引き直す。
+```
+flat vector art, anime, manga, cel shading, line art, cartoon, chibi, 3d render,
+plastic skin, doll face, collage, grid of portraits, multiple people, split panels,
+text, watermark, signature, logo, border, frame, modern clothing, plain background,
+white background, studio backdrop, harsh flash, oversaturated colours, smiling,
+open mouth, extra fingers, extra arms
+```
+
+## 4. 冠と衣（時代を外さないための指定）
+
+見本にした画の冠は明代のもの。**画質・照明・質感はあの基準のまま、冠と衣だけを
+この時代のものに置き換える。** 冠は身分そのものなので、ここは崩さない。
 
 ### 帝（emperor）— 8枚
 
-冕冠。黒い板（延）を前へ傾け、**十二旒の玉が顔の前に垂れる。**
-衣は玄衣纁裳（藍黒の袍に朱の襟）。
-
 ```
-A Chinese emperor of the Six Dynasties period wearing the mianguan crown:
-a flat black rectangular board tilted forward above the head, with twelve
-strands of red-and-white jade beads hanging in front of his face, a gold band
-around the black cap beneath. Deep indigo imperial robe with a cinnabar-red
-collar. <年齢の一行> A different individual from the previous image: change the
-face shape, the eyes, the brow and the build.
+A Chinese emperor of the Six Dynasties period. He wears the mianguan crown: a
+flat black lacquered board tilted forward above his head, its gold fittings
+catching the candlelight, and twelve strands of white jade and red coral beads
+hanging in a curtain in front of his face, swaying slightly. Beneath it a black
+silk cap and a red cord tied under the chin. His robe is deep indigo silk woven
+with gold-thread roundels, closed right over left, with a broad cinnabar-red
+collar band and a jade-and-gold belt plaque just visible at the bottom edge.
+<年齢の一行>
 ```
 
 | ファイル名 | 年齢の一行 |
 |---|---|
-| `emperor_boy_1.png` `emperor_boy_2.png` | A boy of about twelve, round soft face, no facial hair, uneasy on the throne. |
-| `emperor_young_1.png` `emperor_young_2.png` | A young man of about twenty-two, clean-shaven or with a thin moustache. |
-| `emperor_mid_1.png` `emperor_mid_2.png` | A man of about forty, full black beard, heavy brow. |
-| `emperor_old_1.png` `emperor_old_2.png` | An old man of about sixty-five, long white beard, deeply lined face. |
+| `emperor_boy_1.png` `emperor_boy_2.png` | A boy of about twelve. Round soft face, no facial hair, the heavy crown slightly too large for him, uneasy eyes. |
+| `emperor_young_1.png` `emperor_young_2.png` | A young man of about twenty-two, clean-shaven or with a thin moustache, smooth skin, watchful. |
+| `emperor_mid_1.png` `emperor_mid_2.png` | A man of about forty. Full black beard, heavy brow, lines at the corners of the eyes. |
+| `emperor_old_1.png` `emperor_old_2.png` | An old man of about sixty-five. Long white beard falling to his chest, deeply lined face, hooded eyes, age spots. |
 
 ### 皇后（empress）— 6枚
 
-花釵冠。**金の歩揺（花形の簪）を挿し、両脇に真珠を垂らす。**
-高く結った髷、褘衣（深紅または深藍の袍）。
+**見本の画にいちばん近いのはここ。** 金の花冠と真珠、朱の房をそのまま使う。
 
 ```
-A Chinese empress of the Six Dynasties period. High coiled hair with a golden
-huachai crown: gold flower-shaped hairpins standing above the head and strands
-of pearls hanging beside both temples. Crimson-and-indigo court robe with a
-cream collar. Fine ink eyebrows, pale complexion, composed expression.
-<年齢の一行> A different individual from the previous image.
+A Chinese empress of the Six Dynasties period. Her hair is drawn up into a high
+coiled bun and covered by an elaborate gold filigree crown built from hundreds of
+tiny gold flowers, pearls and kingfisher-blue enamel, dense and glittering, with
+strings of small pearls hanging at both temples and long crimson silk tassels
+falling beside her ears. Her robe is crimson and violet brocade embroidered with
+gold thread, over a cream inner collar, closed right over left. Fine ink-drawn
+eyebrows, pale powdered complexion, a small vermilion mark between the brows.
+<年齢の一行>
 ```
 
 | ファイル名 | 年齢の一行 |
 |---|---|
-| `empress_young_1.png` `empress_young_2.png` | A woman of about eighteen. |
-| `empress_mid_1.png` `empress_mid_2.png` | A woman of about thirty-five. |
-| `empress_old_1.png` `empress_old_2.png` | A woman of about sixty, grey hair, still upright. |
+| `empress_young_1.png` `empress_young_2.png` | A woman of about eighteen. Smooth skin, calm and guarded. |
+| `empress_mid_1.png` `empress_mid_2.png` | A woman of about thirty-five. Composed, faint lines, a harder gaze. |
+| `empress_old_1.png` `empress_old_2.png` | A woman of about sixty. Grey hair beneath the crown, lined face, upright and severe. |
 
 ### 藩王（prince）— 6枚
 
-遠遊冠。**旒は無い**（旒は天子だけ）。黒い冠に金の帯、紫または朱の袍。
-
 ```
-A Chinese imperial prince of the Six Dynasties period wearing the yuanyou guan:
-a black cap with a rounded ridge and a gold band, NO hanging beads (the beaded
-crown belongs to the emperor alone). Purple or dark red robe with a cream collar.
-Proud, watchful expression. <年齢の一行> A different individual from the previous image.
+A Chinese imperial prince of the Six Dynasties period. He wears the yuanyou
+guan: a black lacquered cap with a rounded ridge over the crown and a chased
+gold band across the front — and NO hanging beads, because the beaded curtain
+belongs to the emperor alone. His robe is deep purple or dark red silk with a
+woven pattern and a cream inner collar, a gold-mounted sword hilt just visible
+at the bottom edge. Proud, watchful, faintly impatient.
+<年齢の一行>
 ```
 
 | ファイル名 | 年齢の一行 |
 |---|---|
-| `prince_young_1.png` `prince_young_2.png` | A young man of about twenty. |
-| `prince_mid_1.png` `prince_mid_2.png` | A man of about thirty-eight, short beard. |
-| `prince_old_1.png` `prince_old_2.png` | A man of about fifty-five, greying beard. |
+| `prince_young_1.png` `prince_young_2.png` | A young man of about twenty, clean-shaven. |
+| `prince_mid_1.png` `prince_mid_2.png` | A man of about thirty-eight, short trimmed beard. |
+| `prince_old_1.png` `prince_old_2.png` | A man of about fifty-five, greying beard, heavy eyelids. |
 
 ### 文官（official・録尚書事と刺史）— 4枚
 
-進賢冠。**前が低く後ろが高い黒い冠**に梁が一本。絳紗袍（深緑または藍）。
-
 ```
-A Chinese civil official of the Six Dynasties period wearing the jinxian guan:
-a black cloth cap, low at the front and rising at the back, with a single ridge
-over the crown. Dark green or indigo court robe, cream inner collar. Scholarly,
-narrow-eyed, self-possessed. <年齢の一行> A different individual from the previous image.
+A Chinese civil official of the Six Dynasties period. He wears the jinxian guan:
+a black cloth cap, low at the front and rising at the back, with a single narrow
+ridge running over the crown, tied with a dark cord. His robe is dark green or
+deep indigo silk with a cream inner collar and a jade pendant at the sash.
+Scholarly and self-possessed, narrow eyes, a slight stoop of the shoulders.
+<年齢の一行>
 ```
 
 | ファイル名 | 年齢の一行 |
 |---|---|
-| `official_mid_1.png` `official_mid_2.png` | A man of about forty-five, thin beard. |
-| `official_old_1.png` `official_old_2.png` | A man of about sixty-five, long white beard. |
+| `official_mid_1.png` `official_mid_2.png` | A man of about forty-five, thin beard, ink-stained fingers not visible in frame. |
+| `official_old_1.png` `official_old_2.png` | A man of about sixty-five, long thin white beard, wispy eyebrows. |
 
 ### 都督（marshal・武将）— 6枚
 
-鉄の兜に**朱の纓**を立て、頬当てを垂らす。裲襠鎧（札を綴じた甲）。
-
 ```
-A Chinese general of the Six Dynasties period in armour: an iron helmet with a
-short cinnabar-red plume on the crown and cheek guards hanging at both sides,
-over lamellar armour of small iron plates with a red sash at the collar.
-Weathered, direct gaze. <年齢の一行> A different individual from the previous image.
+A Chinese general of the Six Dynasties period in armour. An iron helmet with a
+short cinnabar-red plume on the crown and hinged cheek guards hanging at both
+sides; beneath it, lamellar armour of hundreds of small iron plates laced with
+red cord, a heavy leather shoulder strap with bronze studs, and a red silk sash
+knotted at the collar. The metal is scratched and dulled by use, not polished.
+Weathered skin, a direct and unhurried gaze.
+<年齢の一行>
 ```
 
 | ファイル名 | 年齢の一行 |
 |---|---|
-| `marshal_young_1.png` `marshal_young_2.png` | A man of about twenty-eight, clean-shaven. |
-| `marshal_mid_1.png` `marshal_mid_2.png` | A man of about forty, thick black beard, scarred cheek. |
-| `marshal_old_1.png` `marshal_old_2.png` | A man of about sixty, grey beard, one eye narrowed. |
+| `marshal_young_1.png` `marshal_young_2.png` | A man of about twenty-eight, clean-shaven, a fresh scar on one cheekbone. |
+| `marshal_mid_1.png` `marshal_mid_2.png` | A man of about forty, thick black beard, broken nose. |
+| `marshal_old_1.png` `marshal_old_2.png` | A man of about sixty, grey beard, one eye permanently narrowed. |
 
 ### 胡族の首長（chieftain）— 6枚
 
-**貂の帽**（毛皮の縁と、後ろへ垂れる尾）、弁髪、**左衽**の胡服、毛皮の襟、金の頸環。
-
 ```
-A steppe or inner-frontier tribal chieftain of northern China, 4th-5th century
-(Xiongnu, Jie, Di, Qiang, Xianbei). A fur hat trimmed with sable and a fur tail
-hanging behind, braided hair falling in front of both ears, a fur-collared
-riding coat fastened on the LEFT side (zuoren), a plain gold torque at the neck.
-Sunburnt skin, broad cheekbones. <年齢の一行> A different individual from the previous
-image: change the fur colour (dark brown / grey brown / reddish brown) as well.
+A chieftain of an inner-frontier steppe people of northern China in the fourth
+century (Xiongnu, Jie, Di, Qiang, Xianbei). He wears a tall fur hat trimmed with
+sable, a fur tail hanging down behind his shoulder, and his hair falls in tight
+braids in front of both ears. His riding coat is fastened on the LEFT side
+(zuoren, the barbarian fashion), with a thick fur collar, coarse wool and worn
+leather, bronze plaques on the chest strap and a plain heavy gold torque at the
+throat. Sun-darkened skin, broad cheekbones, wind-cracked lips.
+<年齢の一行> Vary the fur colour as well (dark sable brown / grey brown / reddish fox).
 ```
 
 | ファイル名 | 年齢の一行 |
 |---|---|
-| `chieftain_young_1.png` `chieftain_young_2.png` | A man of about twenty-six, thin moustache. |
-| `chieftain_mid_1.png` `chieftain_mid_2.png` | A man of about forty, full beard. |
-| `chieftain_old_1.png` `chieftain_old_2.png` | A man of about sixty, white beard and braids. |
+| `chieftain_young_1.png` `chieftain_young_2.png` | A man of about twenty-six, thin moustache, restless eyes. |
+| `chieftain_mid_1.png` `chieftain_mid_2.png` | A man of about forty, full beard, a scar through one eyebrow. |
+| `chieftain_old_1.png` `chieftain_old_2.png` | A man of about sixty, white beard and white braids, still hard. |
 
 ### 北朝の主（north）— 4枚
 
-**冕冠と毛皮を同時に着ける** — 胡族が漢の天子の冠をかぶった姿。孝文帝の漢化以後は
-毛皮を減らしてよい。
-
 ```
-A ruler of a northern Chinese dynasty founded by a Xianbei house (Northern Wei).
-He wears the Chinese mianguan crown — flat black board tilted forward with
-strands of beads hanging before his face — but over a fur-collared robe, and his
-hair is braided at the temples. The two costumes are deliberately mixed.
-<年齢の一行> A different individual from the previous image.
+The ruler of a northern Chinese dynasty founded by a Xianbei house (Northern
+Wei). The two costumes are deliberately mixed: he wears the Chinese mianguan
+crown — the flat black board tilted forward, strands of jade beads hanging
+before his face — but over a fur-collared riding coat, and his hair is braided
+at the temples in the steppe manner. Gold and sable together, candlelight on
+both. A cold, appraising expression.
+<年齢の一行>
 ```
 
 | ファイル名 | 年齢の一行 |
 |---|---|
 | `north_mid_1.png` `north_mid_2.png` | A man of about thirty-five, strong black beard. |
-| `north_old_1.png` `north_old_2.png` | A man of about fifty-five, greying beard. |
+| `north_old_1.png` `north_old_2.png` | A man of about fifty-five, greying beard, deep-set eyes. |
 
-## 4. 第二便（いま顔の無いもの・10枚）
+## 5. 第二便（いま顔の無いもの・10枚）
 
-| ファイル名 | 指定に足す一行 |
+| ファイル名 | SUBJECT に足す一行 |
 |---|---|
-| `heir_boy_1.png` `heir_boy_2.png` | A boy of about fourteen in a plain dark robe and a small black cap, the crown prince, not yet enthroned. |
-| `heir_girl_1.png` `heir_girl_2.png` | A girl of about fifteen of the imperial house, hair in two coiled loops, plain silk robe, no crown. |
-| `dowager_old_1.png` `dowager_old_2.png` | An empress dowager of about seventy, grey hair under a gold flower crown, dark purple robe, severe expression. |
-| `chieftain_female_1.png` `chieftain_female_2.png` | A woman chieftain of a steppe people, about thirty, fur hat and braids, fur-collared coat fastened on the left, gold torque. |
-| `rebel_mid_1.png` `rebel_mid_2.png` | A rebel general of about forty-five, no crown, hair bound in a plain cloth wrap, worn leather armour, hard stare. |
+| `heir_boy_1.png` `heir_boy_2.png` | A boy of about fourteen, the crown prince: a plain dark silk robe and a small black cap with no beads, no crown, a jade pendant at the collar. |
+| `heir_girl_1.png` `heir_girl_2.png` | A girl of about fifteen of the imperial house: hair in two coiled loops with a single gold pin, plain pale silk robe, no crown. |
+| `dowager_old_1.png` `dowager_old_2.png` | An empress dowager of about seventy: grey hair under a heavy gold flower crown, dark purple brocade, a Buddhist rosary at the wrist, a severe unblinking gaze. |
+| `chieftain_female_1.png` `chieftain_female_2.png` | A woman chieftain of a steppe people, about thirty: fur hat and braids, a fur-collared coat fastened on the left, a heavy gold torque, a hunting falcon's jesses visible at her shoulder. |
+| `rebel_mid_1.png` `rebel_mid_2.png` | A rebel general of about forty-five: no crown, hair bound up in a plain cloth wrap, battered leather armour over a coarse robe, a hard stare. |
 
-## 5. 第三便（史実の人物・個別の顔）
+## 6. 第三便（史実の人物・個別の顔）
 
-`data/leaders.json` に名前のある78人。**ここは有っても無くても遊べる**ので最後でよい。
-ファイル名は `leader_<よみ>.png`（例 `leader_shile.png`）。
+`data/leaders.json` に名前のある78人。**無くても遊べる**ので最後でよい。
+ファイル名は `leader_<よみ>.png`。
 
-```
-<共通スタイル>
-SUBJECT: <人物の説明>. Head-and-shoulders portrait in the same set style.
-```
-
-| 人物 | 説明に足す一行 | ファイル名 |
+| 人物 | SUBJECT に足す一行 | ファイル名 |
 |---|---|---|
-| 石勒 | Shi Le, the Jie slave who became emperor of Later Zhao. About fifty, heavy build, deep-set eyes, fur-collared robe under a Chinese crown. | `leader_shile.png` |
-| 苻堅 | Fu Jian of Former Qin, about forty-five. Refined and generous-looking, Chinese robes, light beard — a barbarian ruler who governed as a Confucian sovereign. | `leader_fujian.png` |
-| 拓跋燾 | Emperor Taiwu of Northern Wei, about thirty-five. Hard, narrow-eyed, braided temples, fur collar under a beaded crown. | `leader_tuobatao.png` |
-| 慕容垂 | Murong Chui of Later Yan, about sixty. Tall, white-bearded, still a soldier. | `leader_murongchui.png` |
-| 桓温 | Huan Wen, Jin general, about fifty. Long face, sparse beard, iron helmet, ambitious eyes. | `leader_huanwen.png` |
-| 謝玄 | Xie Xuan, victor of the Fei River, about forty. Aristocratic, slender, light armour. | `leader_xiexuan.png` |
-| 劉裕 | Liu Yu, founder of the Song, about fifty-five. Low-born soldier's face, broad jaw, scarred, plain armour. | `leader_liuyu.png` |
-| 檀道済 | Tan Daoji, about fifty. Grizzled veteran, full armour. | `leader_tandaoji.png` |
-| 韋叡 | Wei Rui, about sixty-five. Frail scholar-general in a robe rather than armour, carried in a litter. | `leader_weirui.png` |
-| 陳慶之 | Chen Qingzhi, about forty-five. Pale, slight, dressed in white — the general who could not draw a strong bow. | `leader_chenqingzhi.png` |
-| 陳霸先 | Chen Baxian, founder of the Chen, about fifty. Southern soldier, dark-skinned, heavy brow. | `leader_chenbaxian.png` |
-| 劉淵 | Liu Yuan of Han-Zhao, about forty-five. Xiongnu chieftain educated in the Chinese classics; Chinese robe, braided hair. | `leader_liuyuan.png` |
+| 石勒 | Shi Le, the Jie slave who rose to be emperor of Later Zhao. About fifty, heavy-set, deep-set eyes, braided temples, a fur collar under a Chinese crown — a man who never learned to read. | `leader_shile.png` |
+| 苻堅 | Fu Jian of Former Qin, about forty-five. Refined and generous-looking, Chinese court robes rather than furs, a light beard — a barbarian ruler who governed as a Confucian sovereign. | `leader_fujian.png` |
+| 拓跋燾 | Emperor Taiwu of Northern Wei, about thirty-five. Hard and narrow-eyed, braided temples, sable collar beneath a beaded crown, a hunter's weathered skin. | `leader_tuobatao.png` |
+| 慕容垂 | Murong Chui of Later Yan, about sixty. Tall, white-bearded, upright, still every inch a cavalry commander. | `leader_murongchui.png` |
+| 桓温 | Huan Wen, general of Jin, about fifty. Long face, sparse beard, iron helmet, the eyes of a man measuring the throne. | `leader_huanwen.png` |
+| 謝玄 | Xie Xuan, victor of the Fei River, about forty. Aristocratic and slender, light lamellar armour over a silk robe. | `leader_xiexuan.png` |
+| 劉裕 | Liu Yu, founder of the Song, about fifty-five. A low-born soldier's face: broad jaw, scarred cheek, plain unornamented armour, no jade. | `leader_liuyu.png` |
+| 檀道済 | Tan Daoji, about fifty. A grizzled veteran in full armour, grey at the temples. | `leader_tandaoji.png` |
+| 韋叡 | Wei Rui, about sixty-five. A frail scholar-general in a plain robe instead of armour, a bamboo staff, thin white beard. | `leader_weirui.png` |
+| 陳慶之 | Chen Qingzhi, about forty-five. Pale, slight, dressed in white — the general who could not draw a strong bow and never lost a battle. | `leader_chenqingzhi.png` |
+| 陳霸先 | Chen Baxian, founder of the Chen, about fifty. A southern soldier, dark-skinned, heavy brow, plain armour. | `leader_chenbaxian.png` |
+| 劉淵 | Liu Yuan of Han-Zhao, about forty-five. A Xiongnu chieftain educated in the Chinese classics: Chinese robes, braided hair, a scholar's calm over a rider's frame. | `leader_liuyuan.png` |
 
-残りの人物も同じ書き方で足せる。**史実の顔が無い人物は種から作った顔のままでよい。**
+残りの人物も同じ書き方で足せる。**顔の無い人物は種から作った SVG のままでよい。**
 
-## 6. 揃ったあと
+## 7. 揃ったあと
 
-`public/portraits/manifest.json` に置いたファイル名を並べ、
-表示側はそれを読んで「有る顔は画像、無い顔は SVG」に振り分ける。
-manifest が無ければ全部 SVG のまま動く。
+こちらでやること。
+
+1. 原寸の画像を、表示用に **512×683 の WebP へ縮小**（一覧に並べるので軽くする）
+2. `public/portraits/manifest.json` に置いたファイル名を並べる
+3. 表示側でその一覧を読み、**有る顔は画像、無い顔は SVG** に振り分ける。
+   manifest が無ければ全部 SVG のまま動く
+4. 画像の顔には金の枠を回して、絹地の画面から浮かないようにする
