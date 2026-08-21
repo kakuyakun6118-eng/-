@@ -198,6 +198,7 @@ function succeed(state: GameState, cause: DeathCause, rng: () => number): GameSt
     heirs.length > 0 ? 'heir' : kin.length > 0 ? 'kin' : 'crisis';
 
   const record: DeathRecord = {
+    id: dynasty.ruler.id,
     name: dynasty.ruler.name,
     houseName: dynasty.houseName,
     year: state.year,
@@ -304,6 +305,7 @@ export function abdicate(state: GameState, rng: () => number): GameState {
   };
 
   const record: DeathRecord = {
+    id: dynasty.ruler.id,
     name: dynasty.ruler.name,
     houseName: dynasty.houseName,
     year: state.year,

@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { MEN_PER_STRENGTH } from '../../core/constants';
 import { orderLabel, resolveTarget, wingLabel } from '../../core/battlefield';
+import { Portrait, seededAge } from './Portrait';
 import type {
   ArmKind,
   BattleDeployment,
@@ -206,14 +207,25 @@ export function BattleScreen({
           <p className="text-[12px]" style={{ color: 'var(--ink-soft)' }}>
             {TERRAIN_LABELS[field.terrain]}／{TERRAIN_NOTES[field.terrain]}
           </p>
-          <p className="text-[12px] mt-0.5">
-            <span style={{ color: 'var(--imperial)' }}>我 {men(ourTotal)}</span>
-            <span style={{ color: 'var(--ink-soft)' }}> 対 </span>
-            <span style={{ color: 'var(--cinnabar)' }}>敵 {men(foeTotal)}</span>
-            <span style={{ color: 'var(--ink-soft)' }}>
-              {' '}／ {field.leaderName} が率いる（第{field.round + 1}合）
-            </span>
-          </p>
+          <div className="flex items-center gap-2 mt-0.5">
+            {/* 率いる者の顔。帝が自ら出れば冕冠、都督なら兜で分かる */}
+            <Portrait
+              spec={{
+                seed: field.leaderName,
+                role: field.leader === 'sovereign' ? 'emperor' : 'marshal',
+                age: seededAge(field.leaderName, 28, 62),
+              }}
+              size={40}
+            />
+            <p className="text-[12px]">
+              <span style={{ color: 'var(--imperial)' }}>我 {men(ourTotal)}</span>
+              <span style={{ color: 'var(--ink-soft)' }}> 対 </span>
+              <span style={{ color: 'var(--cinnabar)' }}>敵 {men(foeTotal)}</span>
+              <span style={{ color: 'var(--ink-soft)' }}>
+                {' '}／ {field.leaderName} が率いる（第{field.round + 1}合）
+              </span>
+            </p>
+          </div>
         </header>
 
         {/* 布陣図 */}

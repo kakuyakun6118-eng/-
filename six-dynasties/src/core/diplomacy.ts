@@ -1,3 +1,4 @@
+import consortsData from '../data/consorts.json';
 import housesData from '../data/houses.json';
 import {
   AUXILIARY_DEFECT_THRESHOLD,
@@ -5,6 +6,7 @@ import {
   AUXILIARY_LOYALTY_GAIN,
   AUXILIARY_LOYALTY_LOSS,
   AUXILIARY_PAY_PER_STRENGTH,
+  CONSORT_TRIBAL_RELIEF,
   CHARISMA_TRIBUTE_DISCOUNT,
   COALITION_RALLY_PER_HOMELAND,
   EXPEDITION_ARMY_SHARE,
@@ -32,8 +34,10 @@ import {
   modifiersOf,
 } from './constants';
 import { kingdomNameOf } from './factions';
+import { createRng } from './rng';
 import type {
   Consort,
+  MarriageKind,
   FactionId,
   GameState,
   HomelandId,
@@ -43,6 +47,7 @@ import type {
 import { clamp, clamp100, pick } from './util';
 
 const HOUSES = housesData.houses as { id: string; name: string }[];
+const CONSORT_NAMES = consortsData.names as string[];
 
 export function houseName(houseId: string): string {
   return HOUSES.find((house) => house.id === houseId)?.name ?? houseId;
@@ -191,11 +196,29 @@ export function settleAuxiliaryPay(state: GameState): GameState {
     };
   }
 
+  /*
+   * 和親の后は、給が絶えた年の落ち込みを和らげる。
+   * 婚姻は「その年の帰順を買う」だけの手ではなく、
+   * **迎えているあいだ効き続ける**ものとして扱う
+   */
+  const relief = consortRelief(state, 'tribe') * CONSORT_TRIBAL_RELIEF;
   return {
     ...state,
     treasury: Math.max(0, state.treasury - due),
-    tribalLoyalty: clamp100(state.tribalLoyalty - AUXILIARY_LOYALTY_LOSS),
+    tribalLoyalty: clamp100(state.tribalLoyalty - Math.max(0, AUXILIARY_LOYALTY_LOSS - relief)),
   };
+}
+
+/**
+ * 皇后の内助。**出自に見合う帰順にだけ効く。**
+ *
+ * 士族の女は士族の支持を、和親の后は胡族の帰順を、北朝の公主は天命を支える。
+ * 効くのは人望で、迎えているあいだ毎年働く
+ */
+export function consortRelief(state: GameState, kind: MarriageKind): number {
+  const consort = state.dynasty.consort;
+  if (consort === null || consort.kind !== kind) return 0;
+  return consort.abilities.charisma;
 }
 
 /** 帰順が尽きた義従胡は寝返る */
@@ -360,6 +383,50 @@ export function updateHomelands(state: GameState, rng: () => number): GameState 
  * **行動枠を消費する。** 無償にすると純粋な上振れだけの選択肢になり、
  * すでに傾いている行動経済をさらに壊す
  */
+/**
+ * 差し出される女。**申し出の一覧に出す顔と、迎えたあとの皇后は同じ人物にする。**
+ *
+ * 迎えてから抽選していたときは、選ぶときに見た顔・年・人望と
+ * 皇后になった人物が別人になった。行動の一覧はここを呼んで下見を描き、
+ * `arrangeMarriage` は成立したときに同じものを受け取る。
+ *
+ * 種は「家門（または勢力）と、いまの王朝」から作る。代が替われば
+ * 差し出される娘も替わり、同じ代のあいだは替わらない
+ */
+export function brideFor(state: GameState, target: MarriageAction['target']): Consort {
+  const key =
+    target.kind === 'gentry'
+      ? target.houseId
+      : target.kind === 'tribe'
+        ? target.factionId
+        : 'north';
+  const id = `consort_${target.kind}_${key}_${state.dynasty.foundedYear}`;
+
+  let hash = 2166136261;
+  for (let i = 0; i < id.length; i++) {
+    hash ^= id.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  const rng = createRng(hash >>> 0);
+  const given = CONSORT_NAMES[Math.floor(rng() * CONSORT_NAMES.length)] ?? '徽音';
+  const roll = (low: number, high: number) => low + Math.floor(rng() * (high - low + 1));
+
+  return {
+    id,
+    name: target.kind === 'gentry' ? `${houseName(target.houseId)}の${given}` : given,
+    age: roll(15, 27),
+    abilities: {
+      military: roll(1, 6),
+      administration: roll(2, 9),
+      charisma: roll(3, 10),
+    },
+    kind: target.kind,
+    factionId: target.kind === 'tribe' ? target.factionId : null,
+    houseId: target.kind === 'gentry' ? target.houseId : null,
+    marriedYear: state.year,
+  };
+}
+
 export function arrangeMarriage(
   state: GameState,
   target: MarriageAction['target'],
@@ -382,18 +449,7 @@ export function arrangeMarriage(
   const paid: GameState = { ...state, treasury: state.treasury - MARRIAGE_COST };
   if (rng() >= Math.min(0.95, base + charisma * 0.012)) return paid;
 
-  const consort: Consort = {
-    name:
-      target.kind === 'gentry'
-        ? `${houseName(target.houseId)}の女`
-        : target.kind === 'tribe'
-          ? '胡族の女'
-          : '北朝の公主',
-    kind: target.kind,
-    factionId: target.kind === 'tribe' ? target.factionId : null,
-    houseId: target.kind === 'gentry' ? target.houseId : null,
-    marriedYear: state.year,
-  };
+  const consort = brideFor(state, target);
 
   let next: GameState = {
     ...paid,

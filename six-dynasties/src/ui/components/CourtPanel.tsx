@@ -2,8 +2,10 @@ import { useState } from 'react';
 
 import { DEFAULT_CHIEFTAIN_ABILITIES, chieftainOf } from '../../core/factions';
 import { provincesToProclaim } from '../../core/constants';
+import { houseName } from '../../core/diplomacy';
 import type { Abilities, GameState } from '../../core/types';
 import { FACTION_LABELS, PROVINCE_LABELS, STANCE_LABELS } from '../catalogue';
+import { Portrait, seededAge } from './Portrait';
 
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
@@ -61,8 +63,17 @@ export function RulerPanel({
 
   return (
     <section className="han-panel-dark rounded-sm px-3 py-2.5">
-      <div className="flex items-baseline justify-between gap-2">
-        <div className="min-w-0">
+      <div className="flex items-start justify-between gap-2">
+        <Portrait
+          spec={{
+            seed: ruler.id,
+            role: 'emperor',
+            age: ruler.age,
+            hu: ruler.lineage === 'mixed',
+          }}
+          size={64}
+        />
+        <div className="min-w-0 flex-1">
           <span className="text-[11px]" style={{ color: 'rgba(231, 220, 198, 0.7)' }}>
             {state.dynasty.houseName}（{state.dynasty.foundedYear}年〜）
           </span>
@@ -120,6 +131,82 @@ export function RulerPanel({
   );
 }
 
+/**
+ * 皇后。
+ *
+ * **迎えているあいだ毎年働く。** 婚姻を「その年の帰順を買う手」に留めると、
+ * 士族に爵位を配ることと王氏の女を娶ることの区別がつかない。
+ * 后の人望は、その出自に見合う帰順の減りだけを和らげる
+ */
+export function ConsortPanel({ state }: { state: GameState }) {
+  const consort = state.dynasty.consort;
+  if (consort === null) {
+    return (
+      <section className="han-panel rounded-sm px-3 py-2">
+        <h2 className="han-heading text-sm">皇后</h2>
+        <p className="mt-1 text-[12px]" style={{ color: 'var(--ink-soft)' }}>
+          空位。「行動 → 官職」から士族の家門・胡族・北朝のいずれかと婚姻を結べる。
+          迎えた后は毎年その出自の帰順を支え、子が生まれた年にもう一度効く
+        </p>
+      </section>
+    );
+  }
+
+  const origin =
+    consort.kind === 'gentry'
+      ? `士族 ${consort.houseId === null ? '' : houseName(consort.houseId)}`
+      : consort.kind === 'tribe'
+        ? `和親 ${consort.factionId === null ? '' : FACTION_LABELS[consort.factionId]}`
+        : '北朝の公主';
+  const effect =
+    consort.kind === 'gentry'
+      ? '士族の支持の自然減を和らげている'
+      : consort.kind === 'tribe'
+        ? '給が絶えた年の胡族の帰順の落ちを和らげている'
+        : '天命の自然減を和らげている';
+
+  return (
+    <section className="han-panel rounded-sm px-3 py-2">
+      <h2 className="han-heading text-sm">皇后</h2>
+      <div className="mt-1.5 flex gap-2 items-start">
+        <Portrait
+          spec={{
+            seed: consort.id,
+            role: 'empress',
+            age: consort.age + (state.year - consort.marriedYear),
+            female: true,
+            hu: consort.kind !== 'gentry',
+          }}
+          size={52}
+        />
+        <div className="min-w-0 flex-1 text-[12px]">
+          <div className="flex items-baseline gap-1.5 flex-wrap">
+            <span className="font-semibold">{consort.name}</span>
+            <AbilityRow abilities={consort.abilities} />
+            <span className="tabular-nums" style={{ color: 'var(--ink-soft)' }}>
+              {consort.age + (state.year - consort.marriedYear)}歳
+            </span>
+          </div>
+          <div className="text-[11px]" style={{ color: 'var(--ink-soft)' }}>
+            {origin}／{consort.marriedYear}年に迎えた
+          </div>
+          <div className="text-[11px]" style={{ color: 'var(--jade)' }}>
+            人望{consort.abilities.charisma} — {effect}
+          </div>
+          {state.dynasty.pendingMarriages.length > 0 && (
+            <div className="text-[11px]" style={{ color: 'var(--ink-soft)' }}>
+              {state.dynasty.pendingMarriages[0].dueYear}年に子が生まれれば、縁はもう一度効く
+            </div>
+          )}
+        </div>
+      </div>
+      <p className="mt-1.5 text-[11px]" style={{ color: 'var(--ink-soft)' }}>
+        代が替われば后も替わる。皇后を迎えているあいだは子の生まれる目も上がる
+      </p>
+    </section>
+  );
+}
+
 /** 都督と録尚書事。実権はこの二席にある */
 export function OfficersPanel({ state }: { state: GameState }) {
   const marshal = state.marshal.holder;
@@ -128,29 +215,45 @@ export function OfficersPanel({ state }: { state: GameState }) {
   return (
     <section className="han-panel rounded-sm px-3 py-2">
       <h2 className="han-heading text-sm">朝廷の要職</h2>
-      <ul className="mt-1.5 space-y-1.5 text-[12px]">
-        <li>
-          <span className="font-semibold">都督中外諸軍事</span>
-          <span style={{ color: 'var(--ink-soft)' }}>
-            {' — '}
-            {marshal
-              ? `${marshal.name}（軍事${marshal.competence}・野心${marshal.ambition}・残り${marshal.tenure}年）`
-              : '空位。守りが弱くなっている'}
-          </span>
-          {marshal && marshal.competence >= 8 && (
-            <div className="text-[11px]" style={{ color: 'var(--cinnabar)' }}>
-              有能な将ほど戦勝の名を持ち去り、天命を余分に削り、位を狙う目も増える
-            </div>
+      <ul className="mt-1.5 space-y-2 text-[12px]">
+        <li className="flex gap-2">
+          {marshal && (
+            <Portrait
+              spec={{ seed: marshal.id, role: 'marshal', age: seededAge(marshal.id, 28, 60) }}
+              size={38}
+            />
           )}
+          <div className="min-w-0">
+            <span className="font-semibold">都督中外諸軍事</span>
+            <span style={{ color: 'var(--ink-soft)' }}>
+              {' — '}
+              {marshal
+                ? `${marshal.name}（軍事${marshal.competence}・野心${marshal.ambition}・残り${marshal.tenure}年）`
+                : '空位。守りが弱くなっている'}
+            </span>
+            {marshal && marshal.competence >= 8 && (
+              <div className="text-[11px]" style={{ color: 'var(--cinnabar)' }}>
+                有能な将ほど戦勝の名を持ち去り、天命を余分に削り、位を狙う目も増える
+              </div>
+            )}
+          </div>
         </li>
-        <li>
-          <span className="font-semibold">録尚書事</span>
-          <span style={{ color: 'var(--ink-soft)' }}>
-            {' — '}
-            {chancellor
-              ? `${chancellor.name}（能力${chancellor.competence}・野心${chancellor.ambition}・残り${chancellor.tenure}年）`
-              : '空位'}
-          </span>
+        <li className="flex gap-2">
+          {chancellor && (
+            <Portrait
+              spec={{ seed: chancellor.id, role: 'chancellor', age: seededAge(chancellor.id, 34, 68) }}
+              size={38}
+            />
+          )}
+          <div className="min-w-0">
+            <span className="font-semibold">録尚書事</span>
+            <span style={{ color: 'var(--ink-soft)' }}>
+              {' — '}
+              {chancellor
+                ? `${chancellor.name}（能力${chancellor.competence}・野心${chancellor.ambition}・残り${chancellor.tenure}年）`
+                : '空位'}
+            </span>
+          </div>
         </li>
       </ul>
     </section>
@@ -167,7 +270,12 @@ export function PrincePanel({ state }: { state: GameState }) {
       <h2 className="han-heading text-sm">宗室の諸王</h2>
       <ul className="mt-1.5 space-y-1">
         {state.princes.map((prince) => (
-          <li key={prince.id} className="text-[12px]">
+          <li key={prince.id} className="text-[12px] flex gap-2">
+            <Portrait
+              spec={{ seed: prince.id, role: 'prince', age: seededAge(prince.id, 19, 58) }}
+              size={38}
+            />
+            <div className="min-w-0 flex-1">
             <div className="flex items-baseline gap-1.5 flex-wrap">
               <span className="font-semibold shrink-0">{prince.name}</span>
               <AbilityRow abilities={prince.abilities} ambition={prince.ambition} />
@@ -185,6 +293,7 @@ export function PrincePanel({ state }: { state: GameState }) {
                 兵を集めて都を衝く。陥とせばこの王が帝位に即く
               </div>
             )}
+            </div>
           </li>
         ))}
       </ul>
@@ -210,7 +319,17 @@ export function TribePanel({ state }: { state: GameState }) {
         {factions.map((faction) => {
           const chieftain = chieftainOf(faction.id, state.year);
           return (
-            <li key={faction.id} className="text-[12px]">
+            <li key={faction.id} className="text-[12px] flex gap-2">
+              <Portrait
+                spec={{
+                  seed: chieftain?.name ?? faction.id,
+                  role: 'chieftain',
+                  age: seededAge(chieftain?.name ?? faction.id, 24, 62),
+                  hu: true,
+                }}
+                size={40}
+              />
+              <div className="min-w-0 flex-1">
               <div className="flex items-baseline gap-1.5 flex-wrap">
                 <span className="font-semibold shrink-0">{FACTION_LABELS[faction.id]}</span>
                 {faction.proclaimedYear !== null && (
@@ -248,6 +367,7 @@ export function TribePanel({ state }: { state: GameState }) {
                   ? `／${provincesToProclaim(faction.ambition)}州を得れば帝を称する`
                   : `／${faction.emperorName ?? '首長'}が${faction.proclaimedYear}年に帝を称した`}
               </div>
+              </div>
             </li>
           );
         })}
@@ -276,12 +396,23 @@ export function NorthPanel({ state }: { state: GameState }) {
       <h2 className="han-heading text-sm" style={{ color: 'var(--cinnabar)' }}>
         北朝 — {north.name}（{north.foundedYear}年〜）
       </h2>
-      <p className="mt-1 text-[12px]">
-        <span style={{ color: 'var(--ink-soft)' }}>主 </span>
-        {north.rulerName}（軍事{north.rulerMilitary}）
-        <span style={{ color: 'var(--ink-soft)' }}> ／ 兵 </span>
-        <span className="tabular-nums font-semibold">{Math.round(north.strength)}</span>
-      </p>
+      <div className="mt-1 flex gap-2 items-start">
+        <Portrait
+          spec={{
+            seed: north.rulerName,
+            role: 'northRuler',
+            age: seededAge(north.rulerName, 26, 60),
+            hu: true,
+          }}
+          size={44}
+        />
+        <p className="text-[12px]">
+          <span style={{ color: 'var(--ink-soft)' }}>主 </span>
+          {north.rulerName}（軍事{north.rulerMilitary}）
+          <span style={{ color: 'var(--ink-soft)' }}> ／ 兵 </span>
+          <span className="tabular-nums font-semibold">{Math.round(north.strength)}</span>
+        </p>
+      </div>
       <p className="mt-1 text-[11px]" style={{ color: 'var(--ink-soft)' }}>
         {north.offensiveSince === null
           ? 'まだ南征は始まっていない'
@@ -306,7 +437,21 @@ export function ChroniclePanel({ state }: { state: GameState }) {
           .slice()
           .reverse()
           .map((record, i) => (
-            <li key={i} className="text-[11px]" style={{ color: 'var(--ink-soft)' }}>
+            <li
+              key={i}
+              className="text-[11px] flex items-center gap-1.5"
+              style={{ color: 'var(--ink-soft)' }}
+            >
+              {/* 顔は在位中に見たものと同じ。並べると代の移りが読める */}
+              <Portrait
+                spec={{
+                  seed: record.id,
+                  role: 'emperor',
+                  age: record.age,
+                }}
+                size={26}
+              />
+              <span>
               <span className="tabular-nums">{record.year}年</span>{' '}
               <span style={{ color: 'var(--ink)' }}>
                 {record.houseName}・{record.name}
@@ -321,6 +466,7 @@ export function ChroniclePanel({ state }: { state: GameState }) {
                     ? '藩王が位を奪う'
                     : '王朝が替わる'}
               ）
+              </span>
             </li>
           ))}
       </ul>

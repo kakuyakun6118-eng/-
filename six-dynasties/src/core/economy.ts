@@ -5,6 +5,8 @@ import {
   CAPITAL_MANDATE_BONUS,
   CAPITAL_NAMES,
   CHANCELLOR_GENTRY_RELIEF,
+  CONSORT_GENTRY_RELIEF,
+  CONSORT_MANDATE_RELIEF,
   CHANCELLOR_INCOME_PER_POINT,
   CHARISMA_LOYALTY_RELIEF,
   CONTROL_MAX,
@@ -48,6 +50,7 @@ import {
   TAX_RATE,
   modifiersOf,
 } from './constants';
+import { consortRelief } from './diplomacy';
 import type {
   Difficulty,
   Dynasty,
@@ -293,13 +296,23 @@ export function applyDecay(state: GameState): GameState {
     // 都を保っているあいだは威信が下支えする
     (state.provinces[state.capital].holder === null ? CAPITAL_MANDATE_BONUS : 0);
 
+  /*
+   * 皇后の内助。**出自に見合う帰順にだけ効く。**
+   * 士族の女は士族の支持を、北朝の公主は天命を支える
+   * （和親の后は給の清算のほうで効く）
+   */
   const gentryDecay =
-    GENTRY_DECAY - (state.chancellor?.competence ?? 0) * CHANCELLOR_GENTRY_RELIEF;
+    GENTRY_DECAY -
+    (state.chancellor?.competence ?? 0) * CHANCELLOR_GENTRY_RELIEF -
+    consortRelief(state, 'gentry') * CONSORT_GENTRY_RELIEF;
   const loyaltyRelief = ruler.charisma * CHARISMA_LOYALTY_RELIEF;
 
   return {
     ...state,
-    mandate: clamp100(state.mandate - Math.max(0, mandateDecay)),
+    mandate: clamp100(
+      state.mandate -
+        Math.max(0, mandateDecay - consortRelief(state, 'north') * CONSORT_MANDATE_RELIEF),
+    ),
     gentry: clamp100(state.gentry - Math.max(0, gentryDecay)),
     princeLoyalty: clamp100(state.princeLoyalty - Math.max(0, PRINCE_LOYALTY_DECAY - loyaltyRelief)),
   };

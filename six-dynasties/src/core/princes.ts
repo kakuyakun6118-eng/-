@@ -372,6 +372,7 @@ export function checkPrinceMarchOnCapital(state: GameState, rng: () => number): 
   if (rng() >= PRINCE_MARCH_PROBABILITY) return state;
 
   const record: DeathRecord = {
+    id: state.dynasty.ruler.id,
     name: state.dynasty.ruler.name,
     houseName: state.dynasty.houseName,
     year: state.year,

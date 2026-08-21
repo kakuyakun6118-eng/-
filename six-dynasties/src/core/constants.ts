@@ -332,6 +332,19 @@ export const GENTRY_DECAY = 1.4;
 export const CHANCELLOR_GENTRY_RELIEF = 0.1;
 /** 宗室の帰順の自然減 */
 export const PRINCE_LOYALTY_DECAY = 1.1;
+/**
+ * 皇后の人望1あたり、その出自に見合う帰順の減りを和らげる幅。
+ *
+ * **婚姻をその年だけの手にしない。** 迎えた年に一度だけ効く作りでは、
+ * 王氏の女を娶ることと士族に爵位を配ることの区別がつかない。
+ * 后は迎えているあいだ毎年働き、代が替われば失われる
+ */
+export const CONSORT_GENTRY_RELIEF = 0.07;
+/** 和親の后。給が絶えた年の胡族の帰順の落ちを和らげる */
+export const CONSORT_TRIBAL_RELIEF = 0.3;
+/** 北朝の公主。天命の自然減を和らげる */
+export const CONSORT_MANDATE_RELIEF = 0.05;
+
 /** 人望1あたり、宗室と胡族の帰順の自然減を和らげる */
 export const CHARISMA_LOYALTY_RELIEF = 0.09;
 

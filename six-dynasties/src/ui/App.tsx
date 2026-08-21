@@ -8,6 +8,7 @@ import { BattleScreen } from './components/BattleScreen';
 import { ChinaMap, CityPanel, MapLegend, type InspectTarget } from './components/ChinaMap';
 import {
   ChroniclePanel,
+  ConsortPanel,
   NorthPanel,
   OfficersPanel,
   PrincePanel,
@@ -304,6 +305,7 @@ export function App() {
         {tab === 'court' && (
           <>
             <RulerPanel state={state} onRename={rename} />
+            <ConsortPanel state={state} />
             <OfficersPanel state={state} />
             <PrincePanel state={state} />
             <TribePanel state={state} />

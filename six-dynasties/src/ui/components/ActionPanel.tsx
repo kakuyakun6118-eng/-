@@ -14,7 +14,13 @@ import {
   SETTLE_COST,
 } from '../../core/constants';
 import { availableBattleLeaders, availableFoes, leaderName } from '../../core/battle';
-import { auxiliaryPay, allHouses, canSubdueHomeland, tributeCost } from '../../core/diplomacy';
+import {
+  auxiliaryPay,
+  allHouses,
+  brideFor,
+  canSubdueHomeland,
+  tributeCost,
+} from '../../core/diplomacy';
 import { canMoveCapital } from '../../core/economy';
 import { canRecoverProvince } from '../../core/military';
 import type {
@@ -32,6 +38,7 @@ import {
   PROVINCE_SEATS,
 } from '../catalogue';
 import { actionKey } from '../useGame';
+import { Portrait, seededAge, type PortraitSpec } from './Portrait';
 
 type Category = 'prince' | 'tribe' | 'military' | 'domestic' | 'office';
 
@@ -50,6 +57,8 @@ interface Choice {
   cost?: string;
   disabled?: boolean;
   urgent?: boolean;
+  /** 相手の顔。婚姻の申し出で、迎えることになる人物を先に見せる */
+  portrait?: PortraitSpec;
 }
 
 function ActionRow({
@@ -72,19 +81,27 @@ function ActionRow({
         opacity: choice.disabled ? 0.45 : 1,
       }}
     >
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>
-          {chosen && '✓ '}
-          {choice.title}
-        </span>
-        {choice.cost && (
-          <span className="text-[10px] tabular-nums shrink-0" style={{ color: 'var(--ink-soft)' }}>
-            {choice.cost}
-          </span>
-        )}
-      </div>
-      <div className="text-[11px] leading-snug mt-0.5" style={{ color: 'var(--ink-soft)' }}>
-        {choice.detail}
+      <div className="flex gap-2 items-start">
+        {choice.portrait && <Portrait spec={choice.portrait} size={40} />}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>
+              {chosen && '✓ '}
+              {choice.title}
+            </span>
+            {choice.cost && (
+              <span
+                className="text-[10px] tabular-nums shrink-0"
+                style={{ color: 'var(--ink-soft)' }}
+              >
+                {choice.cost}
+              </span>
+            )}
+          </div>
+          <div className="text-[11px] leading-snug mt-0.5" style={{ color: 'var(--ink-soft)' }}>
+            {choice.detail}
+          </div>
+        </div>
       </div>
     </button>
   );
@@ -517,6 +534,11 @@ function OfficeChoices({
       </div>
       {state.candidates.map((candidate) =>
         row({
+          portrait: {
+            seed: candidate.id,
+            role: 'chancellor',
+            age: seededAge(candidate.id, 34, 68),
+          },
           action: { type: 'court_appoint_chancellor', officialId: candidate.id },
           title: `${candidate.name}を録尚書事に`,
           detail: `能力${candidate.competence}・野心${candidate.ambition}・任期${candidate.tenure}年${candidate.gentryBorn ? '・士族の出' : ''}`,
@@ -545,6 +567,11 @@ function OfficeChoices({
           </p>
           {state.candidates.map((candidate) =>
             row({
+              portrait: {
+                seed: candidate.id,
+                role: 'inspector',
+                age: seededAge(candidate.id, 30, 64),
+              },
               action: {
                 type: 'court_appoint_inspector',
                 provinceId: seat,
@@ -566,42 +593,73 @@ function OfficeChoices({
       )}
 
       <div className="pt-2 text-[11px]" style={{ color: 'var(--ink-soft)' }}>
-        婚姻 — {state.dynasty.consort ? `皇后は${state.dynasty.consort.name}` : '皇后は空位'}
+        婚姻 —{' '}
+        {state.dynasty.consort
+          ? `皇后は${state.dynasty.consort.name}（人望${state.dynasty.consort.abilities.charisma}）。代が替わるまで新たに迎えることはできない`
+          : '皇后は空位。迎えているあいだ、后はその出自の帰順を毎年支える'}
       </div>
       {state.dynasty.consort === null && (
         <>
-          {houses.slice(0, 4).map((house) =>
-            row({
+          {houses.slice(0, 4).map((house) => {
+            const bride = brideFor(state, { kind: 'gentry', houseId: house.id });
+            return row({
               action: { type: 'court_marriage', target: { kind: 'gentry', houseId: house.id } },
-              title: `${house.name}の女を迎える`,
-              detail: '士族の支持と天命が上がる。持参の荘園に伴う免税で戸口を恒久的に失う',
+              title: `${house.name}の${bride.name.replace(`${house.name}の`, '')}を迎える`,
+              detail: `${bride.age}歳・統治${bride.abilities.administration}・人望${bride.abilities.charisma}。士族の支持と天命が上がり、以後その支持を支える。持参の荘園に伴う免税で戸口を恒久的に失う`,
               cost: `国庫 ${MARRIAGE_COST}`,
               disabled: state.treasury < MARRIAGE_COST || state.gentry < 30,
-            }),
-          )}
+              portrait: {
+                seed: bride.id,
+                role: 'empress',
+                age: bride.age,
+                female: true,
+              },
+            });
+          })}
           {Object.values(state.factions)
             .filter((f) => f.stance !== 'enfeoffed')
             .slice(0, 3)
-            .map((faction) =>
-              row({
+            .map((faction) => {
+              const bride = brideFor(state, {
+                kind: 'tribe',
+                factionId: faction.id as FactionId,
+              });
+              return row({
                 action: {
                   type: 'court_marriage',
                   target: { kind: 'tribe', factionId: faction.id as FactionId },
                 },
-                title: `${FACTION_LABELS[faction.id]}と和親する`,
-                detail: '胡族の帰順が上がり相手が味方になる。士族の支持と天命は落ち、子は混血になる',
+                title: `${FACTION_LABELS[faction.id]}の${bride.name}と和親する`,
+                detail: `${bride.age}歳・人望${bride.abilities.charisma}。胡族の帰順が上がり相手が味方になる。士族の支持と天命は落ち、子は混血になる`,
                 cost: `国庫 ${MARRIAGE_COST}`,
                 disabled: state.treasury < MARRIAGE_COST,
-              }),
-            )}
-          {state.north !== null &&
-            row({
-              action: { type: 'court_marriage', target: { kind: 'north' } },
-              title: `${state.north.name}の公主を迎える`,
-              detail: '天命が大きく上がる。成立しにくいこと自体が代償',
-              cost: `国庫 ${MARRIAGE_COST}`,
-              disabled: state.treasury < MARRIAGE_COST,
+                portrait: {
+                  seed: bride.id,
+                  role: 'empress',
+                  age: bride.age,
+                  female: true,
+                  hu: true,
+                },
+              });
             })}
+          {state.north !== null &&
+            (() => {
+              const bride = brideFor(state, { kind: 'north' });
+              return row({
+                action: { type: 'court_marriage', target: { kind: 'north' } },
+                title: `${state.north.name}の公主${bride.name}を迎える`,
+                detail: `${bride.age}歳・人望${bride.abilities.charisma}。天命が大きく上がり、以後の天命の減りも和らぐ。成立しにくいこと自体が代償`,
+                cost: `国庫 ${MARRIAGE_COST}`,
+                disabled: state.treasury < MARRIAGE_COST,
+                portrait: {
+                  seed: bride.id,
+                  role: 'empress',
+                  age: bride.age,
+                  female: true,
+                  hu: true,
+                },
+              });
+            })()}
         </>
       )}
     </>

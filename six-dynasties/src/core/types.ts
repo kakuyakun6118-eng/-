@@ -242,6 +242,8 @@ export type DeathCause = 'natural' | 'assassination' | 'battle';
 export type SuccessionOutcome = 'heir' | 'kin' | 'crisis' | 'usurped';
 
 export interface DeathRecord {
+  /** 没した帝の id。年代記にその人物の顔を並べるために持つ */
+  id: string;
   name: string;
   /** 替わる前の王朝名。これが無いと家系図で代を辿れない */
   houseName: string;
@@ -282,7 +284,18 @@ export interface Dynasty {
 export type MarriageKind = 'gentry' | 'tribe' | 'north';
 
 export interface Consort {
+  /** 顔を引く種。婚姻の申し出のときに見た顔が、そのまま皇后の顔になる */
+  id: string;
   name: string;
+  age: number;
+  /**
+   * 皇后の能力。
+   *
+   * **新しい資源ではない。** 人望が、その出自に応じた帰順の自然減を
+   * 和らげる補正としてだけ働く（士族の女なら士族の支持、和親なら胡族の帰順、
+   * 北朝の公主なら天命）
+   */
+  abilities: Abilities;
   kind: MarriageKind;
   /** 胡族と結んだ場合の相手 */
   factionId: FactionId | null;

@@ -8,9 +8,11 @@ const FORMAT = 'six-dynasties-save';
  * 上げずにいたときは、古い保存（`retiredPrinceIds` や城の耐久を持たない）が
  * そのまま受け入れられ、年を送った瞬間に
  * 「state.retiredPrinceIds is not iterable」で落ちた。
- * 読めないものは読めないと言って断るほうが、黙って壊れるよりよい
+ * 読めないものは読めないと言って断るほうが、黙って壊れるよりよい。
+ *
+ * 3 — 皇后に年齢・能力・顔の種を持たせた
  */
-const VERSION = 2;
+const VERSION = 3;
 
 interface SaveFile {
   format: string;
@@ -72,6 +74,11 @@ export function deserialize(contents: string): LoadResult {
     Object.values(state.provinces).some(
       (p) => typeof p?.wall !== 'number' || typeof p?.wallMax !== 'number',
     ) && '城の耐久',
+    state.dynasty?.consort != null &&
+      (typeof state.dynasty.consort.id !== 'string' ||
+        typeof state.dynasty.consort.age !== 'number' ||
+        state.dynasty.consort.abilities === undefined) &&
+      '皇后の年齢と能力',
   ].filter((x): x is string => typeof x === 'string');
 
   if (missing.length > 0) {
