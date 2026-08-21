@@ -234,7 +234,12 @@ export interface Person {
 }
 
 export type DeathCause = 'natural' | 'assassination' | 'battle';
-export type SuccessionOutcome = 'heir' | 'kin' | 'crisis';
+/**
+ * 位がどう渡ったか。`usurped` は挙兵した藩王が都を陥として即いた場合で、
+ * **王朝の号は替わらない**（趙王倫が晋の帝位に即いたのと同じ）ので
+ * `crisis` とは分けて持つ
+ */
+export type SuccessionOutcome = 'heir' | 'kin' | 'crisis' | 'usurped';
 
 export interface DeathRecord {
   name: string;

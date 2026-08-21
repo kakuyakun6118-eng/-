@@ -44,17 +44,43 @@ export function renameRuler(state: GameState, name: string): GameState {
   };
 }
 
+/** 天寿を引く。人物が生まれたときに一度だけ呼ぶ */
+function rollLifespan(rng: () => number): number {
+  return randomInt(rng, RULER_MIN_LIFESPAN, RULER_MAX_LIFESPAN);
+}
+
+/**
+ * 新しい家が興すときに連れてくる一族。
+ *
+ * **家は当主ひとりでは興らない。** 一族を空にしていたときは、
+ * 王朝が替わるたびに宗室が消え、子が生まれて成人する十五年のあいだ
+ * 諸王がひとりもいなくなった。1局に2〜3度替わるので、
+ * 三百年のうち数十年が「宗室のいない朝廷」になる。
+ * 劉裕には弟の道憐・道規と数人の子がいて、宋はその一族ごと立った
+ */
+function foundingKin(rng: () => number, year: number): Person[] {
+  const count = randomInt(rng, 1, 3);
+  const kin: Person[] = [];
+  for (let i = 0; i < count; i++) {
+    kin.push({
+      id: `kin_${year}_${i}`,
+      name: randomName(rng),
+      age: randomInt(rng, 16, 38),
+      lifespan: rollLifespan(rng),
+      abilities: rollAbilities(rng),
+      relation: 'kin',
+      lineage: 'han',
+    });
+  }
+  return kin;
+}
+
 /**
  * 能力を引く。**10%で能力7〜10の名君**が出る。
  *
  * 通常の抽選は3〜8なので、これが無いと9・10の君主が決して生まれず、
  * 北朝の拓跋燾や宇文邕に対して一方的に不利になる
  */
-/** 天寿を引く。人物が生まれたときに一度だけ呼ぶ */
-function rollLifespan(rng: () => number): number {
-  return randomInt(rng, RULER_MIN_LIFESPAN, RULER_MAX_LIFESPAN);
-}
-
 function rollAbilities(rng: () => number): Abilities {
   const exceptional = rng() < EXCEPTIONAL_RULER_PROBABILITY;
   const low = exceptional ? EXCEPTIONAL_MIN_ABILITY : RULER_MIN_ABILITY;
@@ -93,13 +119,23 @@ export function updateDynasty(state: GameState, rng: () => number): GameState {
   return succeed(next, assassinated ? 'assassination' : 'natural', rng);
 }
 
+/**
+ * 一族に一年を加える。**天寿の尽きた者は没する。**
+ *
+ * 寿命を帝にしか当てていなかったときは、一族の者が誰も死ななかった。
+ * 六人の枠が三百年ぶん埋まったまま入れ替わらず、
+ * 291年に生まれた弟が480年に八十九歳で位を継ぐようなことが起きた。
+ * 王もこの名簿から出るので、諸王の顔ぶれも入れ替わらなくなる
+ */
 function ageEveryone(state: GameState): GameState {
   return {
     ...state,
     dynasty: {
       ...state.dynasty,
       ruler: { ...state.dynasty.ruler, age: state.dynasty.ruler.age + 1 },
-      members: state.dynasty.members.map((m) => ({ ...m, age: m.age + 1 })),
+      members: state.dynasty.members
+        .map((m) => ({ ...m, age: m.age + 1 }))
+        .filter((m) => m.age < m.lifespan),
     },
   };
 }
@@ -227,7 +263,7 @@ function foundNewHouse(state: GameState, record: DeathRecord, rng: () => number)
       houseName,
       foundedYear: state.year,
       ruler: founder,
-      members: [],
+      members: foundingKin(rng, state.year),
       history: [...dynasty.history, record],
       namePool: dynasty.namePool.filter((n) => n !== founder.name),
       housePool: dynasty.housePool.filter((h) => h !== houseName),
@@ -276,10 +312,19 @@ export function abdicate(state: GameState, rng: () => number): GameState {
     outcome: 'crisis',
   };
 
-  // 州が動揺する。位が渡った年は天下が揺れる
+  /*
+   * 州が動揺する。位が渡った年は天下が揺れる。
+   * **前の家に拠って挙兵していた王の封国も朝廷へ戻す** —
+   * その王は諸王の名簿から降りるので、戻さなければ
+   * 拠る者のない「藩王領」が永久に残る
+   */
   const provinces = { ...state.provinces };
   for (const id of Object.keys(provinces) as ProvinceId[]) {
     const province = provinces[id];
+    if (province.holder === 'prince') {
+      provinces[id] = { ...province, holder: null, control: Math.max(20, province.control) };
+      continue;
+    }
     if (province.holder !== null) continue;
     provinces[id] = { ...province, control: clamp100(province.control - ABDICATION_CONTROL_LOSS) };
   }
@@ -292,14 +337,18 @@ export function abdicate(state: GameState, rng: () => number): GameState {
     princeLoyalty: clamp100(state.princeLoyalty - ABDICATION_PRINCE_LOSS),
     // 位を受けた将は帝になるので、都督の席は空く
     marshal: { ...state.marshal, holder: null },
-    // 前の家の宗室は諸王ではなくなる
-    princes: state.princes.filter((p) => p.inRevolt),
+    /*
+     * **前の家の宗室は諸王ではなくなる。** 挙兵していた王も含めて退く。
+     * 挙兵中の者だけ残していたときは、その王を支える一族が消えたまま
+     * 名簿に一年残り、拠る者のない封国が生まれた
+     */
+    princes: [],
     dynasty: {
       ...dynasty,
       houseName,
       foundedYear: state.year,
       ruler: founder,
-      members: [],
+      members: foundingKin(rng, state.year),
       history: [...dynasty.history, record],
       namePool: dynasty.namePool.filter((n) => n !== founder.name),
       housePool: dynasty.housePool.filter((h) => h !== houseName),

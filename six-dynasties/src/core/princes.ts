@@ -1,6 +1,7 @@
 import princesData from '../data/princes.json';
 import {
   ADULT_AGE,
+  ENDING_YEAR,
   CURTAIL_ARMY_GAIN,
   CURTAIL_LOYALTY_LOSS,
   EMPOWER_AMBITION_GAIN,
@@ -18,6 +19,7 @@ import {
   PRINCE_REVOLT_GARRISON_SHARE,
   PRINCE_REVOLT_MANDATE_LOSS,
   PRINCE_MARCH_PROBABILITY,
+  PRINCE_MARCH_MARGIN,
   PRINCE_ENTHRONE_MANDATE,
   PRINCE_ENTHRONE_GENTRY_LOSS,
 } from './constants';
@@ -39,9 +41,23 @@ const MAX_PRINCES = 5;
  * この仕組みは八王の乱で終わらせない
  */
 export function updatePrinceRoster(state: GameState, rng: () => number): GameState {
-  // 舞台を去る年を過ぎた王は退場する（挙兵中の者はそのまま残す）
-  const leaving = state.princes.filter((p) => !p.inRevolt && state.year > p.untilYear);
-  let princes = state.princes.filter((p) => p.inRevolt || state.year <= p.untilYear);
+  /*
+   * 舞台を去る年を過ぎた王は退場する（挙兵中の者はそのまま残す）。
+   *
+   * **宗室の名簿から消えた者も封国を離れる。** 王は宗室の成人男子なので、
+   * 没しても位を継いでも `dynasty.members` から抜ける。抜けたのに諸王として
+   * 残していると、没した王が兵を挙げ、継いだ帝が自分に対して挙兵しうる
+   */
+  const inHouse = new Set(state.dynasty.members.map((member) => `kin_${member.id}`));
+  const gone = (prince: Prince): boolean =>
+    prince.id.startsWith('kin_') && !inHouse.has(prince.id);
+
+  const leaving = state.princes.filter(
+    (p) => gone(p) || (!p.inRevolt && state.year > p.untilYear),
+  );
+  let princes = state.princes.filter(
+    (p) => !gone(p) && (p.inRevolt || state.year <= p.untilYear),
+  );
 
   /*
    * 一度舞台を去った王は二度と現れない。
@@ -69,21 +85,35 @@ export function updatePrinceRoster(state: GameState, rng: () => number): GameSta
     princes = [...princes, { ...historical }];
   }
 
-  // 史実の顔ぶれが尽きたら、宗室の成人男子に封国を与える
+  /*
+   * 史実の顔ぶれが尽きたら、宗室の成人男子に封国を与える。
+   *
+   * **皇子も含めて数える。** 傍系（`kin`）だけを封じていたときは、
+   * 開始時の一族三人を使い切ったあと諸王がひとりも現れなくなり、
+   * 320年以降は**8割の年に王がいない**局になった（実測）。
+   * 生まれた子はみな `child` として記録されるので、傍系は増えないためである。
+   * 南朝の諸王はいずれも皇子で、宋の元凶の変も斉の諸王の相殺も皇子どうしの争いだった。
+   * 「宗室に兵を預ければ中央が倒れる」という主題は、皇子を封じてはじめて立つ。
+   *
+   * ただし**太子は封国を持たない** — 都にいて位を継ぐ者だから、
+   * 成人した嫡子の筆頭だけは諸王に数えない
+   */
   if (princes.length < 3 && state.year > 311) {
-    const kin = state.dynasty.members.filter(
-      (member) => member.relation === 'kin' && member.age >= ADULT_AGE,
-    );
+    const adults = state.dynasty.members.filter((member) => member.age >= ADULT_AGE);
+    const heirApparent = adults.find((member) => member.relation === 'child');
+    const eligible = adults.filter((member) => member.id !== heirApparent?.id);
     const held = [...courtHeld].filter(
       (id) => !princes.some((p) => p.province === id) && id !== state.capital,
     );
     const titles = [...state.dynasty.princeTitlePool];
-    for (const member of kin) {
+    for (const member of eligible) {
       if (princes.length >= 3) break;
       if (retired.has(`kin_${member.id}`)) continue;
       if (princes.some((p) => p.id === `kin_${member.id}`)) continue;
       const province = pick(rng, held);
       if (province === null) break;
+      // 同じ年に二人を同じ封国へ置かない。一つの州に二人の王は立たない
+      held.splice(held.indexOf(province), 1);
       // 封国の号で呼ぶ。王朝名を冠すると、即位したときに号が食い違う
       const title = titles.shift() ?? `${member.name}王`;
       princes = [
@@ -101,17 +131,40 @@ export function updatePrinceRoster(state: GameState, rng: () => number): GameSta
           ambition: randomInt(rng, 3, 9),
           inRevolt: false,
           fromYear: state.year,
-          untilYear: state.year + randomInt(rng, 8, 26),
+          /*
+           * **封国は終身。** 史実の八王には史書どおりの退場年があるが、
+           * 生まれた王に十年ほどの任期を与えていたときは、任期が切れた王が
+           * 生きているのに二度と封じられず（退場した王は再び現れない規則のため）、
+           * 成人の一族が平均1.5人しかいないこの模型では諸王が枯れた。
+           * 王が去るのは没したとき・誅されたとき・位を継いだときだけである
+           */
+          untilYear: ENDING_YEAR,
         },
       ];
     }
   }
 
   if (princes === state.princes && retired.size === state.retiredPrinceIds.length) return state;
+
+  /*
+   * 去った王が挙兵中だったなら、その封国は朝廷へ戻る。
+   * 戻さずにいると、拠る王がいないのに「藩王の手」のままの州が残る
+   */
+  let provinces = state.provinces;
+  for (const departed of leaving) {
+    const seat = provinces[departed.province];
+    if (seat?.holder !== 'prince') continue;
+    provinces = {
+      ...provinces,
+      [seat.id]: { ...seat, holder: null, control: Math.max(20, seat.control) },
+    };
+  }
+
   const used = princes.filter((p) => p.id.startsWith('kin_')).map((p) => p.name);
   return {
     ...state,
     princes,
+    provinces,
     retiredPrinceIds: [...retired],
     dynasty: {
       ...state.dynasty,
@@ -227,16 +280,29 @@ export function curtailPrinces(state: GameState): GameState {
   };
 }
 
-/** 誅殺。挙兵の芽を摘むが、宗室と天命を大きく失う */
+/**
+ * 誅殺。挙兵の芽を摘むが、宗室と天命を大きく失う。
+ *
+ * **誅した王は宗室の名簿からも消す。** 名簿に残していたときは、
+ * 誅殺したはずの王がのちに帝位を継いで現れた
+ */
 export function executePrince(state: GameState, princeId: string): GameState {
   const prince = state.princes.find((p) => p.id === princeId);
   if (prince === undefined || prince.inRevolt) return state;
 
   const province = state.provinces[prince.province];
+  const memberId = princeId.startsWith('kin_') ? princeId.slice('kin_'.length) : null;
   return {
     ...state,
     princes: state.princes.filter((p) => p.id !== princeId),
     retiredPrinceIds: [...state.retiredPrinceIds, princeId],
+    dynasty:
+      memberId === null
+        ? state.dynasty
+        : {
+            ...state.dynasty,
+            members: state.dynasty.members.filter((m) => m.id !== memberId),
+          },
     // 王の手勢はその州の守備隊に編入される
     provinces:
       province === undefined
@@ -297,7 +363,12 @@ export function checkPrinceMarchOnCapital(state: GameState, rng: () => number): 
   const prince = marchers.sort((a, b) => b.troops - a.troops)[0];
   const defence = defenceStrength(state, state.capital, new Set()) + state.centralArmy * 0.6;
   const attack = prince.troops * (1 + prince.abilities.military * 0.04);
-  if (attack <= defence) return state;
+  /*
+   * **押し勝つだけでは足りない。** 互角に近い兵で都を衝けるようにしていたときは、
+   * 朝廷が細った局で挙兵がそのまま即位につながり、中級で局の41%、
+   * 上級で51%が藩王の即位で終わった。都を陥とすには目に見えて上回る兵が要る
+   */
+  if (attack <= defence * PRINCE_MARCH_MARGIN) return state;
   if (rng() >= PRINCE_MARCH_PROBABILITY) return state;
 
   const record: DeathRecord = {
@@ -306,7 +377,8 @@ export function checkPrinceMarchOnCapital(state: GameState, rng: () => number): 
     year: state.year,
     age: state.dynasty.ruler.age,
     cause: 'assassination',
-    outcome: 'crisis',
+    // 王朝の号は替わらない。記録にも「王朝が替わる」と書かせない
+    outcome: 'usurped',
   };
 
   const enthroned: Person = {

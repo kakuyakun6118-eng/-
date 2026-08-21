@@ -317,7 +317,9 @@ export function ChroniclePanel({ state }: { state: GameState }) {
                 ? '嫡子が継ぐ'
                 : record.outcome === 'kin'
                   ? '傍系が継ぐ'
-                  : '王朝が替わる'}
+                  : record.outcome === 'usurped'
+                    ? '藩王が位を奪う'
+                    : '王朝が替わる'}
               ）
             </li>
           ))}

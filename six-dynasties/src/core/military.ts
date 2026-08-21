@@ -1,5 +1,6 @@
 import {
   ABDICATION_MIN_INTERVAL,
+  USURPATION_MARSHAL_THRESHOLD_PER_POINT,
   ARMY_COLLAPSE_THRESHOLD,
   CONSCRIPT_COST,
   CONSCRIPT_TAX_BASE_LOSS,
@@ -278,11 +279,20 @@ export function suppressPrince(
  * 位を奪える者がいるということでもある
  */
 export function checkUsurpation(state: GameState, rng: () => number): boolean {
-  if (state.mandate >= USURPATION_THRESHOLD) return false;
   // 立ったばかりの家からは位が渡らない
   if (state.year - state.dynasty.foundedYear < ABDICATION_MIN_INTERVAL) return false;
-  const pressure = (USURPATION_THRESHOLD - state.mandate) / USURPATION_THRESHOLD;
+
+  /*
+   * **有能な都督がいるほど、より高い天命からでも位は渡る。**
+   * 天命が尽きるのを待つ作りにしていたときは、王朝の交替が1局に1.4回しか
+   * 起きなかった。劉裕が晋から位を受けたのは晋が衰えていたからではなく、
+   * 北伐に勝ち続けた将だったからである
+   */
   const marshal = state.marshal.holder?.competence ?? 0;
+  const threshold = USURPATION_THRESHOLD + marshal * USURPATION_MARSHAL_THRESHOLD_PER_POINT;
+  if (state.mandate >= threshold) return false;
+
+  const pressure = (threshold - state.mandate) / threshold;
   const chance = USURPATION_BASE * (1 + pressure * 4) + marshal * USURPATION_MARSHAL_PER_POINT;
   return rng() < chance;
 }
