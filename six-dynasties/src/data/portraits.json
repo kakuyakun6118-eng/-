@@ -1,0 +1,82 @@
+{
+  "chieftain": {
+    "female": [
+      "chieftain_female_1.webp",
+      "chieftain_female_10.webp",
+      "chieftain_female_11.webp",
+      "chieftain_female_12.webp",
+      "chieftain_female_2.webp",
+      "chieftain_female_3.webp",
+      "chieftain_female_4.webp",
+      "chieftain_female_5.webp",
+      "chieftain_female_6.webp",
+      "chieftain_female_7.webp",
+      "chieftain_female_8.webp",
+      "chieftain_female_9.webp"
+    ],
+    "mid": [
+      "chieftain_mid_1.webp",
+      "chieftain_mid_2.webp",
+      "chieftain_mid_3.webp"
+    ],
+    "old": [
+      "chieftain_old_1.webp"
+    ],
+    "young": [
+      "chieftain_young_1.webp"
+    ]
+  },
+  "emperor": {
+    "mid": [
+      "emperor_mid_1.webp",
+      "emperor_mid_2.webp",
+      "emperor_mid_3.webp"
+    ],
+    "old": [
+      "emperor_old_1.webp",
+      "emperor_old_2.webp",
+      "emperor_old_3.webp",
+      "emperor_old_4.webp"
+    ],
+    "young": [
+      "emperor_young_1.webp",
+      "emperor_young_2.webp",
+      "emperor_young_3.webp",
+      "emperor_young_4.webp",
+      "emperor_young_5.webp"
+    ]
+  },
+  "empress": {
+    "mid": [
+      "empress_mid_1.webp",
+      "empress_mid_2.webp"
+    ],
+    "old": [
+      "empress_old_1.webp",
+      "empress_old_2.webp"
+    ],
+    "young": [
+      "empress_young_1.webp",
+      "empress_young_2.webp",
+      "empress_young_3.webp",
+      "empress_young_4.webp",
+      "empress_young_5.webp",
+      "empress_young_6.webp",
+      "empress_young_7.webp",
+      "empress_young_8.webp"
+    ]
+  },
+  "north": {
+    "mid": [
+      "north_mid_1.webp",
+      "north_mid_2.webp",
+      "north_mid_3.webp",
+      "north_mid_4.webp",
+      "north_mid_5.webp"
+    ],
+    "old": [
+      "north_old_1.webp",
+      "north_old_2.webp"
+    ]
+  }
+}

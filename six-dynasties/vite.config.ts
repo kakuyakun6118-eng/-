@@ -10,5 +10,10 @@ export default defineConfig({
    * ドメイン直下でない場所に置いても届くようにするため
    */
   base: './',
+  /*
+   * 資産は `six-dynasties/public/` に置く。`root` を `src/ui` にしてあるので、
+   * 既定のままだと `src/ui/public/` を見に行き、顔の画像が配られなかった
+   */
+  publicDir: '../../public',
   build: { outDir: '../../dist', emptyOutDir: true },
 });

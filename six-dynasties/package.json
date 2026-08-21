@@ -10,7 +10,8 @@
     "audit": "tsx src/sim/audit.ts",
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "portraits": "tsx scripts/portrait-manifest.ts"
   },
   "dependencies": {
     "react": "^19.2.0",

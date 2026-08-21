@@ -1,18 +1,23 @@
 /*
  * 人物の顔。
  *
- * 写真ではなく**絹本の肖像**として描く。この画面は絹地に墨と朱で書かれた
- * 帳簿の体裁なので、写実の顔を貼るとそこだけが浮く。輪郭と冠だけを線で取り、
+ * **描いた画があればそれを、無ければ組み立ての肖像を出す。**
+ * `public/portraits/` に置いた画を `data/portraits.json` が役と年ごとに束ねていて、
+ * 当てはまる画があればそちらを使い、無い役は下の SVG で描く。
+ * 画は一枚ずつ足していけるので、揃うまでのあいだも画面は成立する。
+ *
+ * 組み立てのほうは絹本の肖像として描く。輪郭と冠だけを線で取り、
  * 色はこのアプリの七色（絹・墨・金・朱・紺・碧）から出さない。
  *
  * **顔は素性から決まる。** 同じ人物はいつ描いても同じ顔になるように、
- * 人物の id を種にして特徴を引く（`createRng`）。年が変われば髭と白髪だけが
- * 変わり、顔立ちは変わらない。
+ * 人物の id を種にして特徴を引く（`createRng`）。画を選ぶのも同じ種なので、
+ * 一度その顔で現れた人物は、年を経ても同じ画のままになる。
  *
  * 冠は身分そのものである。冕冠の旒は天子にしか許されず、諸王は遠遊冠、
  * 文官は進賢冠、武人は兜、胡族の首長は貂の帽をかぶる。
  * **冠を見ればその人物が何者かが分かる**ようにしてある
  */
+import portraitsData from '../../data/portraits.json';
 import { createRng } from '../../core/rng';
 
 export type PortraitRole =
@@ -76,8 +81,72 @@ const ROBES: Record<PortraitRole, { cloth: string[]; collar: string; trim: strin
   northRuler: { cloth: ['#2b2f3f', '#40352c'], collar: '#9b2d20', trim: '#d0a63f' },
 };
 
+/*
+ * 描いた画の一覧。役 → 年の帯 → ファイル名。
+ * `public/portraits/` に置いて `npm run portraits` で作り直す
+ */
+const PAINTED = portraitsData as Record<string, Record<string, string[]>>;
+
+/** 年を三つの帯に分ける。画はこの帯ごとに用意する */
+function bandOf(age: number): 'young' | 'mid' | 'old' {
+  if (age < 32) return 'young';
+  if (age < 52) return 'mid';
+  return 'old';
+}
+
+/**
+ * その人物に当てられる画を探す。
+ *
+ * 役の名は画のほうの呼び名に寄せる（`northRuler` は `north`、
+ * 文官の二役は同じ画で足りる）。**女性の首長には女性の画を当てる。**
+ * 見つからなければ null を返し、組み立ての肖像に落ちる
+ */
+function paintedFor(spec: PortraitSpec, rng: () => number): string | null {
+  const role =
+    spec.role === 'northRuler'
+      ? 'north'
+      : spec.role === 'chancellor' || spec.role === 'inspector'
+        ? 'official'
+        : spec.role;
+  const band = spec.role === 'chieftain' && spec.female === true ? 'female' : bandOf(spec.age);
+  const list = PAINTED[role]?.[band];
+  if (list === undefined || list.length === 0) return null;
+  return list[Math.floor(rng() * list.length)] ?? null;
+}
+
 export function Portrait({ spec, size = 44 }: { spec: PortraitSpec; size?: number }) {
   const rng = createRng(hashOf(spec.seed));
+
+  /*
+   * 画を先に引く。**乱数を使う順は変えない** — 引く順が変わると、
+   * 画の無い役の顔立ちまで総取り替えになる
+   */
+  const painted = paintedFor(spec, rng);
+  if (painted !== null) {
+    return (
+      <span
+        className="block shrink-0 overflow-hidden"
+        style={{
+          width: size,
+          height: Math.round((size * 70) / 60),
+          border: '1px solid var(--gold)',
+          boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.35)',
+          backgroundColor: BACKDROPS[spec.role],
+        }}
+      >
+        <img
+          src={`${import.meta.env.BASE_URL}portraits/${painted}`}
+          alt={ROLE_LABELS[spec.role]}
+          loading="lazy"
+          decoding="async"
+          width={size}
+          height={Math.round((size * 70) / 60)}
+          style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+      </span>
+    );
+  }
+
   const pick = <T,>(list: T[]): T => list[Math.floor(rng() * list.length)];
 
   const skin = pick(SKINS);
