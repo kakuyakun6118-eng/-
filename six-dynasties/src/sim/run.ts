@@ -14,7 +14,7 @@ import provincesData from '../data/provinces.json';
 import { DIFFICULTY_LABELS, ENDING_YEAR, MAX_ACTIONS_PER_TURN } from '../core/constants';
 import { createInitialState } from '../core/economy';
 import { createRng } from '../core/rng';
-import { evaluateScore, tick } from '../core/tick';
+import { consumesActionSlot, evaluateScore, tick } from '../core/tick';
 import type {
   Difficulty,
   Dynasty,
@@ -41,14 +41,8 @@ function freshState(difficulty: Difficulty): GameState {
     officialsData.inspectors as ({ provinceId: string } & Official)[]
   ).map((entry) => ({
     provinceId: entry.provinceId as ProvinceId,
-    official: {
-      id: entry.id,
-      name: entry.name,
-      competence: entry.competence,
-      ambition: entry.ambition,
-      tenure: entry.tenure,
-      gentryBorn: entry.gentryBorn,
-    },
+    // 名簿の欄がそのまま武将の欄なので、丸ごと渡す
+  official: entry as Official,
   }));
 
   return createInitialState(
@@ -71,6 +65,13 @@ function freshState(difficulty: Difficulty): GameState {
  */
 function chooseActions(state: GameState, rng: () => number): PlayerAction[] {
   const actions: PlayerAction[] = [];
+  /*
+   * **枠を数えるのは枠を食う手だけ。**
+   * 応答と人事は枠を食わないのに `actions.length` で数えていたときは、
+   * 登用と刺史の任命が二つの枠を潰し、募兵も派遣もできないまま
+   * 中軍が0のまま滅んだ（中級の存続が59%から0%へ落ちた）
+   */
+  const slots = () => actions.filter(consumesActionSlot).length;
   const held = Object.values(state.provinces).filter((p) => p.holder === null && p.control > 0);
 
   // 突きつけられた要求には答える（枠を消費しない）
@@ -81,20 +82,73 @@ function chooseActions(state: GameState, rng: () => number): PlayerAction[] {
     }
   }
 
-  // 都督が空位なら埋める
-  if (state.marshal.holder === null && state.treasury > 200) {
+  /*
+   * 人を抱えていなければ登用する。**任命はそのあとの話。**
+   * 名簿が空のまま都督を任じようとしても席は埋まらない
+   */
+  const retained = state.candidates.filter((o) => o.retained);
+  const seatsToFill =
+    state.marshal.holder === null || Object.keys(state.inspectors).length < 3;
+  if (retained.length < 1 && seatsToFill && state.treasury > 200) {
+    const best = [...state.candidates]
+      .filter((o) => !o.retained)
+      .sort((a, b) => b.abilities.leadership - a.abilities.leadership)[0];
+    if (best !== undefined) actions.push({ type: 'court_recruit_officer', officerId: best.id });
+  }
+
+  /*
+   * 都督が空位なら埋める。**登用したその年のうちに任じる。**
+   * 翌年に回していたときは、登用の年と任命の年が交互になり、
+   * 都督が居る年が26%しかなかった（席が空いていれば守りがそのぶん薄い）
+   */
+  const recruiting = actions.some((a) => a.type === 'court_recruit_officer');
+  if (
+    state.marshal.holder === null &&
+    (retained.length > 0 || recruiting) &&
+    state.treasury > 200
+  ) {
     actions.push({ type: 'military_appoint_marshal' });
+  }
+
+  /*
+   * 空いた州へ刺史を置く。**任命は枠を食わないので、置かない理由がない。**
+   * 刺史は守りと支配度の回復に効き、個性によっては開発や城の修復にも効く
+   */
+  if (retained.length > 0 && state.treasury > 520 && Object.keys(state.inspectors).length < 5) {
+    const vacant = held
+      .filter((p) => state.inspectors[p.id] === undefined)
+      .sort((a, b) => b.baseTax * b.control - a.baseTax * a.control)[0];
+    const spare = [...retained].sort(
+      (a, b) => b.abilities.politics - a.abilities.politics,
+    )[0];
+    if (vacant !== undefined && spare !== undefined) {
+      actions.push({
+        type: 'court_appoint_inspector',
+        provinceId: vacant.id,
+        officialId: spare.id,
+      });
+    }
+  }
+
+  // 忠誠が細った者に恩賞を出す。放っておくと州ごと離れる
+  if (state.treasury > 480) {
+    const wavering = [...retained, ...Object.values(state.inspectors), state.marshal.holder]
+      .filter((o): o is NonNullable<typeof o> => o !== null && o !== undefined && o.loyalty < 22)
+      .sort((a, b) => a.loyalty - b.loyalty)[0];
+    if (wavering !== undefined) {
+      actions.push({ type: 'court_reward_officer', officerId: wavering.id });
+    }
   }
 
   // 挙兵した王がいれば討つ
   const rebel = state.princes.find((p) => p.inRevolt);
-  if (rebel !== undefined && actions.length < MAX_ACTIONS_PER_TURN) {
+  if (rebel !== undefined && slots() < MAX_ACTIONS_PER_TURN) {
     actions.push({ type: 'military_suppress_prince', princeId: rebel.id });
   }
 
   // 宗室の帰順が危ういなら鎮撫する
   if (
-    actions.length < MAX_ACTIONS_PER_TURN &&
+    slots() < MAX_ACTIONS_PER_TURN &&
     state.princeLoyalty < 40 &&
     state.treasury > 300
   ) {
@@ -109,12 +163,12 @@ function chooseActions(state: GameState, rng: () => number): PlayerAction[] {
       ),
     )
     .sort((a, b) => a.control - b.control)[0];
-  if (threatened !== undefined && actions.length < MAX_ACTIONS_PER_TURN) {
+  if (threatened !== undefined && slots() < MAX_ACTIONS_PER_TURN) {
     actions.push({ type: 'military_deploy', provinceId: threatened.id });
   }
 
   // 士族の支持が細ったら機嫌を取る
-  if (actions.length < MAX_ACTIONS_PER_TURN && state.gentry < 35) {
+  if (slots() < MAX_ACTIONS_PER_TURN && state.gentry < 35) {
     actions.push({ type: 'domestic_confirm_privilege' });
   }
 
@@ -126,7 +180,7 @@ function chooseActions(state: GameState, rng: () => number): PlayerAction[] {
    * 312年から402年までどの数値も動かない死んだ局面になった。
    * **軍を保つことは余裕のある年の贅沢ではなく、毎年の課題**
    */
-  if (actions.length < MAX_ACTIONS_PER_TURN && state.centralArmy < 90 && state.treasury > 200) {
+  if (slots() < MAX_ACTIONS_PER_TURN && state.centralArmy < 90 && state.treasury > 200) {
     const rich = held.sort((a, b) => b.baseTax * b.control - a.baseTax * a.control)[0];
     if (rich !== undefined) {
       actions.push({ type: 'military_recruit_province', provinceId: rich.id });
@@ -140,7 +194,7 @@ function chooseActions(state: GameState, rng: () => number): PlayerAction[] {
   const threshold = STRATEGY === 'unifier' ? 90 : 160;
   const eagerness = STRATEGY === 'unifier' ? 0.9 : 0.25;
   if (
-    actions.length < MAX_ACTIONS_PER_TURN &&
+    slots() < MAX_ACTIONS_PER_TURN &&
     lost.length > 0 &&
     state.centralArmy > threshold &&
     rng() < eagerness
@@ -153,7 +207,7 @@ function chooseActions(state: GameState, rng: () => number): PlayerAction[] {
   }
 
   // それでも枠が余っていれば税を取り立てる
-  if (actions.length < MAX_ACTIONS_PER_TURN && state.treasury < 200 && rng() < 0.5) {
+  if (slots() < MAX_ACTIONS_PER_TURN && state.treasury < 200 && rng() < 0.5) {
     actions.push({ type: 'domestic_raise_taxes' });
   }
 
@@ -178,6 +232,9 @@ interface Outcome {
   everProclaimed: number;
   peakProclaimed: number;
   princeTookCapital: boolean;
+  marshalRatio: number;
+  defections: number;
+  inspectorAvg: number;
   citiesLost: number;
 }
 
@@ -185,6 +242,9 @@ function runOne(difficulty: Difficulty, seed: number): Outcome {
   let state = freshState(difficulty);
   const rng = createRng(seed);
   let princeSeized = false;
+  let marshalYears = 0;
+  let defections = 0;
+  let inspectorYears = 0;
   // 帝を称したことのある勢力（延べ）と、同時に並び立った最大の数
   const everProclaimed = new Set<string>();
   let peakProclaimed = 0;
@@ -192,6 +252,9 @@ function runOne(difficulty: Difficulty, seed: number): Outcome {
   while (state.status === 'ongoing' && state.year < ENDING_YEAR) {
     state = tick(state, chooseActions(state, rng), seed + state.turn);
     if (state.turnEvents.includes('prince_took_capital')) princeSeized = true;
+    if (state.marshal.holder !== null) marshalYears++;
+    inspectorYears += Object.keys(state.inspectors).length;
+    if (state.turnEvents.includes('officer_defected')) defections++;
     let now = 0;
     for (const f of Object.values(state.factions)) {
       if (f.proclaimedYear === null) continue;
@@ -219,6 +282,9 @@ function runOne(difficulty: Difficulty, seed: number): Outcome {
     everProclaimed: everProclaimed.size,
     peakProclaimed,
     princeTookCapital: princeSeized,
+    marshalRatio: marshalYears / Math.max(1, state.turn),
+    defections,
+    inspectorAvg: inspectorYears / Math.max(1, state.turn),
     citiesLost: Object.values(state.provinces).filter((p) => p.holder !== null).length,
   };
 }
@@ -259,5 +325,6 @@ for (const difficulty of difficulties) {
   console.log(`  胡族の建国 平均 ${mean(outcomes.map((o) => o.kingdoms)).toFixed(1)} 国`);
   console.log(`  帝を称した胡族 延べ ${mean(outcomes.map((o) => o.everProclaimed)).toFixed(1)} 勢力／同時に最大 ${mean(outcomes.map((o) => o.peakProclaimed)).toFixed(1)}／終局に残る ${mean(outcomes.map((o) => o.proclaimed)).toFixed(1)}`);
   console.log(`  藩王が帝位に即いた局 ${pct(count((o) => o.princeTookCapital))}`);
+  console.log(`  都督が居る年の割合 ${(mean(outcomes.map((o) => o.marshalRatio)) * 100).toFixed(0)}% ／ 刺史 平均 ${mean(outcomes.map((o) => o.inspectorAvg)).toFixed(1)}人 ／ 離反 ${mean(outcomes.map((o) => o.defections)).toFixed(1)}回`);
   console.log(`  失った州 平均 ${mean(outcomes.map((o) => o.citiesLost)).toFixed(1)}`);
 }

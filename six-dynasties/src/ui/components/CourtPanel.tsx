@@ -3,9 +3,16 @@ import { useState } from 'react';
 import { DEFAULT_CHIEFTAIN_ABILITIES, chieftainOf } from '../../core/factions';
 import { provincesToProclaim } from '../../core/constants';
 import { houseName } from '../../core/diplomacy';
-import type { Abilities, GameState } from '../../core/types';
+import { traitName, traitNote } from '../../core/officers';
+import type {
+  Abilities,
+  GameState,
+  OfficerAbilities,
+  Official,
+  ProvinceId,
+} from '../../core/types';
 import { FACTION_LABELS, PROVINCE_LABELS, STANCE_LABELS } from '../catalogue';
-import { Portrait, seededAge } from './Portrait';
+import { Portrait, seededAge, type PortraitRole } from './Portrait';
 
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
@@ -46,6 +53,166 @@ function AbilityRow({ abilities, ambition }: { abilities: Abilities; ambition?: 
         </span>
       ))}
     </span>
+  );
+}
+
+/** 武将の五能力。統率・武力・知力・政治・魅力を小さく並べる */
+export function FiveRow({ abilities }: { abilities: OfficerAbilities }) {
+  const cells: [string, number][] = [
+    ['統', abilities.leadership],
+    ['武', abilities.might],
+    ['知', abilities.intellect],
+    ['政', abilities.politics],
+    ['魅', abilities.charm],
+  ];
+  return (
+    <span className="inline-flex gap-1 align-middle">
+      {cells.map(([label, value]) => (
+        <span
+          key={label}
+          className="text-[10px] tabular-nums px-1 rounded-[2px]"
+          style={{
+            backgroundColor: value >= 9 ? 'rgba(208,166,63,0.3)' : 'rgba(0,0,0,0.06)',
+            border: '1px solid var(--bamboo)',
+            fontWeight: value >= 9 ? 700 : 400,
+          }}
+        >
+          {label}
+          {value}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/** 忠誠の帯。細っているものだけ朱にする */
+function LoyaltyBar({ loyalty }: { loyalty: number }) {
+  const low = loyalty < 30;
+  return (
+    <span className="inline-flex items-center gap-1 align-middle">
+      <span
+        className="inline-block rounded-[1px]"
+        style={{ width: 34, height: 5, backgroundColor: 'rgba(0,0,0,0.12)' }}
+      >
+        <span
+          className="block rounded-[1px]"
+          style={{
+            width: `${Math.max(0, Math.min(100, loyalty))}%`,
+            height: '100%',
+            backgroundColor: low ? 'var(--cinnabar)' : 'var(--jade)',
+          }}
+        />
+      </span>
+      <span
+        className="text-[10px] tabular-nums"
+        style={{ color: low ? 'var(--cinnabar)' : 'var(--ink-soft)' }}
+      >
+        忠{Math.round(loyalty)}
+      </span>
+    </span>
+  );
+}
+
+/** 武将の一行。名簿でも席でも使い回す */
+export function OfficerLine({
+  officer,
+  post,
+  role,
+}: {
+  officer: Official;
+  post?: string;
+  role: PortraitRole;
+}) {
+  return (
+    <li className="text-[12px] flex gap-2">
+      <Portrait
+        spec={{ seed: officer.id, role, age: seededAge(officer.id, 26, 64) }}
+        size={38}
+      />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline gap-1.5 flex-wrap">
+          <span className="font-semibold shrink-0">{officer.name}</span>
+          {post !== undefined && (
+            <span className="text-[10px] px-1 rounded-[2px] han-seal">{post}</span>
+          )}
+          <FiveRow abilities={officer.abilities} />
+          <span
+            className="text-[10px] px-1 rounded-[2px]"
+            style={{ border: '1px solid var(--gold)', color: 'var(--gold)' }}
+            title={traitNote(officer.trait)}
+          >
+            {traitName(officer.trait)}
+          </span>
+          <LoyaltyBar loyalty={officer.loyalty} />
+        </div>
+        <div className="text-[11px]" style={{ color: 'var(--ink-soft)' }}>
+          野心{officer.ambition}／{officer.historical ? '史実の人物' : '無名の士'}／
+          あと{officer.tenure}年
+        </div>
+      </div>
+    </li>
+  );
+}
+
+/**
+ * 武将の名簿。
+ *
+ * **官に就いている者と、配下だが無官の者を分けて並べる。**
+ * 個性が効くのは官に就いている者だけなので、そこが見えないと
+ * 「抱えているのに何も起きない」理由が分からない
+ */
+export function RosterPanel({ state }: { state: GameState }) {
+  const idle = state.candidates.filter((o) => o.retained);
+  const marshal = state.marshal.holder;
+  const chancellor = state.chancellor;
+  const inspectors = (Object.keys(state.inspectors) as ProvinceId[])
+    .map((id) => ({ id, officer: state.inspectors[id] }))
+    .filter((x): x is { id: ProvinceId; officer: Official } => x.officer !== undefined);
+
+  if (marshal === null && chancellor === null && inspectors.length === 0 && idle.length === 0) {
+    return (
+      <section className="han-panel rounded-sm px-3 py-2">
+        <h2 className="han-heading text-sm">武将</h2>
+        <p className="mt-1 text-[12px]" style={{ color: 'var(--ink-soft)' }}>
+          仕えている者がいない。「行動 → 人事」から在野の士を登用できる。
+          個性が効くのは官に就けた者だけで、抱えているだけでは何も動かない
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="han-panel rounded-sm px-3 py-2">
+      <h2 className="han-heading text-sm">武将</h2>
+      <ul className="mt-1.5 space-y-1.5">
+        {marshal !== null && <OfficerLine officer={marshal} post="都督" role="marshal" />}
+        {chancellor !== null && (
+          <OfficerLine officer={chancellor} post="録尚書事" role="chancellor" />
+        )}
+        {inspectors.map(({ id, officer }) => (
+          <OfficerLine
+            key={id}
+            officer={officer}
+            post={`${PROVINCE_LABELS[id]}刺史`}
+            role="inspector"
+          />
+        ))}
+        {idle.map((officer) => (
+          <OfficerLine key={officer.id} officer={officer} post="無官" role="inspector" />
+        ))}
+      </ul>
+      {marshal !== null && marshal.competence >= 8 && (
+        <p className="mt-1.5 text-[11px]" style={{ color: 'var(--cinnabar)' }}>
+          有能な将ほど戦勝の名を持ち去り、天命を余分に削り、位を狙う目も増える
+        </p>
+      )}
+      <p className="mt-1.5 text-[11px]" style={{ color: 'var(--ink-soft)' }}>
+        統＝統率、武＝武力、知＝知力、政＝政治、魅＝魅力。
+        都督は統率が、刺史と録尚書事は政治が問われる。
+        **個性が効くのは官に就けた者だけ。**
+        忠誠は年ごとに冷め、尽きれば去る（州を預けていればその州ごと離れる）
+      </p>
+    </section>
   );
 }
 
@@ -203,59 +370,6 @@ export function ConsortPanel({ state }: { state: GameState }) {
       <p className="mt-1.5 text-[11px]" style={{ color: 'var(--ink-soft)' }}>
         代が替われば后も替わる。皇后を迎えているあいだは子の生まれる目も上がる
       </p>
-    </section>
-  );
-}
-
-/** 都督と録尚書事。実権はこの二席にある */
-export function OfficersPanel({ state }: { state: GameState }) {
-  const marshal = state.marshal.holder;
-  const chancellor = state.chancellor;
-
-  return (
-    <section className="han-panel rounded-sm px-3 py-2">
-      <h2 className="han-heading text-sm">朝廷の要職</h2>
-      <ul className="mt-1.5 space-y-2 text-[12px]">
-        <li className="flex gap-2">
-          {marshal && (
-            <Portrait
-              spec={{ seed: marshal.id, role: 'marshal', age: seededAge(marshal.id, 28, 60) }}
-              size={38}
-            />
-          )}
-          <div className="min-w-0">
-            <span className="font-semibold">都督中外諸軍事</span>
-            <span style={{ color: 'var(--ink-soft)' }}>
-              {' — '}
-              {marshal
-                ? `${marshal.name}（軍事${marshal.competence}・野心${marshal.ambition}・残り${marshal.tenure}年）`
-                : '空位。守りが弱くなっている'}
-            </span>
-            {marshal && marshal.competence >= 8 && (
-              <div className="text-[11px]" style={{ color: 'var(--cinnabar)' }}>
-                有能な将ほど戦勝の名を持ち去り、天命を余分に削り、位を狙う目も増える
-              </div>
-            )}
-          </div>
-        </li>
-        <li className="flex gap-2">
-          {chancellor && (
-            <Portrait
-              spec={{ seed: chancellor.id, role: 'chancellor', age: seededAge(chancellor.id, 34, 68) }}
-              size={38}
-            />
-          )}
-          <div className="min-w-0">
-            <span className="font-semibold">録尚書事</span>
-            <span style={{ color: 'var(--ink-soft)' }}>
-              {' — '}
-              {chancellor
-                ? `${chancellor.name}（能力${chancellor.competence}・野心${chancellor.ambition}・残り${chancellor.tenure}年）`
-                : '空位'}
-            </span>
-          </div>
-        </li>
-      </ul>
     </section>
   );
 }

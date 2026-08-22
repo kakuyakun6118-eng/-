@@ -348,6 +348,76 @@ export const CONSORT_MANDATE_RELIEF = 0.05;
 /** 人望1あたり、宗室と胡族の帰順の自然減を和らげる */
 export const CHARISMA_LOYALTY_RELIEF = 0.09;
 
+// ── 武将 ──────────────────────────────────────────────
+
+/**
+ * 登用の費い。**断られても戻らない。**
+ * 任命（詔一本）より重くしてあるのは、人を口説くのは別の話だから
+ */
+export const RECRUIT_COST = 60;
+/** 登用に応じた者が最初に持つ忠誠の上積み */
+export const RECRUIT_LOYALTY_GAIN = 10;
+/** 新しく名簿に載る者の忠誠 */
+export const OFFICER_LOYALTY_START = 62;
+/** 恩賞の費いと、戻る忠誠 */
+export const REWARD_COST = 70;
+export const REWARD_LOYALTY_GAIN = 22;
+/**
+ * 忠誠の自然減。野心1ごとに上乗せする。
+ *
+ * **抱えたままにする手を無償にしない。** 減らないようにしていたときは、
+ * 一度登用すれば三百年そのまま働いたので、恩賞も罷免も死んだ選択肢になった
+ */
+export const OFFICER_LOYALTY_DECAY = 0.9;
+export const OFFICER_LOYALTY_AMBITION_PER_POINT = 0.22;
+/** 在野に最低これだけは置く。史実の人物だけでは年によって二人しかいない */
+export const OFFICER_POOL_MIN = 4;
+/** 刺史が州ごと離れたときの痛手 */
+export const OFFICER_DEFECT_CONTROL_LOSS = 28;
+export const OFFICER_DEFECT_MANDATE_LOSS = 6;
+
+/** 個性の名 */
+export const TRAIT_LABELS: Record<string, string> = {
+  mengjiang: '猛将',
+  mingjiang: '名将',
+  tiebi: '鉄壁',
+  shensuan: '神算',
+  tuntian: '屯田',
+  nengli: '能吏',
+  renbo: '人望',
+  gaojie: '高潔',
+  yexin: '野心家',
+  huairou: '懐柔',
+  kuli: '酷吏',
+  mingshi: '名士',
+};
+
+/*
+ * 個性の効き幅。**すべて既存の計算式に掛かる補正で、新しい資源は作らない。**
+ * 一つ一つは小さいが、六席が噛み合うと目に見えて変わる
+ */
+/** 猛将。会戦での打撃 */
+export const TRAIT_ATTACK_BONUS = 0.12;
+/** 神算。会戦で受ける損害 */
+export const TRAIT_CASUALTY_RELIEF = 0.15;
+/** 名将。預かる州の守り */
+export const TRAIT_DEFENCE_BONUS = 0.16;
+/** 鉄壁。城の修復 */
+export const TRAIT_REPAIR_BONUS = 0.8;
+/** 屯田。州の開発 */
+export const TRAIT_DEVELOPMENT_BONUS = 0.5;
+/** 能吏。税収 */
+export const TRAIT_INCOME_BONUS = 0.08;
+/** 人望。士族の支持の自然減 */
+export const TRAIT_GENTRY_RELIEF = 0.5;
+/** 懐柔。胡族の帰順の落ち込み */
+export const TRAIT_TRIBAL_RELIEF = 2.0;
+/** 名士。天命の自然減 */
+export const TRAIT_MANDATE_RELIEF = 0.35;
+/** 酷吏。支配度の回復と、その代わりに離れる士族 */
+export const TRAIT_CONTROL_BONUS = 1.6;
+export const TRAIT_KULI_GENTRY_LOSS = 0.5;
+
 // ── 簒奪と禅譲 ────────────────────────────────────────
 
 /** 簒奪の判定を始める天命の閾値 */

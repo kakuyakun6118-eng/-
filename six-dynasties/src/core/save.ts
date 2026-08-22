@@ -11,8 +11,9 @@ const FORMAT = 'six-dynasties-save';
  * 読めないものは読めないと言って断るほうが、黙って壊れるよりよい。
  *
  * 3 — 皇后に年齢・能力・顔の種を持たせた
+ * 4 — 武将の名簿（五能力・個性・忠誠）を持たせた
  */
-const VERSION = 3;
+const VERSION = 4;
 
 interface SaveFile {
   format: string;
@@ -79,6 +80,10 @@ export function deserialize(contents: string): LoadResult {
         typeof state.dynasty.consort.age !== 'number' ||
         state.dynasty.consort.abilities === undefined) &&
       '皇后の年齢と能力',
+    !Array.isArray(state.seenOfficers) && '武将の名簿',
+    Array.isArray(state.candidates) &&
+      state.candidates.some((o) => o?.abilities === undefined || o?.trait === undefined) &&
+      '武将の五能力と個性',
   ].filter((x): x is string => typeof x === 'string');
 
   if (missing.length > 0) {

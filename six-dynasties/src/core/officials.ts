@@ -1,55 +1,37 @@
 import officialsData from '../data/officials.json';
-import leadersData from '../data/leaders.json';
 import {
   APPOINT_COST,
-  CANDIDATE_COUNT,
   DISMISS_ARMY_LOSS,
   DISMISS_MANDATE_GAIN,
-  EXCEPTIONAL_MARSHAL_PROBABILITY,
   INSPECTOR_REVOLT_AMBITION_PER_POINT,
   INSPECTOR_REVOLT_BASE,
-  OFFICIAL_MAX_TENURE,
-  OFFICIAL_MIN_TENURE,
   USURPATION_THRESHOLD,
 } from './constants';
 import type { GameState, Official, ProvinceId } from './types';
-import { clamp100, heldProvinceIds, pick, randomInt } from './util';
+import { clamp100, heldProvinceIds, pick } from './util';
 
 const SURNAMES = officialsData.surnames as string[];
 const GIVEN_NAMES = officialsData.givenNames as string[];
-const HISTORICAL_MARSHALS = leadersData.marshals as {
-  name: string;
-  from: number;
-  to: number;
-  military: number;
-}[];
-
-/** 史実の将を迎えるとき、残り任期がこれを切るなら通常の抽選に落とす */
-const MIN_REMAINING_TENURE = 5;
-
 export function randomName(rng: () => number): string {
   return `${pick(rng, SURNAMES) ?? '王'}${pick(rng, GIVEN_NAMES) ?? '導'}`;
 }
 
-/** 候補を1人こしらえる。能力と野心は別の軸で引く */
-export function makeCandidate(rng: () => number, seedId: number): Official {
-  return {
-    id: `cand_${seedId}`,
-    name: randomName(rng),
-    competence: randomInt(rng, 3, 9),
-    ambition: randomInt(rng, 1, 10),
-    tenure: randomInt(rng, OFFICIAL_MIN_TENURE, OFFICIAL_MAX_TENURE),
-    gentryBorn: rng() < 0.65,
-  };
+/**
+ * 名簿から一人を席に就ける。
+ *
+ * **席によって問われる能力が違う。** `competence` はその席の能力の写しで、
+ * 都督なら統率、文官なら政治を取る。既存の計算式はこれを見ているので、
+ * 五能力を足しても式を書き換えずに済む
+ */
+function seat(officer: Official, ability: 'leadership' | 'politics'): Official {
+  return { ...officer, competence: officer.abilities[ability] };
 }
 
-/** 任命の候補は毎年入れ替える。3人から選ぶので「能力か野心か」が判断になる */
-export function refreshCandidates(state: GameState, rng: () => number): GameState {
-  const candidates: Official[] = [];
-  for (let i = 0; i < CANDIDATE_COUNT; i++) {
-    candidates.push(makeCandidate(rng, state.turn * 10 + i));
-  }
-  return { ...state, candidates };
+/** 席を降りた者は配下に戻る。二度と会えないわけではない */
+function returnToRoster(state: GameState, officer: Official | null): Official[] {
+  if (officer === null) return state.candidates;
+  if (state.year > officer.untilYear) return state.candidates;
+  return [...state.candidates, { ...officer, retained: true }];
 }
 
 // ── 録尚書事 ──────────────────────────────────────────
@@ -63,14 +45,15 @@ export function refreshCandidates(state: GameState, rng: () => number): GameStat
  * 無償ではない — 金がかかり、野心の高い者を選べば反乱が増える
  */
 export function appointChancellor(state: GameState, officialId: string): GameState {
-  const official = state.candidates.find((c) => c.id === officialId);
+  const official = state.candidates.find((c) => c.id === officialId && c.retained);
   if (official === undefined) return state;
   if (state.treasury < APPOINT_COST) return state;
+  const rest = state.candidates.filter((c) => c.id !== officialId);
   return {
     ...state,
     treasury: state.treasury - APPOINT_COST,
-    chancellor: { ...official, id: `chan_${state.turn}` },
-    candidates: state.candidates.filter((c) => c.id !== officialId),
+    chancellor: seat(official, 'politics'),
+    candidates: returnToRoster({ ...state, candidates: rest }, state.chancellor),
   };
 }
 
@@ -80,6 +63,7 @@ export function dismissChancellor(state: GameState): GameState {
   return {
     ...state,
     chancellor: null,
+    candidates: returnToRoster(state, state.chancellor),
     mandate: clamp100(state.mandate + DISMISS_MANDATE_GAIN),
     gentry: clamp100(state.gentry - 4),
   };
@@ -92,25 +76,32 @@ export function appointInspector(
   provinceId: ProvinceId,
   officialId: string,
 ): GameState {
-  const official = state.candidates.find((c) => c.id === officialId);
+  const official = state.candidates.find((c) => c.id === officialId && c.retained);
   if (official === undefined) return state;
   const province = state.provinces[provinceId];
   if (province === undefined || province.holder !== null) return state;
   if (state.treasury < APPOINT_COST) return state;
 
+  const rest = state.candidates.filter((c) => c.id !== officialId);
   return {
     ...state,
     treasury: state.treasury - APPOINT_COST,
-    inspectors: { ...state.inspectors, [provinceId]: { ...official, id: `insp_${provinceId}_${state.turn}` } },
-    candidates: state.candidates.filter((c) => c.id !== officialId),
+    inspectors: { ...state.inspectors, [provinceId]: seat(official, 'politics') },
+    candidates: returnToRoster({ ...state, candidates: rest }, state.inspectors[provinceId] ?? null),
   };
 }
 
 export function dismissInspector(state: GameState, provinceId: ProvinceId): GameState {
-  if (state.inspectors[provinceId] === undefined) return state;
+  const inspector = state.inspectors[provinceId];
+  if (inspector === undefined) return state;
   const inspectors = { ...state.inspectors };
   delete inspectors[provinceId];
-  return { ...state, inspectors, mandate: clamp100(state.mandate + DISMISS_MANDATE_GAIN) };
+  return {
+    ...state,
+    inspectors,
+    candidates: returnToRoster(state, inspector),
+    mandate: clamp100(state.mandate + DISMISS_MANDATE_GAIN),
+  };
 }
 
 // ── 都督中外諸軍事 ────────────────────────────────────
@@ -122,47 +113,31 @@ export function dismissInspector(state: GameState, provinceId: ProvinceId): Game
  * その年に任命すれば来る。一度仕えた将は二度は出ない。
  * 史実の将がいない年は通常の抽選だが、12%で軍事10の将が出る
  */
-export function appointMarshal(state: GameState, rng: () => number): GameState {
+export function appointMarshal(
+  state: GameState,
+  rng: () => number,
+  officerId?: string,
+): GameState {
   if (state.treasury < APPOINT_COST) return state;
 
-  const historical = HISTORICAL_MARSHALS.find(
-    (entry) =>
-      state.year >= entry.from &&
-      state.year <= entry.to &&
-      entry.to - state.year >= MIN_REMAINING_TENURE &&
-      !state.marshal.hiredHistorical.includes(entry.name),
-  );
+  /*
+   * **都督は名簿から選ぶ。** かつては任命のたびに能力を抽選していたので、
+   * 桓温は「軍事8の誰か」でしかなく、罷免すればその人物ごと消えた。
+   * いまは在野から登用した者のうち、統率の高い者を推す
+   */
+  const retained = state.candidates.filter((c) => c.retained);
+  const chosen =
+    officerId === undefined
+      ? [...retained].sort((a, b) => b.abilities.leadership - a.abilities.leadership)[0]
+      : retained.find((c) => c.id === officerId);
+  if (chosen === undefined) return state;
 
-  const official: Official =
-    historical !== undefined
-      ? {
-          id: `marshal_${state.turn}`,
-          name: historical.name,
-          competence: historical.military,
-          ambition: randomInt(rng, 4, 9),
-          tenure: historical.to - state.year,
-          gentryBorn: true,
-        }
-      : {
-          id: `marshal_${state.turn}`,
-          name: randomName(rng),
-          competence:
-            rng() < EXCEPTIONAL_MARSHAL_PROBABILITY ? 10 : randomInt(rng, 3, 8),
-          ambition: randomInt(rng, 2, 10),
-          tenure: randomInt(rng, OFFICIAL_MIN_TENURE, OFFICIAL_MAX_TENURE),
-          gentryBorn: rng() < 0.5,
-        };
-
+  const rest = state.candidates.filter((c) => c.id !== chosen.id);
   return {
     ...state,
     treasury: state.treasury - APPOINT_COST,
-    marshal: {
-      holder: official,
-      hiredHistorical:
-        historical === undefined
-          ? state.marshal.hiredHistorical
-          : [...state.marshal.hiredHistorical, historical.name],
-    },
+    marshal: { ...state.marshal, holder: seat(chosen, 'leadership') },
+    candidates: returnToRoster({ ...state, candidates: rest }, state.marshal.holder),
   };
 }
 
@@ -172,6 +147,7 @@ export function dismissMarshal(state: GameState): GameState {
   return {
     ...state,
     marshal: { ...state.marshal, holder: null },
+    candidates: returnToRoster(state, state.marshal.holder),
     centralArmy: state.centralArmy * (1 - DISMISS_ARMY_LOSS),
     mandate: clamp100(state.mandate + DISMISS_MANDATE_GAIN),
   };
@@ -179,39 +155,34 @@ export function dismissMarshal(state: GameState): GameState {
 
 // ── 任期と反乱 ────────────────────────────────────────
 
-/** 任期。退任しても後任は自動では決まらない */
+/**
+ * 席の年ごとの更新。
+ *
+ * **武将は没年まで仕える。** かつては「任期」を数えて勝手に辞めさせていたが、
+ * それは任命のたびに人物を抽選していた頃の名残で、名簿を持たせたいまは
+ * 席が空く理由が無いのに空いた（実測で都督が居る年が26%しかなかった）。
+ * 席を降りるのは、没したとき・罷免したとき・忠誠が尽きたときだけである。
+ * `tenure` は残りの年数を写した表示用の数に変えた
+ */
 export function updateOfficials(state: GameState): GameState {
-  let next = state;
+  const age = (official: Official | null): Official | null => {
+    if (official === null) return null;
+    if (state.year > official.untilYear) return null;
+    return { ...official, tenure: Math.max(0, official.untilYear - state.year) };
+  };
 
-  if (next.chancellor !== null) {
-    const tenure = next.chancellor.tenure - 1;
-    next = { ...next, chancellor: tenure <= 0 ? null : { ...next.chancellor, tenure } };
-  }
-  if (next.marshal.holder !== null) {
-    const tenure = next.marshal.holder.tenure - 1;
-    next = {
-      ...next,
-      marshal: {
-        ...next.marshal,
-        holder: tenure <= 0 ? null : { ...next.marshal.holder, tenure },
-      },
-    };
+  const inspectors: GameState['inspectors'] = {};
+  for (const id of Object.keys(state.inspectors) as ProvinceId[]) {
+    const kept = age(state.inspectors[id] ?? null);
+    if (kept !== null) inspectors[id] = kept;
   }
 
-  const inspectors = { ...next.inspectors };
-  let changed = false;
-  for (const id of Object.keys(inspectors) as ProvinceId[]) {
-    const inspector = inspectors[id];
-    if (inspector === undefined) continue;
-    const tenure = inspector.tenure - 1;
-    if (tenure <= 0) {
-      delete inspectors[id];
-    } else {
-      inspectors[id] = { ...inspector, tenure };
-    }
-    changed = true;
-  }
-  return changed ? { ...next, inspectors } : next;
+  return {
+    ...state,
+    marshal: { ...state.marshal, holder: age(state.marshal.holder) },
+    chancellor: age(state.chancellor),
+    inspectors,
+  };
 }
 
 /**

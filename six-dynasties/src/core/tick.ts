@@ -54,6 +54,7 @@ import {
   updateControl,
 } from './economy';
 import { applyHistoricalEvents } from './events';
+import { recruitOfficer, rewardOfficer, updateLoyalty, updateOfficerRoster } from './officers';
 import {
   applyFactionActions,
   applyProvinceLosses,
@@ -80,7 +81,6 @@ import {
   dismissChancellor,
   dismissInspector,
   dismissMarshal,
-  refreshCandidates,
   updateOfficials,
 } from './officials';
 import {
@@ -124,6 +124,9 @@ const SLOT_FREE_ACTIONS: ReadonlySet<PlayerAction['type']> = new Set([
   'tribe_accept_demand',
   'court_appoint_chancellor',
   'court_appoint_inspector',
+  // 人事は詔で足りる。代わりに金がかかり、登用は断られもする
+  'court_recruit_officer',
+  'court_reward_officer',
 ]);
 
 export function consumesActionSlot(action: PlayerAction): boolean {
@@ -274,7 +277,8 @@ export function tick(state: GameState, actions: PlayerActions, seed: Seed): Game
   next = updateDynasty(next, rng);
   next = updatePrinceRoster(next, rng);
   next = updateOfficials(next);
-  next = refreshCandidates(next, rng);
+  next = updateLoyalty(next, rng);
+  next = updateOfficerRoster(next, rng);
   next = settlePendingMarriages(next);
 
   // 9. 歴史イベントの発火判定
@@ -340,7 +344,11 @@ function applyAction(
     case 'court_dismiss_inspector':
       return dismissInspector(state, action.provinceId);
     case 'military_appoint_marshal':
-      return appointMarshal(state, rng);
+      return appointMarshal(state, rng, action.officerId);
+    case 'court_recruit_officer':
+      return recruitOfficer(state, action.officerId, rng);
+    case 'court_reward_officer':
+      return rewardOfficer(state, action.officerId);
     case 'military_dismiss_marshal':
       return dismissMarshal(state);
 

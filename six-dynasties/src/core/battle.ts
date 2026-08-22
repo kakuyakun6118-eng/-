@@ -9,6 +9,7 @@ import {
   DEFENSE_MULTIPLIER,
   DEPLOY_SHARE,
   INSPECTOR_DEFENSE_PER_POINT,
+  TRAIT_DEFENCE_BONUS,
   MARSHAL_MILITARY_PER_POINT,
   MARSHAL_VACANT_PENALTY,
   MOBILIZE_EFFICIENCY,
@@ -35,7 +36,11 @@ export function defenceStrength(
   if (province === undefined) return 0;
 
   const inspector = state.inspectors[provinceId];
-  let power = province.garrison * (1 + (inspector?.competence ?? 0) * INSPECTOR_DEFENSE_PER_POINT);
+  // 名将を預けた州は固い。個性は既存の式に掛かる補正としてだけ働く
+  const mingjiang = inspector?.trait === 'mingjiang' ? TRAIT_DEFENCE_BONUS : 0;
+  let power =
+    province.garrison *
+    (1 + (inspector?.competence ?? 0) * INSPECTOR_DEFENSE_PER_POINT + mingjiang);
 
   if (reinforced.has(provinceId)) power += state.centralArmy * DEPLOY_SHARE;
 

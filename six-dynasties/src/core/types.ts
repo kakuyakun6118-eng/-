@@ -314,14 +314,55 @@ export interface PendingMarriage {
 // ── 官職 ──────────────────────────────────────────────
 
 /**
- * 能力と野心を別の軸にする。任命は候補から選ぶので、
- * 「能力7・野心8 を採るか、能力5・野心5 にしておくか」が判断になる。
- * 野心は反乱の確率にのみ効き、職務には一切効かない
+ * 武将の五能力。
+ *
+ * **席によって問われる能力が違う。** 都督は統率、刺史は政治、
+ * 会戦の打撃は武力、損害の軽さは知力、登用と交渉は魅力に効く。
+ * 一人の中で得手不得手が割れるので、「誰をどこに置くか」が判断になる
+ */
+export interface OfficerAbilities {
+  /** 統率。軍を率いる力 */
+  leadership: number;
+  /** 武力。自ら打ち合う力 */
+  might: number;
+  /** 知力。策と損害の軽さ */
+  intellect: number;
+  /** 政治。税と支配度 */
+  politics: number;
+  /** 魅力。人が付いてくる力 */
+  charm: number;
+}
+
+/**
+ * 個性。**新しい資源は作らず、既存の計算式への補正としてだけ働く。**
+ * 一人に一つだけ持たせる（複数持たせると、どれが効いたのか読めなくなる）
+ */
+export type TraitId =
+  | 'mengjiang'
+  | 'mingjiang'
+  | 'tiebi'
+  | 'shensuan'
+  | 'tuntian'
+  | 'nengli'
+  | 'renbo'
+  | 'gaojie'
+  | 'yexin'
+  | 'huairou'
+  | 'kuli'
+  | 'mingshi';
+
+/**
+ * 武将。在野の者も、配下で無官の者も、官に就いている者も同じ型で持つ。
+ *
+ * `competence` は**その席で問われる能力の写し**で、任命のときに五能力から
+ * 取ってくる（都督なら統率、文官なら政治）。既存の計算式はこれを見るので、
+ * 五能力を足しても式を書き換えずに済む。
+ * 野心は忠誠の落ちやすさと反乱の確率にのみ効き、職務には効かない
  */
 export interface Official {
   id: string;
   name: string;
-  /** 職務の能力 1〜10 */
+  /** 職務の能力 1〜10。任命のとき五能力から写す */
   competence: number;
   /** 野心 1〜10 */
   ambition: number;
@@ -329,6 +370,16 @@ export interface Official {
   tenure: number;
   /** 出身。士族なら士族の支持に効く */
   gentryBorn: boolean;
+  abilities: OfficerAbilities;
+  trait: TraitId;
+  /** 忠誠 0〜100。尽きれば去るか、州ごと離れる */
+  loyalty: number;
+  /** 配下か。false なら在野で、登用しなければ働かない */
+  retained: boolean;
+  /** 舞台を去る年。史実の人物は没年 */
+  untilYear: number;
+  /** 史実の人物か */
+  historical: boolean;
 }
 
 /** 都督中外諸軍事。この時代に実際に軍を握っていた席 */
@@ -388,6 +439,11 @@ export interface Battlefield {
   leader: BattleLeader;
   leaderName: string;
   leaderMilitary: number;
+  /**
+   * 率いる者の個性。会戦のあいだ効くので、始まった時点の値を写しておく
+   * （途中で罷免されても、その戦いは最後まで同じ将が率いる）
+   */
+  leaderTrait: TraitId | null;
   /** 地形。戦場の絵と補正に効く */
   terrain: 'plain' | 'river' | 'hill' | 'forest' | 'desert';
   units: BattleUnit[];
@@ -453,8 +509,14 @@ export interface GameState {
   chancellor: Official | null;
   /** 州の刺史。その州の守備と支配度の回復に効く */
   inspectors: Partial<Record<ProvinceId, Official>>;
-  /** 任命の候補。毎年入れ替わる */
+  /**
+   * 武将の名簿。**在野の者と、配下だが無官の者を並べて持つ。**
+   * 官に就いている者は席（`marshal` `chancellor` `inspectors`）のほうにいて、
+   * ここには重ねて置かない
+   */
   candidates: Official[];
+  /** 一度でも名簿に出した史実の人物。二度は出さない */
+  seenOfficers: string[];
   north: NorthernCourt | null;
   battlefield: Battlefield | null;
 
@@ -510,6 +572,9 @@ export type TurnEventId =
   | 'abdication'
   | 'succession_crisis'
   | 'auxiliary_defected'
+  | 'officer_left'
+  | 'officer_defected'
+  | 'officer_recruited'
   | 'army_deserted'
   | 'battle_won'
   | 'battle_lost'
@@ -551,6 +616,15 @@ export interface MarriageAction {
     | { kind: 'north' };
 }
 
+export interface RecruitOfficerAction {
+  type: 'court_recruit_officer';
+  officerId: string;
+}
+export interface RewardOfficerAction {
+  type: 'court_reward_officer';
+  officerId: string;
+}
+
 export interface AppointChancellorAction {
   type: 'court_appoint_chancellor';
   officialId: string;
@@ -569,6 +643,8 @@ export interface DismissInspectorAction {
 }
 export interface AppointMarshalAction {
   type: 'military_appoint_marshal';
+  /** 誰を推すか。省かれたら統率のいちばん高い者を推す */
+  officerId?: string;
 }
 export interface DismissMarshalAction {
   type: 'military_dismiss_marshal';
@@ -657,6 +733,8 @@ export type PlayerAction =
   | AcceptDemandAction
   | SubdueHomelandAction
   | MarriageAction
+  | RecruitOfficerAction
+  | RewardOfficerAction
   | AppointChancellorAction
   | DismissChancellorAction
   | AppointInspectorAction

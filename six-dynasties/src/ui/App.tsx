@@ -10,7 +10,7 @@ import {
   ChroniclePanel,
   ConsortPanel,
   NorthPanel,
-  OfficersPanel,
+  RosterPanel,
   PrincePanel,
   RulerPanel,
   TribePanel,
@@ -306,7 +306,7 @@ export function App() {
           <>
             <RulerPanel state={state} onRename={rename} />
             <ConsortPanel state={state} />
-            <OfficersPanel state={state} />
+            <RosterPanel state={state} />
             <PrincePanel state={state} />
             <TribePanel state={state} />
             <ChroniclePanel state={state} />

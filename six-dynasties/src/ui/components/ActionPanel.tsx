@@ -7,6 +7,8 @@ import {
   DEFEND_COST,
   MARRIAGE_COST,
   MOVE_CAPITAL_COST,
+  RECRUIT_COST,
+  REWARD_COST,
   PACIFY_COST,
   PROVINCE_RECRUIT_COST,
   REGISTER_COST,
@@ -23,9 +25,11 @@ import {
 } from '../../core/diplomacy';
 import { canMoveCapital } from '../../core/economy';
 import { canRecoverProvince } from '../../core/military';
+import { recruitChance, seatedOfficers, traitName, traitNote } from '../../core/officers';
 import type {
   BattleFoe,
   FactionId,
+  Official,
   GameState,
   HomelandId,
   PlayerAction,
@@ -40,15 +44,26 @@ import {
 import { actionKey } from '../useGame';
 import { Portrait, seededAge, type PortraitSpec } from './Portrait';
 
-type Category = 'prince' | 'tribe' | 'military' | 'domestic' | 'office';
+type Category = 'prince' | 'tribe' | 'military' | 'domestic' | 'office' | 'people';
 
 const CATEGORIES: { id: Category; label: string }[] = [
+  { id: 'people', label: '人事' },
   { id: 'prince', label: '宗室' },
   { id: 'tribe', label: '胡族' },
   { id: 'military', label: '軍事' },
   { id: 'domestic', label: '内政' },
   { id: 'office', label: '官職' },
 ];
+
+/** 配下で無官の武将。官に就けられるのはこの人たちだけ */
+function retainedOf(state: GameState): Official[] {
+  return state.candidates.filter((o) => o.retained);
+}
+
+/** 在野の武将。登用の相手 */
+function wanderersOf(state: GameState): Official[] {
+  return state.candidates.filter((o) => !o.retained);
+}
 
 interface Choice {
   action: PlayerAction;
@@ -174,7 +189,7 @@ export function ActionPanel({
 
   return (
     <div>
-      <div className="grid grid-cols-5 gap-1 mb-2">
+      <div className="grid grid-cols-3 gap-1 mb-2">
         {CATEGORIES.map((c) => (
           <button
             key={c.id}
@@ -325,17 +340,38 @@ export function ActionPanel({
               cost: money(CONSCRIPT_COST),
               disabled: poor(CONSCRIPT_COST),
             })}
-            {row({
-              action: { type: 'military_appoint_marshal' },
-              title: '都督中外諸軍事を任じる',
-              detail:
-                state.marshal.holder === null
-                  ? 'いまは空位。守りが弱くなっている'
-                  : `いまは${state.marshal.holder.name}（能力${state.marshal.holder.competence}・残り${state.marshal.holder.tenure}年）`,
-              cost: money(APPOINT_COST),
-              disabled: poor(APPOINT_COST),
-              urgent: state.marshal.holder === null,
-            })}
+            <div className="pt-1 text-[11px]" style={{ color: 'var(--ink-soft)' }}>
+              都督中外諸軍事 —{' '}
+              {state.marshal.holder === null
+                ? '空位。守りが弱くなっている'
+                : `${state.marshal.holder.name}（統率${state.marshal.holder.competence}・${traitName(state.marshal.holder.trait)}・忠誠${Math.round(state.marshal.holder.loyalty)}）`}
+            </div>
+            {retainedOf(state).length === 0 && (
+              <p className="text-[11px]" style={{ color: 'var(--cinnabar)' }}>
+                無官の配下がいない。「人事」で在野の士を登用しないと都督は立てられない
+              </p>
+            )}
+            {/* **統率の高い者を上に出す。** 都督に問われるのは統率だから */}
+            {[...retainedOf(state)]
+              .sort((a, b) => b.abilities.leadership - a.abilities.leadership)
+              .map((officer) =>
+                row({
+                  portrait: {
+                    seed: officer.id,
+                    role: 'marshal',
+                    age: seededAge(officer.id, 26, 64),
+                  },
+                  action: { type: 'military_appoint_marshal', officerId: officer.id },
+                  title: `${officer.name}を都督に任じる`,
+                  detail:
+                    `統率${officer.abilities.leadership}・武力${officer.abilities.might}・` +
+                    `知力${officer.abilities.intellect}／${traitName(officer.trait)}` +
+                    `（${traitNote(officer.trait)}）／野心${officer.ambition}`,
+                  cost: money(APPOINT_COST),
+                  disabled: poor(APPOINT_COST),
+                  urgent: state.marshal.holder === null,
+                }),
+              )}
             {state.marshal.holder !== null &&
               row({
                 action: { type: 'military_dismiss_marshal' },
@@ -438,6 +474,9 @@ export function ActionPanel({
           </>
         )}
 
+        {category === 'people' && (
+          <PeopleChoices state={state} row={row} />
+        )}
         {category === 'office' && (
           <OfficeChoices state={state} chosenKeys={chosenKeys} onToggle={onToggle} row={row} />
         )}
@@ -502,6 +541,85 @@ function BattleChoices({
   );
 }
 
+/**
+ * 人事。登用と恩賞。
+ *
+ * **どちらも行動枠を食わない。** 詔で招き、詔で賞するので1年を費やす手ではない。
+ * 代わりに金がかかり、登用は断られることがある（金は戻らない）
+ */
+function PeopleChoices({
+  state,
+  row,
+}: {
+  state: GameState;
+  row: (choice: Choice) => ReactElement;
+}) {
+  const wanderers = wanderersOf(state);
+  const retained = retainedOf(state);
+  const seated = seatedOfficers(state);
+  const wavering = [...retained, ...seated].sort((a, b) => a.loyalty - b.loyalty).slice(0, 4);
+
+  return (
+    <>
+      <p className="text-[11px]" style={{ color: 'var(--ink-soft)' }}>
+        登用も恩賞も行動枠を消費しない。代わりに金がかかり、登用は断られることがある
+      </p>
+
+      <div className="pt-1 text-[11px]" style={{ color: 'var(--ink-soft)' }}>
+        在野 — 登用して配下にしないと官には就けられない
+      </div>
+      {wanderers.length === 0 && (
+        <p className="text-[12px]" style={{ color: 'var(--ink-soft)' }}>
+          いま在野に人がいない
+        </p>
+      )}
+      {wanderers.map((officer) =>
+        row({
+          portrait: {
+            seed: officer.id,
+            role: officer.abilities.leadership >= officer.abilities.politics ? 'marshal' : 'chancellor',
+            age: seededAge(officer.id, 26, 64),
+          },
+          action: { type: 'court_recruit_officer', officerId: officer.id },
+          title: `${officer.name}を登用する`,
+          detail:
+            `統${officer.abilities.leadership} 武${officer.abilities.might} ` +
+            `知${officer.abilities.intellect} 政${officer.abilities.politics} ` +
+            `魅${officer.abilities.charm}／${traitName(officer.trait)}（${traitNote(officer.trait)}）` +
+            `／野心${officer.ambition}／応じる目 ${Math.round(recruitChance(state, officer) * 100)}%` +
+            `${officer.historical ? '' : '（無名の士）'}`,
+          cost: `国庫 ${RECRUIT_COST}`,
+          disabled: state.treasury < RECRUIT_COST,
+        }),
+      )}
+
+      <div className="pt-2 text-[11px]" style={{ color: 'var(--ink-soft)' }}>
+        恩賞 — 忠誠は年ごとに冷める。尽きた者は去り、州を預けていればその州ごと離れる
+      </div>
+      {wavering.length === 0 && (
+        <p className="text-[12px]" style={{ color: 'var(--ink-soft)' }}>
+          仕えている者がいない
+        </p>
+      )}
+      {wavering.map((officer) =>
+        row({
+          portrait: {
+            seed: officer.id,
+            role: officer.abilities.leadership >= officer.abilities.politics ? 'marshal' : 'chancellor',
+            age: seededAge(officer.id, 26, 64),
+          },
+          action: { type: 'court_reward_officer', officerId: officer.id },
+          title: `${officer.name}に恩賞を与える`,
+          detail: `忠誠${Math.round(officer.loyalty)} → ${Math.round(Math.min(100, officer.loyalty + 22))}／野心${officer.ambition}・${traitName(officer.trait)}`,
+          cost: `国庫 ${REWARD_COST}`,
+          disabled: state.treasury < REWARD_COST,
+          urgent: officer.loyalty < 25,
+        }),
+      )}
+    </>
+  );
+}
+
 /** 官職。任命は行動枠を消費しない */
 function OfficeChoices({
   state,
@@ -523,16 +641,22 @@ function OfficeChoices({
     <>
       <p className="text-[11px]" style={{ color: 'var(--ink-soft)' }}>
         任命は行動枠を消費しない（詔一本の話で、1年を費やす行動ではない）。
-        解任のほうは枠を使う
+        解任のほうは枠を使う。**官に就けられるのは配下の武将だけ**で、
+        在野の者は「人事」から登用する
       </p>
+      {retainedOf(state).length === 0 && (
+        <p className="text-[11px]" style={{ color: 'var(--cinnabar)' }}>
+          いま無官の配下がいない。「人事」で在野の士を登用しないと席は埋まらない
+        </p>
+      )}
 
       <div className="pt-1 text-[11px]" style={{ color: 'var(--ink-soft)' }}>
         録尚書事 —{' '}
         {state.chancellor
-          ? `${state.chancellor.name}（能力${state.chancellor.competence}・野心${state.chancellor.ambition}・残り${state.chancellor.tenure}年）`
+          ? `${state.chancellor.name}（政治${state.chancellor.competence}・${traitName(state.chancellor.trait)}・忠誠${Math.round(state.chancellor.loyalty)}）`
           : '空位'}
       </div>
-      {state.candidates.map((candidate) =>
+      {retainedOf(state).map((candidate) =>
         row({
           portrait: {
             seed: candidate.id,
@@ -541,7 +665,7 @@ function OfficeChoices({
           },
           action: { type: 'court_appoint_chancellor', officialId: candidate.id },
           title: `${candidate.name}を録尚書事に`,
-          detail: `能力${candidate.competence}・野心${candidate.ambition}・任期${candidate.tenure}年${candidate.gentryBorn ? '・士族の出' : ''}`,
+          detail: `政治${candidate.abilities.politics}・${traitName(candidate.trait)}・忠誠${Math.round(candidate.loyalty)}${candidate.gentryBorn ? '・士族の出' : ''}`,
           cost: `国庫 ${APPOINT_COST}`,
           disabled: state.treasury < APPOINT_COST,
         }),
@@ -562,10 +686,10 @@ function OfficeChoices({
           <p className="text-[11px] mb-1" style={{ color: 'var(--ink-soft)' }}>
             {PROVINCE_LABELS[seat]}：
             {state.inspectors[seat]
-              ? `${state.inspectors[seat]?.name}（能力${state.inspectors[seat]?.competence}・野心${state.inspectors[seat]?.ambition}・残り${state.inspectors[seat]?.tenure}年）`
+              ? `${state.inspectors[seat]?.name}（政治${state.inspectors[seat]?.competence}・${traitName(state.inspectors[seat]?.trait ?? 'nengli')}・忠誠${Math.round(state.inspectors[seat]?.loyalty ?? 0)}）`
               : '空位'}
           </p>
-          {state.candidates.map((candidate) =>
+          {retainedOf(state).map((candidate) =>
             row({
               portrait: {
                 seed: candidate.id,
@@ -578,7 +702,7 @@ function OfficeChoices({
                 officialId: candidate.id,
               },
               title: `${candidate.name}を${PROVINCE_LABELS[seat]}刺史に`,
-              detail: `能力${candidate.competence}・野心${candidate.ambition}・任期${candidate.tenure}年`,
+              detail: `政治${candidate.abilities.politics}・${traitName(candidate.trait)}（${traitNote(candidate.trait)}）・忠誠${Math.round(candidate.loyalty)}`,
               cost: `国庫 ${APPOINT_COST}`,
               disabled: state.treasury < APPOINT_COST,
             }),

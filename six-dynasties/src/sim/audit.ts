@@ -22,6 +22,7 @@ import provincesData from '../data/provinces.json';
 import { availableBattleLeaders, availableFoes } from '../core/battle';
 import { ENDING_YEAR, MAX_ACTIONS_PER_TURN, provincesToProclaim } from '../core/constants';
 import { createInitialState } from '../core/economy';
+import { seatedOfficers } from '../core/officers';
 import { appointMarshal } from '../core/officials';
 import { createRng } from '../core/rng';
 import { deserialize, serialize } from '../core/save';
@@ -57,14 +58,8 @@ const inspectors = (
   officialsData.inspectors as ({ provinceId: string } & Official)[]
 ).map((entry) => ({
   provinceId: entry.provinceId as ProvinceId,
-  official: {
-    id: entry.id,
-    name: entry.name,
-    competence: entry.competence,
-    ambition: entry.ambition,
-    tenure: entry.tenure,
-    gentryBorn: entry.gentryBorn,
-  },
+  // 名簿の欄がそのまま武将の欄なので、丸ごと渡す
+  official: entry as Official,
 }));
 
 const copy = <T>(value: unknown): T => JSON.parse(JSON.stringify(value)) as T;
@@ -159,6 +154,35 @@ function checkState(state: GameState, where: string): void {
   if (state.dynasty.members.some((m) => m.id === ruler.id)) {
     flag('即位した者が継承候補に残っている', `${where} ${ruler.name}`);
   }
+  /*
+   * 武将は**一人につき一か所**にしかいない。名簿と席の両方に同じ者が
+   * 載っていると、恩賞が二重に効いたり、去ったはずの者が残ったりする
+   */
+  const everyone = [...state.candidates, ...seatedOfficers(state)];
+  const ids = everyone.map((o) => o.id);
+  if (new Set(ids).size !== ids.length) {
+    const dup = ids.find((id, i) => ids.indexOf(id) !== i);
+    flag('同じ武将が二か所にいる', `${where} ${dup}`);
+  }
+  for (const officer of everyone) {
+    const at = `${where} ${officer.name}`;
+    if (!finite(officer.loyalty) || officer.loyalty < 0 || officer.loyalty > 100) {
+      flag('忠誠が0〜100の外', `${at}=${officer.loyalty}`);
+    }
+    for (const value of Object.values(officer.abilities)) {
+      if (!Number.isInteger(value) || value < 1 || value > 10) {
+        flag('武将の能力が1〜10の外', `${at}=${value}`);
+      }
+    }
+    if (state.year > officer.untilYear) flag('去るべき年を過ぎた武将が残っている', at);
+  }
+  for (const officer of seatedOfficers(state)) {
+    if (!officer.retained && officer.historical) {
+      // 席に就いている以上は配下のはず（登用せずに官へは就けない）
+      flag('登用していない者が官に就いている', `${where} ${officer.name}`);
+    }
+  }
+
   if (state.north !== null && (!finite(state.north.strength) || state.north.strength < 0)) {
     flag('北朝の兵が異常', `${where} ${state.north.strength}`);
   }
@@ -197,6 +221,12 @@ function randomActions(state: GameState, rng: () => number): PlayerAction[] {
   }
   for (const province of Object.values(state.provinces)) {
     if (province.holder !== null) pool.push({ type: 'military_northern_expedition', provinceId: province.id });
+  }
+  // 人事も打たせる。登用と恩賞は枠を食わないが、状態は動かす
+  for (const officer of state.candidates) {
+    pool.push({ type: 'court_recruit_officer', officerId: officer.id });
+    pool.push({ type: 'court_reward_officer', officerId: officer.id });
+    if (officer.retained) pool.push({ type: 'military_appoint_marshal', officerId: officer.id });
   }
   for (const faction of Object.values(state.factions)) {
     pool.push({ type: 'tribe_tribute', factionId: faction.id, amount: 0 });

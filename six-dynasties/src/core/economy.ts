@@ -11,6 +11,13 @@ import {
   CHARISMA_LOYALTY_RELIEF,
   CONTROL_MAX,
   CONTROL_RECOVERY,
+  TRAIT_CONTROL_BONUS,
+  TRAIT_DEVELOPMENT_BONUS,
+  TRAIT_GENTRY_RELIEF,
+  TRAIT_INCOME_BONUS,
+  TRAIT_KULI_GENTRY_LOSS,
+  TRAIT_MANDATE_RELIEF,
+  TRAIT_REPAIR_BONUS,
   CONTROL_RECOVERY_MIN_CONTROL,
   CONVERSATION_COST,
   CONVERSATION_GENTRY_GAIN,
@@ -51,6 +58,7 @@ import {
   modifiersOf,
 } from './constants';
 import { consortRelief } from './diplomacy';
+import { hasTrait, seatedOfficers } from './officers';
 import type {
   Difficulty,
   Dynasty,
@@ -115,6 +123,7 @@ export function createInitialState(
     chancellor,
     inspectors: inspectorMap,
     candidates: [],
+    seenOfficers: [],
     north: null,
     battlefield: null,
 
@@ -161,12 +170,15 @@ export function calculateIncome(state: GameState): number {
   const adminBonus = 1 + state.dynasty.ruler.abilities.administration * ADMIN_INCOME_PER_POINT;
   const chancellorBonus =
     1 + (state.chancellor?.competence ?? 0) * CHANCELLOR_INCOME_PER_POINT;
+  // 能吏を官に就けていれば帳簿が締まる
+  const traitBonus = 1 + (hasTrait(state, 'nengli') ? TRAIT_INCOME_BONUS : 0);
 
   return (
     (raw + fromHomelands) *
     householdFactor *
     adminBonus *
     chancellorBonus *
+    traitBonus *
     modifiersOf(state.difficulty).incomeMultiplier
   );
 }
@@ -200,7 +212,11 @@ export function updateControl(state: GameState): GameState {
 
     const inspector = state.inspectors[id];
     const recovery =
-      CONTROL_RECOVERY * (1 + (inspector?.competence ?? 0) * INSPECTOR_RECOVERY_PER_POINT);
+      CONTROL_RECOVERY *
+      (1 +
+        (inspector?.competence ?? 0) * INSPECTOR_RECOVERY_PER_POINT +
+        // 酷吏は支配度を早く戻すが、そのぶん士族が離れる（下で引く）
+        (inspector?.trait === 'kuli' ? TRAIT_CONTROL_BONUS : 0));
     provinces[id] = { ...province, control: clamp(province.control + recovery, 0, CONTROL_MAX) };
   }
   return { ...state, provinces };
@@ -222,7 +238,11 @@ export function repairWalls(state: GameState, besieged: ReadonlySet<ProvinceId>)
     if (province.wall >= province.wallMax) continue;
 
     const inspector = state.inspectors[id];
-    const repair = WALL_REPAIR * (1 + (inspector?.competence ?? 0) * WALL_REPAIR_PER_POINT);
+    const repair =
+      WALL_REPAIR *
+      (1 +
+        (inspector?.competence ?? 0) * WALL_REPAIR_PER_POINT +
+        (inspector?.trait === 'tiebi' ? TRAIT_REPAIR_BONUS : 0));
     provinces[id] = { ...province, wall: Math.min(province.wallMax, province.wall + repair) };
     changed = true;
   }
@@ -246,9 +266,12 @@ export function developProvinces(state: GameState): GameState {
     if (province.holder !== null || province.control <= 0) continue;
     if (province.baseTax >= province.baseTaxMax) continue;
 
+    const inspector = state.inspectors[id];
     const rate =
-      (province.region === 'south' ? DEVELOPMENT_RATE_SOUTH : DEVELOPMENT_RATE_NORTH) +
-      (province.region === capitalRegion ? DEVELOPMENT_CAPITAL_BONUS : 0);
+      ((province.region === 'south' ? DEVELOPMENT_RATE_SOUTH : DEVELOPMENT_RATE_NORTH) +
+        (province.region === capitalRegion ? DEVELOPMENT_CAPITAL_BONUS : 0)) *
+      // 屯田を敷いた州は伸びが速い。陶侃が荊州でやったこと
+      (1 + (inspector?.trait === 'tuntian' ? TRAIT_DEVELOPMENT_BONUS : 0));
     provinces[id] = {
       ...province,
       // 荒れた州は開発も進まない。支配度がそのまま伸びに掛かる
@@ -301,17 +324,28 @@ export function applyDecay(state: GameState): GameState {
    * 士族の女は士族の支持を、北朝の公主は天命を支える
    * （和親の后は給の清算のほうで効く）
    */
+  /*
+   * 個性はここでも効く。人望のある者が官にいれば士族は離れにくく、
+   * 名士がいれば天命が保ち、**酷吏を置けばそのぶん士族が離れる**
+   */
   const gentryDecay =
     GENTRY_DECAY -
     (state.chancellor?.competence ?? 0) * CHANCELLOR_GENTRY_RELIEF -
-    consortRelief(state, 'gentry') * CONSORT_GENTRY_RELIEF;
+    consortRelief(state, 'gentry') * CONSORT_GENTRY_RELIEF -
+    (hasTrait(state, 'renbo') ? TRAIT_GENTRY_RELIEF : 0) +
+    seatedOfficers(state).filter((o) => o.trait === 'kuli').length * TRAIT_KULI_GENTRY_LOSS;
   const loyaltyRelief = ruler.charisma * CHARISMA_LOYALTY_RELIEF;
 
   return {
     ...state,
     mandate: clamp100(
       state.mandate -
-        Math.max(0, mandateDecay - consortRelief(state, 'north') * CONSORT_MANDATE_RELIEF),
+        Math.max(
+          0,
+          mandateDecay -
+            consortRelief(state, 'north') * CONSORT_MANDATE_RELIEF -
+            (hasTrait(state, 'mingshi') ? TRAIT_MANDATE_RELIEF : 0),
+        ),
     ),
     gentry: clamp100(state.gentry - Math.max(0, gentryDecay)),
     princeLoyalty: clamp100(state.princeLoyalty - Math.max(0, PRINCE_LOYALTY_DECAY - loyaltyRelief)),

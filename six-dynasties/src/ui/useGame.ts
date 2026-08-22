@@ -50,14 +50,8 @@ function buildInitialState(difficulty: Difficulty): GameState {
     officialsData.inspectors as ({ provinceId: string } & Official)[]
   ).map((entry) => ({
     provinceId: entry.provinceId as ProvinceId,
-    official: {
-      id: entry.id,
-      name: entry.name,
-      competence: entry.competence,
-      ambition: entry.ambition,
-      tenure: entry.tenure,
-      gentryBorn: entry.gentryBorn,
-    },
+    // 名簿の欄がそのまま武将の欄なので、丸ごと渡す
+  official: entry as Official,
   }));
 
   return createInitialState(

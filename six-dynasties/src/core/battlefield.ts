@@ -3,6 +3,8 @@ import {
   BATTLE_UNITS_PER_WING,
   FLANK_BONUS,
   TACTICS_MAX,
+  TRAIT_ATTACK_BONUS,
+  TRAIT_CASUALTY_RELIEF,
   TACTICS_MIN,
   WITHDRAW_RELIEF,
 } from './constants';
@@ -84,6 +86,8 @@ export function openBattlefield(
     leader,
     leaderName: leaderName(state, leader),
     leaderMilitary: leaderMilitary(state, leader),
+    // 帝が自ら率いるときは個性を持たない。個性は武将のものだから
+    leaderTrait: leader === 'marshal' ? (state.marshal.holder?.trait ?? null) : null,
     terrain: rollTerrain(rng),
     units: [
       ...makeUnits('court', ours, 6, rng),
@@ -191,7 +195,10 @@ export function battleRound(
     const ourArm = wingArm(field, 'court', wing);
     const theirArm = wingArm(field, 'foe', target);
 
-    let ourPower = ours * (1 + field.leaderMilitary * 0.03);
+    // 猛将が率いると打撃が重い
+    let ourPower =
+      ours *
+      (1 + field.leaderMilitary * 0.03 + (field.leaderTrait === 'mengjiang' ? TRAIT_ATTACK_BONUS : 0));
     if (order === 'flank') ourPower *= FLANK_BONUS;
     if (ourArm !== null && theirArm !== null && ARM_ADVANTAGE[ourArm] === theirArm) {
       ourPower *= ARM_BONUS;
@@ -205,8 +212,14 @@ export function battleRound(
     const noise = 0.85 + rng() * 0.3;
 
     const foeDamage = Math.max(0, swing) * theirs * 0.55 * noise;
+    // 神算が率いると受ける損害が軽い
     const ourDamage =
-      Math.max(0, -swing) * ours * 0.55 * noise * (order === 'withdraw' ? WITHDRAW_RELIEF : 1);
+      Math.max(0, -swing) *
+      ours *
+      0.55 *
+      noise *
+      (order === 'withdraw' ? WITHDRAW_RELIEF : 1) *
+      (field.leaderTrait === 'shensuan' ? 1 - TRAIT_CASUALTY_RELIEF : 1);
 
     units = applyDamage(units, 'foe', target, foeDamage);
     units = applyDamage(units, 'court', wing, ourDamage);

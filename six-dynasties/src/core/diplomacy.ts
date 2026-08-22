@@ -7,6 +7,7 @@ import {
   AUXILIARY_LOYALTY_LOSS,
   AUXILIARY_PAY_PER_STRENGTH,
   CONSORT_TRIBAL_RELIEF,
+  TRAIT_TRIBAL_RELIEF,
   CHARISMA_TRIBUTE_DISCOUNT,
   COALITION_RALLY_PER_HOMELAND,
   EXPEDITION_ARMY_SHARE,
@@ -34,6 +35,7 @@ import {
   modifiersOf,
 } from './constants';
 import { kingdomNameOf } from './factions';
+import { hasTrait } from './officers';
 import { createRng } from './rng';
 import type {
   Consort,
@@ -201,7 +203,9 @@ export function settleAuxiliaryPay(state: GameState): GameState {
    * 婚姻は「その年の帰順を買う」だけの手ではなく、
    * **迎えているあいだ効き続ける**ものとして扱う
    */
-  const relief = consortRelief(state, 'tribe') * CONSORT_TRIBAL_RELIEF;
+  const relief =
+    consortRelief(state, 'tribe') * CONSORT_TRIBAL_RELIEF +
+    (hasTrait(state, 'huairou') ? TRAIT_TRIBAL_RELIEF : 0);
   return {
     ...state,
     treasury: Math.max(0, state.treasury - due),
