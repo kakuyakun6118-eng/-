@@ -4,9 +4,9 @@ import { DIFFICULTY_LABELS, ENDING_YEAR, START_YEAR } from '../../core/constants
 import type { Difficulty, GameState, ScoreResult } from '../../core/types';
 
 const DIFFICULTY_NOTES: Record<Difficulty, string> = {
-  beginner: '災厄はめったに起きず、収入も多い。まず三百年の形を掴むために',
-  standard: '調整の基準。史実より朝廷に有利で、災厄は半分ほどしか起きない',
-  veteran: '史実に近い。永嘉の乱も侯景の乱もほぼ確実に起き、南朝は呑まれていく',
+  beginner: '収入に余裕があり、災厄も半分に届かない。素朴な打ち手で9割が589年を迎える',
+  standard: '調整の基準。史実より朝廷に有利で、災厄は半分ほど。素朴な打ち手なら五分',
+  veteran: '史実に近い。永嘉の乱も侯景の乱もほぼ確実に起き、たいてい江南へ落ちる。素朴な打ち手で保つのは2割',
 };
 
 export function TitleScreen({

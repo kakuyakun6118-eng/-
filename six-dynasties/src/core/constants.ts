@@ -734,14 +734,32 @@ export const CAPITAL_FALL_MANDATE_LOSS = 16;
 
 /**
  * 難易度は新しいメカニクスを足さない。既存の計算式に掛かる倍率としてのみ働く。
- * **中級はすべて 1.0**。調整済みの基準バランスがそのまま中級になる
+ * **中級はすべて 1.0**。調整済みの基準バランスがそのまま中級になる。
+ *
+ * **三段は等間隔に置く。** 素朴な打ち手（`npm run sim`）が589年まで保つ割合で
+ * 90%／55%／20% に並ぶよう取ってある。かつては 99%／56%／2% で、
+ * 初級は放っておいても終わり、上級は何をしても終わらなかった。
+ * とくに上級の2%は**史実にも合っていない** — 南朝は宋・斉・梁・陳と替わりながら
+ * 589年まで続いたのであって、呑まれて消えたわけではない。
+ * 上級は「厳しいが手はある」ところに置く。
+ *
+ * 倍率はどれも小さく効かせる。収入の倍率を 0.9 から 0.96 へ動かしただけで
+ * 上級の存続が 2% から 19% へ振れる（給が払えなければ兵が散り、
+ * 兵が散れば州を失い、州を失えば収入がさらに落ちる — 循環の罠は
+ * 入口の数センチが出口の何十倍にもなる）
  */
 export const DIFFICULTY_MODIFIERS: Record<Difficulty, DifficultyModifiers> = {
   beginner: {
-    incomeMultiplier: 1.25,
-    foePowerMultiplier: 0.82,
-    auxiliaryEscalationMultiplier: 0.6,
-    historicalSeverityMultiplier: 0.3,
+    incomeMultiplier: 1.15,
+    foePowerMultiplier: 0.9,
+    auxiliaryEscalationMultiplier: 0.75,
+    /*
+     * **初級でも史実の出来事は見せる。** 0.3 に置いていたときは、
+     * 永嘉の乱も侯景の乱もめったに起きず、初級で遊んだ人はこの三百年の
+     * 出来事をほとんど見ないまま589年を迎えた。出来事はこのゲームの中身なので、
+     * 起こしたうえで収入の余裕で耐えられるようにする
+     */
+    historicalSeverityMultiplier: 0.45,
   },
   standard: {
     incomeMultiplier: 1,
@@ -750,9 +768,9 @@ export const DIFFICULTY_MODIFIERS: Record<Difficulty, DifficultyModifiers> = {
     historicalSeverityMultiplier: 0.6,
   },
   veteran: {
-    incomeMultiplier: 0.9,
-    foePowerMultiplier: 1.1,
-    auxiliaryEscalationMultiplier: 1.35,
+    incomeMultiplier: 0.96,
+    foePowerMultiplier: 1.04,
+    auxiliaryEscalationMultiplier: 1.28,
     historicalSeverityMultiplier: 1,
   },
 };
