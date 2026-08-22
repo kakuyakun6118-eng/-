@@ -280,20 +280,64 @@ export function ChinaMap({
             <stop offset="0%" stopColor="#b9c6c4" />
             <stop offset="100%" stopColor="#9fb0b0" />
           </linearGradient>
+
+          {/*
+            起伏。**乱流から法線を作り、北西から光を当てる。**
+
+            平らな塗りに山地の輪郭を描いていたときは、山も高原も砂漠も
+            「色の違う面」でしかなく、天下に高さが無かった。
+            `feTurbulence` の作る雑音を高さの図とみなして `feDiffuseLighting` に
+            通すと、同じ輪郭のまま岩肌の陰影が生まれる。
+            光の向きは全部の層で揃える（315°）— 揃えないと、山と高原が
+            別々の太陽の下に並ぶ
+          */}
+          <filter id="relief-rock" x="-5%" y="-5%" width="110%" height="110%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.042" numOctaves="5" seed="17" result="n" />
+            <feDiffuseLighting in="n" lightingColor="#fffaf0" surfaceScale="3.4" result="lit">
+              <feDistantLight azimuth="315" elevation="48" />
+            </feDiffuseLighting>
+            <feComposite in="lit" in2="SourceGraphic" operator="in" result="clipped" />
+            <feBlend in="SourceGraphic" in2="clipped" mode="multiply" />
+          </filter>
+
+          {/* 高原と砂漠はなだらかに。同じ強さで彫ると平地まで岩になる */}
+          <filter id="relief-soft" x="-5%" y="-5%" width="110%" height="110%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="4" seed="5" result="n" />
+            <feDiffuseLighting in="n" lightingColor="#fff8ea" surfaceScale="3.2" result="lit">
+              <feDistantLight azimuth="315" elevation="55" />
+            </feDiffuseLighting>
+            <feComposite in="lit" in2="SourceGraphic" operator="in" result="clipped" />
+            <feBlend in="SourceGraphic" in2="clipped" mode="multiply" />
+          </filter>
+
+          {/* 陸を海から浮かせる影 */}
+          <filter id="land-lift" x="-8%" y="-8%" width="120%" height="120%">
+            <feDropShadow dx="1.4" dy="2" stdDeviation="2.4" floodColor="#3b4a4a" floodOpacity="0.4" />
+          </filter>
+
+          {/* 山塊はさらに深い影を落とす。高さの差がそのまま影の差になる */}
+          <filter id="range-lift" x="-10%" y="-10%" width="125%" height="125%">
+            <feDropShadow dx="1.6" dy="2.4" stdDeviation="2" floodColor="#3a3020" floodOpacity="0.32" />
+          </filter>
         </defs>
 
         {/* 海 */}
         <rect x="0" y="0" width="100%" height="100%" fill="url(#sea)" />
 
-        {/* 天下の外の陸。背景として沈める */}
-        <path d={CONTEXT_LAND_PATH} fill="#b5ab90" stroke="none" />
+        {/* 天下の外の陸。背景として沈めるが、海からは浮かせる */}
+        <path d={CONTEXT_LAND_PATH} fill="#b5ab90" stroke="none" filter="url(#land-lift)" />
 
-        {/* 地形。州の下に敷いて起伏を出す。塗りが透けるので濃く敷く */}
-        <g opacity="0.66">
+        {/*
+          地形。州の下に敷いて起伏を出す。塗りが透けるので濃く敷く。
+          **平地・高原・砂漠・山地の順に重ね、高いものほど強く彫る**
+        */}
+        <g opacity="0.7">
           <path d={PLAIN_PATH} fill="#a9b184" />
-          <path d={PLATEAU_PATH} fill="#b3a683" />
-          <path d={DESERT_PATH} fill="#cfc09a" />
-          <path d={MOUNTAIN_PATH} fill="#8d8570" />
+          <path d={PLATEAU_PATH} fill="#b3a683" filter="url(#relief-soft)" />
+          <path d={DESERT_PATH} fill="#cfc09a" filter="url(#relief-soft)" />
+          <g filter="url(#range-lift)">
+            <path d={MOUNTAIN_PATH} fill="#9d9276" filter="url(#relief-rock)" />
+          </g>
         </g>
 
         {/* 胡族の郷里 */}
@@ -347,6 +391,24 @@ export function ChinaMap({
             />
           );
         })}
+
+        {/*
+          陰影をもう一度、**塗りの上から**掛ける。
+
+          起伏を州の下にだけ敷いていたときは、絹の下地と勢力の色に覆われて
+          天下の内側だけが平らになり、山が見えるのは朝廷の外だけだった。
+          政治の色を塗ったうえに陰だけを重ねるのは、地勢図の常道でもある。
+          白を塗って乗算で重ねるので、**明るい斜面は素通りし、陰になる斜面だけが沈む**
+        */}
+        <g
+          style={{ mixBlendMode: 'multiply' }}
+          opacity="0.55"
+          pointerEvents="none"
+        >
+          <path d={PLATEAU_PATH} fill="#ffffff" filter="url(#relief-soft)" />
+          <path d={DESERT_PATH} fill="#ffffff" filter="url(#relief-soft)" />
+          <path d={MOUNTAIN_PATH} fill="#ffffff" filter="url(#relief-rock)" />
+        </g>
 
         {/*
           奪われた州の輪郭。**持ち主の色で太く縁取る。**
