@@ -19,6 +19,7 @@
  */
 import portraitsData from '../../data/portraits.json';
 import { createRng } from '../../core/rng';
+import type { OfficerAbilities } from '../../core/types';
 
 export type PortraitRole =
   | 'emperor'
@@ -60,6 +61,20 @@ function hashOf(seed: string): number {
  */
 export function seededAge(seed: string, low: number, high: number): number {
   return low + (hashOf(`${seed}:age`) % (high - low + 1));
+}
+
+/**
+ * 武将の顔をどの役の画で描くか。
+ *
+ * **席ではなく人で決める。** 席で決めていたときは、同じ人物が
+ * 刺史から都督へ移った瞬間に別人の顔になった（画は役ごとの山から引くため）。
+ * 官職は肩書きの札で見せればよく、顔はその人のものである。
+ * 武に寄った者は兜の画、文に寄った者は進賢冠の画で描く
+ */
+export function officerRole(abilities: OfficerAbilities): PortraitRole {
+  const martial = abilities.leadership + abilities.might;
+  const civil = abilities.politics + abilities.intellect;
+  return martial >= civil ? 'marshal' : 'chancellor';
 }
 
 const SKINS = ['#e3c2a0', '#d8b189', '#c69c74'];

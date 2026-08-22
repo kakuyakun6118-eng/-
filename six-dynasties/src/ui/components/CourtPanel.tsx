@@ -12,7 +12,7 @@ import type {
   ProvinceId,
 } from '../../core/types';
 import { FACTION_LABELS, PROVINCE_LABELS, STANCE_LABELS } from '../catalogue';
-import { Portrait, seededAge, type PortraitRole } from './Portrait';
+import { Portrait, officerRole, seededAge } from './Portrait';
 
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
@@ -114,19 +114,16 @@ function LoyaltyBar({ loyalty }: { loyalty: number }) {
 }
 
 /** 武将の一行。名簿でも席でも使い回す */
-export function OfficerLine({
-  officer,
-  post,
-  role,
-}: {
-  officer: Official;
-  post?: string;
-  role: PortraitRole;
-}) {
+export function OfficerLine({ officer, post }: { officer: Official; post?: string }) {
   return (
     <li className="text-[12px] flex gap-2">
+      {/* 顔は席ではなく人で決まる。官職は下の札のほうで見せる */}
       <Portrait
-        spec={{ seed: officer.id, role, age: seededAge(officer.id, 26, 64) }}
+        spec={{
+          seed: officer.id,
+          role: officerRole(officer.abilities),
+          age: seededAge(officer.id, 26, 64),
+        }}
         size={38}
       />
       <div className="min-w-0 flex-1">
@@ -185,20 +182,15 @@ export function RosterPanel({ state }: { state: GameState }) {
     <section className="han-panel rounded-sm px-3 py-2">
       <h2 className="han-heading text-sm">武将</h2>
       <ul className="mt-1.5 space-y-1.5">
-        {marshal !== null && <OfficerLine officer={marshal} post="都督" role="marshal" />}
+        {marshal !== null && <OfficerLine officer={marshal} post="都督" />}
         {chancellor !== null && (
-          <OfficerLine officer={chancellor} post="録尚書事" role="chancellor" />
+          <OfficerLine officer={chancellor} post="録尚書事" />
         )}
         {inspectors.map(({ id, officer }) => (
-          <OfficerLine
-            key={id}
-            officer={officer}
-            post={`${PROVINCE_LABELS[id]}刺史`}
-            role="inspector"
-          />
+          <OfficerLine key={id} officer={officer} post={`${PROVINCE_LABELS[id]}刺史`} />
         ))}
         {idle.map((officer) => (
-          <OfficerLine key={officer.id} officer={officer} post="無官" role="inspector" />
+          <OfficerLine key={officer.id} officer={officer} post="無官" />
         ))}
       </ul>
       {marshal !== null && marshal.competence >= 8 && (

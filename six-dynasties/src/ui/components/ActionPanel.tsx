@@ -42,7 +42,7 @@ import {
   PROVINCE_SEATS,
 } from '../catalogue';
 import { actionKey } from '../useGame';
-import { Portrait, seededAge, type PortraitSpec } from './Portrait';
+import { Portrait, officerRole, seededAge, type PortraitSpec } from './Portrait';
 
 type Category = 'prince' | 'tribe' | 'military' | 'domestic' | 'office' | 'people';
 
@@ -358,7 +358,7 @@ export function ActionPanel({
                 row({
                   portrait: {
                     seed: officer.id,
-                    role: 'marshal',
+                    role: officerRole(officer.abilities),
                     age: seededAge(officer.id, 26, 64),
                   },
                   action: { type: 'military_appoint_marshal', officerId: officer.id },
@@ -577,7 +577,7 @@ function PeopleChoices({
         row({
           portrait: {
             seed: officer.id,
-            role: officer.abilities.leadership >= officer.abilities.politics ? 'marshal' : 'chancellor',
+            role: officerRole(officer.abilities),
             age: seededAge(officer.id, 26, 64),
           },
           action: { type: 'court_recruit_officer', officerId: officer.id },
@@ -605,7 +605,7 @@ function PeopleChoices({
         row({
           portrait: {
             seed: officer.id,
-            role: officer.abilities.leadership >= officer.abilities.politics ? 'marshal' : 'chancellor',
+            role: officerRole(officer.abilities),
             age: seededAge(officer.id, 26, 64),
           },
           action: { type: 'court_reward_officer', officerId: officer.id },
@@ -660,8 +660,8 @@ function OfficeChoices({
         row({
           portrait: {
             seed: candidate.id,
-            role: 'chancellor',
-            age: seededAge(candidate.id, 34, 68),
+            role: officerRole(candidate.abilities),
+            age: seededAge(candidate.id, 26, 64),
           },
           action: { type: 'court_appoint_chancellor', officialId: candidate.id },
           title: `${candidate.name}を録尚書事に`,
@@ -693,8 +693,8 @@ function OfficeChoices({
             row({
               portrait: {
                 seed: candidate.id,
-                role: 'inspector',
-                age: seededAge(candidate.id, 30, 64),
+                role: officerRole(candidate.abilities),
+                age: seededAge(candidate.id, 26, 64),
               },
               action: {
                 type: 'court_appoint_inspector',
