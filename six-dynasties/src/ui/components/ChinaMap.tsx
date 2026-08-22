@@ -136,6 +136,96 @@ function Peak({
   );
 }
 
+/**
+ * 軍鎮と封国。**十五の治所だけでは、この時代の地名が図に出てこない。**
+ *
+ * 汝南王亮・楚王瑋・趙王倫・斉王冏・河間王顒・東海王越 — 諸王はみな封国の号で
+ * 呼ばれるのに、その汝南も楚も趙も図のどこにも無かった。許昌・壽春・襄陽・宛城・
+ * 下邳といった軍鎮も同じで、**兵を置く土地の名が一つも読めない。**
+ *
+ * 州の治所とは別の層として置く。ここに耐久は無い — 攻城の対象は州の治所だけで、
+ * こちらは**地名**であって城ではない。惠帝の初めの「八王封国図及軍鎮図」に倣い、
+ * 軍鎮は白抜き、封国は塗り潰しで描き分ける
+ */
+const LANDMARKS: {
+  lon: number;
+  lat: number;
+  name: string;
+  fief?: boolean;
+  /**
+   * 名を置く向き。**印は動かさず、字だけ逃がす。**
+   *
+   * 既定は印の真下だが、それでは許昌が洛陽の板に、淮南が建康の板に、
+   * 長沙が荊州の名に隠れた。土地の位置は史実のままにして、
+   * 重なる相手のいる側とは反対へ字を振る
+   */
+  dx?: number;
+  dy?: number;
+}[] = [
+  // 河北・山東
+  { lon: 116.1, lat: 38.38, name: '河間', fief: true, dx: 12, dy: -3 },
+  { lon: 114.49, lat: 36.63, name: '趙', fief: true, dx: -10, dy: -2 },
+  // 中原
+  { lon: 113.85, lat: 34.03, name: '許昌', dx: 15, dy: 3 },
+  { lon: 115.66, lat: 34.41, name: '梁', fief: true, dx: 9, dy: -3 },
+  { lon: 114.62, lat: 32.96, name: '汝南', fief: true },
+  // 徐州の方面
+  { lon: 117.95, lat: 34.32, name: '下邳', dx: 14, dy: 2 },
+  { lon: 118.3, lat: 34.61, name: '東海', fief: true, dx: 15, dy: -4 },
+  // 淮南
+  { lon: 116.79, lat: 32.58, name: '壽春', dx: -14, dy: -2 },
+  { lon: 117.28, lat: 31.86, name: '淮南', fief: true, dx: -15, dy: 5 },
+  // 荊州の方面
+  { lon: 112.53, lat: 33.0, name: '宛城' },
+  { lon: 112.14, lat: 32.01, name: '襄陽' },
+  { lon: 113.68, lat: 31.26, name: '楚', fief: true, dx: 9, dy: 3 },
+  { lon: 112.98, lat: 28.23, name: '長沙', fief: true, dx: 0, dy: 6 },
+];
+
+/** 軍鎮・封国の印。治所より小さく、耐久は持たない */
+function Landmark({
+  x,
+  y,
+  name,
+  fief,
+  dx,
+  dy,
+}: {
+  x: number;
+  y: number;
+  name: string;
+  fief: boolean;
+  dx: number;
+  dy: number;
+}) {
+  return (
+    <g pointerEvents="none">
+      <rect
+        x={x - 2.6}
+        y={y - 2.6}
+        width="5.2"
+        height="5.2"
+        fill={fief ? '#3b3428' : '#f6ecd6'}
+        stroke="#3b3428"
+        strokeWidth="1"
+      />
+      <text
+        x={x + dx}
+        y={y + 9 + dy}
+        textAnchor="middle"
+        fontSize="7.5"
+        fontWeight="700"
+        fill="#3b3428"
+        stroke="#f0e6d2"
+        strokeWidth="2"
+        paintOrder="stroke"
+      >
+        {name}
+      </text>
+    </g>
+  );
+}
+
 /** 都に立てる旗。竿と靡く布で描く */
 function CapitalBanner({ x, y }: { x: number; y: number }) {
   return (
@@ -649,6 +739,25 @@ export function ChinaMap({
           );
         })}
 
+        {/*
+          軍鎮と封国。**州の治所より先に描く**ので、治所の板と州の名が上に来る。
+          攻城の対象になるのは治所だけで、こちらは地名として置いてある
+        */}
+        {LANDMARKS.map((place) => {
+          const [x, y] = projectLonLat(place.lon, place.lat);
+          return (
+            <Landmark
+              key={place.name}
+              x={x}
+              y={y}
+              name={place.name}
+              fief={place.fief === true}
+              dx={place.dx ?? 0}
+              dy={place.dy ?? 0}
+            />
+          );
+        })}
+
         {/* 州の名と治所 */}
         {provinceIds.map((id) => {
           const label = PROVINCE_LABEL_POINTS[id];
@@ -794,7 +903,10 @@ export function MapLegend({ state }: { state: GameState }) {
         城は持ち主の色で塗り、板の下の帯が残りの耐久（囲まれている城は朱）。
         金の三層の楼は<strong style={{ color: 'var(--ink)' }}>三大都</strong>（洛陽・長安・建康）、
         屋根が一段のものが大城（鄴・江陵・成都）、旗が立っているのがいまの都。
-        三角は山脈、青い筋は河川。朱の札は城を囲んでいる出征軍
+        三角は山脈、青い筋は河川。朱の札は城を囲んでいる出征軍。
+        小さな四角は<strong style={{ color: 'var(--ink)' }}>軍鎮</strong>（白抜き＝許昌・壽春・襄陽・宛城・下邳）と
+        <strong style={{ color: 'var(--ink)' }}>封国</strong>（塗り＝汝南・趙・楚・梁・河間・東海・淮南・長沙）。
+        諸王の号はこの封国から来ている（攻城の対象になるのは州の治所だけ）
       </span>
     </div>
   );
