@@ -47,7 +47,8 @@ import {
   PROVINCE_SEATS,
 } from '../catalogue';
 import { actionKey } from '../useGame';
-import { Portrait, officerRole, seededAge, type PortraitSpec } from './Portrait';
+import { FiveRow } from './CourtPanel';
+import { Portrait, PortraitFrame, officerRole, seededAge, type PortraitSpec } from './Portrait';
 
 type Category = 'prince' | 'tribe' | 'military' | 'domestic' | 'office' | 'people';
 
@@ -79,6 +80,12 @@ interface Choice {
   urgent?: boolean;
   /** 相手の顔。婚姻の申し出で、迎えることになる人物を先に見せる */
   portrait?: PortraitSpec;
+  /**
+   * 五能力と個性。**人を選ぶ手には、朝廷の一覧と同じ表を出す。**
+   * 「統率9・武力8…」と文で書いていたときは、三人並べても
+   * 誰が優れているのかを読み比べないと分からなかった
+   */
+  officer?: Official;
 }
 
 function ActionRow({
@@ -102,7 +109,7 @@ function ActionRow({
       }}
     >
       <div className="flex gap-2 items-start">
-        {choice.portrait && <Portrait spec={choice.portrait} size={40} />}
+        {choice.portrait && <PortraitFrame spec={choice.portrait} size={40} />}
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
             <span className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>
@@ -118,6 +125,20 @@ function ActionRow({
               </span>
             )}
           </div>
+          {choice.officer !== undefined && (
+            <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+              <FiveRow abilities={choice.officer.abilities} />
+              <span
+                className="text-[10px] px-1 rounded-[2px]"
+                style={{ border: '1px solid var(--gold)', color: 'var(--gold)' }}
+              >
+                {traitName(choice.officer.trait)}
+              </span>
+              <span className="text-[10px]" style={{ color: 'var(--ink-soft)' }}>
+                野心{choice.officer.ambition}
+              </span>
+            </div>
+          )}
           <div className="text-[11px] leading-snug mt-0.5" style={{ color: 'var(--ink-soft)' }}>
             {choice.detail}
           </div>
@@ -368,10 +389,8 @@ export function ActionPanel({
                   },
                   action: { type: 'military_appoint_marshal', officerId: officer.id },
                   title: `${officer.name}を都督に任じる`,
-                  detail:
-                    `統率${officer.abilities.leadership}・武力${officer.abilities.might}・` +
-                    `知力${officer.abilities.intellect}／${traitName(officer.trait)}` +
-                    `（${traitNote(officer.trait)}）／野心${officer.ambition}`,
+                  officer,
+                  detail: traitNote(officer.trait),
                   cost: money(APPOINT_COST),
                   disabled: poor(APPOINT_COST),
                   urgent: state.marshal.holder === null,
@@ -469,8 +488,8 @@ export function ActionPanel({
                             provinceId: recoverTarget,
                           },
                           title: `${officer.name}を${PROVINCE_LABELS[recoverTarget]}へ発たせる`,
+                          officer,
                           detail:
-                            `統率${officer.abilities.leadership}／${traitName(officer.trait)}／` +
                             `中軍の${Math.round(CORPS_SHARE * 100)}%（兵${Math.round(state.centralArmy * CORPS_SHARE)}）を預ける。` +
                             `${state.capitalName}から${marchPath(state, state.capital, recoverTarget).length}州の道のり`,
                           cost: money(CORPS_COST),
@@ -674,11 +693,10 @@ function PeopleChoices({
           },
           action: { type: 'court_recruit_officer', officerId: officer.id },
           title: `${officer.name}を登用する`,
+          officer,
           detail:
-            `統${officer.abilities.leadership} 武${officer.abilities.might} ` +
-            `知${officer.abilities.intellect} 政${officer.abilities.politics} ` +
-            `魅${officer.abilities.charm}／${traitName(officer.trait)}（${traitNote(officer.trait)}）` +
-            `／野心${officer.ambition}／応じる目 ${Math.round(recruitChance(state, officer) * 100)}%` +
+            `${traitNote(officer.trait)}／応じる目 ` +
+            `${Math.round(recruitChance(state, officer) * 100)}%` +
             `${officer.historical ? '' : '（無名の士）'}`,
           cost: `国庫 ${RECRUIT_COST}`,
           disabled: state.treasury < RECRUIT_COST,
@@ -702,7 +720,8 @@ function PeopleChoices({
           },
           action: { type: 'court_reward_officer', officerId: officer.id },
           title: `${officer.name}に恩賞を与える`,
-          detail: `忠誠${Math.round(officer.loyalty)} → ${Math.round(Math.min(100, officer.loyalty + 22))}／野心${officer.ambition}・${traitName(officer.trait)}`,
+          officer,
+          detail: `忠誠 ${Math.round(officer.loyalty)} → ${Math.round(Math.min(100, officer.loyalty + 22))}`,
           cost: `国庫 ${REWARD_COST}`,
           disabled: state.treasury < REWARD_COST,
           urgent: officer.loyalty < 25,
@@ -757,7 +776,8 @@ function OfficeChoices({
           },
           action: { type: 'court_appoint_chancellor', officialId: candidate.id },
           title: `${candidate.name}を録尚書事に`,
-          detail: `政治${candidate.abilities.politics}・${traitName(candidate.trait)}・忠誠${Math.round(candidate.loyalty)}${candidate.gentryBorn ? '・士族の出' : ''}`,
+          officer: candidate,
+          detail: `忠誠 ${Math.round(candidate.loyalty)}${candidate.gentryBorn ? '／士族の出' : ''}`,
           cost: `国庫 ${APPOINT_COST}`,
           disabled: state.treasury < APPOINT_COST,
         }),
@@ -794,7 +814,8 @@ function OfficeChoices({
                 officialId: candidate.id,
               },
               title: `${candidate.name}を${PROVINCE_LABELS[seat]}刺史に`,
-              detail: `政治${candidate.abilities.politics}・${traitName(candidate.trait)}（${traitNote(candidate.trait)}）・忠誠${Math.round(candidate.loyalty)}`,
+              officer: candidate,
+              detail: `${traitNote(candidate.trait)}／忠誠 ${Math.round(candidate.loyalty)}`,
               cost: `国庫 ${APPOINT_COST}`,
               disabled: state.treasury < APPOINT_COST,
             }),

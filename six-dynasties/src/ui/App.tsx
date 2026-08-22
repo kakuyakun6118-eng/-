@@ -9,6 +9,7 @@ import { ChinaMap, CityPanel, MapLegend, type InspectTarget } from './components
 import {
   ChroniclePanel,
   ConsortPanel,
+  FactionChip,
   NorthPanel,
   RosterPanel,
   PrincePanel,
@@ -20,7 +21,9 @@ import { StatusBar } from './components/StatusBar';
 import {
   DEMAND_DETAILS,
   DEMAND_LABELS,
+  FACTION_COLORS,
   FACTION_LABELS,
+  PRINCE_COLOR,
   PROVINCE_LABELS,
   PROVINCE_NOTES,
   PROVINCE_SEATS,
@@ -117,11 +120,16 @@ function FrontsPanel({ state }: { state: GameState }) {
               支配 {Math.round(row.province.control)}／城 {Math.round(row.province.wall)}／州兵{' '}
               {Math.round(row.province.garrison)}
             </span>
-            <span className="truncate" style={{ color: 'var(--cinnabar)' }}>
-              {row.revolt && '宗室の挙兵 '}
-              {row.foes
-                .map((f) => `${FACTION_LABELS[f.id]} ${Math.round(f.strength)}`)
-                .join('、')}
+            {/* **勢力の名は地図と同じ色で出す。** 図と一覧で色が違えば、色は印にならない */}
+            <span className="truncate flex gap-1.5 items-baseline">
+              {row.revolt && (
+                <span style={{ color: PRINCE_COLOR, fontWeight: 600 }}>宗室の挙兵</span>
+              )}
+              {row.foes.map((f) => (
+                <span key={f.id} style={{ color: FACTION_COLORS[f.id], fontWeight: 600 }}>
+                  <FactionChip id={f.id} /> {Math.round(f.strength)}
+                </span>
+              ))}
             </span>
           </li>
         ))}

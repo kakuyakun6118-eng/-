@@ -7,13 +7,40 @@ import { houseName } from '../../core/diplomacy';
 import { traitName, traitNote } from '../../core/officers';
 import type {
   Abilities,
+  FactionId,
   GameState,
   OfficerAbilities,
   Official,
   ProvinceId,
 } from '../../core/types';
-import { FACTION_LABELS, PROVINCE_LABELS, STANCE_LABELS } from '../catalogue';
-import { Portrait, officerRole, seededAge } from './Portrait';
+import { FACTION_COLORS, FACTION_LABELS, PROVINCE_LABELS, STANCE_LABELS } from '../catalogue';
+import { Portrait, PortraitFrame, officerRole, seededAge } from './Portrait';
+
+/**
+ * 勢力の印。**色の小片と名を必ず一緒に出す。**
+ *
+ * 地図を勢力ごとの色で塗り分けた以上、一覧の側も同じ色で呼ばないと
+ * 色は印にならない。図で朱に塗られている州が匈奴のものだと分かるのは、
+ * 一覧の「匈奴」にも同じ朱が付いているからである
+ */
+export function FactionChip({ id, bold }: { id: FactionId; bold?: boolean }) {
+  return (
+    <span className="inline-flex items-center gap-1 align-middle">
+      <span
+        className="inline-block rounded-[1px] shrink-0"
+        style={{
+          width: 8,
+          height: 8,
+          backgroundColor: FACTION_COLORS[id],
+          border: '1px solid rgba(36, 31, 26, 0.45)',
+        }}
+      />
+      <span style={{ color: FACTION_COLORS[id], fontWeight: bold === false ? 400 : 600 }}>
+        {FACTION_LABELS[id]}
+      </span>
+    </span>
+  );
+}
 
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
@@ -28,62 +55,119 @@ function Stat({ label, value }: { label: string; value: string | number }) {
   );
 }
 
-/** 能力の三つ組。諸王と首長で使い回す小さな並び */
+/**
+ * 能力の三つ組。諸王と首長で使い回す。
+ *
+ * 武将の五能力と**同じ形・同じ色分け**で並べる。同じ画面に二通りの能力表が
+ * あると、どちらが強いのかを比べるのに一拍かかる
+ */
 function AbilityRow({ abilities, ambition }: { abilities: Abilities; ambition?: number }) {
-  const cells: { label: string; value: number; tone?: string }[] = [
+  const cells: { label: string; value: number; ambitionCell?: boolean }[] = [
     { label: '軍', value: abilities.military },
     { label: '政', value: abilities.administration },
     { label: '望', value: abilities.charisma },
   ];
-  if (ambition !== undefined) cells.push({ label: '野', value: ambition, tone: 'var(--cinnabar)' });
+  if (ambition !== undefined) cells.push({ label: '野', value: ambition, ambitionCell: true });
 
+  return <GradeGrid cells={cells} />;
+}
+
+/**
+ * 能力の格。**数を読ませる前に、色で高低を語らせる。**
+ *
+ * すべて同じ字で並べていたときは、統率9の将と統率4の将が同じ重さに見えた。
+ * 五つの数を毎回読み比べないと誰が優れているのか分からないので、
+ * 一覧を上から流し読みできなかった。**傑出（9以上）は金、優（7〜8）は藍、
+ * 並（5〜6）は墨、劣（4以下）は淡く**置く
+ */
+function gradeOf(value: number): { fg: string; bg: string; weight: number } {
+  if (value >= 9) return { fg: '#4a3608', bg: 'rgba(208, 166, 63, 0.85)', weight: 700 };
+  if (value >= 7) return { fg: '#f0e9da', bg: 'rgba(46, 63, 87, 0.88)', weight: 700 };
+  if (value >= 5) return { fg: '#2e2a22', bg: 'rgba(200, 180, 139, 0.5)', weight: 400 };
+  return { fg: '#7a7062', bg: 'rgba(200, 180, 139, 0.22)', weight: 400 };
+}
+
+/**
+ * 野心だけは高いほうが**危うい。**
+ *
+ * 能力と同じ色分けを当てていたときは、野心10の匈奴が金の札で
+ * 「傑出」として並び、優れた首長のように見えた。同じ形の表に混ぜる以上、
+ * 色の意味だけは逆に取る
+ */
+function ambitionGrade(value: number): { fg: string; bg: string; weight: number } {
+  if (value >= 9) return { fg: '#f6ece0', bg: 'rgba(155, 45, 32, 0.9)', weight: 700 };
+  if (value >= 7) return { fg: '#6d1d15', bg: 'rgba(155, 45, 32, 0.28)', weight: 700 };
+  if (value >= 5) return { fg: '#2e2a22', bg: 'rgba(200, 180, 139, 0.5)', weight: 400 };
+  return { fg: '#7a7062', bg: 'rgba(200, 180, 139, 0.22)', weight: 400 };
+}
+
+/**
+ * 能力の並び。**見出しの帯の下に数を揃えて置く。**
+ *
+ * 「統9」「武8」と札を五つ並べていたときは、札のほうが数より大きく見えて
+ * 何の数か分かるのに一拍かかった。見出しは上に一度だけ出し、
+ * 下に数だけを揃えるほうが、人物を縦に並べたとき列として読める
+ */
+function GradeGrid({
+  cells,
+}: {
+  cells: { label: string; value: number; ambitionCell?: boolean }[];
+}) {
   return (
-    <span className="inline-flex gap-1 align-middle">
-      {cells.map((cell) => (
-        <span
-          key={cell.label}
-          className="text-[10px] tabular-nums px-1 rounded-[2px]"
-          style={{
-            backgroundColor: 'rgba(0,0,0,0.06)',
-            border: '1px solid var(--bamboo)',
-            color: cell.tone ?? 'var(--ink)',
-          }}
-        >
-          {cell.label}
-          {cell.value}
-        </span>
-      ))}
+    <span className="inline-block align-middle">
+      <span className="flex">
+        {cells.map((cell) => (
+          <span
+            key={cell.label}
+            className="text-[9px] text-center"
+            style={{
+              width: 19,
+              color: 'var(--silk)',
+              backgroundColor: cell.ambitionCell
+                ? 'rgba(109, 29, 21, 0.82)'
+                : 'rgba(36, 31, 26, 0.72)',
+              borderRight: '1px solid rgba(240, 230, 210, 0.25)',
+              letterSpacing: 0,
+            }}
+          >
+            {cell.label}
+          </span>
+        ))}
+      </span>
+      <span className="flex">
+        {cells.map((cell) => {
+          const grade = cell.ambitionCell ? ambitionGrade(cell.value) : gradeOf(cell.value);
+          return (
+            <span
+              key={cell.label}
+              className="text-[11px] text-center tabular-nums"
+              style={{
+                width: 19,
+                color: grade.fg,
+                backgroundColor: grade.bg,
+                fontWeight: grade.weight,
+                borderRight: '1px solid rgba(36, 31, 26, 0.22)',
+              }}
+            >
+              {cell.value}
+            </span>
+          );
+        })}
+      </span>
     </span>
   );
 }
 
-/** 武将の五能力。統率・武力・知力・政治・魅力を小さく並べる */
+const FIVE: [string, keyof OfficerAbilities][] = [
+  ['統', 'leadership'],
+  ['武', 'might'],
+  ['知', 'intellect'],
+  ['政', 'politics'],
+  ['魅', 'charm'],
+];
+
 export function FiveRow({ abilities }: { abilities: OfficerAbilities }) {
-  const cells: [string, number][] = [
-    ['統', abilities.leadership],
-    ['武', abilities.might],
-    ['知', abilities.intellect],
-    ['政', abilities.politics],
-    ['魅', abilities.charm],
-  ];
-  return (
-    <span className="inline-flex gap-1 align-middle">
-      {cells.map(([label, value]) => (
-        <span
-          key={label}
-          className="text-[10px] tabular-nums px-1 rounded-[2px]"
-          style={{
-            backgroundColor: value >= 9 ? 'rgba(208,166,63,0.3)' : 'rgba(0,0,0,0.06)',
-            border: '1px solid var(--bamboo)',
-            fontWeight: value >= 9 ? 700 : 400,
-          }}
-        >
-          {label}
-          {value}
-        </span>
-      ))}
-    </span>
-  );
+  return <GradeGrid cells={FIVE.map(([label, key]) => ({ label, value: abilities[key] }))} />;
 }
 
 /** 忠誠の帯。細っているものだけ朱にする */
@@ -117,15 +201,15 @@ function LoyaltyBar({ loyalty }: { loyalty: number }) {
 /** 武将の一行。名簿でも席でも使い回す */
 export function OfficerLine({ officer, post }: { officer: Official; post?: string }) {
   return (
-    <li className="text-[12px] flex gap-2">
+    <li className="text-[12px] flex gap-2 items-start">
       {/* 顔は席ではなく人で決まる。官職は下の札のほうで見せる */}
-      <Portrait
+      <PortraitFrame
         spec={{
           seed: officer.id,
           role: officerRole(officer.abilities),
           age: seededAge(officer.id, 26, 64),
         }}
-        size={38}
+        size={42}
       />
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-1.5 flex-wrap">
@@ -349,7 +433,7 @@ export function ConsortPanel({ state }: { state: GameState }) {
     <section className="han-panel rounded-sm px-3 py-2">
       <h2 className="han-heading text-sm">皇后</h2>
       <div className="mt-1.5 flex gap-2 items-start">
-        <Portrait
+        <PortraitFrame
           spec={{
             seed: consort.id,
             role: 'empress',
@@ -397,10 +481,10 @@ export function PrincePanel({ state }: { state: GameState }) {
       <h2 className="han-heading text-sm">宗室の諸王</h2>
       <ul className="mt-1.5 space-y-1">
         {state.princes.map((prince) => (
-          <li key={prince.id} className="text-[12px] flex gap-2">
-            <Portrait
+          <li key={prince.id} className="text-[12px] flex gap-2 items-start">
+            <PortraitFrame
               spec={{ seed: prince.id, role: 'prince', age: seededAge(prince.id, 19, 58) }}
-              size={38}
+              size={40}
             />
             <div className="min-w-0 flex-1">
             <div className="flex items-baseline gap-1.5 flex-wrap">
@@ -446,8 +530,8 @@ export function TribePanel({ state }: { state: GameState }) {
         {factions.map((faction) => {
           const chieftain = chieftainOf(faction.id, state.year);
           return (
-            <li key={faction.id} className="text-[12px] flex gap-2">
-              <Portrait
+            <li key={faction.id} className="text-[12px] flex gap-2 items-start">
+              <PortraitFrame
                 spec={{
                   seed: chieftain?.name ?? faction.id,
                   role: 'chieftain',
@@ -458,7 +542,9 @@ export function TribePanel({ state }: { state: GameState }) {
               />
               <div className="min-w-0 flex-1">
               <div className="flex items-baseline gap-1.5 flex-wrap">
-                <span className="font-semibold shrink-0">{FACTION_LABELS[faction.id]}</span>
+                <span className="shrink-0">
+                  <FactionChip id={faction.id} />
+                </span>
                 {faction.proclaimedYear !== null && (
                   <span
                     className="han-seal rounded-[2px] px-1 text-[10px] font-bold shrink-0"
@@ -524,7 +610,7 @@ export function NorthPanel({ state }: { state: GameState }) {
         北朝 — {north.name}（{north.foundedYear}年〜）
       </h2>
       <div className="mt-1 flex gap-2 items-start">
-        <Portrait
+        <PortraitFrame
           spec={{
             seed: north.rulerName,
             role: 'northRuler',

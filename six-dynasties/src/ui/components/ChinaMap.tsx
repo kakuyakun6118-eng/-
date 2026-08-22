@@ -2,11 +2,14 @@ import { useMemo } from 'react';
 
 import type { FactionId, GameState, HomelandId, ProvinceId } from '../../core/types';
 import {
+  FACTION_COLORS,
   FACTION_LABELS,
   HOMELAND_LABELS,
+  NORTH_COLOR,
   PROVINCE_LABELS,
   PROVINCE_SEATS,
   SEAT_COORDS,
+  holderColor,
 } from '../catalogue';
 import {
   CONTEXT_LAND_PATH,
@@ -31,23 +34,22 @@ export type InspectTarget =
   | { kind: 'north' };
 
 /**
- * 州の色。支配度をそのまま濃さにする。
+ * 州の塗り。**勢力の色を、地形の上に透かして乗せる。**
  *
- * 朝廷の州は藍、胡族の国は朱、北朝は墨、挙兵した王は紫で塗る。
- * **持ち主が一目で分かることを、濃淡より優先する**
+ * かつては不透明な単色で塗り潰していたので、下に敷いた平原・高原・砂漠・山地が
+ * 一枚残らず隠れ、地図が15枚の色紙になっていた。しかも胡族はひと色の朱で、
+ * 并州の匈奴も遼東の慕容も見分けがつかなかった。
+ *
+ * 色は持ち主ごと（`holderColor`）、**濃さは支配の固さ**。
+ * 朝廷の州は支配度が高いほど濃く塗られ、傾いた州は地形が透けて見える —
+ * **塗りの薄さがそのまま「その土地がまだ自分のものになっていない」ことを語る**
  */
-function provinceFill(state: GameState, id: ProvinceId): string {
+function provinceFill(state: GameState, id: ProvinceId): { color: string; opacity: number } {
   const province = state.provinces[id];
-  if (province.holder === 'north') return '#3a3129';
-  if (province.holder === 'prince') return '#5b3f63';
-  if (province.holder !== null) return '#8e3323';
-
-  // 朝廷の州。支配度が高いほど濃い藍になる
+  const color = holderColor(province.holder);
+  if (province.holder !== null) return { color, opacity: 0.58 };
   const t = Math.max(0, Math.min(1, province.control / 100));
-  const light = [206, 198, 176];
-  const deep = [46, 63, 87];
-  const mix = light.map((c, i) => Math.round(c + (deep[i] - c) * (0.25 + t * 0.75)));
-  return `rgb(${mix[0]}, ${mix[1]}, ${mix[2]})`;
+  return { color, opacity: 0.16 + t * 0.46 };
 }
 
 /** 都に立てる旗。竿と靡く布で描く */
@@ -74,12 +76,15 @@ function CapitalBanner({ x, y }: { x: number; y: number }) {
 const MAJOR_CITIES = new Set<ProvinceId>(['Si', 'Yong', 'Ji', 'Yang', 'Jing', 'Yi']);
 
 /**
- * 城。**地図の上には点と名だけを置く。**
+ * 城。**点ではなく、城壁の形で描く。**
  *
- * 耐久の帯と数まで図に描き込んだときは、中原のように城が密なところで
- * 州名・支配度・城名・耐久・「囲まれている」が四重五重に重なって読めなかった。
- * 耐久は図の下の一覧（CityPanel）で読ませ、図では囲まれている城にだけ
- * 細い帯を出して危うさを伝える
+ * 丸い点で置いていたときは、都市なのか軍なのか勢力の印なのかが図から読めなかった。
+ * 版築の壁に楼を二つ立て、門を開ける — 大城には屋根を重ね、都には旗を添える。
+ * 城は持ち主の色で塗るので、**州の塗りが薄くても城の色でどちらのものかが分かる。**
+ *
+ * 耐久の帯と数まで描き込んだときは、城の密な中原で州名・支配度・城名・耐久・
+ * 「囲まれている」が四重五重に重なって読めなかった。耐久は図の下の一覧で読ませ、
+ * 図では囲まれている城にだけ細い帯を出して危うさを伝える
  */
 function City({
   x,
@@ -90,7 +95,7 @@ function City({
   major,
   isCapital,
   besieged,
-  held,
+  color,
 }: {
   x: number;
   y: number;
@@ -100,29 +105,41 @@ function City({
   major: boolean;
   isCapital: boolean;
   besieged: boolean;
-  held: boolean;
+  color: string;
 }) {
-  const radius = isCapital ? 3.8 : major ? 3 : 2;
+  const scale = isCapital ? 1.25 : major ? 1.05 : 0.8;
   const ratio = wallMax <= 0 ? 0 : Math.max(0, Math.min(1, wall / wallMax));
 
   return (
     <g pointerEvents="none">
-      {major && (
-        <circle cx={x} cy={y} r={radius + 2.2} fill="none" stroke="#2c2419" strokeWidth="0.7" opacity="0.7" />
-      )}
-      <circle
-        cx={x}
-        cy={y}
-        r={radius}
-        fill={isCapital ? 'var(--gold-bright)' : major ? '#f6ecd6' : '#e6dcc4'}
-        stroke="#2c2419"
-        strokeWidth="0.9"
-      />
+      <g transform={`translate(${x} ${y}) scale(${scale})`}>
+        {/* 城壁。左右に楼を立て、中央に門を開ける */}
+        <path
+          d="M-6,2 L-6,-3 L-4.2,-3 L-4.2,-5 L-1.6,-5 L-1.6,-3 L1.6,-3 L1.6,-5 L4.2,-5 L4.2,-3 L6,-3 L6,2 Z"
+          fill={color}
+          stroke="#241f1a"
+          strokeWidth="0.9"
+          strokeLinejoin="round"
+        />
+        {/* 門 */}
+        <path d="M-1.3,2 L-1.3,-0.6 A1.3,1.3 0 0 1 1.3,-0.6 L1.3,2 Z" fill="#f2e8d4" opacity="0.92" />
+        {/* 大城には屋根を重ねる */}
+        {(major || isCapital) && (
+          <path
+            d="M-7.4,-5 L0,-8.8 L7.4,-5 Z"
+            fill={color}
+            stroke="#241f1a"
+            strokeWidth="0.9"
+            strokeLinejoin="round"
+          />
+        )}
+      </g>
+      {isCapital && <CapitalBanner x={x + 8} y={y - 2} />}
       {/* 大城と都だけ名を出す。小さな城まで書くと図が字で埋まる */}
       {(major || isCapital) && (
         <text
           x={x}
-          y={y - radius - 3.5}
+          y={y - 9 * scale - 2.5}
           textAnchor="middle"
           fontSize="10.5"
           fontWeight="700"
@@ -135,15 +152,15 @@ function City({
         </text>
       )}
       {/* 囲まれている城だけ、残りの耐久を細い帯で見せる */}
-      {held && besieged && (
+      {besieged && (
         <>
-          <rect x={x - 11} y={y + radius + 2} width="22" height="2.4" fill="rgba(20,16,12,0.45)" />
+          <rect x={x - 11} y={y + 3.5} width="22" height="2.4" fill="rgba(20,16,12,0.5)" />
           <rect
             x={x - 11}
-            y={y + radius + 2}
+            y={y + 3.5}
             width={22 * ratio}
             height="2.4"
-            fill={ratio > 0.5 ? 'var(--gold)' : 'var(--cinnabar)'}
+            fill={ratio > 0.5 ? 'var(--gold-bright)' : 'var(--cinnabar)'}
           />
         </>
       )}
@@ -271,8 +288,8 @@ export function ChinaMap({
         {/* 天下の外の陸。背景として沈める */}
         <path d={CONTEXT_LAND_PATH} fill="#b5ab90" stroke="none" />
 
-        {/* 地形。州の下に敷いて起伏を出す */}
-        <g opacity="0.5">
+        {/* 地形。州の下に敷いて起伏を出す。塗りが透けるので濃く敷く */}
+        <g opacity="0.66">
           <path d={PLAIN_PATH} fill="#a9b184" />
           <path d={PLATEAU_PATH} fill="#b3a683" />
           <path d={DESERT_PATH} fill="#cfc09a" />
@@ -284,8 +301,12 @@ export function ChinaMap({
           <path
             key={id}
             d={HOMELAND_PATHS[id]}
-            fill={homelandOwners.get(id) === 'court' ? '#4a6f5d' : '#7a5a49'}
-            fillOpacity="0.75"
+            fill={
+              homelandOwners.get(id) === 'court'
+                ? 'var(--jade)'
+                : FACTION_COLORS[id as FactionId]
+            }
+            fillOpacity="0.5"
             stroke="#4c3f30"
             strokeWidth="0.6"
             onClick={() => onInspect({ kind: 'homeland', id })}
@@ -293,18 +314,60 @@ export function ChinaMap({
           />
         ))}
 
-        {/* 州 */}
+        {/*
+          州の下地。**色を乗せる前に、絹の色を一枚敷く。**
+          地形の上へ直に藍を乗せていたときは、山地の褐色と混ざって
+          朝廷の州が一様に濁った鼠色になり、支配度の濃淡が読めなかった。
+          顔料は紙の上でこそ発色する
+        */}
         {provinceIds.map((id) => (
           <path
-            key={id}
+            key={`g-${id}`}
             d={PROVINCE_PATHS[id]}
-            fill={provinceFill(state, id)}
-            stroke={selected === id ? 'var(--gold-bright)' : '#3d3427'}
-            strokeWidth={selected === id ? 2.2 : 0.7}
-            onClick={() => onSelect(id)}
-            style={{ cursor: 'pointer' }}
+            fill="#efe6d0"
+            fillOpacity="0.55"
+            pointerEvents="none"
           />
         ))}
+
+        {/* 州。持ち主の色を地形の上に透かして乗せる */}
+        {provinceIds.map((id) => {
+          const paint = provinceFill(state, id);
+          return (
+            <path
+              key={id}
+              d={PROVINCE_PATHS[id]}
+              fill={paint.color}
+              fillOpacity={paint.opacity}
+              stroke={selected === id ? 'var(--gold-bright)' : '#3d3427'}
+              strokeWidth={selected === id ? 2.2 : 0.8}
+              strokeOpacity={selected === id ? 1 : 0.75}
+              onClick={() => onSelect(id)}
+              style={{ cursor: 'pointer' }}
+            />
+          );
+        })}
+
+        {/*
+          奪われた州の輪郭。**持ち主の色で太く縁取る。**
+          朝廷の州にまで同じことをすると、州と州のあいだの境まで藍で塗り潰されて
+          十五州が一枚の面になる。縁で語らせるのは**手を離れた州のほう**で、
+          そこが天下のどこまで及んでいるかが一目で分かればよい
+        */}
+        {provinceIds
+          .filter((id) => state.provinces[id].holder !== null)
+          .map((id) => (
+            <path
+              key={`o-${id}`}
+              d={PROVINCE_PATHS[id]}
+              fill="none"
+              stroke={holderColor(state.provinces[id].holder)}
+              strokeWidth="2"
+              strokeOpacity="0.95"
+              strokeLinejoin="round"
+              pointerEvents="none"
+            />
+          ))}
 
         {/* 河川。州の上に描いて南北の境を読ませる */}
         <path d={MINOR_RIVER_PATH} fill="none" stroke="#6f8a97" strokeWidth="0.5" opacity="0.5" />
@@ -363,9 +426,8 @@ export function ChinaMap({
                 major={MAJOR_CITIES.has(id)}
                 isCapital={isCapital}
                 besieged={foes.length > 0 || (armies.has(id) && province.holder !== null)}
-                held={province.holder === null || armies.has(id)}
+                color={holderColor(province.holder)}
               />
-              {isCapital && <CapitalBanner x={seat[0]} y={seat[1]} />}
               {foes.length > 0 && <ClashMark x={seat[0] + 14} y={seat[1] - 12} />}
 
               <text
@@ -374,8 +436,8 @@ export function ChinaMap({
                 textAnchor="middle"
                 fontSize="14"
                 fontWeight="700"
-                fill={province.holder === null && province.control > 45 ? '#f4ecd9' : '#241f1a'}
-                stroke={province.holder === null && province.control > 45 ? 'none' : '#f0e6d2'}
+                fill={provinceFill(state, id).opacity > 0.44 ? '#f4ecd9' : '#241f1a'}
+                stroke={provinceFill(state, id).opacity > 0.44 ? 'none' : '#f0e6d2'}
                 strokeWidth="2.4"
                 paintOrder="stroke"
               >
@@ -386,8 +448,8 @@ export function ChinaMap({
                 y={label[1] + 13}
                 textAnchor="middle"
                 fontSize="10"
-                fill={province.holder === null && province.control > 45 ? '#e2d6bb' : '#4a4034'}
-                stroke={province.holder === null && province.control > 45 ? 'none' : '#f0e6d2'}
+                fill={provinceFill(state, id).opacity > 0.44 ? '#e2d6bb' : '#4a4034'}
+                stroke={provinceFill(state, id).opacity > 0.44 ? 'none' : '#f0e6d2'}
                 strokeWidth="2"
                 paintOrder="stroke"
               >
@@ -452,14 +514,28 @@ export function ChinaMap({
 
 /** 図の読み方。色と持ち主を結び付ける */
 export function MapLegend({ state }: { state: GameState }) {
+  /*
+   * **凡例には、いま図の上にある勢力だけを出す。**
+   * 十四の民をすべて並べていたら、大半の年は一つも州を持っていない民の色で
+   * 凡例が埋まる。州を握った民が現れたその年に、その色が凡例に加わる
+   */
+  const holders = new Set(
+    Object.values(state.provinces)
+      .map((p) => p.holder)
+      .filter((h): h is FactionId => h !== null && h !== 'north' && h !== 'prince'),
+  );
+  const revolted = Object.values(state.provinces).some((p) => p.holder === 'prince');
+
   const items: { color: string; label: string }[] = [
-    { color: '#2e3f57', label: '朝廷の州（濃いほど支配が固い）' },
-    { color: '#8e3323', label: '胡族の手に落ちた州' },
-    { color: '#3a3129', label: `北朝${state.north ? `（${state.north.name}）` : ''}` },
-    { color: '#5b3f63', label: '挙兵した王が拠る州' },
-    { color: '#7a5a49', label: '塞外の郷里' },
-    { color: '#2e3f57', label: '出征軍の札（赤は城を囲んでいる軍）' },
+    { color: holderColor(null), label: '朝廷（濃いほど支配が固い）' },
+    ...[...holders].map((id) => ({
+      color: FACTION_COLORS[id],
+      label: `${FACTION_LABELS[id]}${state.factions[id].kingdomName ?? ''}`,
+    })),
+    ...(state.north !== null ? [{ color: NORTH_COLOR, label: state.north.name }] : []),
+    ...(revolted ? [{ color: holderColor('prince'), label: '挙兵した王' }] : []),
   ];
+
   return (
     <div className="han-panel mt-2 rounded-sm px-3 py-2 flex flex-wrap gap-x-4 gap-y-1">
       {items.map((item) => (
@@ -472,8 +548,9 @@ export function MapLegend({ state }: { state: GameState }) {
         </span>
       ))}
       <span className="text-[11px] w-full" style={{ color: 'var(--ink-soft)' }}>
-        二重の輪は<strong style={{ color: 'var(--ink)' }}>大城</strong>（洛陽・長安・鄴・建康・江陵・成都）。
-        囲まれている城には残りの耐久が帯で出る
+        城は<strong style={{ color: 'var(--ink)' }}>持ち主の色</strong>で塗る。屋根が重なっているのが大城
+        （洛陽・長安・鄴・建康・江陵・成都）で、旗が立っているのが都。
+        囲まれている城には残りの耐久が帯で出る。札は出征軍（朱は城を囲んでいる軍）
       </span>
     </div>
   );

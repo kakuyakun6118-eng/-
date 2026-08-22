@@ -151,6 +151,46 @@ function paintedFor(spec: PortraitSpec, rng: () => number): string | null {
   return null;
 }
 
+/**
+ * 顔を額に入れる。
+ *
+ * **人物は絵として立てる。** 枠の無い画を字の横に置いていたときは、
+ * 顔が背景に溶けて一覧が字の壁に見えた。金の細枠と内側の墨の線、
+ * そして紙の厚みぶんの影を付けると、同じ画でも「並んでいる人物」として読める。
+ * 名を添えれば額の下の札になる
+ */
+export function PortraitFrame({
+  spec,
+  size = 44,
+  name,
+}: {
+  spec: PortraitSpec;
+  size?: number;
+  name?: string;
+}) {
+  return (
+    <span
+      className="block shrink-0"
+      style={{
+        padding: 2,
+        backgroundImage: 'linear-gradient(160deg, #d0a63f, #8a6a1c)',
+        border: '1px solid #5f4a12',
+        boxShadow: '0 1px 3px rgba(60, 48, 28, 0.35)',
+      }}
+    >
+      <Portrait spec={spec} size={size} />
+      {name !== undefined && (
+        <span
+          className="block text-center text-[10px] leading-[13px] truncate"
+          style={{ color: '#2a2110', fontWeight: 700, maxWidth: size }}
+        >
+          {name}
+        </span>
+      )}
+    </span>
+  );
+}
+
 export function Portrait({ spec, size = 44 }: { spec: PortraitSpec; size?: number }) {
   const rng = createRng(hashOf(spec.seed));
 

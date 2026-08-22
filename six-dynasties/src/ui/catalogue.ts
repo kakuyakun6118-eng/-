@@ -9,6 +9,7 @@ import type {
   FactionId,
   FactionStance,
   HomelandId,
+  ProvinceHolder,
   ProvinceId,
   TurnEventId,
   WingOrder,
@@ -104,6 +105,52 @@ export const FACTION_LABELS: Record<FactionId, string> = {
   Goguryeo: '高句麗',
   Tuyuhun: '吐谷渾',
 };
+
+/**
+ * 勢力の色。**地図はこれで塗り分ける。**
+ *
+ * 胡族をひと色の朱でまとめていたときは、并州の匈奴も遼東の慕容も同じ赤で、
+ * 誰が天下のどこを握っているのかが図から読めなかった。
+ * 十四の民に一つずつ色を当て、**その色のまま朝廷の一覧にも凡例にも出す。**
+ *
+ * 彩度は絹地に合わせて落としてある（原色を並べると図が騒がしくなり、
+ * 下に敷いた地形が読めなくなる）
+ */
+export const FACTION_COLORS: Record<FactionId, string> = {
+  Xiongnu: '#b8402f',
+  Jie: '#8b57a0',
+  Di: '#d19a35',
+  Qiang: '#a06f43',
+  Ba: '#3d9080',
+  Lushui: '#5f9bc0',
+  Dingling: '#b08f3c',
+  Qifu: '#789b4d',
+  Tuoba: '#4f66b5',
+  Murong: '#d16f4d',
+  Yuwen: '#8a7cc4',
+  Rouran: '#a8a85c',
+  Goguryeo: '#3d8c5c',
+  Tuyuhun: '#c4759a',
+};
+
+/**
+ * 朝廷・北朝・挙兵した王の色。勢力の色と同じ場所から引かせる。
+ *
+ * **地図の色は板の色より明るく取る。** 画面の枠に使っている藍（`--imperial`
+ * ＝ #2e3f57）をそのまま塗りに使ったときは、地形の褐色と混ざって
+ * 天下じゅうが一様に濁った鼠色になった。顔料は薄めても濁らない明度で選ぶ
+ */
+export const COURT_COLOR = '#3d6bb0';
+export const NORTH_COLOR = '#574c40';
+export const PRINCE_COLOR = '#8354a0';
+
+/** 州の持ち主の色。null は朝廷 */
+export function holderColor(holder: ProvinceHolder | null): string {
+  if (holder === null) return COURT_COLOR;
+  if (holder === 'north') return NORTH_COLOR;
+  if (holder === 'prince') return PRINCE_COLOR;
+  return FACTION_COLORS[holder];
+}
 
 export const FACTION_NOTES: Record<FactionId, string> = {
   Xiongnu: '并州に内徙した南匈奴。劉淵が漢を称し、洛陽を陥れる',
