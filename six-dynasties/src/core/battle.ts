@@ -17,6 +17,7 @@ import {
   MOBILIZE_MAX_PROVINCES,
   SOVEREIGN_MILITARY_PER_POINT,
 } from './constants';
+import { corpsDefence } from './corps';
 import type { BattleFoe, BattleLeader, GameState, ProvinceId } from './types';
 import { clamp100 } from './util';
 
@@ -43,6 +44,9 @@ export function defenceStrength(
     (1 + (inspector?.competence ?? 0) * INSPECTOR_DEFENSE_PER_POINT + mingjiang);
 
   if (reinforced.has(provinceId)) power += state.centralArmy * DEPLOY_SHARE;
+
+  // その州に立っている出征軍は、そのまま戦線に加わる
+  power += corpsDefence(state, provinceId);
 
   // 義従胡はその年の戦線に加わる。安く戦線を埋められる代わりに給が要る
   const auxiliaries = Object.values(state.factions).filter((f) => f.stance === 'auxiliary');

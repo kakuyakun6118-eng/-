@@ -192,7 +192,8 @@ export function rewardOfficer(state: GameState, officerId: string): GameState {
   if (state.treasury < REWARD_COST) return state;
   const inRoster = state.candidates.some((o) => o.id === officerId && o.retained);
   const seated = seatedOfficers(state).find((o) => o.id === officerId);
-  if (!inRoster && seated === undefined) return state;
+  const inField = state.corps.some((c) => c.officer.id === officerId);
+  if (!inRoster && seated === undefined && !inField) return state;
 
   const raise = (o: Official): Official =>
     o.id === officerId ? { ...o, loyalty: clamp100(o.loyalty + REWARD_LOYALTY_GAIN) } : o;
@@ -201,6 +202,7 @@ export function rewardOfficer(state: GameState, officerId: string): GameState {
     ...state,
     treasury: state.treasury - REWARD_COST,
     candidates: state.candidates.map(raise),
+    corps: state.corps.map((c) => ({ ...c, officer: raise(c.officer) })),
     marshal: {
       ...state.marshal,
       holder: state.marshal.holder === null ? null : raise(state.marshal.holder),
@@ -233,6 +235,7 @@ export function updateLoyalty(state: GameState, rng: () => number): GameState {
   let next: GameState = {
     ...state,
     candidates: state.candidates.map((o) => (o.retained ? cool(o) : o)),
+    corps: state.corps.map((c) => ({ ...c, officer: cool(c.officer) })),
     marshal: {
       ...state.marshal,
       holder: state.marshal.holder === null ? null : cool(state.marshal.holder),
@@ -263,6 +266,34 @@ export function updateLoyalty(state: GameState, rng: () => number): GameState {
   }
   if (next.chancellor !== null && next.chancellor.loyalty <= 0) {
     next = { ...next, chancellor: null, turnEvents: [...next.turnEvents, 'officer_left'] };
+  }
+
+  /*
+   * **兵を預けた将は、兵ごと離れる。**
+   *
+   * 王敦も桓玄も侯景も、朝廷が与えた軍を朝廷へ向けた。
+   * 出征軍が離反した年、その兵は中軍へは帰らず、
+   * 立っていた州が朝廷のものならその州も揺らぐ
+   */
+  const defecting = next.corps.filter((c) => c.officer.loyalty <= 0);
+  for (const corps of defecting) {
+    const province = next.provinces[corps.at];
+    next = {
+      ...next,
+      corps: next.corps.filter((c) => c.id !== corps.id),
+      provinces:
+        province === undefined || province.holder !== null
+          ? next.provinces
+          : {
+              ...next.provinces,
+              [corps.at]: {
+                ...province,
+                control: clamp100(province.control - OFFICER_DEFECT_CONTROL_LOSS),
+              },
+            },
+      mandate: clamp100(next.mandate - OFFICER_DEFECT_MANDATE_LOSS),
+      turnEvents: [...next.turnEvents, 'officer_defected'],
+    };
   }
 
   // 刺史はその州ごと離れる

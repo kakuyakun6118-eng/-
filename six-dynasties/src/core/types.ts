@@ -382,6 +382,34 @@ export interface Official {
   historical: boolean;
 }
 
+// ── 出征軍 ────────────────────────────────────────────
+
+/**
+ * 出征軍（部隊）。**中軍から兵を割いて将に預け、州から州へ動かす。**
+ *
+ * これまで失地の回復は「州を選んで一度賽を振る」だけだったので、
+ * 誰が率いても同じで、隣も通らずに軍が届いた。部隊にすると、
+ * 将の統率と個性が効き、行軍に年が要り、城は一年では落ちない。
+ *
+ * **新しい資源ではない。** 兵は中軍から出て中軍へ帰る移し替えで、
+ * 維持費も中軍と同じ単価で国庫から引く
+ */
+export interface Corps {
+  id: string;
+  /** 率いる将。名簿から連れ出すので、席と同じく人物ごと持つ */
+  officer: Official;
+  /** 預けた兵。中軍から割いたもの */
+  troops: number;
+  /** いまいる州 */
+  at: ProvinceId;
+  /** 目指す州。着けば `at` と同じになる */
+  target: ProvinceId;
+  /** いまの城を囲んでいる年数。行軍中は 0 */
+  siegeYears: number;
+  /** 出立した年 */
+  raisedYear: number;
+}
+
 /** 都督中外諸軍事。この時代に実際に軍を握っていた席 */
 export interface MarshalSeat {
   holder: Official | null;
@@ -517,6 +545,11 @@ export interface GameState {
   candidates: Official[];
   /** 一度でも名簿に出した史実の人物。二度は出さない */
   seenOfficers: string[];
+  /**
+   * 野に出ている部隊。**将はここにいるあいだ名簿にも席にもいない。**
+   * 兵は中軍から割いたもので、帰還すれば中軍へ戻る
+   */
+  corps: Corps[];
   north: NorthernCourt | null;
   battlefield: Battlefield | null;
 
@@ -575,6 +608,9 @@ export type TurnEventId =
   | 'officer_left'
   | 'officer_defected'
   | 'officer_recruited'
+  | 'corps_dispatched'
+  | 'corps_took_city'
+  | 'corps_broken'
   | 'army_deserted'
   | 'battle_won'
   | 'battle_lost'
@@ -692,10 +728,25 @@ export interface SuppressPrinceAction {
   type: 'military_suppress_prince';
   princeId: string;
 }
-/** 北伐。失われた州を取り返す */
-export interface NorthernExpeditionAction {
-  type: 'military_northern_expedition';
+/**
+ * 出征。中軍から兵を割き、将に預けて州へ向かわせる。
+ * 部隊はその年のうちには着かない
+ */
+export interface DispatchCorpsAction {
+  type: 'military_dispatch_corps';
+  officerId: string;
   provinceId: ProvinceId;
+}
+/** 進軍先を改める。詔一本なので行動枠は使わない */
+export interface OrderCorpsAction {
+  type: 'military_order_corps';
+  corpsId: string;
+  provinceId: ProvinceId;
+}
+/** 召還。兵は中軍へ戻り、将は名簿へ戻る */
+export interface RecallCorpsAction {
+  type: 'military_recall_corps';
+  corpsId: string;
 }
 
 export interface RaiseTaxesAction {
@@ -751,7 +802,9 @@ export type PlayerAction =
   | RecruitProvinceAction
   | PitchedBattleAction
   | SuppressPrinceAction
-  | NorthernExpeditionAction
+  | DispatchCorpsAction
+  | OrderCorpsAction
+  | RecallCorpsAction
   | RaiseTaxesAction
   | ReorganizeArmyAction
   | ConfirmPrivilegeAction

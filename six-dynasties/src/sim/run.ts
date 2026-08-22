@@ -14,6 +14,7 @@ import provincesData from '../data/provinces.json';
 import { DIFFICULTY_LABELS, ENDING_YEAR, MAX_ACTIONS_PER_TURN } from '../core/constants';
 import { createInitialState } from '../core/economy';
 import { createRng } from '../core/rng';
+import { canCampaignAgainst, canDispatch } from '../core/corps';
 import { consumesActionSlot, evaluateScore, tick } from '../core/tick';
 import type {
   Difficulty,
@@ -33,8 +34,20 @@ function argOf(name: string, fallback: string): string {
   return index >= 0 && process.argv[index + 1] ? process.argv[index + 1] : fallback;
 }
 
-/** 方針。`general` は守りを埋めるだけ、`unifier` は北伐に枠を割く */
+/** 方針。`general` は守りを埋めるだけ、`unifier` は出征に枠を割く */
 const STRATEGY = argOf('strategy', 'general');
+
+/**
+ * 中軍をどこまで積むか。**方針とは別の軸として外から与えられるようにしてある。**
+ *
+ * 出征は積んだ軍を割いて出すものなので、薄い中軍のままでは部隊が
+ * 城に取りつく前に崩れる（90で回すと中級では城がひとつも落ちない）。
+ * だが「積むこと」そのものが守りも厚くするので、方針の比較で軍の量まで
+ * 一緒に動かすと、出征の損得が軍の量の損得に紛れる。
+ * `npm run sim -- --strategy general --army 150` で、
+ * **同じだけ積んで出さなかった場合**が測れる
+ */
+const ARMY_TARGET = Number(argOf('army', STRATEGY === 'unifier' ? '150' : '90'));
 
 function freshState(difficulty: Difficulty): GameState {
   const inspectors = (
@@ -89,7 +102,13 @@ function chooseActions(state: GameState, rng: () => number): PlayerAction[] {
   const retained = state.candidates.filter((o) => o.retained);
   const seatsToFill =
     state.marshal.holder === null || Object.keys(state.inspectors).length < 3;
-  if (retained.length < 1 && seatsToFill && state.treasury > 200) {
+  // 出征に枠を割く方針は将を余分に抱える。席を埋めた上で野へ出す者が要る
+  const wanted = STRATEGY === 'unifier' ? 2 : 1;
+  if (
+    retained.length < wanted &&
+    (seatsToFill || STRATEGY === 'unifier') &&
+    state.treasury > 200
+  ) {
     const best = [...state.candidates]
       .filter((o) => !o.retained)
       .sort((a, b) => b.abilities.leadership - a.abilities.leadership)[0];
@@ -114,7 +133,13 @@ function chooseActions(state: GameState, rng: () => number): PlayerAction[] {
    * 空いた州へ刺史を置く。**任命は枠を食わないので、置かない理由がない。**
    * 刺史は守りと支配度の回復に効き、個性によっては開発や城の修復にも効く
    */
-  if (retained.length > 0 && state.treasury > 520 && Object.keys(state.inspectors).length < 5) {
+  // 出征に枠を割く方針は、野へ出す一人を残して刺史を置く
+  const sparesKept = STRATEGY === 'unifier' ? 1 : 0;
+  if (
+    retained.length > sparesKept &&
+    state.treasury > 520 &&
+    Object.keys(state.inspectors).length < 5
+  ) {
     const vacant = held
       .filter((p) => state.inspectors[p.id] === undefined)
       .sort((a, b) => b.baseTax * b.control - a.baseTax * a.control)[0];
@@ -180,30 +205,57 @@ function chooseActions(state: GameState, rng: () => number): PlayerAction[] {
    * 312年から402年までどの数値も動かない死んだ局面になった。
    * **軍を保つことは余裕のある年の贅沢ではなく、毎年の課題**
    */
-  if (slots() < MAX_ACTIONS_PER_TURN && state.centralArmy < 90 && state.treasury > 200) {
+  if (slots() < MAX_ACTIONS_PER_TURN && state.centralArmy < ARMY_TARGET && state.treasury > 200) {
     const rich = held.sort((a, b) => b.baseTax * b.control - a.baseTax * a.control)[0];
     if (rich !== undefined) {
       actions.push({ type: 'military_recruit_province', provinceId: rich.id });
     }
   }
 
-  // 失った州が多ければ北伐を試みる
+  /*
+   * 失った州があれば軍を出す。**出すのは1年の手、あとは詔で足りる。**
+   * 着くまでに何年かかるかは道のりで決まるので、出しっぱなしにはできない
+   */
   const lost = Object.values(state.provinces).filter(
     (p) => p.holder !== null && p.holder !== 'prince',
   );
-  const threshold = STRATEGY === 'unifier' ? 90 : 160;
-  const eagerness = STRATEGY === 'unifier' ? 0.9 : 0.25;
+  const threshold = STRATEGY === 'unifier' ? 110 : 200;
+  const eagerness = STRATEGY === 'unifier' ? 0.85 : 0.2;
+
+  // 目的の州を取り終えた部隊には、次の州を指す（枠は使わない）
+  for (const corps of state.corps) {
+    if (corps.at !== corps.target) continue;
+    if (canCampaignAgainst(state, corps.at)) continue;
+    const near = lost.sort((a, b) => a.wall - b.wall)[0];
+    if (near !== undefined) {
+      actions.push({ type: 'military_order_corps', corpsId: corps.id, provinceId: near.id });
+    } else {
+      actions.push({ type: 'military_recall_corps', corpsId: corps.id });
+    }
+  }
+
   if (
     slots() < MAX_ACTIONS_PER_TURN &&
     lost.length > 0 &&
+    canDispatch(state) &&
     state.centralArmy > threshold &&
     rng() < eagerness
   ) {
-    // 弱い相手から取り返す。北朝を抱えた州は最後に回す
+    // 弱い城から取り返す。北朝の抱えた州は最後に回す
     const ordered = [...lost].sort(
-      (a, b) => (a.holder === 'north' ? 1 : 0) - (b.holder === 'north' ? 1 : 0),
+      (a, b) =>
+        (a.holder === 'north' ? 1 : 0) - (b.holder === 'north' ? 1 : 0) || a.wall - b.wall,
     );
-    actions.push({ type: 'military_northern_expedition', provinceId: ordered[0].id });
+    const general = [...retained].sort(
+      (a, b) => b.abilities.leadership - a.abilities.leadership,
+    )[0];
+    if (general !== undefined) {
+      actions.push({
+        type: 'military_dispatch_corps',
+        officerId: general.id,
+        provinceId: ordered[0].id,
+      });
+    }
   }
 
   // それでも枠が余っていれば税を取り立てる
@@ -236,6 +288,8 @@ interface Outcome {
   defections: number;
   inspectorAvg: number;
   citiesLost: number;
+  citiesTaken: number;
+  corpsBroken: number;
 }
 
 function runOne(difficulty: Difficulty, seed: number): Outcome {
@@ -245,6 +299,8 @@ function runOne(difficulty: Difficulty, seed: number): Outcome {
   let marshalYears = 0;
   let defections = 0;
   let inspectorYears = 0;
+  let citiesTaken = 0;
+  let corpsBroken = 0;
   // 帝を称したことのある勢力（延べ）と、同時に並び立った最大の数
   const everProclaimed = new Set<string>();
   let peakProclaimed = 0;
@@ -255,6 +311,8 @@ function runOne(difficulty: Difficulty, seed: number): Outcome {
     if (state.marshal.holder !== null) marshalYears++;
     inspectorYears += Object.keys(state.inspectors).length;
     if (state.turnEvents.includes('officer_defected')) defections++;
+    citiesTaken += state.turnEvents.filter((e) => e === 'corps_took_city').length;
+    corpsBroken += state.turnEvents.filter((e) => e === 'corps_broken').length;
     let now = 0;
     for (const f of Object.values(state.factions)) {
       if (f.proclaimedYear === null) continue;
@@ -286,6 +344,8 @@ function runOne(difficulty: Difficulty, seed: number): Outcome {
     defections,
     inspectorAvg: inspectorYears / Math.max(1, state.turn),
     citiesLost: Object.values(state.provinces).filter((p) => p.holder !== null).length,
+    citiesTaken,
+    corpsBroken,
   };
 }
 
@@ -327,4 +387,5 @@ for (const difficulty of difficulties) {
   console.log(`  藩王が帝位に即いた局 ${pct(count((o) => o.princeTookCapital))}`);
   console.log(`  都督が居る年の割合 ${(mean(outcomes.map((o) => o.marshalRatio)) * 100).toFixed(0)}% ／ 刺史 平均 ${mean(outcomes.map((o) => o.inspectorAvg)).toFixed(1)}人 ／ 離反 ${mean(outcomes.map((o) => o.defections)).toFixed(1)}回`);
   console.log(`  失った州 平均 ${mean(outcomes.map((o) => o.citiesLost)).toFixed(1)}`);
+  console.log(`  攻め落とした城 平均 ${mean(outcomes.map((o) => o.citiesTaken)).toFixed(1)} ／ 崩れた部隊 ${mean(outcomes.map((o) => o.corpsBroken)).toFixed(1)}`);
 }

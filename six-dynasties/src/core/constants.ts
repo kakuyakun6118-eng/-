@@ -581,10 +581,63 @@ export const NORTH_TEMPO_PER_POINT = 0.045;
 /** 北朝が分裂した年に失う戦力（534年の東西魏） */
 export const NORTH_SPLIT_STRENGTH_LOSS = 0.42;
 
-/** 北伐。取り返しに要る中軍の割合 */
-export const EXPEDITION_NORTH_SHARE = 0.7;
-/** 北伐で奪い返した州の初期支配度 */
+// ── 出征軍（部隊） ────────────────────────────────────
+
+/**
+ * 部隊。**中軍から兵を割いて将に預け、州から州へ動かして城を囲む。**
+ *
+ * かつての北伐は「州を選んで一度賽を振る」だけだったので、
+ * 誰が率いても同じで、隣も通らずに軍が届き、勝てばその年のうちに州が戻った。
+ * 部隊にすると、行軍に年が要り、城は一年では落ちず、
+ * **留守にした中軍のぶんだけ本土が薄くなる**
+ */
+
+/** 同時に出しておける部隊の数 */
+export const CORPS_MAX = 3;
+/** 出征に割く中軍の割合 */
+export const CORPS_SHARE = 0.55;
+/** これを割る中軍からは部隊を出せない */
+export const CORPS_MIN_ARMY = 40;
+/** 出征の支度金 */
+export const CORPS_COST = 110;
+/**
+ * 野に出ている兵の維持費の割増。
+ *
+ * **遠征は兵站で潰れる。** 都の禁軍と同じ単価で養えるなら、
+ * 軍を出しっぱなしにしない理由が無くなる。実測では、割増を付けずにいたとき
+ * 北伐に枠を割く方針のほうが守りを埋めるだけの方針より**存続まで上回った**
+ * （中級で52%対56%、そのうえ35%が統一した）。桓温の北伐が三度とも
+ * 兵糧で折れたように、遠くへ出した軍ほど高くつく
+ */
+export const CORPS_UPKEEP_MULTIPLIER = 1.7;
+/** 行軍の損耗。自領を歩いても兵は減る */
+export const CORPS_ATTRITION = 0.045;
+/** 敵地に立っている年の損耗 */
+export const CORPS_HOSTILE_ATTRITION = 0.075;
+/** 兵がこれを割った部隊は崩れる */
+export const CORPS_COLLAPSE = 10;
+/** 召還のときに失う兵の割合 */
+export const CORPS_RECALL_LOSS = 0.12;
+/** 将の統率1あたり、攻城の力に乗る倍率 */
+export const CORPS_LEAD_PER_POINT = 0.055;
+/** 一年の攻城で削れる城の耐久の基準 */
+export const CORPS_SIEGE_BREACH = 26;
+/** 攻城の一年で失う兵の基準 */
+export const CORPS_SIEGE_LOSS = 0.2;
+/** 攻城の一年で削れる守備隊の割合 */
+export const CORPS_SIEGE_GARRISON_LOSS = 0.16;
+/** 城を陥としたとき、そのまま州の守備に残す兵の割合 */
+export const CORPS_CAPTURE_GARRISON = 0.3;
+/** 城を陥としたときに得る天命 */
+export const CORPS_CAPTURE_MANDATE = 9;
+/** 部隊が崩れたときに落ちる天命 */
+export const CORPS_BROKEN_MANDATE = 5;
+/** 自領に立つ部隊が、その州の守りに加える割合 */
+export const CORPS_GARRISON_SHARE = 0.6;
+/** 部隊が奪い返した州の初期支配度 */
 export const EXPEDITION_RECOVERED_CONTROL = 34;
+/** 敵の握る州の城も、囲まれていない年は繕われる */
+export const WALL_REPAIR_HOSTILE = 1.1;
 
 // ── 会戦 ──────────────────────────────────────────────
 

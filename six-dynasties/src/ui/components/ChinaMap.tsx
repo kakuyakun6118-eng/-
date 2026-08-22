@@ -151,6 +151,55 @@ function City({
   );
 }
 
+/**
+ * 出征軍の札。
+ *
+ * **軍がいまどこにいるかは、図でなければ読めない。** 幟だけを立てていたときは、
+ * 将の名が州名や治所の名と重なって、青州の軍がどれなのか読めなかった。
+ * 名と兵は下地のある札に載せ、**州の名より上の層**に描く
+ */
+function CorpsPlate({
+  x,
+  y,
+  name,
+  troops,
+  besieging,
+}: {
+  x: number;
+  y: number;
+  name: string;
+  troops: number;
+  besieging: boolean;
+}) {
+  const label = `${name} ${Math.round(troops)}`;
+  const width = label.length * 6.4 + 12;
+  return (
+    <g transform={`translate(${x} ${y})`} pointerEvents="none">
+      <line x1="0" y1="0" x2="6" y2="0" stroke="#2c2419" strokeWidth="1" />
+      <rect
+        x={-width}
+        y={-7}
+        width={width}
+        height="14"
+        rx="2"
+        fill={besieging ? 'var(--cinnabar-deep)' : 'var(--imperial)'}
+        stroke="#f0e6d2"
+        strokeWidth="0.8"
+      />
+      <text
+        x={-width / 2}
+        y={3.6}
+        textAnchor="middle"
+        fontSize="9.5"
+        fontWeight="700"
+        fill="#f6ece0"
+      >
+        {label}
+      </text>
+    </g>
+  );
+}
+
 /** 交戦の印。敵が踏み込んでいる州に置く */
 function ClashMark({ x, y }: { x: number; y: number }) {
   return (
@@ -196,6 +245,15 @@ export function ChinaMap({
   }, [state.homelands]);
 
   const provinceIds = Object.keys(PROVINCE_PATHS) as ProvinceId[];
+
+  /** 州ごとに、そこに立っている出征軍 */
+  const armies = useMemo(() => {
+    const map = new Map<ProvinceId, GameState['corps']>();
+    for (const corps of state.corps) {
+      map.set(corps.at, [...(map.get(corps.at) ?? []), corps]);
+    }
+    return map;
+  }, [state.corps]);
 
   return (
     <div className="han-panel rounded-sm overflow-hidden">
@@ -304,8 +362,8 @@ export function ChinaMap({
                 wallMax={province.wallMax}
                 major={MAJOR_CITIES.has(id)}
                 isCapital={isCapital}
-                besieged={foes.length > 0}
-                held={province.holder === null}
+                besieged={foes.length > 0 || (armies.has(id) && province.holder !== null)}
+                held={province.holder === null || armies.has(id)}
               />
               {isCapital && <CapitalBanner x={seat[0]} y={seat[1]} />}
               {foes.length > 0 && <ClashMark x={seat[0] + 14} y={seat[1] - 12} />}
@@ -345,6 +403,43 @@ export function ChinaMap({
           );
         })}
 
+        {/* 出征軍の札。州の名の上に重ねる */}
+        {[...armies.entries()].flatMap(([id, list]) => {
+          const seat = projectLonLat(...SEAT_COORDS[id]);
+          return list.map((corps, i) => (
+            <CorpsPlate
+              key={corps.id}
+              x={seat[0] - 7}
+              y={seat[1] - 14 - i * 17}
+              name={corps.officer.name}
+              troops={corps.troops}
+              besieging={state.provinces[id].holder !== null}
+            />
+          ));
+        })}
+
+        {/* 行軍の路。まだ着いていない軍から、目指す州へ点線を引く */}
+        {state.corps
+          .filter((corps) => corps.at !== corps.target)
+          .map((corps) => {
+            const from = projectLonLat(...SEAT_COORDS[corps.at]);
+            const to = projectLonLat(...SEAT_COORDS[corps.target]);
+            return (
+              <line
+                key={`m-${corps.id}`}
+                x1={from[0]}
+                y1={from[1]}
+                x2={to[0]}
+                y2={to[1]}
+                stroke="var(--imperial)"
+                strokeWidth="1.4"
+                strokeDasharray="4 3"
+                opacity="0.8"
+                pointerEvents="none"
+              />
+            );
+          })}
+
         {/*
           塞外の勢力を図の上端に駒でも並べていたが、この時代に郷里を持つ民は
           ちょうど6つの郷里の面と一対一で重なるので、同じものが二度出るだけだった。
@@ -363,6 +458,7 @@ export function MapLegend({ state }: { state: GameState }) {
     { color: '#3a3129', label: `北朝${state.north ? `（${state.north.name}）` : ''}` },
     { color: '#5b3f63', label: '挙兵した王が拠る州' },
     { color: '#7a5a49', label: '塞外の郷里' },
+    { color: '#2e3f57', label: '出征軍の札（赤は城を囲んでいる軍）' },
   ];
   return (
     <div className="han-panel mt-2 rounded-sm px-3 py-2 flex flex-wrap gap-x-4 gap-y-1">

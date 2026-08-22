@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { DEFAULT_CHIEFTAIN_ABILITIES, chieftainOf } from '../../core/factions';
 import { provincesToProclaim } from '../../core/constants';
+import { canCampaignAgainst } from '../../core/corps';
 import { houseName } from '../../core/diplomacy';
 import { traitName, traitNote } from '../../core/officers';
 import type {
@@ -166,7 +167,13 @@ export function RosterPanel({ state }: { state: GameState }) {
     .map((id) => ({ id, officer: state.inspectors[id] }))
     .filter((x): x is { id: ProvinceId; officer: Official } => x.officer !== undefined);
 
-  if (marshal === null && chancellor === null && inspectors.length === 0 && idle.length === 0) {
+  if (
+    marshal === null &&
+    chancellor === null &&
+    inspectors.length === 0 &&
+    idle.length === 0 &&
+    state.corps.length === 0
+  ) {
     return (
       <section className="han-panel rounded-sm px-3 py-2">
         <h2 className="han-heading text-sm">武将</h2>
@@ -189,6 +196,20 @@ export function RosterPanel({ state }: { state: GameState }) {
         {inspectors.map(({ id, officer }) => (
           <OfficerLine key={id} officer={officer} post={`${PROVINCE_LABELS[id]}刺史`} />
         ))}
+        {/* 野に出ている将。席には就いていないので、どこにいるかを役の代わりに出す */}
+        {state.corps.map((corps) => (
+          <OfficerLine
+            key={corps.id}
+            officer={corps.officer}
+            post={
+              canCampaignAgainst(state, corps.at)
+                ? `${PROVINCE_LABELS[corps.at]}を囲む・兵${Math.round(corps.troops)}`
+                : corps.at === corps.target
+                  ? `${PROVINCE_LABELS[corps.at]}に駐屯・兵${Math.round(corps.troops)}`
+                  : `${PROVINCE_LABELS[corps.at]}／${PROVINCE_LABELS[corps.target]}へ・兵${Math.round(corps.troops)}`
+            }
+          />
+        ))}
         {idle.map((officer) => (
           <OfficerLine key={officer.id} officer={officer} post="無官" />
         ))}
@@ -200,9 +221,9 @@ export function RosterPanel({ state }: { state: GameState }) {
       )}
       <p className="mt-1.5 text-[11px]" style={{ color: 'var(--ink-soft)' }}>
         統＝統率、武＝武力、知＝知力、政＝政治、魅＝魅力。
-        都督は統率が、刺史と録尚書事は政治が問われる。
-        **個性が効くのは官に就けた者だけ。**
-        忠誠は年ごとに冷め、尽きれば去る（州を預けていればその州ごと離れる）
+        都督は統率が、刺史と録尚書事は政治が問われ、出征軍を率いるのも統率。
+        個性が効くのは官に就けた者だけ。
+        忠誠は年ごとに冷め、尽きれば去る（州や兵を預けていればそれごと離れる）
       </p>
     </section>
   );

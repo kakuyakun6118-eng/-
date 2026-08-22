@@ -10,8 +10,6 @@ import {
   DEPLOY_ATTRITION,
   DESERTION_MANDATE_LOSS,
   DESERTION_PER_DEFICIT,
-  EXPEDITION_NORTH_SHARE,
-  EXPEDITION_RECOVERED_CONTROL,
   PROVINCE_RECRUIT_CONTROL_LOSS,
   PROVINCE_RECRUIT_COST,
   PROVINCE_RECRUIT_GARRISON_SHARE,
@@ -136,91 +134,6 @@ export function reorganizeArmy(state: GameState): GameState {
     treasury: state.treasury - REORGANIZE_COST,
     provinces,
     centralArmy: state.centralArmy + moved,
-  };
-}
-
-// ── 北伐 ──────────────────────────────────────────────
-
-/** 取り返しに挑める州か。朝廷の手を離れていて、隣に足場がある州 */
-export function canRecoverProvince(state: GameState, provinceId: ProvinceId): boolean {
-  const province = state.provinces[provinceId];
-  if (province === undefined || province.holder === null) return false;
-  // 主力を出せない朝廷は北伐そのものを企てられない
-  return state.centralArmy > ARMY_COLLAPSE_THRESHOLD * 3;
-}
-
-/**
- * 北伐。失われた州を取り返す。
- *
- * 桓温も劉裕もこれを繰り返した。守る側は「その州を握る者の力 ＋ 州兵」で、
- * 中軍の大半を投じても届かないことのほうが多い。
- * **拡大はこの朝廷には本来ずっと重い**、という主題をここに置く
- */
-export function recoverProvince(
-  state: GameState,
-  provinceId: ProvinceId,
-  rng: () => number,
-): GameState {
-  if (!canRecoverProvince(state, provinceId)) return state;
-  const province = state.provinces[provinceId];
-
-  const attacking = state.centralArmy * EXPEDITION_NORTH_SHARE;
-  const holder = province.holder;
-  const defending =
-    province.garrison +
-    (holder === 'north'
-      ? (state.north?.strength ?? 0) * 0.55
-      : holder === 'prince' || holder === null
-        ? 0
-        : (state.factions[holder]?.strength ?? 0) * 0.6);
-
-  const total = attacking + defending;
-  const winChance = total <= 0 ? 0 : attacking / total;
-  const won = rng() < winChance;
-
-  // 攻めた側は勝っても負けても兵を失う。負けたほうが重い
-  const losses = attacking * (won ? 0.3 : 0.6);
-  const next: GameState = {
-    ...state,
-    centralArmy: Math.max(0, state.centralArmy - losses),
-  };
-  if (!won) {
-    return { ...next, mandate: clamp100(next.mandate - 4) };
-  }
-
-  // 取り返した州は荒れている。支配度は低いところから始まる
-  const factions = { ...next.factions };
-  if (holder !== null && holder !== 'north' && holder !== 'prince') {
-    const faction = factions[holder];
-    if (faction) {
-      factions[holder] = {
-        ...faction,
-        strength: faction.strength * 0.6,
-        stance: 'hostile',
-        location: 'exterior',
-        foundedYear: null,
-        kingdomName: null,
-      };
-    }
-  }
-  return {
-    ...next,
-    factions,
-    north:
-      holder === 'north' && next.north
-        ? { ...next.north, strength: next.north.strength * 0.82 }
-        : next.north,
-    provinces: {
-      ...next.provinces,
-      [provinceId]: {
-        ...province,
-        holder: null,
-        control: EXPEDITION_RECOVERED_CONTROL,
-        wall: Math.max(8, province.wallMax * 0.35),
-        garrison: Math.max(6, province.garrison * 0.4),
-      },
-    },
-    mandate: clamp100(next.mandate + 9),
   };
 }
 

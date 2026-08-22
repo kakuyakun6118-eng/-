@@ -7,6 +7,10 @@ import {
   DEFEND_COST,
   MARRIAGE_COST,
   MOVE_CAPITAL_COST,
+  CORPS_COST,
+  CORPS_MAX,
+  CORPS_MIN_ARMY,
+  CORPS_SHARE,
   RECRUIT_COST,
   REWARD_COST,
   PACIFY_COST,
@@ -23,8 +27,9 @@ import {
   canSubdueHomeland,
   tributeCost,
 } from '../../core/diplomacy';
+import { canCampaignAgainst, canDispatch } from '../../core/corps';
+import { marchPath } from '../../core/geography';
 import { canMoveCapital } from '../../core/economy';
-import { canRecoverProvince } from '../../core/military';
 import { recruitChance, seatedOfficers, traitName, traitNote } from '../../core/officers';
 import type {
   BattleFoe,
@@ -379,23 +384,110 @@ export function ActionPanel({
                 detail: '天命は戻るが、その将に従っていた兵は離れる',
               })}
 
+            <div className="pt-1 text-[11px]" style={{ color: 'var(--cinnabar)' }}>
+              出征 — 中軍を割いて将に預け、州から州へ動かして城を囲む
+            </div>
+            {state.corps.map((corps) => {
+              const here = PROVINCE_LABELS[corps.at];
+              /*
+               * 押した先がすぐ光るように、**選びかけの指図があればそれを出す。**
+               * 部隊のいまの目的地だけを見ていたときは、州を押しても
+               * 何も変わらないように見えた（年を送るまで反映されないため）
+               */
+              const pending = selected.find(
+                (a): a is Extract<PlayerAction, { type: 'military_order_corps' }> =>
+                  a.type === 'military_order_corps' && a.corpsId === corps.id,
+              );
+              const besieging = canCampaignAgainst(state, corps.at);
+              const path = marchPath(state, corps.at, corps.target);
+              return (
+                <div key={corps.id} className="pl-1">
+                  <div className="text-[11px]" style={{ color: 'var(--ink)' }}>
+                    {corps.officer.name}の軍 — {here}／兵{Math.round(corps.troops)}／忠誠
+                    {Math.round(corps.officer.loyalty)}
+                    {besieging
+                      ? `／${here}の城を囲んで${corps.siegeYears}年（耐久${Math.round(state.provinces[corps.at].wall)}）`
+                      : corps.at === corps.target
+                        ? '／駐屯'
+                        : `／${PROVINCE_LABELS[corps.target]}まであと${path.length}州`}
+                  </div>
+                  <ProvincePicker
+                    ids={lost.map((p) => p.id)}
+                    value={
+                      pending?.provinceId ?? (corps.target === corps.at ? null : corps.target)
+                    }
+                    onChange={(id) =>
+                      onToggle(
+                        { type: 'military_order_corps', corpsId: corps.id, provinceId: id },
+                        actionKey({
+                          type: 'military_order_corps',
+                          corpsId: corps.id,
+                          provinceId: id,
+                        }),
+                      )
+                    }
+                  />
+                  {row({
+                    action: { type: 'military_recall_corps', corpsId: corps.id },
+                    title: `${corps.officer.name}の軍を召還する`,
+                    detail: '兵は中軍へ戻り、将は配下へ戻る。帰り道でも兵は減る',
+                  })}
+                </div>
+              );
+            })}
+
             {lost.length > 0 && (
               <div className="pt-1">
-                <div className="text-[11px] mb-1" style={{ color: 'var(--cinnabar)' }}>
-                  北伐 — 失った州を取り返す
-                </div>
                 <ProvincePicker
                   ids={lost.map((p) => p.id)}
                   value={recoverTarget}
                   onChange={setRecoverTarget}
                 />
-                {recoverTarget &&
-                  row({
-                    action: { type: 'military_northern_expedition', provinceId: recoverTarget },
-                    title: `${PROVINCE_LABELS[recoverTarget]}へ北伐する`,
-                    detail: '中軍の70%を投じる。勝っても兵は大きく減り、取り返した州は荒れている',
-                    disabled: !canRecoverProvince(state, recoverTarget),
-                  })}
+                {recoverTarget === null && (
+                  <p className="text-[11px]" style={{ color: 'var(--ink-soft)' }}>
+                    攻める州を選ぶ
+                  </p>
+                )}
+                {recoverTarget !== null &&
+                  (retainedOf(state).length === 0 ? (
+                    <p className="text-[11px]" style={{ color: 'var(--cinnabar)' }}>
+                      無官の配下がいない。「人事」で在野の士を登用しないと軍は出せない
+                    </p>
+                  ) : (
+                    [...retainedOf(state)]
+                      .sort((a, b) => b.abilities.leadership - a.abilities.leadership)
+                      .map((officer) =>
+                        row({
+                          portrait: {
+                            seed: officer.id,
+                            role: officerRole(officer.abilities),
+                            age: seededAge(officer.id, 26, 64),
+                          },
+                          action: {
+                            type: 'military_dispatch_corps',
+                            officerId: officer.id,
+                            provinceId: recoverTarget,
+                          },
+                          title: `${officer.name}を${PROVINCE_LABELS[recoverTarget]}へ発たせる`,
+                          detail:
+                            `統率${officer.abilities.leadership}／${traitName(officer.trait)}／` +
+                            `中軍の${Math.round(CORPS_SHARE * 100)}%（兵${Math.round(state.centralArmy * CORPS_SHARE)}）を預ける。` +
+                            `${state.capitalName}から${marchPath(state, state.capital, recoverTarget).length}州の道のり`,
+                          cost: money(CORPS_COST),
+                          disabled: !canDispatch(state),
+                        }),
+                      )
+                  ))}
+                {state.corps.length >= CORPS_MAX && (
+                  <p className="text-[11px]" style={{ color: 'var(--ink-soft)' }}>
+                    同時に出せる軍は{CORPS_MAX}つまで
+                  </p>
+                )}
+                {state.centralArmy <= CORPS_MIN_ARMY && (
+                  <p className="text-[11px]" style={{ color: 'var(--cinnabar)' }}>
+                    中軍が薄すぎて軍を割けない（{CORPS_MIN_ARMY}を超えている必要がある）
+                  </p>
+                )}
               </div>
             )}
 

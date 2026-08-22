@@ -54,6 +54,14 @@ import {
   updateControl,
 } from './economy';
 import { applyHistoricalEvents } from './events';
+import {
+  advanceCorps,
+  canCampaignAgainst,
+  dispatchCorps,
+  orderCorps,
+  recallCorps,
+  updateCorpsOfficers,
+} from './corps';
 import { recruitOfficer, rewardOfficer, updateLoyalty, updateOfficerRoster } from './officers';
 import {
   applyFactionActions,
@@ -66,7 +74,6 @@ import {
   applyDesertion,
   checkUsurpation,
   conscript,
-  recoverProvince,
   recruitInProvince,
   reinforceGarrison,
   reorganizeArmy,
@@ -127,6 +134,9 @@ const SLOT_FREE_ACTIONS: ReadonlySet<PlayerAction['type']> = new Set([
   // 人事は詔で足りる。代わりに金がかかり、登用は断られもする
   'court_recruit_officer',
   'court_reward_officer',
+  // 出している部隊への指図も詔一本。出すことそのものだけが1年の手になる
+  'military_order_corps',
+  'military_recall_corps',
 ]);
 
 export function consumesActionSlot(action: PlayerAction): boolean {
@@ -199,6 +209,7 @@ export function concludeBattle(state: GameState, seed: Seed): GameState {
  * 3. プレイヤー行動の適用
  * 4. 胡族の手番 — 成長・移動・侵攻・建国
  * 4B. 北朝の手番 — 華北の統合と南征
+ * 4C. 出征軍の手番 — 行軍と攻城
  * 5. 都の攻防
  * 6. 支配度と戸口の更新
  * 7. 天命の判定 — 簒奪と禅譲、宗室と刺史の反乱
@@ -249,6 +260,17 @@ export function tick(state: GameState, actions: PlayerActions, seed: Seed): Game
   next = updateNorthernCourt(next, rng, modifiers);
   // 北朝が攻め落とした城もここで持ち主が決まる
   next = applyProvinceLosses(next, modifiers);
+
+  /*
+   * 4C. 出征軍の手番。**行軍か攻城か、そのどちらかだけ。**
+   *
+   * 胡族と北朝が動いたあとに置く。先に動かすと、その年に敵が奪ったばかりの州へ
+   * 部隊が「まだ自領だから」と素通りしてしまう
+   */
+  const besiegedByCourt = new Set(
+    next.corps.filter((c) => canCampaignAgainst(next, c.at)).map((c) => c.at),
+  );
+  next = advanceCorps(next, rng);
   next = updateHomelands(next, rng);
   next = growRevolts(next);
   // 兵を集めた王は都を衝く。陥とせばその王が帝位に即く
@@ -265,7 +287,7 @@ export function tick(state: GameState, actions: PlayerActions, seed: Seed): Game
   next = updateControl(next);
   next = developProvinces(next);
   next = recoverHouseholds(next);
-  next = repairWalls(next, new Set(modifiers.besieged.keys()));
+  next = repairWalls(next, new Set([...modifiers.besieged.keys(), ...besiegedByCourt]));
 
   // 7. 天命の判定
   next = applyDecay(next);
@@ -277,6 +299,7 @@ export function tick(state: GameState, actions: PlayerActions, seed: Seed): Game
   next = updateDynasty(next, rng);
   next = updatePrinceRoster(next, rng);
   next = updateOfficials(next);
+  next = updateCorpsOfficers(next);
   next = updateLoyalty(next, rng);
   next = updateOfficerRoster(next, rng);
   next = settlePendingMarriages(next);
@@ -381,8 +404,12 @@ function applyAction(
       ).state;
     case 'military_suppress_prince':
       return suppressPrince(state, action.princeId, rng);
-    case 'military_northern_expedition':
-      return recoverProvince(state, action.provinceId, rng);
+    case 'military_dispatch_corps':
+      return dispatchCorps(state, action.officerId, action.provinceId);
+    case 'military_order_corps':
+      return orderCorps(state, action.corpsId, action.provinceId);
+    case 'military_recall_corps':
+      return recallCorps(state, action.corpsId);
 
     case 'domestic_raise_taxes':
       return raiseTaxes(state);

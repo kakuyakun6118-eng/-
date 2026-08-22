@@ -20,6 +20,7 @@ import {
   TRAIT_REPAIR_BONUS,
   CONTROL_RECOVERY_MIN_CONTROL,
   CONVERSATION_COST,
+  CORPS_UPKEEP_MULTIPLIER,
   CONVERSATION_GENTRY_GAIN,
   CONVERSATION_MANDATE_GAIN,
   COURT_COST,
@@ -53,10 +54,12 @@ import {
   TAX_BASE_RECOVERY,
   TAX_BASE_REFERENCE,
   WALL_REPAIR,
+  WALL_REPAIR_HOSTILE,
   WALL_REPAIR_PER_POINT,
   TAX_RATE,
   modifiersOf,
 } from './constants';
+import { corpsTroops } from './corps';
 import { consortRelief } from './diplomacy';
 import { hasTrait, seatedOfficers } from './officers';
 import type {
@@ -124,6 +127,7 @@ export function createInitialState(
     inspectors: inspectorMap,
     candidates: [],
     seenOfficers: [],
+    corps: [],
     north: null,
     battlefield: null,
 
@@ -183,10 +187,20 @@ export function calculateIncome(state: GameState): number {
   );
 }
 
-/** 支出 = 中軍の維持費 + 州兵の維持費 + 宮廷費 */
+/**
+ * 支出 = 中軍の維持費 + 出征軍の維持費 + 州兵の維持費 + 宮廷費。
+ *
+ * **野に出ている兵はいっそう高くつく。** 出征のあいだ中軍の帳簿が軽くなるだけ、
+ * では遠征がただになってしまう。兵は都にいても野にいても食い、
+ * 遠くへ運ぶぶんだけ余計に食う（`CORPS_UPKEEP_MULTIPLIER`）
+ */
 export function calculateExpenses(state: GameState): number {
   const garrisons = heldProvinces(state).reduce((sum, p) => sum + p.garrison, 0);
-  return state.centralArmy * ARMY_UPKEEP + garrisons * GARRISON_UPKEEP + COURT_COST;
+  return (
+    (state.centralArmy + corpsTroops(state) * CORPS_UPKEEP_MULTIPLIER) * ARMY_UPKEEP +
+    garrisons * GARRISON_UPKEEP +
+    COURT_COST
+  );
 }
 
 // ── 支配度 ────────────────────────────────────────────
@@ -226,7 +240,11 @@ export function updateControl(state: GameState): GameState {
  * 城の修復。囲まれていない年に少しずつ耐久が戻る。
  *
  * 刺史がいれば戻りが速い。囲まれているあいだは戻らないので、
- * 攻め続けられている城は年ごとに削られていく
+ * 攻め続けられている城は年ごとに削られていく。
+ *
+ * **敵の手にある城も繕われる。** 奪われた州の城が二度と直らないままだと、
+ * 部隊を出しさえすれば何年かかっても必ず落ちる形になり、
+ * 攻城が「時間を払えば買えるもの」になってしまう
  */
 export function repairWalls(state: GameState, besieged: ReadonlySet<ProvinceId>): GameState {
   const provinces = { ...state.provinces };
@@ -234,8 +252,16 @@ export function repairWalls(state: GameState, besieged: ReadonlySet<ProvinceId>)
 
   for (const id of Object.keys(provinces) as ProvinceId[]) {
     const province = provinces[id];
-    if (province.holder !== null || besieged.has(id)) continue;
+    if (besieged.has(id)) continue;
     if (province.wall >= province.wallMax) continue;
+    if (province.holder !== null) {
+      provinces[id] = {
+        ...province,
+        wall: Math.min(province.wallMax, province.wall + WALL_REPAIR_HOSTILE),
+      };
+      changed = true;
+      continue;
+    }
 
     const inspector = state.inspectors[id];
     const repair =

@@ -254,6 +254,9 @@ export function actionKey(action: PlayerAction): string {
   if ('princeId' in action) parts.push(action.princeId);
   // 同じ官職の候補どうしを区別する。入れないと3人の候補が同じキーになる
   if ('officialId' in action) parts.push(action.officialId);
+  // 出征は「誰を」「どこへ」で別の行動になる
+  if ('officerId' in action && action.officerId !== undefined) parts.push(action.officerId);
+  if ('corpsId' in action) parts.push(action.corpsId);
   if ('target' in action) {
     parts.push(
       action.target.kind === 'north'

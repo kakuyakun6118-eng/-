@@ -22,6 +22,8 @@ import provincesData from '../data/provinces.json';
 import { availableBattleLeaders, availableFoes } from '../core/battle';
 import { ENDING_YEAR, MAX_ACTIONS_PER_TURN, provincesToProclaim } from '../core/constants';
 import { createInitialState } from '../core/economy';
+import { canCampaignAgainst } from '../core/corps';
+import { NEIGHBOURS, marchPath } from '../core/geography';
 import { seatedOfficers } from '../core/officers';
 import { appointMarshal } from '../core/officials';
 import { createRng } from '../core/rng';
@@ -158,7 +160,11 @@ function checkState(state: GameState, where: string): void {
    * 武将は**一人につき一か所**にしかいない。名簿と席の両方に同じ者が
    * 載っていると、恩賞が二重に効いたり、去ったはずの者が残ったりする
    */
-  const everyone = [...state.candidates, ...seatedOfficers(state)];
+  const everyone = [
+    ...state.candidates,
+    ...seatedOfficers(state),
+    ...state.corps.map((c) => c.officer),
+  ];
   const ids = everyone.map((o) => o.id);
   if (new Set(ids).size !== ids.length) {
     const dup = ids.find((id, i) => ids.indexOf(id) !== i);
@@ -180,6 +186,30 @@ function checkState(state: GameState, where: string): void {
     if (!officer.retained && officer.historical) {
       // 席に就いている以上は配下のはず（登用せずに官へは就けない）
       flag('登用していない者が官に就いている', `${where} ${officer.name}`);
+    }
+  }
+
+  /*
+   * 出征軍。**兵は中軍から割いた移し替えなので、湧いても消えてもならない。**
+   * 存在しない州に立っている部隊や、目的の州へ道の無い部隊も破れになる
+   */
+  const corpsIds = state.corps.map((c) => c.id);
+  if (new Set(corpsIds).size !== corpsIds.length) {
+    flag('同じ部隊が二つある', `${where} ${corpsIds.join('・')}`);
+  }
+  for (const corps of state.corps) {
+    const at = `${where} ${corps.officer.name}の軍`;
+    if (!finite(corps.troops) || corps.troops < 0) flag('出征軍の兵が負', `${at}=${corps.troops}`);
+    if (state.provinces[corps.at] === undefined) flag('出征軍が存在しない州にいる', `${at}@${corps.at}`);
+    if (state.provinces[corps.target] === undefined) {
+      flag('出征軍が存在しない州を目指している', `${at}→${corps.target}`);
+    }
+    if (corps.siegeYears < 0 || !finite(corps.siegeYears)) {
+      flag('攻城の年数が異常', `${at}=${corps.siegeYears}`);
+    }
+    // 自領に立ったまま攻城の年数を数えているのは、囲みを畳み忘れた跡
+    if (corps.siegeYears > 0 && !canCampaignAgainst(state, corps.at)) {
+      flag('囲んでいない部隊が攻城の年数を持っている', `${at}@${corps.at}`);
     }
   }
 
@@ -220,7 +250,22 @@ function randomActions(state: GameState, rng: () => number): PlayerAction[] {
     pool.push({ type: 'court_dismiss_inspector', provinceId: province.id });
   }
   for (const province of Object.values(state.provinces)) {
-    if (province.holder !== null) pool.push({ type: 'military_northern_expedition', provinceId: province.id });
+    if (province.holder === null) continue;
+    for (const officer of state.candidates) {
+      if (!officer.retained) continue;
+      pool.push({
+        type: 'military_dispatch_corps',
+        officerId: officer.id,
+        provinceId: province.id,
+      });
+    }
+  }
+  for (const corps of state.corps) {
+    pool.push({ type: 'military_recall_corps', corpsId: corps.id });
+    pool.push({ type: 'court_reward_officer', officerId: corps.officer.id });
+    for (const province of Object.values(state.provinces)) {
+      pool.push({ type: 'military_order_corps', corpsId: corps.id, provinceId: province.id });
+    }
   }
   // 人事も打たせる。登用と恩賞は枠を食わないが、状態は動かす
   for (const officer of state.candidates) {
@@ -402,6 +447,35 @@ function auditBattlesAndSaves(): string {
   return `会戦 ${battles}回 ／ 激突 ${rounds}合`;
 }
 
+/**
+ * 地図そのものの点検。局を回さずに一度だけ見る。
+ *
+ * 辺が片方向だと、行けるのに帰れない州ができる。どこかの州が孤立していると、
+ * そこへ出した部隊は永久に都から動かない
+ */
+function auditGeography(): string {
+  const ids = Object.keys(NEIGHBOURS) as ProvinceId[];
+  for (const id of ids) {
+    for (const other of NEIGHBOURS[id]) {
+      if (NEIGHBOURS[other] === undefined) flag('隣に存在しない州がある', `${id}→${other}`);
+      else if (!NEIGHBOURS[other].includes(id)) flag('隣り合いが片方向', `${id}→${other}`);
+    }
+    if (NEIGHBOURS[id].includes(id)) flag('州が自分の隣になっている', id);
+  }
+
+  // どの州からどの州へも道が通っていること
+  const state = freshState('standard');
+  let pairs = 0;
+  for (const from of ids) {
+    for (const to of ids) {
+      if (from === to) continue;
+      if (marchPath(state, from, to).length === 0) flag('道の通らない州の組', `${from}→${to}`);
+      pairs++;
+    }
+  }
+  return `${ids.length}州 ／ ${pairs}組`;
+}
+
 // ── 3. 筋が通っているか ────────────────────────────────
 
 /** その民が攻め入れる州。`reach` の外にいれば地理が壊れている */
@@ -512,6 +586,7 @@ function auditCoherence(): string {
 console.log(`  1. 値域と整合  ${auditInvariants()}`);
 console.log(`  2. 会戦と保存  ${auditBattlesAndSaves()}`);
 console.log(`  3. 筋の通り方  ${auditCoherence()}`);
+console.log(`  4. 地図の繋がり ${auditGeography()}`);
 
 if (problems.size === 0) {
   console.log('\n破れなし');

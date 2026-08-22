@@ -12,8 +12,9 @@ const FORMAT = 'six-dynasties-save';
  *
  * 3 — 皇后に年齢・能力・顔の種を持たせた
  * 4 — 武将の名簿（五能力・個性・忠誠）を持たせた
+ * 5 — 出征軍（部隊）を持たせ、北伐を行軍と攻城に置き換えた
  */
-const VERSION = 4;
+const VERSION = 5;
 
 interface SaveFile {
   format: string;
@@ -81,6 +82,10 @@ export function deserialize(contents: string): LoadResult {
         state.dynasty.consort.abilities === undefined) &&
       '皇后の年齢と能力',
     !Array.isArray(state.seenOfficers) && '武将の名簿',
+    !Array.isArray(state.corps) && '出征軍',
+    Array.isArray(state.corps) &&
+      state.corps.some((c) => c?.officer === undefined || typeof c?.at !== 'string') &&
+      '出征軍の将と位置',
     Array.isArray(state.candidates) &&
       state.candidates.some((o) => o?.abilities === undefined || o?.trait === undefined) &&
       '武将の五能力と個性',
