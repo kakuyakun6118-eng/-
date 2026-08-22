@@ -13,7 +13,7 @@ import type {
   WingId,
   WingOrder,
 } from '../../core/types';
-import { FACTION_LABELS, ORDER_LABELS } from '../catalogue';
+import { FACTION_LABELS, ORDER_LABELS, PROVINCE_LABELS } from '../catalogue';
 
 const WINGS: WingId[] = ['left', 'center', 'right'];
 const ORDERS: WingOrder[] = ['advance', 'flank', 'withdraw'];
@@ -21,9 +21,10 @@ const ORDERS: WingOrder[] = ['advance', 'flank', 'withdraw'];
 const ARM_LABELS: Record<ArmKind, string> = { foot: '歩兵', horse: '騎兵', bow: '弓兵' };
 
 const TERRAIN_LABELS: Record<Battlefield['terrain'], string> = {
-  plain: '平野',
+  plain: '草原',
   river: '河を挟む',
   hill: '丘陵',
+  mountain: '山地',
   forest: '林',
   desert: '荒野',
 };
@@ -32,6 +33,7 @@ const TERRAIN_NOTES: Record<Battlefield['terrain'], string> = {
   plain: '遮るものがない。数がそのまま利く',
   river: '渡って攻める側が不利になる',
   hill: '高みを取れば迂回がよく効く',
+  mountain: '道が細い。大軍を並べられない',
   forest: '見通しが悪く、隊の並びが乱れる',
   desert: '水が乏しく、長く相持できない',
 };
@@ -209,6 +211,75 @@ function TerrainFeature({ terrain }: { terrain: Battlefield['terrain'] }) {
     );
   }
 
+  if (terrain === 'mountain') {
+    /*
+     * 山地。**丘とは稜線の角度で描き分ける。**
+     *
+     * 丘を大きくしただけでは、ただの大きな丘にしかならなかった。
+     * 山は折れた稜線と、頂の岩と、谷筋の影で語る。
+     * 蜀の桟道も秦嶺の谷もこの形で、**大軍を並べられない**のが地形の性質
+     */
+    const peak = (
+      cx: number,
+      baseY: number,
+      halfW: number,
+      height: number,
+      fill: string,
+      snow: boolean,
+      key: string,
+    ) => (
+      <g key={key}>
+        <ellipse cx={cx} cy={baseY} rx={halfW} ry={height * 0.1} fill="rgba(48, 40, 24, 0.14)" />
+        {/* 折れた稜線。左は緩く、右は切り立つ */}
+        <path
+          d={`M${cx - halfW},${baseY} L${cx - halfW * 0.35},${baseY - height * 0.66}
+              L${cx - halfW * 0.1},${baseY - height * 0.48} L${cx},${baseY - height}
+              L${cx + halfW * 0.3},${baseY - height * 0.42} L${cx + halfW},${baseY} Z`}
+          fill={fill}
+        />
+        {/* 陽の当たる面 */}
+        <path
+          d={`M${cx - halfW},${baseY} L${cx - halfW * 0.35},${baseY - height * 0.66}
+              L${cx - halfW * 0.1},${baseY - height * 0.48} L${cx},${baseY - height}
+              L${cx},${baseY} Z`}
+          fill="rgba(255, 250, 232, 0.32)"
+        />
+        {/* 谷の影 */}
+        <path
+          d={`M${cx},${baseY - height} L${cx + halfW * 0.3},${baseY - height * 0.42}
+              L${cx + halfW},${baseY} L${cx},${baseY} Z`}
+          fill="rgba(44, 34, 18, 0.26)"
+        />
+        {snow && (
+          <path
+            d={`M${cx - halfW * 0.16},${baseY - height * 0.78} L${cx},${baseY - height}
+                L${cx + halfW * 0.14},${baseY - height * 0.74}
+                L${cx + halfW * 0.04},${baseY - height * 0.68}
+                L${cx - halfW * 0.06},${baseY - height * 0.72} Z`}
+            fill="rgba(252, 250, 244, 0.9)"
+          />
+        )}
+      </g>
+    );
+    return (
+      <g>
+        {/* 岩がちの地。山の会戦では足元も土ではなく礫になる */}
+        <rect y={HORIZON} width={W} height={H - HORIZON} fill="rgba(122, 126, 116, 0.22)" />
+        {/*
+          奥の連峰。**靄に負けない濃さで置く。**
+          遠景の色をそのまま薄く取ると、地平の靄と重なって影も残らなかった
+        */}
+        {peak(52, HORIZON + 34, 58, 50, '#6d7671', true, 'p1')}
+        {peak(126, HORIZON + 30, 48, 38, '#79827c', true, 'p2')}
+        {peak(210, HORIZON + 36, 64, 54, '#66706b', true, 'p3')}
+        {peak(298, HORIZON + 32, 52, 40, '#767f79', true, 'p4')}
+        {/* 手前の尾根。この谷あいを抜けて戦う */}
+        {peak(6, H * 0.86, 92, 76, '#8b8770', false, 'n1')}
+        {peak(334, H * 0.88, 96, 82, '#8b8770', false, 'n2')}
+      </g>
+    );
+  }
+
   if (terrain === 'forest') {
     // 奥ほど小さく密に。木立の影が地面に落ちる
     const trees = [];
@@ -258,33 +329,54 @@ function TerrainFeature({ terrain }: { terrain: Battlefield['terrain'] }) {
   }
 
   /*
-   * 平野。**遮るものがないことがこの地形の性質**なので、地面には何も立てない。
+   * 草原。**遮るものがないことがこの地形の性質**なので、高いものは立てない。
    *
-   * 草叢を扇形の線で撒いていたときは、草ではなく下向きの矢印が等間隔に並んで
-   * 壁紙のように見えた。奥行きは地面の畝と消点へ収束する筋がすでに担っているので、
-   * ここでは**手前にだけ低い灌木を疎らに置く** — 遠くはただ開けている
+   * 奥行きは地面の畝と収束線が担う。ここで足すのは草の色と、
+   * 手前の草叢だけ。草叢を扇形の直線で撒いていたときは、草ではなく
+   * 下向きの矢印が等間隔に並んで壁紙のように見えたので、
+   * **束にして、長さと傾きを散らす**
    */
-  const scrub = [];
-  for (let i = 0; i < 11; i++) {
+  const green = (
+    <rect
+      y={HORIZON}
+      width={W}
+      height={H - HORIZON}
+      fill="url(#grass)"
+      pointerEvents="none"
+    />
+  );
+  const clumps = [];
+  for (let i = 0; i < 26; i++) {
     // 種を固定した擬似乱数。並びの規則性が読み取れないようにばらす
     const r = (n: number) => ((Math.sin(i * 12.9898 + n * 78.233) * 43758.5453) % 1 + 1) % 1;
-    const t = 0.45 + r(1) * 0.55;
+    const t = 0.18 + r(1) * 0.82;
     const y = HORIZON + (H - HORIZON) * t;
-    const x = 14 + r(2) * (W - 28);
-    const k = 0.5 + t * 1.4;
-    scrub.push(
-      <g key={`s-${i}`} transform={`translate(${x} ${y}) scale(${k})`}>
-        <ellipse cx="0" cy="0.6" rx="4.6" ry="1.3" fill="rgba(60, 48, 28, 0.13)" />
-        <path
-          d="M-4,0 Q-2.6,-3.4 -0.4,-1.2 Q0.6,-4.2 2.2,-1.4 Q3.4,-2.6 4,0 Z"
-          fill="#7d8a5c"
-          opacity="0.7"
-        />
-        <path d="M-4,0 Q-2.6,-3.4 -0.4,-1.2 L-0.4,0 Z" fill="rgba(255,250,226,0.22)" />
-      </g>,
+    const x = 8 + r(2) * (W - 16);
+    const k = 0.35 + t * 1.25;
+    const blades = [];
+    for (let j = 0; j < 5; j++) {
+      const dx = (j - 2) * 1.5 * k;
+      const lean = (r(3 + j) - 0.5) * 3 * k;
+      const len = (3.4 + r(9 + j) * 3.2) * k;
+      blades.push(`M${x + dx},${y} q${lean * 0.4},${-len * 0.6} ${lean},${-len}`);
+    }
+    clumps.push(
+      <path
+        key={`c-${i}`}
+        d={blades.join(' ')}
+        stroke="rgba(96, 112, 58, 0.42)"
+        strokeWidth={0.5 * k}
+        strokeLinecap="round"
+        fill="none"
+      />,
     );
   }
-  return <g>{scrub}</g>;
+  return (
+    <g>
+      {green}
+      {clumps}
+    </g>
+  );
 }
 
 /** 兵ひとり。兵科ごとの姿で描く */
@@ -447,6 +539,7 @@ export function BattleScreen({
             {state.year}年 — {foeName}との会戦
           </h1>
           <p className="text-[12px]" style={{ color: 'var(--ink-soft)' }}>
+            {field.province !== null && `${PROVINCE_LABELS[field.province]}・`}
             {TERRAIN_LABELS[field.terrain]}／{TERRAIN_NOTES[field.terrain]}
           </p>
           <div className="flex items-center gap-2 mt-0.5">
@@ -492,6 +585,11 @@ export function BattleScreen({
                 <stop offset="0%" stopColor="#fffae2" stopOpacity="0.5" />
                 <stop offset="45%" stopColor="#fffae2" stopOpacity="0.08" />
                 <stop offset="100%" stopColor="#3a2e1a" stopOpacity="0.3" />
+              </linearGradient>
+              {/* 草原の緑。地の土色にうっすら重ねる */}
+              <linearGradient id="grass" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#8d9a63" stopOpacity="0.22" />
+                <stop offset="100%" stopColor="#7d9052" stopOpacity="0.42" />
               </linearGradient>
               <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#6f8d9c" />

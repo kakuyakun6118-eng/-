@@ -472,8 +472,15 @@ export interface Battlefield {
    * （途中で罷免されても、その戦いは最後まで同じ将が率いる）
    */
   leaderTrait: TraitId | null;
-  /** 地形。戦場の絵と補正に効く */
-  terrain: 'plain' | 'river' | 'hill' | 'forest' | 'desert';
+  /**
+   * 地形。戦場の絵と補正に効く。
+   *
+   * **戦った土地から決まる。** 抽選で引いていたときは、蜀の山中で
+   * 砂漠の会戦が起き、涼州で林の会戦が起きた
+   */
+  terrain: 'plain' | 'river' | 'hill' | 'mountain' | 'forest' | 'desert';
+  /** 戦った州。地形を引いた土地。表示に使う */
+  province: ProvinceId | null;
   units: BattleUnit[];
   round: number;
   phase: 'deploy' | 'orders' | 'done';

@@ -64,9 +64,65 @@ function makeUnits(
   return units;
 }
 
+/**
+ * 州ごとに出うる地形。**戦場の絵はここから引く。**
+ *
+ * 一様に抽選していたときは、蜀の山中で砂漠の会戦が起き、
+ * 河西回廊で林の会戦が起きた。土地には土地の姿がある。
+ * 三つ並べてあるのは重みで、同じものを二度書けばそれだけ出やすい
+ */
+const PROVINCE_TERRAIN: Record<ProvinceId, Battlefield['terrain'][]> = {
+  // 洛陽の周り。黄河と伊洛の平地に、南は嵩山
+  Si: ['plain', 'river', 'hill'],
+  // 関中の平野と、南に立ちはだかる秦嶺
+  Yong: ['plain', 'mountain', 'hill'],
+  // 河西回廊。祁連の南は砂
+  Liang: ['desert', 'desert', 'mountain'],
+  // 汾水の谷。東は太行の壁
+  Bing: ['mountain', 'hill', 'plain'],
+  // 河北平原。遮るものがない
+  Ji: ['plain', 'plain', 'river'],
+  // 薊と遼西。北は燕山、東は林
+  You: ['plain', 'mountain', 'forest'],
+  // 山東。丘陵と平地
+  Qing: ['plain', 'plain', 'hill'],
+  // 淮水の北。南北の争奪点
+  Yu: ['plain', 'river', 'plain'],
+  // 建康と長江
+  Yang: ['river', 'river', 'plain'],
+  // 江漢。雲夢の沢と林
+  Jing: ['river', 'forest', 'plain'],
+  // 鄱陽湖と閩の山林
+  Jiang: ['forest', 'river', 'hill'],
+  // 蜀。四塞の地
+  Yi: ['mountain', 'mountain', 'forest'],
+  // 南中。横断山脈の南
+  Ning: ['mountain', 'forest', 'forest'],
+  // 嶺南
+  Guang: ['forest', 'forest', 'river'],
+  // 日南。天下の南端
+  Jiao: ['forest', 'river', 'forest'],
+};
+
+/** 会戦の起きた州。相手のいるところで戦う */
+export function battleProvince(state: GameState, foe: BattleFoe): ProvinceId | null {
+  if (foe.kind === 'faction') {
+    const where = state.factions[foe.factionId]?.location;
+    return where === undefined || where === 'exterior' ? null : where;
+  }
+  if (foe.kind === 'prince') {
+    return state.princes.find((p) => p.id === foe.princeId)?.province ?? null;
+  }
+  // 北朝の南征。境の州で受ける。無ければ都で
+  const front = (Object.keys(state.provinces) as ProvinceId[]).find(
+    (id) => state.provinces[id].holder === null && state.provinces[id].region === 'north',
+  );
+  return front ?? state.capital;
+}
+
 /** 地形を引く。戦場の絵と、迂回の効きに掛かる */
-function rollTerrain(rng: () => number): Battlefield['terrain'] {
-  const kinds: Battlefield['terrain'][] = ['plain', 'river', 'hill', 'forest', 'desert'];
+function rollTerrain(provinceId: ProvinceId | null, rng: () => number): Battlefield['terrain'] {
+  const kinds = provinceId === null ? (['plain', 'river', 'hill'] as const) : PROVINCE_TERRAIN[provinceId];
   return kinds[Math.floor(rng() * kinds.length)];
 }
 
@@ -88,7 +144,8 @@ export function openBattlefield(
     leaderMilitary: leaderMilitary(state, leader),
     // 帝が自ら率いるときは個性を持たない。個性は武将のものだから
     leaderTrait: leader === 'marshal' ? (state.marshal.holder?.trait ?? null) : null,
-    terrain: rollTerrain(rng),
+    province: battleProvince(state, foe),
+    terrain: rollTerrain(battleProvince(state, foe), rng),
     units: [
       ...makeUnits('court', ours, 6, rng),
       ...makeUnits('foe', theirs, 6, rng),
@@ -206,6 +263,11 @@ export function battleRound(
     // 河を渡る戦いは攻める側が不利になる
     if (field.terrain === 'river' && order !== 'withdraw') ourPower *= 0.9;
     if (field.terrain === 'hill' && order === 'flank') ourPower *= 1.08;
+    /*
+     * 山地は**道が細い。** 隊を横に並べられないので、正面から押す手が効かない。
+     * 迂回にも補正を付けないので、山では数の差がそのまま出にくくなる
+     */
+    if (field.terrain === 'mountain' && order === 'advance') ourPower *= 0.9;
 
     const total = ourPower + theirs;
     const swing = total <= 0 ? 0 : (ourPower - theirs) / total;

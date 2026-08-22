@@ -13,8 +13,9 @@ const FORMAT = 'six-dynasties-save';
  * 3 — 皇后に年齢・能力・顔の種を持たせた
  * 4 — 武将の名簿（五能力・個性・忠誠）を持たせた
  * 5 — 出征軍（部隊）を持たせ、北伐を行軍と攻城に置き換えた
+ * 6 — 会戦の地形を戦った州から決めるようにし、山地を足した
  */
-const VERSION = 5;
+const VERSION = 6;
 
 interface SaveFile {
   format: string;

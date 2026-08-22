@@ -52,6 +52,90 @@ function provinceFill(state: GameState, id: ProvinceId): { color: string; opacit
   return { color, opacity: 0.16 + t * 0.46 };
 }
 
+/**
+ * 山脈。**陰影だけでは「そこが山だ」と言い切れない。**
+ *
+ * `feDiffuseLighting` の岩肌は起伏を伝えるが、政治の色を重ねると薄れ、
+ * 秦嶺なのか関中の平地なのかは読み取れなかった。古い地図がそうしたように、
+ * **山には山の形の印を立てる。**
+ *
+ * 座標は経緯度で持つ（`projectLonLat` に通す）。図の座標で書くと、
+ * 地図を引き直したとき山だけが元の場所に取り残される
+ */
+const RANGES: { lon: number; lat: number; size: number; snow?: boolean; name?: string }[] = [
+  // 華北の骨格
+  { lon: 111.5, lat: 41.2, size: 1, name: '陰山' },
+  { lon: 108.6, lat: 41.0, size: 0.85 },
+  { lon: 114.2, lat: 41.2, size: 0.85 },
+  { lon: 117.4, lat: 40.6, size: 0.9, name: '燕山' },
+  { lon: 113.6, lat: 37.6, size: 1, name: '太行' },
+  { lon: 113.2, lat: 35.8, size: 0.9 },
+  { lon: 111.2, lat: 37.6, size: 0.85 },
+  // 関中と隴西
+  { lon: 106.2, lat: 35.4, size: 0.85 },
+  { lon: 107.8, lat: 33.8, size: 1.05, name: '秦嶺' },
+  { lon: 110.2, lat: 33.6, size: 0.9 },
+  { lon: 102.0, lat: 37.6, size: 1, snow: true, name: '祁連' },
+  { lon: 98.6, lat: 38.6, size: 1, snow: true },
+  // 蜀とその周り
+  { lon: 108.2, lat: 32.0, size: 0.95 },
+  { lon: 103.4, lat: 32.6, size: 1.05, snow: true, name: '岷山' },
+  { lon: 102.4, lat: 30.0, size: 1, snow: true },
+  { lon: 109.6, lat: 31.0, size: 0.85 },
+  // 南
+  { lon: 100.3, lat: 28.2, size: 1, snow: true, name: '横断' },
+  { lon: 99.6, lat: 26.0, size: 0.9 },
+  { lon: 110.4, lat: 27.4, size: 0.85 },
+  { lon: 112.6, lat: 25.2, size: 0.9, name: '南嶺' },
+  { lon: 115.9, lat: 31.0, size: 0.85 },
+  { lon: 117.6, lat: 26.6, size: 0.9, name: '武夷' },
+  // 塞外
+  { lon: 85.0, lat: 42.6, size: 1.1, snow: true, name: '天山' },
+  { lon: 91.0, lat: 43.0, size: 0.9, snow: true },
+  { lon: 89.5, lat: 47.6, size: 0.95, snow: true, name: '阿爾泰' },
+  { lon: 122.0, lat: 48.4, size: 0.95, name: '大興安嶺' },
+  { lon: 121.0, lat: 44.6, size: 0.8 },
+  { lon: 127.8, lat: 42.2, size: 0.9, name: '長白' },
+  { lon: 87.0, lat: 36.0, size: 1.1, snow: true, name: '崑崙' },
+  { lon: 93.0, lat: 35.4, size: 0.95, snow: true },
+  { lon: 89.0, lat: 28.8, size: 1.1, snow: true, name: '喜馬拉雅' },
+];
+
+/** 山の駒ひとつ。左に陽が当たり、右が翳る */
+function Peak({
+  x,
+  y,
+  size,
+  snow,
+}: {
+  x: number;
+  y: number;
+  size: number;
+  snow: boolean;
+}) {
+  const w = 9.5 * size;
+  const h = 12 * size;
+  return (
+    <g transform={`translate(${x} ${y})`} pointerEvents="none">
+      <path
+        d={`M${-w},0 L0,${-h} L${w},0 Z`}
+        fill="#645b49"
+        stroke="#3b3428"
+        strokeWidth="0.7"
+        strokeLinejoin="round"
+      />
+      <path d={`M${-w},0 L0,${-h} L0,0 Z`} fill="#b3a88d" />
+      {snow && (
+        <path
+          d={`M${-w * 0.34},${-h * 0.6} L0,${-h} L${w * 0.34},${-h * 0.6}
+              L${w * 0.12},${-h * 0.52} L0,${-h * 0.62} L${-w * 0.14},${-h * 0.5} Z`}
+          fill="#f4f1e8"
+        />
+      )}
+    </g>
+  );
+}
+
 /** 都に立てる旗。竿と靡く布で描く */
 function CapitalBanner({ x, y }: { x: number; y: number }) {
   return (
@@ -76,15 +160,24 @@ function CapitalBanner({ x, y }: { x: number; y: number }) {
 const MAJOR_CITIES = new Set<ProvinceId>(['Si', 'Yong', 'Ji', 'Yang', 'Jing', 'Yi']);
 
 /**
+ * 三大都。**洛陽・長安・建康は、絵の上でも別格に扱う。**
+ *
+ * 天下の中心はこの三つを行き来した。他の治所と同じ形で描いていたときは、
+ * 姑臧も龍編も洛陽も同じ大きさの城で、地図から「どこが天下の要か」が読めなかった
+ */
+const GREAT_CAPITALS = new Set<ProvinceId>(['Si', 'Yong', 'Yang']);
+
+/**
  * 城。**点ではなく、城壁の形で描く。**
  *
  * 丸い点で置いていたときは、都市なのか軍なのか勢力の印なのかが図から読めなかった。
- * 版築の壁に楼を二つ立て、門を開ける — 大城には屋根を重ね、都には旗を添える。
+ * 版築の壁に楼を二つ立て、門を開ける — 大城には屋根を重ね、三大都には
+ * 三層の楼と金の甍を載せ、都には旗を添える。
  * 城は持ち主の色で塗るので、**州の塗りが薄くても城の色でどちらのものかが分かる。**
  *
- * 耐久の帯と数まで描き込んだときは、城の密な中原で州名・支配度・城名・耐久・
- * 「囲まれている」が四重五重に重なって読めなかった。耐久は図の下の一覧で読ませ、
- * 図では囲まれている城にだけ細い帯を出して危うさを伝える
+ * **十五の治所はすべて名と耐久を出す。** 大城だけに名を付けていたときは、
+ * 姑臧も味県も龍編も名無しの点で、どの州のどこを攻められているのか図から読めなかった。
+ * 字が重ならないよう、名は下の小さな板に載せ、耐久はその下の細い帯で見せる
  */
 function City({
   x,
@@ -93,6 +186,7 @@ function City({
   wall,
   wallMax,
   major,
+  grand,
   isCapital,
   besieged,
   color,
@@ -103,12 +197,16 @@ function City({
   wall: number;
   wallMax: number;
   major: boolean;
+  grand: boolean;
   isCapital: boolean;
   besieged: boolean;
   color: string;
 }) {
-  const scale = isCapital ? 1.25 : major ? 1.05 : 0.8;
+  const scale = grand ? 1.45 : major ? 1.05 : 0.82;
   const ratio = wallMax <= 0 ? 0 : Math.max(0, Math.min(1, wall / wallMax));
+  const label = `${name} ${Math.round(wall)}`;
+  const plateW = label.length * 5.2 + 7;
+  const plateY = y + 5 * scale + 2;
 
   return (
     <g pointerEvents="none">
@@ -124,7 +222,7 @@ function City({
         {/* 門 */}
         <path d="M-1.3,2 L-1.3,-0.6 A1.3,1.3 0 0 1 1.3,-0.6 L1.3,2 Z" fill="#f2e8d4" opacity="0.92" />
         {/* 大城には屋根を重ねる */}
-        {(major || isCapital) && (
+        {(major || grand) && (
           <path
             d="M-7.4,-5 L0,-8.8 L7.4,-5 Z"
             fill={color}
@@ -133,37 +231,60 @@ function City({
             strokeLinejoin="round"
           />
         )}
+        {/* 三大都は三層の楼に金の甍 */}
+        {grand && (
+          <>
+            <path
+              d="M-5.4,-8.8 L0,-11.8 L5.4,-8.8 Z"
+              fill="var(--gold)"
+              stroke="#241f1a"
+              strokeWidth="0.8"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M-3.4,-11.8 L0,-14.6 L3.4,-11.8 Z"
+              fill="var(--gold-bright)"
+              stroke="#241f1a"
+              strokeWidth="0.8"
+              strokeLinejoin="round"
+            />
+            <circle cx="0" cy="-15.6" r="1" fill="var(--gold-bright)" stroke="#241f1a" strokeWidth="0.5" />
+          </>
+        )}
       </g>
-      {isCapital && <CapitalBanner x={x + 8} y={y - 2} />}
-      {/* 大城と都だけ名を出す。小さな城まで書くと図が字で埋まる */}
-      {(major || isCapital) && (
-        <text
-          x={x}
-          y={y - 9 * scale - 2.5}
-          textAnchor="middle"
-          fontSize="10.5"
-          fontWeight="700"
-          fill="#241f1a"
-          stroke="#f2e8d4"
-          strokeWidth="2.4"
-          paintOrder="stroke"
-        >
-          {name}
-        </text>
-      )}
-      {/* 囲まれている城だけ、残りの耐久を細い帯で見せる */}
-      {besieged && (
-        <>
-          <rect x={x - 11} y={y + 3.5} width="22" height="2.4" fill="rgba(20,16,12,0.5)" />
-          <rect
-            x={x - 11}
-            y={y + 3.5}
-            width={22 * ratio}
-            height="2.4"
-            fill={ratio > 0.5 ? 'var(--gold-bright)' : 'var(--cinnabar)'}
-          />
-        </>
-      )}
+      {isCapital && <CapitalBanner x={x + 9 * scale} y={y - 2} />}
+
+      {/* 名の板。すべての治所に出す */}
+      <rect
+        x={x - plateW / 2}
+        y={plateY}
+        width={plateW}
+        height="10"
+        rx="1.5"
+        fill={grand ? 'rgba(46, 33, 16, 0.88)' : 'rgba(250, 244, 230, 0.9)'}
+        stroke={grand ? 'var(--gold-bright)' : '#3d3427'}
+        strokeWidth={grand ? 0.9 : 0.5}
+      />
+      <text
+        x={x}
+        y={plateY + 7.7}
+        textAnchor="middle"
+        fontSize={grand ? 8.8 : 7.8}
+        fontWeight="700"
+        fill={grand ? 'var(--gold-bright)' : '#241f1a'}
+      >
+        {label}
+      </text>
+
+      {/* 耐久の帯。囲まれている城は朱、繕われている城は金 */}
+      <rect x={x - plateW / 2} y={plateY + 10.5} width={plateW} height="2.2" fill="rgba(20,16,12,0.42)" />
+      <rect
+        x={x - plateW / 2}
+        y={plateY + 10.5}
+        width={plateW * ratio}
+        height="2.2"
+        fill={besieged ? 'var(--cinnabar)' : ratio > 0.5 ? 'var(--gold-bright)' : 'var(--gold)'}
+      />
     </g>
   );
 }
@@ -431,10 +552,70 @@ export function ChinaMap({
             />
           ))}
 
-        {/* 河川。州の上に描いて南北の境を読ませる */}
-        <path d={MINOR_RIVER_PATH} fill="none" stroke="#6f8a97" strokeWidth="0.5" opacity="0.5" />
-        <path d={RIVER_PATH} fill="none" stroke="#5c7f90" strokeWidth="1.5" opacity="0.85" />
-        <path d={LAKE_PATH} fill="#8fa6ab" stroke="none" opacity="0.8" />
+        {/*
+          河川。**州の上に描いて、二本の線で river らしく見せる。**
+
+          細い一本で引いていたときは、州の塗りに紛れて境の筋にしか見えなかった。
+          濃い縁取りの上に明るい芯を重ねると、水面の照りが出て河になる。
+          黄河と長江はこの三百年の南北を分けた線なので、名も添える
+        */}
+        <path d={MINOR_RIVER_PATH} fill="none" stroke="#4c6f80" strokeWidth="0.6" opacity="0.35" />
+        <path d={RIVER_PATH} fill="none" stroke="#3d6072" strokeWidth="2.8" opacity="0.9" strokeLinecap="round" />
+        <path d={RIVER_PATH} fill="none" stroke="#84b0c4" strokeWidth="1.3" opacity="0.95" strokeLinecap="round" />
+        <path d={LAKE_PATH} fill="#7f9daa" stroke="#3d6072" strokeWidth="0.6" opacity="0.9" />
+
+        {/* 山脈の駒。陰影だけでは「そこが山だ」と言い切れない */}
+        {RANGES.map((range, i) => {
+          const [x, y] = projectLonLat(range.lon, range.lat);
+          return <Peak key={`pk-${i}`} x={x} y={y} size={range.size} snow={range.snow === true} />;
+        })}
+        {RANGES.filter((r) => r.name !== undefined).map((range, i) => {
+          const [x, y] = projectLonLat(range.lon, range.lat);
+          return (
+            <text
+              key={`pn-${i}`}
+              x={x}
+              y={y + 9}
+              textAnchor="middle"
+              fontSize="9"
+              fontWeight="700"
+              fill="#3b3428"
+              stroke="#f0e6d2"
+              strokeWidth="2.2"
+              paintOrder="stroke"
+              opacity="0.95"
+              pointerEvents="none"
+            >
+              {range.name}
+            </text>
+          );
+        })}
+
+        {/* 大河の名 */}
+        {[
+          { lon: 110.0, lat: 37.0, name: '黄河' },
+          { lon: 113.2, lat: 30.2, name: '長江' },
+          { lon: 117.6, lat: 33.2, name: '淮水' },
+        ].map((river) => {
+          const [x, y] = projectLonLat(river.lon, river.lat);
+          return (
+            <text
+              key={river.name}
+              x={x}
+              y={y}
+              textAnchor="middle"
+              fontSize="9"
+              fontWeight="700"
+              fill="#2c5468"
+              stroke="#f0e6d2"
+              strokeWidth="2.4"
+              paintOrder="stroke"
+              pointerEvents="none"
+            >
+              {river.name}
+            </text>
+          );
+        })}
 
         {/* 郷里の名 */}
         {(Object.keys(HOMELAND_PATHS) as HomelandId[]).map((id) => {
@@ -486,17 +667,24 @@ export function ChinaMap({
                 wall={province.wall}
                 wallMax={province.wallMax}
                 major={MAJOR_CITIES.has(id)}
+                grand={GREAT_CAPITALS.has(id)}
                 isCapital={isCapital}
                 besieged={foes.length > 0 || (armies.has(id) && province.holder !== null)}
                 color={holderColor(province.holder)}
               />
               {foes.length > 0 && <ClashMark x={seat[0] + 14} y={seat[1] - 12} />}
 
+              {/*
+                州の名と支配度は**一行にまとめる。** 二行に分けていたときは、
+                治所の密な中原で 州名・支配度・城名・耐久 が四段に積み上がり、
+                互いを潰し合って一つも読めなかった
+              */}
               <text
                 x={label[0]}
-                y={label[1]}
+                /* 城の名の板は治所の下に出るので、州の名はそのぶん上へ逃がす */
+                y={label[1] - 7}
                 textAnchor="middle"
-                fontSize="14"
+                fontSize="13"
                 fontWeight="700"
                 fill={provinceFill(state, id).opacity > 0.44 ? '#f4ecd9' : '#241f1a'}
                 stroke={provinceFill(state, id).opacity > 0.44 ? 'none' : '#f0e6d2'}
@@ -504,24 +692,16 @@ export function ChinaMap({
                 paintOrder="stroke"
               >
                 {PROVINCE_LABELS[id]}
-              </text>
-              <text
-                x={label[0]}
-                y={label[1] + 13}
-                textAnchor="middle"
-                fontSize="10"
-                fill={provinceFill(state, id).opacity > 0.44 ? '#e2d6bb' : '#4a4034'}
-                stroke={provinceFill(state, id).opacity > 0.44 ? 'none' : '#f0e6d2'}
-                strokeWidth="2"
-                paintOrder="stroke"
-              >
-                {province.holder === null
-                  ? `${Math.round(province.control)}`
-                  : province.holder === 'north'
-                    ? (state.north?.name ?? '北朝')
-                    : province.holder === 'prince'
-                      ? '挙兵'
-                      : FACTION_LABELS[province.holder]}
+                <tspan fontSize="10" fontWeight="400">
+                  {' '}
+                  {province.holder === null
+                    ? Math.round(province.control)
+                    : province.holder === 'north'
+                      ? (state.north?.name ?? '北朝')
+                      : province.holder === 'prince'
+                        ? '挙兵'
+                        : FACTION_LABELS[province.holder]}
+                </tspan>
               </text>
             </g>
           );
@@ -610,9 +790,11 @@ export function MapLegend({ state }: { state: GameState }) {
         </span>
       ))}
       <span className="text-[11px] w-full" style={{ color: 'var(--ink-soft)' }}>
-        城は<strong style={{ color: 'var(--ink)' }}>持ち主の色</strong>で塗る。屋根が重なっているのが大城
-        （洛陽・長安・鄴・建康・江陵・成都）で、旗が立っているのが都。
-        囲まれている城には残りの耐久が帯で出る。札は出征軍（朱は城を囲んでいる軍）
+        十五州の治所はすべて<strong style={{ color: 'var(--ink)' }}>名と城の耐久</strong>を出す。
+        城は持ち主の色で塗り、板の下の帯が残りの耐久（囲まれている城は朱）。
+        金の三層の楼は<strong style={{ color: 'var(--ink)' }}>三大都</strong>（洛陽・長安・建康）、
+        屋根が一段のものが大城（鄴・江陵・成都）、旗が立っているのがいまの都。
+        三角は山脈、青い筋は河川。朱の札は城を囲んでいる出征軍
       </span>
     </div>
   );
