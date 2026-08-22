@@ -92,25 +92,22 @@ white background, studio backdrop, harsh flash, oversaturated colours, smiling,
 open mouth, extra fingers, extra arms
 ```
 
-## 3.5 いま作るぶん（第二便・31枚）
+## 3.5 いま作るぶん（残り6枚）
 
-一便目で 帝・皇后・北朝の主・胡族の首長 が入った。**足りないのは次の31枚。**
-番号は既にある画の続きから振ってある（上書きしないこと）。
+藩王・都督・文官・胡族の首長は入った。**残っているのは6枚。**
 
 | ファイル名 | 何 |
 |---|---|
-| `prince_young_1` `prince_young_2` `prince_mid_1` `prince_mid_2` `prince_old_1` `prince_old_2` | 藩王6枚。**最優先** |
-| `marshal_young_1` `marshal_young_2` `marshal_mid_1` `marshal_mid_2` `marshal_old_1` `marshal_old_2` | 都督6枚 |
-| `official_young_1` `official_mid_1` `official_mid_2` `official_mid_3` `official_old_1` `official_old_2` | 文官6枚 |
-| `chieftain_young_2` `chieftain_young_3` `chieftain_young_4` `chieftain_mid_4` `chieftain_mid_5` `chieftain_old_2` `chieftain_old_3` | 胡族の首長の増補7枚（いま5枚で14の民を回している） |
-| `emperor_boy_1` `emperor_boy_2` | 幼帝2枚 |
+| `emperor_boy_1` `emperor_boy_2` | 幼帝2枚。**小さな大人にしないこと**（§4 の帝の欄を見よ） |
 | `empress_mid_3` `empress_mid_4` `empress_old_3` `empress_old_4` | 皇后の壮年・老年4枚（若年は8枚あるが壮老が各2枚） |
 
-### 一便目でいちばん外れたところ
+### 一便目でいちばん外れたところ（覚え書き）
 
-**送られた48枚は、武人も胡族の首長も全員が冕冠（旒の垂れた冠）をかぶっていた。**
+**最初の48枚は、武人も胡族の首長も全員が冕冠（旒の垂れた冠）をかぶっていた。**
 旒は天子の印なので、藩王・都督・文官・首長にかぶせると身分が読めなくなる。
 下の各指定には「旒を垂らすな」を書いてある。**この一行を落とさないこと。**
+二便目はこれを入れたところ、藩王は遠遊冠、都督は兜、文官は進賢冠、
+首長は貂の帽で揃った。
 
 ```
 IMPORTANT: NO beaded curtain, NO hanging strings of beads in front of the face.
@@ -293,24 +290,24 @@ both. A cold, appraising expression.
 
 ## 7. いま揃っているもの／足りないもの
 
-最初の二枚のシートから48枚を切り出して入れてある。
+六枚の一覧から129枚を切り出して入れてある。
 
 | 役 | 画の数 | 状態 |
 |---|---|---|
-| `emperor`（帝） | 若5・壮3・老4 | **入っている** |
-| `empress`（皇后） | 若8・壮2・老2 | **入っている** |
-| `north`（北朝の主） | 壮5・老2 | **入っている** |
-| `chieftain`（胡族の首長） | 若1・壮3・老1 | 入っているが**5枚で14の民を回している** |
-| `prince`（藩王） | 0 | **足りない。** SVG のまま |
-| `chancellor`（文官） | 0 | **足りない。** SVG のまま |
-| `marshal`（都督） | 0 | **足りない。** SVG のまま |
-| `emperor_boy`（幼帝） | 0 | **足りない。** 成人の帝の画で代用している |
+| `emperor`（帝） | 若5・壮3・老4 | 入っている |
+| `empress`（皇后） | 若8・壮2・老2 | 入っているが**壮年と老年が各2枚**と薄い |
+| `prince`（藩王） | 若7・壮14・老3 | **入っている** |
+| `official`（文官） | 壮15・老5 | **入っている**（若年は0だが壮年に落ちる） |
+| `marshal`（都督） | 若4・壮11・老4 | **入っている** |
+| `chieftain`（胡族の首長） | 若3・壮14・老6 | **入っている**（14の民に行き渡る） |
+| `north`（北朝の主） | 壮5・老2 | 入っている |
+| `emperor_boy`（幼帝） | 0 | **足りない。** 若年の帝の画で代用している |
 | `heir` `dowager` `rebel` | 0 | 仕組みごと未実装 |
 
 `chieftain_female_*`（12枚）は女性の首長のための予備で、いまの仕組みでは使われない。
 
-**足すべき順**は 藩王 → 都督 → 文官 → 胡族の首長の増補 → 幼帝。
-藩王と都督は画面に大きく出るのに、いま一人も画が無い。
+**残っているのは幼帝2枚と、皇后の壮年・老年の増補4枚だけ。**
+そのあとは §6 の史実の人物（78人）に進める。
 
 ## 8. 足したあとの手順
 

@@ -16,14 +16,32 @@
     ],
     "mid": [
       "chieftain_mid_1.webp",
+      "chieftain_mid_10.webp",
+      "chieftain_mid_11.webp",
+      "chieftain_mid_12.webp",
+      "chieftain_mid_13.webp",
+      "chieftain_mid_14.webp",
       "chieftain_mid_2.webp",
-      "chieftain_mid_3.webp"
+      "chieftain_mid_3.webp",
+      "chieftain_mid_4.webp",
+      "chieftain_mid_5.webp",
+      "chieftain_mid_6.webp",
+      "chieftain_mid_7.webp",
+      "chieftain_mid_8.webp",
+      "chieftain_mid_9.webp"
     ],
     "old": [
-      "chieftain_old_1.webp"
+      "chieftain_old_1.webp",
+      "chieftain_old_2.webp",
+      "chieftain_old_3.webp",
+      "chieftain_old_4.webp",
+      "chieftain_old_5.webp",
+      "chieftain_old_6.webp"
     ],
     "young": [
-      "chieftain_young_1.webp"
+      "chieftain_young_1.webp",
+      "chieftain_young_2.webp",
+      "chieftain_young_3.webp"
     ]
   },
   "emperor": {
@@ -66,6 +84,33 @@
       "empress_young_8.webp"
     ]
   },
+  "marshal": {
+    "mid": [
+      "marshal_mid_1.webp",
+      "marshal_mid_10.webp",
+      "marshal_mid_11.webp",
+      "marshal_mid_2.webp",
+      "marshal_mid_3.webp",
+      "marshal_mid_4.webp",
+      "marshal_mid_5.webp",
+      "marshal_mid_6.webp",
+      "marshal_mid_7.webp",
+      "marshal_mid_8.webp",
+      "marshal_mid_9.webp"
+    ],
+    "old": [
+      "marshal_old_1.webp",
+      "marshal_old_2.webp",
+      "marshal_old_3.webp",
+      "marshal_old_4.webp"
+    ],
+    "young": [
+      "marshal_young_1.webp",
+      "marshal_young_2.webp",
+      "marshal_young_3.webp",
+      "marshal_young_4.webp"
+    ]
+  },
   "north": {
     "mid": [
       "north_mid_1.webp",
@@ -77,6 +122,64 @@
     "old": [
       "north_old_1.webp",
       "north_old_2.webp"
+    ]
+  },
+  "official": {
+    "mid": [
+      "official_mid_1.webp",
+      "official_mid_10.webp",
+      "official_mid_11.webp",
+      "official_mid_12.webp",
+      "official_mid_13.webp",
+      "official_mid_14.webp",
+      "official_mid_15.webp",
+      "official_mid_2.webp",
+      "official_mid_3.webp",
+      "official_mid_4.webp",
+      "official_mid_5.webp",
+      "official_mid_6.webp",
+      "official_mid_7.webp",
+      "official_mid_8.webp",
+      "official_mid_9.webp"
+    ],
+    "old": [
+      "official_old_1.webp",
+      "official_old_2.webp",
+      "official_old_3.webp",
+      "official_old_4.webp",
+      "official_old_5.webp"
+    ]
+  },
+  "prince": {
+    "mid": [
+      "prince_mid_1.webp",
+      "prince_mid_10.webp",
+      "prince_mid_11.webp",
+      "prince_mid_12.webp",
+      "prince_mid_13.webp",
+      "prince_mid_14.webp",
+      "prince_mid_2.webp",
+      "prince_mid_3.webp",
+      "prince_mid_4.webp",
+      "prince_mid_5.webp",
+      "prince_mid_6.webp",
+      "prince_mid_7.webp",
+      "prince_mid_8.webp",
+      "prince_mid_9.webp"
+    ],
+    "old": [
+      "prince_old_1.webp",
+      "prince_old_2.webp",
+      "prince_old_3.webp"
+    ],
+    "young": [
+      "prince_young_1.webp",
+      "prince_young_2.webp",
+      "prince_young_3.webp",
+      "prince_young_4.webp",
+      "prince_young_5.webp",
+      "prince_young_6.webp",
+      "prince_young_7.webp"
     ]
   }
 }

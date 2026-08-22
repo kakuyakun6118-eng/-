@@ -30,6 +30,6 @@ npm run portraits   # src/data/portraits.json を作り直す
 
 ## 揃っているもの
 
-`emperor` `empress` `north` `chieftain` は画がある。
-`prince` `official` `marshal`、および幼帝（`emperor_boy`）は**まだ無く、SVG で描かれる。**
+`emperor` `empress` `prince` `official` `marshal` `chieftain` `north` は画がある。
+**足りないのは幼帝（`emperor_boy`）と、皇后の壮年・老年の増補だけ。**
 発注の文面は `docs/portrait-prompts.md`。
