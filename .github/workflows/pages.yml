@@ -1,0 +1,145 @@
+name: Deploy all apps to GitHub Pages
+
+# GitHub Pages は**リポジトリにつきサイトを1つ**しか持てない。
+# 三つのアプリがそれぞれ別のワークフローで公開していたときは、
+# 最後に push したものが前のものを丸ごと上書きしていた
+# （NY旅のしおりを直したら西ローマが消え、天下分裂を直したらNYが消える）。
+#
+# ここでは**一つのワークフローが三つとも組み立てて**、階層で分けて載せる。
+#
+#   /                 入口（三つへのリンクだけの小さな頁）
+#   /ny/              NY旅のしおり   （main）
+#   /rome/            西ローマ帝国   （claude/western-rome-sim-phase-0-73l154）
+#   /six-dynasties/   天下分裂       （claude/eight-princes-sui-unification-app-nxn04n）
+#
+# **どのアプリも根には置かない。** NY旅のしおりは PWA で、登録される
+# Service Worker の縄張りは置いた場所から下すべてに及ぶ。根に置くと、
+# NYを一度ひらいた端末では /rome/ や /six-dynasties/ を開いても
+# NYの index.html が返ってしまう。三つとも一段下げれば縄張りは重ならない。
+#
+# **このファイルは三つのブランチすべてに同じ内容で置くこと。**
+# push で走るのは「push されたブランチにあるファイル」なので、
+# 一つのブランチにしか置かないと、他のブランチへ push したときに
+# 何も公開されない（あるいは古いワークフローが走って上書きする）。
+
+on:
+  push:
+    branches:
+      - main
+      - claude/western-rome-sim-phase-0-73l154
+      - claude/eight-princes-sui-unification-app-nxn04n
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 公開は同時に1つだけ。進行中の公開は中断しない
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # ── NY旅のしおり（main）→ /ny/ ──
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: app-ny
+      - run: npm ci
+        working-directory: app-ny
+      - run: npm run build
+        working-directory: app-ny
+        env:
+          # 置き場所と同じ道筋を base にする。ずれると資産を読みに行けない
+          VITE_BASE_PATH: /${{ github.event.repository.name }}/ny/
+          VITE_TRIP_ID: ${{ vars.VITE_TRIP_ID || 'ny-2026-09' }}
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+
+      # ── 西ローマ帝国 → /rome/ ──
+      - uses: actions/checkout@v4
+        with:
+          ref: claude/western-rome-sim-phase-0-73l154
+          path: app-rome
+      - run: npm ci
+        working-directory: app-rome
+      - run: npm run build
+        working-directory: app-rome
+
+      # ── 天下分裂 → /six-dynasties/ ──
+      - uses: actions/checkout@v4
+        with:
+          ref: claude/eight-princes-sui-unification-app-nxn04n
+          path: app-six
+      - run: npm ci
+        working-directory: app-six/six-dynasties
+      - run: npm run build
+        working-directory: app-six/six-dynasties
+
+      # ── 三つを一つの site/ に組み上げる ──
+      - name: Assemble
+        run: |
+          mkdir -p site/ny site/rome site/six-dynasties
+          cp -r app-ny/dist/. site/ny/
+          cp -r app-rome/dist/. site/rome/
+          cp -r app-six/six-dynasties/dist/. site/six-dynasties/
+          cat > site/index.html <<'HTML'
+          <!doctype html>
+          <html lang="ja">
+          <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>三つのアプリ</title>
+          <style>
+            :root { color-scheme: light; }
+            body {
+              margin: 0; padding: 2.5rem 1.25rem; background: #e7dcc6; color: #241f1a;
+              font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif;
+            }
+            main { max-width: 32rem; margin: 0 auto; }
+            h1 { font-size: 1.1rem; letter-spacing: .2em; font-weight: 700; margin: 0 0 1.5rem; }
+            a {
+              display: block; margin-bottom: .75rem; padding: 1rem 1.1rem;
+              background: rgba(250,244,230,.85); border: 1px solid #9c7a26;
+              box-shadow: inset 0 0 0 1px rgba(255,255,255,.55);
+              color: #241f1a; text-decoration: none;
+            }
+            a strong { display: block; font-size: 1.05rem; letter-spacing: .05em; }
+            a span { display: block; margin-top: .3rem; font-size: .8rem; color: #5c5044; }
+          </style>
+          </head>
+          <body><main>
+            <h1>三つのアプリ</h1>
+            <a href="./ny/"><strong>NY旅のしおり</strong><span>2人で共有するニューヨーク旅行のスケジュール</span></a>
+            <a href="./rome/"><strong>西ローマ帝国シミュレーション</strong><span>末期の西ローマを運営するターン制シミュレーション</span></a>
+            <a href="./six-dynasties/"><strong>天下分裂</strong><span>291年の八王の乱から589年の隋の統一まで</span></a>
+          </main></body>
+          </html>
+          HTML
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
