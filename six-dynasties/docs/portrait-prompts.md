@@ -92,6 +92,31 @@ white background, studio backdrop, harsh flash, oversaturated colours, smiling,
 open mouth, extra fingers, extra arms
 ```
 
+## 3.5 いま作るぶん（第二便・31枚）
+
+一便目で 帝・皇后・北朝の主・胡族の首長 が入った。**足りないのは次の31枚。**
+番号は既にある画の続きから振ってある（上書きしないこと）。
+
+| ファイル名 | 何 |
+|---|---|
+| `prince_young_1` `prince_young_2` `prince_mid_1` `prince_mid_2` `prince_old_1` `prince_old_2` | 藩王6枚。**最優先** |
+| `marshal_young_1` `marshal_young_2` `marshal_mid_1` `marshal_mid_2` `marshal_old_1` `marshal_old_2` | 都督6枚 |
+| `official_young_1` `official_mid_1` `official_mid_2` `official_mid_3` `official_old_1` `official_old_2` | 文官6枚 |
+| `chieftain_young_2` `chieftain_young_3` `chieftain_young_4` `chieftain_mid_4` `chieftain_mid_5` `chieftain_old_2` `chieftain_old_3` | 胡族の首長の増補7枚（いま5枚で14の民を回している） |
+| `emperor_boy_1` `emperor_boy_2` | 幼帝2枚 |
+| `empress_mid_3` `empress_mid_4` `empress_old_3` `empress_old_4` | 皇后の壮年・老年4枚（若年は8枚あるが壮老が各2枚） |
+
+### 一便目でいちばん外れたところ
+
+**送られた48枚は、武人も胡族の首長も全員が冕冠（旒の垂れた冠）をかぶっていた。**
+旒は天子の印なので、藩王・都督・文官・首長にかぶせると身分が読めなくなる。
+下の各指定には「旒を垂らすな」を書いてある。**この一行を落とさないこと。**
+
+```
+IMPORTANT: NO beaded curtain, NO hanging strings of beads in front of the face.
+That crown (the mianguan) belongs to the emperor alone and must not appear here.
+```
+
 ## 4. 冠と衣（時代を外さないための指定）
 
 見本にした画の冠は明代のもの。**画質・照明・質感はあの基準のまま、冠と衣だけを
@@ -112,7 +137,7 @@ collar band and a jade-and-gold belt plaque just visible at the bottom edge.
 
 | ファイル名 | 年齢の一行 |
 |---|---|
-| `emperor_boy_1.png` `emperor_boy_2.png` | A boy of about twelve. Round soft face, no facial hair, the heavy crown slightly too large for him, uneasy eyes. |
+| `emperor_boy_1.png` `emperor_boy_2.png` | **The face of a real child of about twelve**: large eyes, round cheeks, no jaw definition, no facial hair, narrow shoulders — NOT a miniature adult. The heavy crown is slightly too large for him and his eyes are uneasy. |
 | `emperor_young_1.png` `emperor_young_2.png` | A young man of about twenty-two, clean-shaven or with a thin moustache, smooth skin, watchful. |
 | `emperor_mid_1.png` `emperor_mid_2.png` | A man of about forty. Full black beard, heavy brow, lines at the corners of the eyes. |
 | `emperor_old_1.png` `emperor_old_2.png` | An old man of about sixty-five. Long white beard falling to his chest, deeply lined face, hooded eyes, age spots. |
@@ -147,6 +172,8 @@ gold band across the front — and NO hanging beads, because the beaded curtain
 belongs to the emperor alone. His robe is deep purple or dark red silk with a
 woven pattern and a cream inner collar, a gold-mounted sword hilt just visible
 at the bottom edge. Proud, watchful, faintly impatient.
+IMPORTANT: NO beaded curtain, NO hanging strings of beads in front of the face,
+NO flat board above the head. He is a prince, not the emperor.
 <年齢の一行>
 ```
 
@@ -164,12 +191,14 @@ a black cloth cap, low at the front and rising at the back, with a single narrow
 ridge running over the crown, tied with a dark cord. His robe is dark green or
 deep indigo silk with a cream inner collar and a jade pendant at the sash.
 Scholarly and self-possessed, narrow eyes, a slight stoop of the shoulders.
+IMPORTANT: NO crown, NO beads, NO armour, NO fur. A cloth cap and a silk robe only.
 <年齢の一行>
 ```
 
 | ファイル名 | 年齢の一行 |
 |---|---|
-| `official_mid_1.png` `official_mid_2.png` | A man of about forty-five, thin beard, ink-stained fingers not visible in frame. |
+| `official_young_1.png` | A man of about twenty-eight, clean-shaven, sharp and newly appointed. |
+| `official_mid_1.png` `official_mid_2.png` `official_mid_3.png` | A man of about forty-five, thin beard. |
 | `official_old_1.png` `official_old_2.png` | A man of about sixty-five, long thin white beard, wispy eyebrows. |
 
 ### 都督（marshal・武将）— 6枚
@@ -181,6 +210,8 @@ sides; beneath it, lamellar armour of hundreds of small iron plates laced with
 red cord, a heavy leather shoulder strap with bronze studs, and a red silk sash
 knotted at the collar. The metal is scratched and dulled by use, not polished.
 Weathered skin, a direct and unhurried gaze.
+IMPORTANT: an iron HELMET, not a crown. NO beaded curtain, NO gold filigree crown,
+NO flat board above the head. He is a general, not a ruler.
 <年齢の一行>
 ```
 
@@ -200,6 +231,8 @@ braids in front of both ears. His riding coat is fastened on the LEFT side
 (zuoren, the barbarian fashion), with a thick fur collar, coarse wool and worn
 leather, bronze plaques on the chest strap and a plain heavy gold torque at the
 throat. Sun-darkened skin, broad cheekbones, wind-cracked lips.
+IMPORTANT: a FUR HAT only. NO Chinese crown, NO beaded curtain, NO flat board
+above the head. He is a tribal chieftain, not an enthroned emperor.
 <年齢の一行> Vary the fur colour as well (dark sable brown / grey brown / reddish fox).
 ```
 
@@ -226,7 +259,7 @@ both. A cold, appraising expression.
 | `north_mid_1.png` `north_mid_2.png` | A man of about thirty-five, strong black beard. |
 | `north_old_1.png` `north_old_2.png` | A man of about fifty-five, greying beard, deep-set eyes. |
 
-## 5. 第二便（いま顔の無いもの・10枚）
+## 5. 第三便（仕組みごと未実装のもの・10枚）
 
 | ファイル名 | SUBJECT に足す一行 |
 |---|---|
@@ -236,7 +269,7 @@ both. A cold, appraising expression.
 | `chieftain_female_1.png` `chieftain_female_2.png` | A woman chieftain of a steppe people, about thirty: fur hat and braids, a fur-collared coat fastened on the left, a heavy gold torque, a hunting falcon's jesses visible at her shoulder. |
 | `rebel_mid_1.png` `rebel_mid_2.png` | A rebel general of about forty-five: no crown, hair bound up in a plain cloth wrap, battered leather armour over a coarse robe, a hard stare. |
 
-## 6. 第三便（史実の人物・個別の顔）
+## 6. 第四便（史実の人物・個別の顔）
 
 `data/leaders.json` に名前のある78人。**無くても遊べる**ので最後でよい。
 ファイル名は `leader_<よみ>.png`。

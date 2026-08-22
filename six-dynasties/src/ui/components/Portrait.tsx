@@ -87,12 +87,28 @@ const ROBES: Record<PortraitRole, { cloth: string[]; collar: string; trim: strin
  */
 const PAINTED = portraitsData as Record<string, Record<string, string[]>>;
 
-/** 年を三つの帯に分ける。画はこの帯ごとに用意する */
-function bandOf(age: number): 'young' | 'mid' | 'old' {
+/**
+ * 年の帯。画はこの帯ごとに用意する。
+ *
+ * **幼帝は別の帯にする。** 十二の帝を若年の画で描くと、
+ * 冕冠の下に髭の無い成人が座るだけで「幼くして立った」ことが伝わらない。
+ * まだ幼帝の画が無いあいだは若年の画に落ちる（`FALLBACK`）
+ */
+function bandOf(age: number): string {
+  if (age < 16) return 'boy';
   if (age < 32) return 'young';
   if (age < 52) return 'mid';
   return 'old';
 }
+
+/** その帯の画が無いときに代わりに探す帯 */
+const FALLBACK: Record<string, string[]> = {
+  boy: ['young'],
+  young: ['mid'],
+  mid: ['old', 'young'],
+  old: ['mid'],
+  female: [],
+};
 
 /**
  * その人物に当てられる画を探す。
@@ -109,9 +125,15 @@ function paintedFor(spec: PortraitSpec, rng: () => number): string | null {
         ? 'official'
         : spec.role;
   const band = spec.role === 'chieftain' && spec.female === true ? 'female' : bandOf(spec.age);
-  const list = PAINTED[role]?.[band];
-  if (list === undefined || list.length === 0) return null;
-  return list[Math.floor(rng() * list.length)] ?? null;
+  const bands = PAINTED[role];
+  if (bands === undefined) return null;
+  for (const key of [band, ...(FALLBACK[band] ?? [])]) {
+    const list = bands[key];
+    if (list !== undefined && list.length > 0) {
+      return list[Math.floor(rng() * list.length)] ?? null;
+    }
+  }
+  return null;
 }
 
 export function Portrait({ spec, size = 44 }: { spec: PortraitSpec; size?: number }) {
