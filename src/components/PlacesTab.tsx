@@ -13,6 +13,23 @@ export function PlacesTab({ trip }: { trip: TripStore }) {
   const [importing, setImporting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [schedulingId, setSchedulingId] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  /** Saving can fail on the device (full storage, private browsing). Never
+   *  let that fail silently — an unreported error looks like a dead button. */
+  const save = async (run: () => Promise<unknown>) => {
+    try {
+      setSaveError(null);
+      await run();
+      return true;
+    } catch (err) {
+      console.error("save failed", err);
+      setSaveError(
+        err instanceof Error ? err.message : "保存できませんでした。時間をおいて再度お試しください。",
+      );
+      return false;
+    }
+  };
 
   const grouped = PRIORITY_ORDER.map((priority) => ({
     priority,
@@ -35,6 +52,8 @@ export function PlacesTab({ trip }: { trip: TripStore }) {
         )}
       </div>
 
+      {saveError && <p className="save-error">⚠️ {saveError}</p>}
+
       {importing && (
         <ImportPanel
           existingNames={trip.places.map((p) => p.name)}
@@ -49,9 +68,8 @@ export function PlacesTab({ trip }: { trip: TripStore }) {
 
       {adding && (
         <PlaceForm
-          onSubmit={(place) => {
-            trip.addPlace(place);
-            setAdding(false);
+          onSubmit={async (place) => {
+            if (await save(() => trip.addPlace(place))) setAdding(false);
           }}
           onCancel={() => setAdding(false)}
         />

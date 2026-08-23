@@ -689,16 +689,37 @@ textarea {
 
 /* --- Bulk import ------------------------------------------------------- */
 
+/* Two buttons plus a heading is tight on a phone: let them share one row and
+   keep the heading from being squeezed into a two-line wrap. */
 .header-actions {
   display: flex;
   gap: 6px;
-  flex-wrap: wrap;
   justify-content: flex-end;
+  flex: 0 0 auto;
 }
 
-.header-actions .btn-secondary {
-  font-size: 0.8rem;
+.header-actions .btn-secondary,
+.header-actions .btn-primary {
+  font-size: 0.78rem;
   padding: 8px 10px;
+  white-space: nowrap;
+}
+
+.tab-header-row h2 {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 1.35rem;
+}
+
+.save-error {
+  background: #fff5f5;
+  border: 1px solid #feb2b2;
+  color: #9b2c2c;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 0 0 12px;
 }
 
 .import-panel {
