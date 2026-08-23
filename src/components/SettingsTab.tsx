@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { doc, setDoc } from "firebase/firestore";
+import { addDoc, collection, deleteDoc, doc, setDoc } from "firebase/firestore";
 import { TripStore } from "../hooks/useTrip";
 import {
   AuthStatus,
@@ -48,21 +48,44 @@ function Diagnostics({ trip }: { trip: TripStore }) {
       }
       await authReady;
       // Firestore queues writes while offline and never settles the promise,
-      // so the test would spin forever without a deadline of its own.
-      await Promise.race([
+      // so each step needs a deadline of its own.
+      const withTimeout = <R,>(p: Promise<R>) =>
+        Promise.race([
+          p,
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject({ code: "timeout" }), 10000),
+          ),
+        ]);
+
+      await withTimeout(
         setDoc(doc(db, "trips", TRIP_ID), { probedAt: Date.now() }, { merge: true }),
-        new Promise((_, reject) =>
-          setTimeout(() => reject({ code: "timeout" }), 10000),
-        ),
-      ]);
-      setProbe("✅ Firebaseへの書き込みに成功しました。登録できる状態です。");
+      );
+
+      // Places live in a subcollection, and Firestore rules that cover only the
+      // parent document still reject those writes. Testing the document alone
+      // would report success while registering a place keeps failing.
+      const probeDoc = await withTimeout(
+        addDoc(collection(db, "trips", TRIP_ID, "places"), {
+          name: "__接続テスト__",
+          category: "other",
+          priority: "if-time",
+          createdAt: Date.now(),
+        }),
+      );
+      await withTimeout(deleteDoc(probeDoc)).catch(() => {
+        // Leaving the probe behind is untidy but not a failure worth reporting.
+      });
+
+      setProbe("✅ 場所の保存に成功しました。登録できる状態です。");
     } catch (err) {
       const e = err as { code?: string; message?: string };
       const code = e?.code ?? "unknown";
       let hint = e?.message ?? String(err);
       if (code.includes("permission-denied")) {
         hint =
-          "Firestoreのルールに拒否されました。Firebaseコンソールで firestore.rules の内容を貼り付けて公開し、匿名ログインを有効にしてください。";
+          "Firestoreのルールに拒否されました。ルールが trips/{tripId} だけを対象にしていると、" +
+          "その配下の places(場所)への書き込みは拒否されます。" +
+          "リポジトリの firestore.rules の内容をそのまま貼り付けて公開してください。";
       } else if (code.includes("unauthenticated")) {
         hint = "ログインできていません。Authentication →「匿名」を有効にしてください。";
       } else if (code.includes("not-found")) {
