@@ -28,6 +28,19 @@ export function useTrip() {
   const [places, setPlaces] = useState<Place[]>([]);
   const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([]);
   const [loading, setLoading] = useState(true);
+  /** Firestore refused to stream the data — otherwise the list just stays
+   *  empty with no explanation of why. */
+  const [syncError, setSyncError] = useState<string | null>(null);
+
+  const onSyncError = (err: { code?: string; message?: string }) => {
+    console.error("firestore subscription failed", err);
+    const code = err?.code ?? "unknown";
+    setSyncError(
+      code.includes("permission-denied")
+        ? "共有サーバーからデータを読み取れません(権限エラー)。Firestoreのルールと匿名ログインの設定をご確認ください。"
+        : `共有サーバーに接続できません (${code})`,
+    );
+  };
 
   useEffect(() => {
     if (!isFirebaseConfigured || !db) {
@@ -53,27 +66,40 @@ export function useTrip() {
       if (cancelled || !db) return;
 
       const tripRef = doc(db, "trips", TRIP_ID);
-      unsubInfo = onSnapshot(tripRef, (snap) => {
-        if (snap.exists()) {
-          setTripInfo({ ...DEFAULT_TRIP_INFO, ...(snap.data() as TripInfo) });
-        } else {
-          setDoc(tripRef, DEFAULT_TRIP_INFO).catch(console.error);
-        }
-      });
+      unsubInfo = onSnapshot(
+        tripRef,
+        (snap) => {
+          setSyncError(null);
+          if (snap.exists()) {
+            setTripInfo({ ...DEFAULT_TRIP_INFO, ...(snap.data() as TripInfo) });
+          } else {
+            setDoc(tripRef, DEFAULT_TRIP_INFO).catch(console.error);
+          }
+        },
+        onSyncError,
+      );
 
       const placesRef = collection(db, "trips", TRIP_ID, "places");
-      unsubPlaces = onSnapshot(placesRef, (snap) => {
-        const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Place);
-        items.sort((a, b) => a.createdAt - b.createdAt);
-        setPlaces(items);
-      });
+      unsubPlaces = onSnapshot(
+        placesRef,
+        (snap) => {
+          const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Place);
+          items.sort((a, b) => a.createdAt - b.createdAt);
+          setPlaces(items);
+        },
+        onSyncError,
+      );
 
       const scheduleRef = collection(db, "trips", TRIP_ID, "scheduleItems");
-      unsubSchedule = onSnapshot(scheduleRef, (snap) => {
-        setScheduleItems(
-          snap.docs.map((d) => ({ id: d.id, ...d.data() }) as ScheduleItem),
-        );
-      });
+      unsubSchedule = onSnapshot(
+        scheduleRef,
+        (snap) => {
+          setScheduleItems(
+            snap.docs.map((d) => ({ id: d.id, ...d.data() }) as ScheduleItem),
+          );
+        },
+        onSyncError,
+      );
 
       setLoading(false);
     });
@@ -90,6 +116,7 @@ export function useTrip() {
     () => ({
       loading,
       isShared: isFirebaseConfigured,
+      syncError,
       tripInfo,
       places,
       scheduleItems,
@@ -147,7 +174,7 @@ export function useTrip() {
         }
       },
     }),
-    [loading, tripInfo, places, scheduleItems],
+    [loading, syncError, tripInfo, places, scheduleItems],
   );
 }
 

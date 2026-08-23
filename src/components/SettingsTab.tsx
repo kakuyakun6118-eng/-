@@ -1,13 +1,91 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import { doc, setDoc } from "firebase/firestore";
 import { TripStore } from "../hooks/useTrip";
-import { TRIP_ID } from "../firebase";
+import {
+  AuthStatus,
+  authReady,
+  db,
+  isFirebaseConfigured,
+  subscribeAuthStatus,
+  TRIP_ID,
+} from "../firebase";
 import { storageAvailable } from "../data/local";
+
+/** Plain-language explanation of the Firebase setup step that is missing. */
+function authAdvice(status: AuthStatus): string | null {
+  if (status.state !== "error") return null;
+  if (status.code.includes("operation-not-allowed")) {
+    return "Firebaseコンソールで匿名ログインが有効になっていません。Authentication → Sign-in method →「匿名」を有効にしてください。";
+  }
+  if (status.code.includes("api-key") || status.code.includes("invalid")) {
+    return "Firebaseの接続情報が正しくない可能性があります。GitHubのSecretsに設定した値をご確認ください。";
+  }
+  if (status.code.includes("network")) {
+    return "Firebaseに接続できませんでした。通信環境をご確認ください。";
+  }
+  return status.message;
+}
 
 /**
  * Facts about the device that decide whether saving can work at all. Shown in
  * the app so a problem can be reported from a screenshot instead of guessed at.
  */
 function Diagnostics({ trip }: { trip: TripStore }) {
+  const [auth, setAuth] = useState<AuthStatus>({ state: "pending" });
+  const [probe, setProbe] = useState<string | null>(null);
+  const [probing, setProbing] = useState(false);
+
+  useEffect(() => subscribeAuthStatus(setAuth), []);
+
+  /** Attempts the exact write the app performs, and reports the real error. */
+  const testWrite = async () => {
+    setProbing(true);
+    setProbe(null);
+    try {
+      if (!isFirebaseConfigured || !db) {
+        setProbe("この端末のみで動作中です(Firebase未設定)。書き込みは端末内に保存されます。");
+        return;
+      }
+      await authReady;
+      // Firestore queues writes while offline and never settles the promise,
+      // so the test would spin forever without a deadline of its own.
+      await Promise.race([
+        setDoc(doc(db, "trips", TRIP_ID), { probedAt: Date.now() }, { merge: true }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject({ code: "timeout" }), 10000),
+        ),
+      ]);
+      setProbe("✅ Firebaseへの書き込みに成功しました。登録できる状態です。");
+    } catch (err) {
+      const e = err as { code?: string; message?: string };
+      const code = e?.code ?? "unknown";
+      let hint = e?.message ?? String(err);
+      if (code.includes("permission-denied")) {
+        hint =
+          "Firestoreのルールに拒否されました。Firebaseコンソールで firestore.rules の内容を貼り付けて公開し、匿名ログインを有効にしてください。";
+      } else if (code.includes("unauthenticated")) {
+        hint = "ログインできていません。Authentication →「匿名」を有効にしてください。";
+      } else if (code.includes("not-found")) {
+        hint = "Firestoreデータベースがまだ作成されていない可能性があります。";
+      } else if (code === "timeout") {
+        hint =
+          "10秒以内に応答がありませんでした。Firebaseに接続できていない可能性があります(通信環境、またはFirestoreデータベースが未作成)。";
+      }
+      setProbe(`❌ 書き込み失敗 (${code})\n${hint}`);
+    } finally {
+      setProbing(false);
+    }
+  };
+
+  const authLabel =
+    auth.state === "ok"
+      ? "ログイン済み"
+      : auth.state === "pending"
+        ? "確認中…"
+        : auth.state === "disabled"
+          ? "未使用(端末内保存)"
+          : `失敗 (${auth.code})`;
+
   const canMakeId =
     typeof crypto !== "undefined" && typeof crypto.randomUUID === "function";
   const standalone =
@@ -21,9 +99,12 @@ function Diagnostics({ trip }: { trip: TripStore }) {
     ["保存領域", storageAvailable ? "使用可" : "使用不可(閉じると消えます)", storageAvailable],
     ["ID採番", canMakeId ? "標準" : "代替方式", true],
     ["共有", trip.isShared ? `Firebase (${TRIP_ID})` : "この端末のみ", true],
+    ["ログイン", authLabel, auth.state !== "error"],
     ["登録数", `場所 ${trip.places.length} / 予定 ${trip.scheduleItems.length}`, true],
     ["起動方法", standalone ? "ホーム画面から" : "ブラウザから", true],
   ];
+
+  const advice = authAdvice(auth);
 
   return (
     <section className="diagnostics">
@@ -37,6 +118,8 @@ function Diagnostics({ trip }: { trip: TripStore }) {
           </div>
         ))}
       </dl>
+      {advice && <p className="save-error">⚠️ {advice}</p>}
+
       {!storageAvailable && (
         <p className="save-error">
           ⚠️ この端末では保存領域が使えません。Safariの設定で「すべてのCookieをブロック」が
@@ -44,6 +127,11 @@ function Diagnostics({ trip }: { trip: TripStore }) {
           解除すると登録した内容が残るようになります。
         </p>
       )}
+
+      <button className="btn-secondary btn-block" onClick={testWrite} disabled={probing}>
+        {probing ? "確認中…" : "保存できるかテストする"}
+      </button>
+      {probe && <p className="probe-result">{probe}</p>}
     </section>
   );
 }

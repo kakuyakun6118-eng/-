@@ -25,8 +25,36 @@ const app = isFirebaseConfigured ? initializeApp(firebaseConfig) : null;
 export const db = app ? getFirestore(app) : null;
 const auth = app ? getAuth(app) : null;
 
+export type AuthStatus =
+  | { state: "disabled" }
+  | { state: "pending" }
+  | { state: "ok"; uid: string }
+  | { state: "error"; code: string; message: string };
+
+let currentAuth: AuthStatus = isFirebaseConfigured ? { state: "pending" } : { state: "disabled" };
+const authListeners = new Set<(s: AuthStatus) => void>();
+
+function setAuth(next: AuthStatus) {
+  currentAuth = next;
+  authListeners.forEach((cb) => cb(next));
+}
+
+export function getAuthStatus(): AuthStatus {
+  return currentAuth;
+}
+
+export function subscribeAuthStatus(cb: (s: AuthStatus) => void): () => void {
+  authListeners.add(cb);
+  cb(currentAuth);
+  return () => authListeners.delete(cb);
+}
+
 // Resolves once an anonymous session is ready so Firestore reads/writes are
 // allowed by security rules that require request.auth != null.
+//
+// A failure here is not cosmetic: without a signed-in user every read and
+// write is rejected, and the app looks like it simply doesn't save. The
+// outcome is recorded so the settings screen can say what went wrong.
 export const authReady: Promise<void> = new Promise((resolve) => {
   if (!auth) {
     resolve();
@@ -34,12 +62,23 @@ export const authReady: Promise<void> = new Promise((resolve) => {
   }
   onAuthStateChanged(auth, (user) => {
     if (user) {
+      setAuth({ state: "ok", uid: user.uid });
       resolve();
     } else {
-      signInAnonymously(auth).catch((err) => {
-        console.error("anonymous sign-in failed", err);
-        resolve();
-      });
+      signInAnonymously(auth)
+        .then((cred) => {
+          setAuth({ state: "ok", uid: cred.user.uid });
+          resolve();
+        })
+        .catch((err: { code?: string; message?: string }) => {
+          console.error("anonymous sign-in failed", err);
+          setAuth({
+            state: "error",
+            code: err?.code ?? "unknown",
+            message: err?.message ?? String(err),
+          });
+          resolve();
+        });
     }
   });
 });
