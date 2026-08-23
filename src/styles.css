@@ -753,6 +753,28 @@ textarea {
   font-weight: 700;
 }
 
+.header-alert {
+  background: rgba(197, 48, 48, 0.85);
+  border-radius: 8px;
+  padding: 6px 9px;
+  font-weight: 600;
+}
+
+.probe-result {
+  white-space: pre-wrap;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 10px 0 0;
+}
+
+.diagnostics .btn-block {
+  margin-top: 12px;
+}
+
 .save-error {
   background: #fff5f5;
   border: 1px solid #feb2b2;
