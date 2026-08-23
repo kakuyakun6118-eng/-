@@ -153,6 +153,13 @@ export function ImportPanel({
     }
     setBusy(null);
     setSources(readFiles);
+    if (found.length === 0) {
+      setError(
+        `「${files.map((f) => f.name).join("、")}」から場所を読み取れませんでした。` +
+          "Takeoutのzip、またはその中のCSV / JSONファイルを選んでください。",
+      );
+      return;
+    }
     addDrafts(found);
   };
 
@@ -173,16 +180,29 @@ export function ImportPanel({
     const selected = drafts.filter((d) => d.include && d.name.trim());
     if (selected.length === 0) return;
     setBusy("保存中…");
-    await onImport(
-      selected.map((d) => ({
-        name: d.name.trim(),
-        category: d.category,
-        priority: d.priority,
-        area: d.area?.trim() || undefined,
-        mapsUrl: d.mapsUrl?.trim() || undefined,
-        note: d.note?.trim() || undefined,
-      })),
-    );
+    try {
+      await onImport(
+        selected.map((d) => ({
+          name: d.name.trim(),
+          category: d.category,
+          priority: d.priority,
+          area: d.area?.trim() || undefined,
+          mapsUrl: d.mapsUrl?.trim() || undefined,
+          note: d.note?.trim() || undefined,
+        })),
+      );
+    } catch (err) {
+      // Without this the panel just closes and nothing is added, which reads
+      // as "the button does nothing".
+      console.error("import save failed", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "保存できませんでした。端末の空き容量をご確認ください。",
+      );
+      setBusy(null);
+      return;
+    }
     setBusy(null);
     onClose();
   };
@@ -258,13 +278,10 @@ export function ImportPanel({
           </ol>
           <label className="file-button">
             zip / CSV / JSON を選ぶ(複数可)
-            <input
-              type="file"
-              accept=".zip,.csv,.json,application/zip,text/csv,application/json"
-              multiple
-              onChange={handleCsv}
-              hidden
-            />
+            {/* No `accept` filter: iOS greys out perfectly valid files when it
+                doesn't recognise a listed type, which makes the Takeout zip
+                impossible to pick. Unsupported files are reported instead. */}
+            <input type="file" multiple onChange={handleCsv} hidden />
           </label>
           <p className="hint">
             解凍済みの <code>.csv</code> / <code>.json</code> を直接選んでも構いません。

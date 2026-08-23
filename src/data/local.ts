@@ -3,8 +3,35 @@
 
 type Listener<T> = (items: T[]) => void;
 
+/**
+ * `crypto.randomUUID` needs a secure context and Safari 15.4+, and throws
+ * outright where either is missing — which would take down the whole "add a
+ * place" path. Fall back to a good-enough id rather than lose the write.
+ */
 function newId(): string {
-  return crypto.randomUUID();
+  try {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+  } catch {
+    // fall through
+  }
+  return `id-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/** Thrown when the device refuses the write, so the UI can explain why. */
+export class StorageError extends Error {}
+
+function persist(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch (err) {
+    // Private browsing and a full storage quota both land here. Without this
+    // the failure is silent and the place simply never appears.
+    throw new StorageError(
+      "この端末に保存できませんでした。Safariのプライベートブラウズを解除するか、空き容量をご確認ください。",
+    );
+  }
 }
 
 export class LocalCollection<T extends { id: string }> {
@@ -21,7 +48,7 @@ export class LocalCollection<T extends { id: string }> {
   }
 
   private write(items: T[]) {
-    localStorage.setItem(this.key, JSON.stringify(items));
+    persist(this.key, JSON.stringify(items));
     this.listeners.forEach((listener) => listener(items));
   }
 
@@ -77,7 +104,7 @@ export class LocalDoc<T> {
 
   update(patch: Partial<T>) {
     const next = { ...this.read(), ...patch };
-    localStorage.setItem(this.key, JSON.stringify(next));
+    persist(this.key, JSON.stringify(next));
     this.listeners.forEach((listener) => listener(next));
   }
 }
