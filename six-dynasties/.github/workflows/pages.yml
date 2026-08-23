@@ -1,0 +1,63 @@
+name: Deploy to GitHub Pages
+
+# **このファイルは、いまのリポジトリでは動かない。**
+#
+# GitHub Actions が読むのは**リポジトリの根の** `.github/workflows/` だけで、
+# ここは `six-dynasties/.github/workflows/` にあたる。いまは眠っている。
+#
+# `git subtree split --prefix=six-dynasties` でこの階層を切り出して
+# 別のリポジトリへ移すと、この階層がそのまま根になり、
+# **その瞬間からこのファイルが動きはじめる。**
+# 分けたあとに書き足す手間を省くために、先に置いてある。
+#
+# 分けたあとにすること（リポジトリの Settings で）:
+#   1. Pages → Source を「GitHub Actions」
+#   2. Environments → github-pages → Deployment branches に main を許す
+#
+# 公開先は https://<ユーザ名>.github.io/<リポジトリ名>/ になる。
+# `vite.config.ts` の `base` は './'（相対）なので、
+# リポジトリ名が何であってもそのまま届く
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 公開は同時に1つだけ。進行中の公開は中断しない
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      # 不変条件の点検。破れが1件でもあれば公開しない
+      - run: npm run audit
+      - run: npm run build
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
