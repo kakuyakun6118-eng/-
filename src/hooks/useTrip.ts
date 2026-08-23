@@ -3,6 +3,7 @@ import {
   addDoc,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   onSnapshot,
   setDoc,
@@ -18,6 +19,24 @@ import {
   ScheduleItem,
   TripInfo,
 } from "../types";
+
+/**
+ * Firestore rejects `undefined` outright ("Unsupported field value: undefined"),
+ * while the local store silently drops it. Optional fields are modelled as
+ * `undefined` throughout the app, so every Firestore write has to be
+ * normalised here — otherwise saving anything with a blank optional field
+ * fails, and only in shared mode.
+ */
+function forCreate<T extends object>(data: T): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
+}
+
+/** On update, an omitted value means "clear this field". */
+function forUpdate<T extends object>(data: T): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(data).map(([k, v]) => [k, v === undefined ? deleteField() : v]),
+  );
+}
 
 const localTripInfo = new LocalDoc<TripInfo>("ny-trip:info", DEFAULT_TRIP_INFO);
 const localPlaces = new LocalCollection<Place>("ny-trip:places");
@@ -73,7 +92,7 @@ export function useTrip() {
           if (snap.exists()) {
             setTripInfo({ ...DEFAULT_TRIP_INFO, ...(snap.data() as TripInfo) });
           } else {
-            setDoc(tripRef, DEFAULT_TRIP_INFO).catch(console.error);
+            setDoc(tripRef, forCreate(DEFAULT_TRIP_INFO)).catch(console.error);
           }
         },
         onSyncError,
@@ -123,7 +142,7 @@ export function useTrip() {
 
       updateTripInfo: async (patch: Partial<TripInfo>) => {
         if (isFirebaseConfigured && db) {
-          await setDoc(doc(db, "trips", TRIP_ID), patch, { merge: true });
+          await setDoc(doc(db, "trips", TRIP_ID), forUpdate(patch), { merge: true });
         } else {
           localTripInfo.update(patch);
         }
@@ -132,14 +151,14 @@ export function useTrip() {
       addPlace: async (place: NewPlace) => {
         const withTimestamp = { ...place, createdAt: Date.now() };
         if (isFirebaseConfigured && db) {
-          await addDoc(collection(db, "trips", TRIP_ID, "places"), withTimestamp);
+          await addDoc(collection(db, "trips", TRIP_ID, "places"), forCreate(withTimestamp));
         } else {
           localPlaces.add(withTimestamp);
         }
       },
       updatePlace: async (id: string, patch: Partial<Place>) => {
         if (isFirebaseConfigured && db) {
-          await updateDoc(doc(db, "trips", TRIP_ID, "places", id), patch);
+          await updateDoc(doc(db, "trips", TRIP_ID, "places", id), forUpdate(patch));
         } else {
           localPlaces.update(id, patch);
         }
@@ -154,14 +173,14 @@ export function useTrip() {
 
       addScheduleItem: async (item: NewScheduleItem) => {
         if (isFirebaseConfigured && db) {
-          await addDoc(collection(db, "trips", TRIP_ID, "scheduleItems"), item);
+          await addDoc(collection(db, "trips", TRIP_ID, "scheduleItems"), forCreate(item));
         } else {
           localScheduleItems.add(item);
         }
       },
       updateScheduleItem: async (id: string, patch: Partial<ScheduleItem>) => {
         if (isFirebaseConfigured && db) {
-          await updateDoc(doc(db, "trips", TRIP_ID, "scheduleItems", id), patch);
+          await updateDoc(doc(db, "trips", TRIP_ID, "scheduleItems", id), forUpdate(patch));
         } else {
           localScheduleItems.update(id, patch);
         }
