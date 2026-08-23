@@ -77,6 +77,25 @@ function Diagnostics({ trip }: { trip: TripStore }) {
     }
   };
 
+  /**
+   * Last resort when the home-screen app keeps serving a stale build: drop the
+   * service worker and its caches, then reload. Saved data lives in
+   * localStorage/Firestore and is untouched.
+   */
+  const forceUpdate = async () => {
+    try {
+      const regs = (await navigator.serviceWorker?.getRegistrations?.()) ?? [];
+      await Promise.all(regs.map((r) => r.unregister()));
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+    } catch (err) {
+      console.error("cache clear failed", err);
+    }
+    location.reload();
+  };
+
   const authLabel =
     auth.state === "ok"
       ? "ログイン済み"
@@ -132,6 +151,13 @@ function Diagnostics({ trip }: { trip: TripStore }) {
         {probing ? "確認中…" : "保存できるかテストする"}
       </button>
       {probe && <p className="probe-result">{probe}</p>}
+
+      <button className="btn-secondary btn-block" onClick={forceUpdate}>
+        最新版に更新する
+      </button>
+      <p className="hint">
+        上のバージョンが古いままのときに押してください。保存済みの内容は消えません。
+      </p>
     </section>
   );
 }

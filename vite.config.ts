@@ -15,6 +15,10 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
+      // Registered by hand in main.tsx so the app can also poll for updates:
+      // an iOS home-screen app otherwise keeps serving its cached build for
+      // days, and every fix looks like it never shipped.
+      injectRegister: false,
       includeAssets: ["icons/icon-180.png"],
       manifest: {
         name: "NY旅のしおり",
