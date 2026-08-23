@@ -4,6 +4,13 @@ import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
   base: process.env.VITE_BASE_PATH || "/",
+  // Shown in the settings tab so it is possible to tell, from a screenshot,
+  // whether a device is actually running the latest deploy.
+  define: {
+    __BUILD_TIME__: JSON.stringify(
+      new Date().toISOString().replace("T", " ").slice(0, 16) + " UTC",
+    ),
+  },
   plugins: [
     react(),
     VitePWA({

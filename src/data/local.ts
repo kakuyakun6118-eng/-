@@ -22,14 +22,48 @@ function newId(): string {
 /** Thrown when the device refuses the write, so the UI can explain why. */
 export class StorageError extends Error {}
 
+/**
+ * Some iOS configurations (private browsing, "block all cookies", a full
+ * quota) make localStorage throw on every write. Rather than leave the app
+ * unusable, fall back to memory for the session and tell the user their data
+ * won't survive a restart.
+ */
+const memoryStore = new Map<string, string>();
+
+function probeLocalStorage(): boolean {
+  try {
+    const probe = "ny-trip:__probe__";
+    localStorage.setItem(probe, "1");
+    localStorage.removeItem(probe);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export const storageAvailable = probeLocalStorage();
+
+function readRaw(key: string): string | null {
+  if (!storageAvailable) return memoryStore.get(key) ?? null;
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return memoryStore.get(key) ?? null;
+  }
+}
+
 function persist(key: string, value: string) {
+  if (!storageAvailable) {
+    memoryStore.set(key, value);
+    return;
+  }
   try {
     localStorage.setItem(key, value);
-  } catch (err) {
-    // Private browsing and a full storage quota both land here. Without this
-    // the failure is silent and the place simply never appears.
+  } catch {
+    // Quota can run out mid-session even when the probe passed.
+    memoryStore.set(key, value);
     throw new StorageError(
-      "この端末に保存できませんでした。Safariのプライベートブラウズを解除するか、空き容量をご確認ください。",
+      "この端末の保存領域がいっぱいのようです。今回の内容は一時的に保持していますが、アプリを閉じると消えます。",
     );
   }
 }
@@ -41,7 +75,7 @@ export class LocalCollection<T extends { id: string }> {
 
   private read(): T[] {
     try {
-      return JSON.parse(localStorage.getItem(this.key) ?? "[]") as T[];
+      return JSON.parse(readRaw(this.key) ?? "[]") as T[];
     } catch {
       return [];
     }
@@ -87,7 +121,7 @@ export class LocalDoc<T> {
 
   private read(): T {
     try {
-      const raw = localStorage.getItem(this.key);
+      const raw = readRaw(this.key);
       return raw ? (JSON.parse(raw) as T) : this.defaultValue;
     } catch {
       return this.defaultValue;

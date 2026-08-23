@@ -1,6 +1,52 @@
 import { FormEvent, useState } from "react";
 import { TripStore } from "../hooks/useTrip";
 import { TRIP_ID } from "../firebase";
+import { storageAvailable } from "../data/local";
+
+/**
+ * Facts about the device that decide whether saving can work at all. Shown in
+ * the app so a problem can be reported from a screenshot instead of guessed at.
+ */
+function Diagnostics({ trip }: { trip: TripStore }) {
+  const canMakeId =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function";
+  const standalone =
+    typeof window !== "undefined" &&
+    (window.matchMedia?.("(display-mode: standalone)").matches ||
+      // iOS predates the standard media query.
+      (window.navigator as { standalone?: boolean }).standalone === true);
+
+  const rows: [string, string, boolean][] = [
+    ["バージョン", __BUILD_TIME__, true],
+    ["保存領域", storageAvailable ? "使用可" : "使用不可(閉じると消えます)", storageAvailable],
+    ["ID採番", canMakeId ? "標準" : "代替方式", true],
+    ["共有", trip.isShared ? `Firebase (${TRIP_ID})` : "この端末のみ", true],
+    ["登録数", `場所 ${trip.places.length} / 予定 ${trip.scheduleItems.length}`, true],
+    ["起動方法", standalone ? "ホーム画面から" : "ブラウザから", true],
+  ];
+
+  return (
+    <section className="diagnostics">
+      <h3>動作状況</h3>
+      <p className="hint">うまく登録できないときは、この内容をお知らせください。</p>
+      <dl className="diag-list">
+        {rows.map(([label, value, ok]) => (
+          <div key={label} className={`diag-row ${ok ? "" : "bad"}`}>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
+      </dl>
+      {!storageAvailable && (
+        <p className="save-error">
+          ⚠️ この端末では保存領域が使えません。Safariの設定で「すべてのCookieをブロック」が
+          有効になっているか、プライベートブラウズで開いている可能性があります。
+          解除すると登録した内容が残るようになります。
+        </p>
+      )}
+    </section>
+  );
+}
 
 export function SettingsTab({ trip }: { trip: TripStore }) {
   const info = trip.tripInfo;
@@ -90,6 +136,8 @@ export function SettingsTab({ trip }: { trip: TripStore }) {
           保存{saved && " ✓"}
         </button>
       </form>
+
+      <Diagnostics trip={trip} />
     </div>
   );
 }

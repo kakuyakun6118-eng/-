@@ -711,6 +711,48 @@ textarea {
   font-size: 1.35rem;
 }
 
+.diagnostics {
+  margin-top: 22px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.diagnostics h3 {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+}
+
+.diag-list {
+  margin: 8px 0 0;
+}
+
+.diag-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.82rem;
+}
+
+.diag-row dt {
+  color: var(--muted);
+  flex: 0 0 auto;
+}
+
+.diag-row dd {
+  margin: 0;
+  text-align: right;
+  word-break: break-all;
+}
+
+.diag-row.bad dd {
+  color: var(--danger);
+  font-weight: 700;
+}
+
 .save-error {
   background: #fff5f5;
   border: 1px solid #feb2b2;
