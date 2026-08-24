@@ -117,6 +117,12 @@ export function PhrasesTab({ trip }: { trip: TripStore }) {
 
       {store.saveError && <p className="save-error">⚠️ {store.saveError}</p>}
 
+      {store.deviceOnly && (
+        <p className="save-error">
+          ⚠️ 共有サーバーに接続できないため、学習記録はこの端末にだけ保存しています(学習は続けられます)。設定タブの「動作状況」をご確認ください。
+        </p>
+      )}
+
       <div className="ph-hero">
         <div className="ph-hero-top">
           <div>
@@ -283,7 +289,7 @@ export function PhrasesTab({ trip }: { trip: TripStore }) {
           );
         })}
       </div>
-      {!store.isShared && (
+      {!store.canShare && (
         <p className="hint">
           Firebaseを設定すると、2人の記録がそれぞれのiPhoneで同期されます(設定タブ参照)。
         </p>
