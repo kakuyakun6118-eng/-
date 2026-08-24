@@ -6,17 +6,10 @@ import { ScheduleTab } from "./components/ScheduleTab";
 import { ItineraryTab } from "./components/ItineraryTab";
 import { SettingsTab } from "./components/SettingsTab";
 import { AutoPlanTab } from "./components/AutoPlanTab";
+import { PhrasesTab } from "./components/PhrasesTab";
 import { Scene } from "./components/Scene";
-import { dateRange, formatDateLabel } from "./utils/date";
+import { dateRange, daysUntil, formatDateLabel } from "./utils/date";
 import { AuthStatus, subscribeAuthStatus } from "./firebase";
-
-function daysUntil(startDate: string): number | null {
-  const start = new Date(`${startDate}T00:00:00`);
-  if (Number.isNaN(start.getTime())) return null;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return Math.round((start.getTime() - today.getTime()) / 86400000);
-}
 
 export default function App() {
   const [tab, setTab] = useState<TabKey>("places");
@@ -73,6 +66,7 @@ export default function App() {
             {tab === "plan" && <AutoPlanTab trip={trip} />}
             {tab === "schedule" && <ScheduleTab trip={trip} />}
             {tab === "itinerary" && <ItineraryTab trip={trip} />}
+            {tab === "phrases" && <PhrasesTab trip={trip} />}
             {tab === "settings" && <SettingsTab trip={trip} />}
           </>
         )}

@@ -122,3 +122,47 @@ export const DEFAULT_PLAN_OPTIONS: PlanOptions = {
   avoidCrowds: true,
   includeIfTime: false,
 };
+
+/**
+ * Phrase-learning progress. Each traveller gets their own record so the two
+ * phones can show both scores side by side (see src/hooks/useLearners.ts).
+ */
+export type LearnerId = "me" | "partner";
+
+export const LEARNER_IDS: LearnerId[] = ["me", "partner"];
+
+export interface LearnerProgress {
+  name: string;
+  /** Points earned. 100 XP = one level. */
+  xp: number;
+  /** Consecutive days with at least one answer. */
+  streak: number;
+  /** YYYY-MM-DD of the last answered question. */
+  lastStudyDate: string;
+  /** Questions to answer per day. */
+  dailyGoal: number;
+  /** Longest run of correct answers so far. */
+  bestCombo: number;
+  /** Review state per phrase id (see src/phrases/quiz.ts). */
+  stats: Record<string, import("./phrases/quiz").PhraseStat>;
+  /** YYYY-MM-DD → questions answered that day. Kept for the last 30 days. */
+  history: Record<string, number>;
+}
+
+export const DEFAULT_LEARNER_NAMES: Record<LearnerId, string> = {
+  me: "わたし",
+  partner: "妻",
+};
+
+export function defaultLearner(id: LearnerId): LearnerProgress {
+  return {
+    name: DEFAULT_LEARNER_NAMES[id],
+    xp: 0,
+    streak: 0,
+    lastStudyDate: "",
+    dailyGoal: 10,
+    bestCombo: 0,
+    stats: {},
+    history: {},
+  };
+}

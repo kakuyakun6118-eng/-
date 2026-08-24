@@ -42,3 +42,23 @@ export function sortScheduleItems<T extends { time?: string; order: number }>(
     return a.order - b.order;
   });
 }
+
+/** Today as YYYY-MM-DD in the device's own timezone. */
+export function todayKey(): string {
+  return toDateKey(new Date());
+}
+
+export function yesterdayKey(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return toDateKey(d);
+}
+
+/** Whole days from today until `dateStr`. Negative once the date has passed. */
+export function daysUntil(dateStr: string): number | null {
+  const target = new Date(`${dateStr}T00:00:00`);
+  if (Number.isNaN(target.getTime())) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((target.getTime() - today.getTime()) / 86400000);
+}
