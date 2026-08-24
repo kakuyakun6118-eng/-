@@ -119,7 +119,8 @@ export class LocalDoc<T> {
     private defaultValue: T,
   ) {}
 
-  private read(): T {
+  /** Public so callers can check what this device holds without subscribing. */
+  read(): T {
     try {
       const raw = readRaw(this.key);
       return raw ? (JSON.parse(raw) as T) : this.defaultValue;
