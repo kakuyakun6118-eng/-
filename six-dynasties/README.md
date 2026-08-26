@@ -234,33 +234,31 @@ npm run map                  # 地図の再生成（ネットワークが要る�
 
 ## 公開
 
-**GitHub Pages はリポジトリにつきサイトを1つしか持ちません。** このリポジトリには
-アプリが三つあるので、別々のワークフローで公開していたときは
-**最後に push したものが前のものを丸ごと上書き**していました。
+**GitHub Pages はリポジトリにつきサイトを1つしか持ちません。** いまのリポジトリには
+アプリが三つあり、その1枠は先に置かれた二つ（`main` の NY旅のしおり、
+`claude/western-rome-sim-phase-0-73l154` の西ローマ帝国シミュレーション）が使っています。
+**同じ枠へ割り込むと、その二つを上書きしてしまいます。**
 
-`.github/workflows/pages.yml`（リポジトリの根）が、**三つをまとめて組み立てて**
-階層で分けて載せます。
+そこでこのアプリは**自分のリポジトリを持って公開します。** この階層を切り出して
+移すだけで、他の二つには指一本触れません。
 
-| 道筋 | アプリ | ブランチ |
-|---|---|---|
-| `/` | 入口（三つへのリンク） | — |
-| `/ny/` | NY旅のしおり | `main` |
-| `/rome/` | 西ローマ帝国シミュレーション | `claude/western-rome-sim-phase-0-73l154` |
-| `/six-dynasties/` | 天下分裂 | `claude/eight-princes-sui-unification-app-nxn04n` |
+```bash
+# 1. GitHub で空のリポジトリを作る（README も .gitignore も入れずに）
+# 2. この階層だけを、履歴ごと切り出して押し込む
+git subtree split --prefix=six-dynasties -b split-six
+git push https://github.com/<ユーザ名>/<新リポジトリ>.git split-six:main
+git branch -D split-six
+```
 
-**どのアプリも根には置きません。** NY旅のしおりは PWA で、登録される Service Worker の
-縄張りは置いた場所から下すべてに及びます。根に置くと、NYを一度ひらいた端末では
-`/rome/` を開いてもNYの画面が返ってしまいます。三つとも一段下げれば縄張りは重なりません。
+移した先では `six-dynasties/.github/workflows/pages.yml` がそのまま根に来て、
+**その瞬間から動きはじめます**（いまのリポジトリでは根の `.github/workflows/` ではないので
+眠っています）。新リポジトリの Settings で二か所だけ：
 
-**このワークフローは三つのブランチすべてに同じ内容で置いてください。** `push` で走るのは
-「push されたブランチにあるファイル」なので、一つのブランチにしか置かないと
-他のブランチへの push で何も公開されません。
+- Pages → Source を **「GitHub Actions」**
+- Environments → **github-pages** → Deployment branches に **main** を許す
 
-設定は二か所：
-
-- Settings → Pages → Source を **「GitHub Actions」**
-- Settings → Environments → **github-pages** → Deployment branches に
-  上の三つのブランチを加える（または「All branches」）
+公開先は `https://<ユーザ名>.github.io/<新リポジトリ>/`。
+`vite.config.ts` の `base` は `'./'`（相対）なので、**リポジトリ名が何でもそのまま届きます。**
 
 ## 技術構成
 
