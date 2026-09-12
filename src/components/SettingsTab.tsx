@@ -142,7 +142,11 @@ function Diagnostics({ trip }: { trip: TripStore }) {
     ["ID採番", canMakeId ? "標準" : "代替方式", true],
     ["共有", trip.isShared ? `Firebase (${TRIP_ID})` : "この端末のみ", true],
     ["ログイン", authLabel, auth.state !== "error"],
-    ["登録数", `場所 ${trip.places.length} / 予定 ${trip.scheduleItems.length}`, true],
+    [
+      "登録数",
+      `場所 ${trip.places.length} / 予定 ${trip.scheduleItems.length} / 持ち物 ${trip.packingItems.length}`,
+      true,
+    ],
     ["起動方法", standalone ? "ホーム画面から" : "ブラウザから", true],
   ];
 

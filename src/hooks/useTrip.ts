@@ -13,8 +13,10 @@ import { authReady, db, isFirebaseConfigured, TRIP_ID } from "../firebase";
 import { LocalCollection, LocalDoc } from "../data/local";
 import {
   DEFAULT_TRIP_INFO,
+  NewPackingItem,
   NewPlace,
   NewScheduleItem,
+  PackingItem,
   Place,
   ScheduleItem,
   TripInfo,
@@ -41,11 +43,13 @@ function forUpdate<T extends object>(data: T): Record<string, unknown> {
 const localTripInfo = new LocalDoc<TripInfo>("ny-trip:info", DEFAULT_TRIP_INFO);
 const localPlaces = new LocalCollection<Place>("ny-trip:places");
 const localScheduleItems = new LocalCollection<ScheduleItem>("ny-trip:schedule");
+const localPackingItems = new LocalCollection<PackingItem>("ny-trip:packing");
 
 export function useTrip() {
   const [tripInfo, setTripInfo] = useState<TripInfo>(DEFAULT_TRIP_INFO);
   const [places, setPlaces] = useState<Place[]>([]);
   const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([]);
+  const [packingItems, setPackingItems] = useState<PackingItem[]>([]);
   const [loading, setLoading] = useState(true);
   /** Firestore refused to stream the data — otherwise the list just stays
    *  empty with no explanation of why. */
@@ -68,17 +72,22 @@ export function useTrip() {
         setPlaces([...items].sort((a, b) => a.createdAt - b.createdAt)),
       );
       const unsubSchedule = localScheduleItems.subscribe(setScheduleItems);
+      const unsubPacking = localPackingItems.subscribe((items) =>
+        setPackingItems([...items].sort((a, b) => a.createdAt - b.createdAt)),
+      );
       setLoading(false);
       return () => {
         unsubInfo();
         unsubPlaces();
         unsubSchedule();
+        unsubPacking();
       };
     }
 
     let unsubInfo = () => {};
     let unsubPlaces = () => {};
     let unsubSchedule = () => {};
+    let unsubPacking = () => {};
     let cancelled = false;
 
     authReady.then(() => {
@@ -120,6 +129,17 @@ export function useTrip() {
         onSyncError,
       );
 
+      const packingRef = collection(db, "trips", TRIP_ID, "packingItems");
+      unsubPacking = onSnapshot(
+        packingRef,
+        (snap) => {
+          const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as PackingItem);
+          items.sort((a, b) => a.createdAt - b.createdAt);
+          setPackingItems(items);
+        },
+        onSyncError,
+      );
+
       setLoading(false);
     });
 
@@ -128,6 +148,7 @@ export function useTrip() {
       unsubInfo();
       unsubPlaces();
       unsubSchedule();
+      unsubPacking();
     };
   }, []);
 
@@ -139,6 +160,7 @@ export function useTrip() {
       tripInfo,
       places,
       scheduleItems,
+      packingItems,
 
       updateTripInfo: async (patch: Partial<TripInfo>) => {
         if (isFirebaseConfigured && db) {
@@ -192,8 +214,34 @@ export function useTrip() {
           localScheduleItems.remove(id);
         }
       },
+
+      addPackingItem: async (item: NewPackingItem) => {
+        const withTimestamp = { ...item, createdAt: Date.now() };
+        if (isFirebaseConfigured && db) {
+          await addDoc(
+            collection(db, "trips", TRIP_ID, "packingItems"),
+            forCreate(withTimestamp),
+          );
+        } else {
+          localPackingItems.add(withTimestamp);
+        }
+      },
+      updatePackingItem: async (id: string, patch: Partial<PackingItem>) => {
+        if (isFirebaseConfigured && db) {
+          await updateDoc(doc(db, "trips", TRIP_ID, "packingItems", id), forUpdate(patch));
+        } else {
+          localPackingItems.update(id, patch);
+        }
+      },
+      removePackingItem: async (id: string) => {
+        if (isFirebaseConfigured && db) {
+          await deleteDoc(doc(db, "trips", TRIP_ID, "packingItems", id));
+        } else {
+          localPackingItems.remove(id);
+        }
+      },
     }),
-    [loading, syncError, tripInfo, places, scheduleItems],
+    [loading, syncError, tripInfo, places, scheduleItems, packingItems],
   );
 }
 

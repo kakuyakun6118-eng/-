@@ -1,10 +1,18 @@
-export type TabKey = "places" | "plan" | "schedule" | "itinerary" | "phrases" | "settings";
+export type TabKey =
+  | "places"
+  | "plan"
+  | "schedule"
+  | "itinerary"
+  | "packing"
+  | "phrases"
+  | "settings";
 
 const TABS: { key: TabKey; label: string; icon: string }[] = [
   { key: "places", label: "場所", icon: "📍" },
   { key: "plan", label: "AI提案", icon: "✨" },
   { key: "schedule", label: "予定", icon: "🗓️" },
   { key: "itinerary", label: "しおり", icon: "📖" },
+  { key: "packing", label: "持ち物", icon: "🧳" },
   { key: "phrases", label: "英会話", icon: "🗣️" },
   { key: "settings", label: "設定", icon: "⚙️" },
 ];

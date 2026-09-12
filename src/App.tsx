@@ -6,6 +6,7 @@ import { ScheduleTab } from "./components/ScheduleTab";
 import { ItineraryTab } from "./components/ItineraryTab";
 import { SettingsTab } from "./components/SettingsTab";
 import { AutoPlanTab } from "./components/AutoPlanTab";
+import { PackingTab } from "./components/PackingTab";
 import { PhrasesTab } from "./components/PhrasesTab";
 import { Scene } from "./components/Scene";
 import { dateRange, daysUntil, formatDateLabel } from "./utils/date";
@@ -66,6 +67,7 @@ export default function App() {
             {tab === "plan" && <AutoPlanTab trip={trip} />}
             {tab === "schedule" && <ScheduleTab trip={trip} />}
             {tab === "itinerary" && <ItineraryTab trip={trip} />}
+            {tab === "packing" && <PackingTab trip={trip} />}
             {tab === "phrases" && <PhrasesTab trip={trip} />}
             {tab === "settings" && <SettingsTab trip={trip} />}
           </>
