@@ -124,6 +124,69 @@ export const DEFAULT_PLAN_OPTIONS: PlanOptions = {
 };
 
 /**
+ * Whose bag an item goes in. "shared" is for things only one of the two needs
+ * to carry (adapter, guidebook) — without it both lists end up duplicating
+ * them and you pack two of everything.
+ */
+export type PackingOwner = "me" | "partner" | "shared";
+
+export const PACKING_OWNERS: PackingOwner[] = ["me", "partner", "shared"];
+
+export const PACKING_OWNER_LABELS: Record<PackingOwner, string> = {
+  me: "わたし",
+  partner: "妻",
+  shared: "共通",
+};
+
+export type PackingCategory =
+  | "documents"
+  | "clothes"
+  | "electronics"
+  | "toiletries"
+  | "medicine"
+  | "other";
+
+export const PACKING_CATEGORIES: PackingCategory[] = [
+  "documents",
+  "clothes",
+  "electronics",
+  "toiletries",
+  "medicine",
+  "other",
+];
+
+export const PACKING_CATEGORY_LABELS: Record<PackingCategory, string> = {
+  documents: "貴重品・書類",
+  clothes: "衣類",
+  electronics: "電子機器",
+  toiletries: "洗面・化粧",
+  medicine: "薬・健康",
+  other: "その他",
+};
+
+export const PACKING_CATEGORY_ICONS: Record<PackingCategory, string> = {
+  documents: "🛂",
+  clothes: "👕",
+  electronics: "🔌",
+  toiletries: "🧴",
+  medicine: "💊",
+  other: "🎒",
+};
+
+export interface PackingItem {
+  id: string;
+  name: string;
+  owner: PackingOwner;
+  category: PackingCategory;
+  /** Ticked off once it is actually in the bag. */
+  packed: boolean;
+  note?: string;
+  createdAt: number;
+}
+
+export type NewPackingItem = Omit<PackingItem, "id" | "createdAt">;
+
+/**
  * Phrase-learning progress. Each traveller gets their own record so the two
  * phones can show both scores side by side (see src/hooks/useLearners.ts).
  */

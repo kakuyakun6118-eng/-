@@ -383,6 +383,7 @@ button {
 .place-form,
 .schedule-item-form,
 .quick-schedule-form,
+.packing-form,
 .settings-form {
   display: flex;
   flex-direction: column;
@@ -397,6 +398,7 @@ button {
 .place-form label,
 .schedule-item-form label,
 .quick-schedule-form label,
+.packing-form label,
 .settings-form label {
   display: flex;
   flex-direction: column;
@@ -1795,4 +1797,161 @@ textarea {
   flex-direction: column;
   gap: 8px;
   margin-top: 16px;
+}
+
+/* --- 持ち物リスト --- */
+
+.pk-owners {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.pk-owner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  border-radius: 10px;
+  padding: 8px 4px;
+  color: var(--muted);
+}
+
+.pk-owner.active {
+  border-color: var(--brand);
+  background: #ebf4ff;
+  color: var(--brand);
+}
+
+.pk-owner-name {
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.pk-owner-count {
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.pk-progress {
+  margin-bottom: 14px;
+}
+
+.pk-progress-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.pk-progress-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--brand);
+  transition: width 0.3s ease;
+}
+
+.pk-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 5px;
+}
+
+.pk-hide-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* The generic `input` rule adds padding and a border, which turns a checkbox
+   into a lopsided grey box. Reset it back to a native control. */
+.pk-hide-toggle input[type="checkbox"],
+.pk-check input[type="checkbox"] {
+  width: auto;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  accent-color: var(--brand);
+}
+
+.pk-suggest {
+  margin-bottom: 6px;
+}
+
+.pk-notice {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.pk-group h3 {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 18px 0 8px;
+}
+
+.pk-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+}
+
+.pk-check {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.pk-check input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  accent-color: var(--brand);
+}
+
+.pk-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pk-name {
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.pk-note {
+  font-size: 0.74rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.pk-row.packed {
+  background: var(--bg);
+}
+
+.pk-row.packed .pk-name {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.pk-row-edit {
+  margin-bottom: 6px;
 }
