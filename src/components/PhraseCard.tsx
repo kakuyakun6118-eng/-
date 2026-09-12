@@ -1,5 +1,5 @@
 import { Phrase } from "../phrases/data";
-import { PhraseStat } from "../phrases/quiz";
+import { CardStat } from "../study/srs";
 import { speak, speechAvailable } from "../utils/speech";
 
 /**
@@ -13,7 +13,7 @@ export function PhraseCard({
   compact = false,
 }: {
   phrase: Phrase;
-  stat?: PhraseStat;
+  stat?: CardStat;
   onToggleFavourite?: () => void;
   compact?: boolean;
 }) {

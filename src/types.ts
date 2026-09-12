@@ -206,8 +206,8 @@ export interface LearnerProgress {
   dailyGoal: number;
   /** Longest run of correct answers so far. */
   bestCombo: number;
-  /** Review state per phrase id (see src/phrases/quiz.ts). */
-  stats: Record<string, import("./phrases/quiz").PhraseStat>;
+  /** Review state per card id — phrases and words alike (see src/study/srs.ts). */
+  stats: Record<string, import("./study/srs").CardStat>;
   /** YYYY-MM-DD → questions answered that day. Kept for the last 30 days. */
   history: Record<string, number>;
 }

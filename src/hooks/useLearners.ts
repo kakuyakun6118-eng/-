@@ -8,7 +8,7 @@ import {
   LearnerId,
   LearnerProgress,
 } from "../types";
-import { nextStat, PhraseStat, scoreFor } from "../phrases/quiz";
+import { CardStat, nextStat, scoreFor } from "../study/srs";
 import { todayKey, yesterdayKey } from "../utils/date";
 
 /** Both learners' records live here so each phone can show the other's score. */
@@ -103,7 +103,7 @@ export function useLearners() {
    * never lost to a rejected write and the user knows sync is off.
    */
   const fallBackToDevice = useCallback((reason: string) => {
-    console.warn("phrase progress falling back to this device:", reason);
+    console.warn("study progress falling back to this device:", reason);
     for (const id of LEARNER_IDS) localDocs[id].update(latest.current[id]);
     setDeviceOnly(true);
   }, []);
@@ -216,7 +216,7 @@ export function useLearners() {
       },
 
       /** Records one answer: review box, XP, combo record and the day streak. */
-      recordAnswer: (phraseId: string, correct: boolean, combo: number) =>
+      recordAnswer: (cardId: string, correct: boolean, combo: number) =>
         patchActive((current) => {
           const today = todayKey();
           const streak =
@@ -231,7 +231,7 @@ export function useLearners() {
             bestCombo: Math.max(current.bestCombo, correct ? combo + 1 : 0),
             streak,
             lastStudyDate: today,
-            stats: { ...current.stats, [phraseId]: nextStat(current.stats[phraseId], correct) },
+            stats: { ...current.stats, [cardId]: nextStat(current.stats[cardId], correct) },
             history: trimHistory({
               ...current.history,
               [today]: (current.history[today] ?? 0) + 1,
@@ -239,9 +239,9 @@ export function useLearners() {
           };
         }),
 
-      toggleFavourite: (phraseId: string) =>
+      toggleFavourite: (cardId: string) =>
         patchActive((current) => {
-          const stat: PhraseStat = current.stats[phraseId] ?? {
+          const stat: CardStat = current.stats[cardId] ?? {
             box: 0,
             due: 0,
             right: 0,
@@ -250,7 +250,7 @@ export function useLearners() {
           };
           return {
             ...current,
-            stats: { ...current.stats, [phraseId]: { ...stat, fav: !stat.fav } },
+            stats: { ...current.stats, [cardId]: { ...stat, fav: !stat.fav } },
           };
         }),
 

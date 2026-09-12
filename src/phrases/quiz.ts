@@ -1,85 +1,18 @@
 /**
- * Question generation and the little spaced-repetition scheduler behind it.
+ * Question generation for the phrase deck.
  *
  * Everything runs on the device: questions are built from the bundled deck
- * (src/phrases/data.ts) and each answer nudges the phrase's review box, so the
- * app keeps resurfacing what you actually get wrong instead of drilling the
- * phrases you already know.
+ * (src/phrases/data.ts) and each answer nudges the phrase's review box (see
+ * src/study/srs.ts), so the app keeps resurfacing what you actually get wrong
+ * instead of drilling the phrases you already know.
  */
 
 import { Phrase, PHRASES, Situation } from "./data";
+import { Question, SessionItem, SessionOptions as BaseSessionOptions } from "../study/session";
+import { CardStat, orderForStudy, shuffle, Stats } from "../study/srs";
 
-export interface PhraseStat {
-  /** Review box 0–5. Higher = seen correctly more often, shown less often. */
-  box: number;
-  /** Epoch ms when this phrase should come back. */
-  due: number;
-  right: number;
-  wrong: number;
-  /** Epoch ms of the last answer. */
-  last: number;
-  fav?: boolean;
-}
-
-/** Days until a phrase in each box comes back around. */
-const INTERVAL_DAYS = [0, 1, 2, 4, 7, 14];
-export const MAX_BOX = INTERVAL_DAYS.length - 1;
-/** From this box up a phrase counts as "習得済み". */
-export const MASTER_BOX = 4;
-const DAY_MS = 86400000;
-
-export function emptyStat(): PhraseStat {
-  return { box: 0, due: 0, right: 0, wrong: 0, last: 0 };
-}
-
-export function nextStat(prev: PhraseStat | undefined, correct: boolean): PhraseStat {
-  const base = prev ?? emptyStat();
-  const box = correct ? Math.min(MAX_BOX, base.box + 1) : 0;
-  const now = Date.now();
-  return {
-    box,
-    // A miss comes back inside the same session; a hit waits out its interval.
-    due: correct ? now + INTERVAL_DAYS[box] * DAY_MS : now,
-    right: base.right + (correct ? 1 : 0),
-    wrong: base.wrong + (correct ? 0 : 1),
-    last: now,
-    ...(base.fav ? { fav: true } : {}),
-  };
-}
-
-export function isDue(stat: PhraseStat | undefined, now = Date.now()): boolean {
-  if (!stat || stat.last === 0) return false;
-  return stat.due <= now;
-}
-
-export function isMastered(stat: PhraseStat | undefined): boolean {
-  return (stat?.box ?? 0) >= MASTER_BOX;
-}
-
-export type Stats = Record<string, PhraseStat>;
-
-export function countProgress(stats: Stats, pool: Phrase[] = PHRASES) {
-  let learning = 0;
-  let mastered = 0;
-  let due = 0;
-  const now = Date.now();
-  for (const phrase of pool) {
-    const stat = stats[phrase.id];
-    if (!stat || stat.last === 0) continue;
-    if (isMastered(stat)) mastered += 1;
-    else learning += 1;
-    if (isDue(stat, now)) due += 1;
-  }
-  return {
-    total: pool.length,
-    learning,
-    mastered,
-    due,
-    fresh: pool.length - learning - mastered,
-  };
-}
-
-// ---------------------------------------------------------------- questions
+export type PhraseQuestion = Question<Phrase>;
+export type PhraseSessionItem = SessionItem<Phrase>;
 
 export type QuestionKind = "ja2en" | "en2ja" | "listen" | "arrange" | "fill";
 
@@ -90,34 +23,6 @@ export const KIND_LABELS: Record<QuestionKind, string> = {
   arrange: "並べかえ",
   fill: "穴うめ",
 };
-
-export interface Question {
-  kind: QuestionKind;
-  phrase: Phrase;
-  /** Main text shown to the learner (hidden for listening questions). */
-  prompt: string;
-  /** Extra line under the prompt, e.g. the sentence with a blank. */
-  sub?: string;
-  /** Multiple-choice options, in display order. */
-  choices?: string[];
-  /** Shuffled word tiles for 並べかえ. */
-  tokens?: string[];
-  /** The correct answer, compared after normalisation. */
-  answer: string;
-}
-
-export type SessionItem =
-  | { type: "teach"; phrase: Phrase }
-  | { type: "quiz"; question: Question };
-
-function shuffle<T>(items: T[]): T[] {
-  const out = [...items];
-  for (let i = out.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
-}
 
 function pickDistractors(
   phrase: Phrase,
@@ -154,15 +59,7 @@ function bareWord(word: string): string {
   return word.replace(/[^A-Za-z'-]/g, "");
 }
 
-export function normalise(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[.,!?]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function buildFill(phrase: Phrase, pool: Phrase[]): Question | null {
+function buildFill(phrase: Phrase, pool: Phrase[]): PhraseQuestion | null {
   const words = phrase.en.split(" ");
   const candidates = words
     .map((word, index) => ({ word, index, bare: bareWord(word).toLowerCase() }))
@@ -189,8 +86,8 @@ function buildFill(phrase: Phrase, pool: Phrase[]): Question | null {
     .map((word, index) => (index === target.index ? word.replace(bareWord(word), "____") : word))
     .join(" ");
   return {
-    kind: "fill",
-    phrase,
+    card: phrase,
+    kindLabel: KIND_LABELS.fill,
     prompt: phrase.ja,
     sub: blanked,
     choices: shuffle([answer, ...others]),
@@ -198,7 +95,7 @@ function buildFill(phrase: Phrase, pool: Phrase[]): Question | null {
   };
 }
 
-function buildArrange(phrase: Phrase): Question | null {
+function buildArrange(phrase: Phrase): PhraseQuestion | null {
   const tokens = phrase.en.split(" ");
   if (tokens.length < 4 || tokens.length > 9) return null;
   let scrambled = shuffle(tokens);
@@ -207,21 +104,30 @@ function buildArrange(phrase: Phrase): Question | null {
     scrambled = shuffle(tokens);
   }
   return {
-    kind: "arrange",
-    phrase,
+    card: phrase,
+    kindLabel: KIND_LABELS.arrange,
     prompt: phrase.ja,
-    tokens: scrambled,
+    tiles: {
+      items: scrambled,
+      joiner: " ",
+      placeholder: "下の単語をタップして並べてください",
+    },
     answer: phrase.en,
   };
 }
 
-function buildChoice(phrase: Phrase, pool: Phrase[], kind: "ja2en" | "en2ja" | "listen"): Question {
+function buildChoice(
+  phrase: Phrase,
+  pool: Phrase[],
+  kind: "ja2en" | "en2ja" | "listen",
+): PhraseQuestion {
   const value = kind === "en2ja" ? (p: Phrase) => p.ja : (p: Phrase) => p.en;
   const answer = value(phrase);
   return {
-    kind,
-    phrase,
-    prompt: kind === "ja2en" ? phrase.ja : kind === "en2ja" ? phrase.en : "🔊 聞こえた英語は?",
+    card: phrase,
+    kindLabel: KIND_LABELS[kind],
+    audio: kind === "listen",
+    prompt: kind === "ja2en" ? phrase.ja : kind === "en2ja" ? phrase.en : "聞こえた英語はどれ?",
     choices: shuffle([answer, ...pickDistractors(phrase, pool, value)]),
     answer,
   };
@@ -237,7 +143,7 @@ export function buildQuestion(
   pool: Phrase[],
   box: number,
   canSpeak: boolean,
-): Question {
+): PhraseQuestion {
   const kinds: QuestionKind[] =
     box <= 0
       ? ["ja2en", "en2ja"]
@@ -262,76 +168,36 @@ export function buildQuestion(
   return buildChoice(phrase, pool, "ja2en");
 }
 
-export interface SessionOptions {
+export interface SessionOptions extends BaseSessionOptions {
   /** Restrict the deck to these situations. Empty = everything. */
   situations?: Situation[];
-  /** How many questions to ask. */
-  count?: number;
-  /** Only phrases that are due for review (no new ones). */
-  reviewOnly?: boolean;
-  /** Only phrases marked with a star. */
-  favouritesOnly?: boolean;
-  /** Speech synthesis is usable, so listening questions are fair game. */
-  canSpeak?: boolean;
 }
 
-/**
- * Orders the deck the way a study session should go: what you got wrong and
- * what's due first, then phrases you've never seen, then everything else as
- * light review.
- */
+/** The phrases a session should cover, in the order they should be studied. */
 export function selectPhrases(stats: Stats, options: SessionOptions = {}): Phrase[] {
   const { situations = [], favouritesOnly = false, reviewOnly = false } = options;
-  const now = Date.now();
 
   let pool = PHRASES;
   if (situations.length > 0) pool = pool.filter((p) => situations.includes(p.situation));
   if (favouritesOnly) pool = pool.filter((p) => stats[p.id]?.fav);
 
-  const due: Phrase[] = [];
-  const fresh: Phrase[] = [];
-  const rest: Phrase[] = [];
-  for (const phrase of pool) {
-    const stat = stats[phrase.id];
-    if (!stat || stat.last === 0) fresh.push(phrase);
-    else if (isDue(stat, now)) due.push(phrase);
-    else rest.push(phrase);
-  }
-
-  // Weakest first among the due ones: low box, then most-missed.
-  due.sort((a, b) => {
-    const sa = stats[a.id];
-    const sb = stats[b.id];
-    return sa.box - sb.box || sb.wrong - sa.wrong || sa.due - sb.due;
-  });
-
-  if (reviewOnly) return due;
-  return [...due, ...shuffle(fresh), ...rest.sort((a, b) => stats[a.id].due - stats[b.id].due)];
+  return orderForStudy(pool, stats, reviewOnly);
 }
 
-export function buildSession(stats: Stats, options: SessionOptions = {}): SessionItem[] {
+export function buildSession(stats: Stats, options: SessionOptions = {}): PhraseSessionItem[] {
   const { count = 10, canSpeak = false } = options;
   const chosen = selectPhrases(stats, options).slice(0, count);
   const pool = chosen.length >= 4 ? chosen : PHRASES;
 
-  const items: SessionItem[] = [];
+  const items: PhraseSessionItem[] = [];
   for (const phrase of chosen) {
-    const stat = stats[phrase.id];
+    const stat: CardStat | undefined = stats[phrase.id];
     // A phrase you've never met gets shown before it gets asked.
-    if (!stat || stat.last === 0) items.push({ type: "teach", phrase });
+    if (!stat || stat.last === 0) items.push({ type: "teach", card: phrase });
     items.push({
       type: "quiz",
       question: buildQuestion(phrase, pool, stat?.box ?? 0, canSpeak),
     });
   }
   return items;
-}
-
-export function isCorrect(question: Question, given: string): boolean {
-  return normalise(given) === normalise(question.answer);
-}
-
-/** 10 points a question, plus a small bonus that grows with the streak. */
-export function scoreFor(combo: number): number {
-  return 10 + Math.min(combo, 5) * 2;
 }

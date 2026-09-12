@@ -1955,3 +1955,139 @@ textarea {
 .pk-row-edit {
   margin-bottom: 6px;
 }
+
+/* ------------------------------------------------------------ vocabulary */
+
+/* Eight tabs now share the bar, so nothing may push its neighbours out. */
+.tab-button {
+  min-width: 0;
+}
+
+.tab-label {
+  white-space: nowrap;
+}
+
+.wd-en {
+  margin: 0 0 2px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.wd-tags {
+  display: flex;
+  gap: 6px;
+  margin: 10px 0 8px;
+}
+
+.wd-tag {
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.wd-tag.word {
+  background: #ebf4ff;
+  color: var(--brand-dark);
+}
+
+.wd-tag.idiom {
+  background: #fffaf0;
+  color: #b7791f;
+}
+
+.wd-tag.pos {
+  background: var(--border);
+  color: var(--muted);
+}
+
+.wd-ja {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 600;
+}
+
+.wd-example {
+  margin-top: 12px;
+  border-left: 3px solid var(--border);
+  padding-left: 10px;
+}
+
+.wd-example-label {
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.wd-example-en {
+  margin: 2px 0 2px;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.wd-example-ja {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.wd-row-en {
+  font-weight: 600;
+}
+
+.wd-row-ja {
+  white-space: normal;
+}
+
+.wd-row-tag {
+  flex: 0 0 auto;
+  background: #fffaf0;
+  color: #b7791f;
+  border-radius: 6px;
+  padding: 1px 5px;
+  font-size: 0.66rem;
+  font-weight: 600;
+}
+
+.wd-types {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.wd-type-btn {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  color: var(--text);
+}
+
+.wd-type-btn b {
+  font-size: 0.92rem;
+}
+
+.wd-type-btn span {
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* Spelling questions: one tile per letter, so they need a steady width. */
+.ph-arrange-answer.letters {
+  gap: 4px;
+}
+
+.ph-token.letter {
+  min-width: 36px;
+  padding: 8px 6px;
+  text-align: center;
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+}

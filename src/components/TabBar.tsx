@@ -5,6 +5,7 @@ export type TabKey =
   | "itinerary"
   | "packing"
   | "phrases"
+  | "vocab"
   | "settings";
 
 const TABS: { key: TabKey; label: string; icon: string }[] = [
@@ -14,6 +15,7 @@ const TABS: { key: TabKey; label: string; icon: string }[] = [
   { key: "itinerary", label: "しおり", icon: "📖" },
   { key: "packing", label: "持ち物", icon: "🧳" },
   { key: "phrases", label: "英会話", icon: "🗣️" },
+  { key: "vocab", label: "単語", icon: "🔤" },
   { key: "settings", label: "設定", icon: "⚙️" },
 ];
 

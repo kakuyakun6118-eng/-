@@ -8,6 +8,7 @@ import { SettingsTab } from "./components/SettingsTab";
 import { AutoPlanTab } from "./components/AutoPlanTab";
 import { PackingTab } from "./components/PackingTab";
 import { PhrasesTab } from "./components/PhrasesTab";
+import { VocabTab } from "./components/VocabTab";
 import { Scene } from "./components/Scene";
 import { dateRange, daysUntil, formatDateLabel } from "./utils/date";
 import { AuthStatus, subscribeAuthStatus } from "./firebase";
@@ -69,6 +70,7 @@ export default function App() {
             {tab === "itinerary" && <ItineraryTab trip={trip} />}
             {tab === "packing" && <PackingTab trip={trip} />}
             {tab === "phrases" && <PhrasesTab trip={trip} />}
+            {tab === "vocab" && <VocabTab trip={trip} />}
             {tab === "settings" && <SettingsTab trip={trip} />}
           </>
         )}

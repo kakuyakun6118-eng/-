@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { TripStore } from "../hooks/useTrip";
 import { useLearners } from "../hooks/useLearners";
 import { PHRASES, Situation, SITUATIONS } from "../phrases/data";
-import { countProgress, isDue, SessionOptions } from "../phrases/quiz";
+import { SessionOptions } from "../phrases/quiz";
+import { countProgress, isDue } from "../study/srs";
 import { QuizSession } from "./QuizSession";
 import { PhraseBook } from "./PhraseBook";
 import { Category, LEARNER_IDS, LearnerId } from "../types";
@@ -33,7 +34,7 @@ export function PhrasesTab({ trip }: { trip: TripStore }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const stats = store.me.stats;
-  const overall = useMemo(() => countProgress(stats), [stats]);
+  const overall = useMemo(() => countProgress(stats, PHRASES), [stats]);
   const dueCount = overall.due;
   const favCount = useMemo(
     () => PHRASES.filter((p) => stats[p.id]?.fav).length,
@@ -277,7 +278,7 @@ export function PhrasesTab({ trip }: { trip: TripStore }) {
       <div className="ph-versus">
         {LEARNER_IDS.map((id) => {
           const learner = store.learners[id];
-          const learnerProgress = countProgress(learner.stats);
+          const learnerProgress = countProgress(learner.stats, PHRASES);
           return (
             <div key={id} className={`ph-versus-card ${store.learnerId === id ? "on" : ""}`}>
               <p className="ph-versus-name">{learner.name}</p>
