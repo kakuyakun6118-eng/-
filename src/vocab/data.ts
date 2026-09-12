@@ -1,9 +1,10 @@
 /**
  * Travel vocabulary deck for the New York trip: the single words and the
  * idioms/phrasal verbs you actually hear at a JFK counter, on the subway and
- * at a diner — the building blocks under the phrase deck (src/phrases/data.ts).
+ * at a diner.
  *
- * Bundled in the app like the phrases, so it works offline on the plane.
+ * Everything is bundled in the app (no network, no API key), so it works
+ * offline on the plane and in the subway.
  * Every entry carries a katakana reading and a real example sentence: knowing
  * "entrée" is useless unless you recognise it when the server says it.
  */

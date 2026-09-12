@@ -13,8 +13,8 @@ interface Result<T extends Card> {
  * Runs one study session: asks the questions a deck built, scores them and
  * feeds every answer back into the learner's review boxes.
  *
- * Deck-agnostic — the phrase deck and the vocabulary deck both drive it, each
- * supplying its own questions and its own card rendering.
+ * Deck-agnostic: the deck supplies the questions and the card rendering, so
+ * this screen only has to ask, score and record.
  */
 export function StudySession<T extends Card>({
   store,

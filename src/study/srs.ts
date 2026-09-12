@@ -1,13 +1,13 @@
 /**
  * The little spaced-repetition scheduler behind every deck in the app.
  *
- * Deck-agnostic on purpose: phrases (src/phrases) and vocabulary
- * (src/vocab) share one review-box model and one `stats` map on the
- * learner record, keyed by card id. Ids carry a per-deck prefix, so the two
- * decks never collide.
+ * Deck-agnostic on purpose: a deck (src/vocab) supplies the cards, and this
+ * module keeps one review-box model and one `stats` map on the learner
+ * record, keyed by card id. Ids carry a per-deck prefix, so decks added
+ * later never collide with the words.
  */
 
-/** Anything that can be reviewed: a phrase, a word, an idiom. */
+/** Anything that can be reviewed: a word, an idiom. */
 export interface Card {
   id: string;
 }

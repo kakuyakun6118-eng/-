@@ -187,7 +187,7 @@ export interface PackingItem {
 export type NewPackingItem = Omit<PackingItem, "id" | "createdAt">;
 
 /**
- * Phrase-learning progress. Each traveller gets their own record so the two
+ * Study progress. Each traveller gets their own record so the two
  * phones can show both scores side by side (see src/hooks/useLearners.ts).
  */
 export type LearnerId = "me" | "partner";
@@ -206,7 +206,7 @@ export interface LearnerProgress {
   dailyGoal: number;
   /** Longest run of correct answers so far. */
   bestCombo: number;
-  /** Review state per card id — phrases and words alike (see src/study/srs.ts). */
+  /** Review state per card id (see src/study/srs.ts). */
   stats: Record<string, import("./study/srs").CardStat>;
   /** YYYY-MM-DD → questions answered that day. Kept for the last 30 days. */
   history: Record<string, number>;

@@ -986,8 +986,9 @@ textarea {
   margin-right: 6px;
 }
 
-/* ------------------------------------------------------------------ 英会話
-   Phrase learning tab. Prefixed `ph-` so it stays out of the planner's way. */
+/* ------------------------------------------------------------------ 英単語
+   Study tab. Prefixed `ph-` so it stays out of the planner's way; the
+   vocabulary-only pieces use `wd-`. */
 
 .ph-learner-switch {
   display: flex;
@@ -1347,11 +1348,6 @@ textarea {
   gap: 8px;
 }
 
-.ph-ja {
-  margin: 0;
-  font-size: 0.86rem;
-  color: var(--muted);
-}
 
 .ph-star {
   border: none;
@@ -1366,12 +1362,6 @@ textarea {
   color: #f6ad55;
 }
 
-.ph-en {
-  margin: 4px 0 2px;
-  font-size: 1.12rem;
-  font-weight: 700;
-  line-height: 1.35;
-}
 
 .ph-kana {
   margin: 0;
@@ -1394,10 +1384,6 @@ textarea {
   color: var(--text);
 }
 
-.ph-speak-inline {
-  margin-left: 6px;
-  padding: 2px 8px;
-}
 
 .ph-tip {
   margin: 10px 0 0;
@@ -1409,28 +1395,9 @@ textarea {
   padding: 8px 10px;
 }
 
-.ph-reply {
-  margin-top: 10px;
-  border-left: 3px solid var(--border);
-  padding-left: 10px;
-}
 
-.ph-reply-label {
-  font-size: 0.68rem;
-  color: var(--muted);
-}
 
-.ph-reply-en {
-  margin: 2px 0 0;
-  font-size: 0.9rem;
-  font-weight: 600;
-}
 
-.ph-reply-ja {
-  margin: 1px 0 0;
-  font-size: 0.76rem;
-  color: var(--muted);
-}
 
 /* --- phrase book --- */
 

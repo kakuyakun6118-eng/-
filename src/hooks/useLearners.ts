@@ -18,7 +18,7 @@ type Learners = Record<LearnerId, LearnerProgress>;
  * Progress is stored as a `learners` field *inside* the trip document rather
  * than in a collection of its own. The Firestore rules already published for
  * this app (see firestore.rules) grant access to `trips/{tripId}` but not to
- * new subcollections, so keeping it here means the phrase tab works on an
+ * new subcollections, so keeping it here means the study tab works on an
  * existing setup with no changes in the Firebase console.
  */
 interface TripDocWithLearners {
@@ -69,7 +69,7 @@ function trimHistory(history: Record<string, number>): Record<string, number> {
  *
  * `updateDoc` with a dotted path swaps the whole nested object, which
  * `setDoc(..., { merge: true })` would not: merging leaves deleted keys
- * behind, so resetting progress would keep every old phrase stat. The
+ * behind, so resetting progress would keep every old card stat. The
  * `setDoc` below is only for the case where the trip document doesn't exist
  * yet (a brand new trip whose first write happens to be a quiz answer).
  */

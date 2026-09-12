@@ -1,5 +1,5 @@
 /**
- * Reads a phrase out loud with the browser's built-in speech synthesis.
+ * Reads English out loud with the browser's built-in speech synthesis.
  *
  * iOS Safari only exposes voices after the first user gesture and silently
  * ignores playback outside one, so nothing here throws — callers check

@@ -6,7 +6,7 @@ import { WordSessionOptions } from "../vocab/quiz";
 import { countProgress, isDue } from "../study/srs";
 import { VocabQuizSession } from "./VocabQuizSession";
 import { WordBook } from "./WordBook";
-import { LEARNER_IDS, LearnerId } from "../types";
+import { Category, LEARNER_IDS, LearnerId } from "../types";
 import { daysUntil, todayKey } from "../utils/date";
 
 type View =
@@ -14,20 +14,31 @@ type View =
   | { mode: "book"; group: WordGroup | null }
   | { mode: "quiz"; title: string; options: WordSessionOptions };
 
+/** Places you registered hint at the words you'll actually need. */
+const CATEGORY_TO_GROUP: Record<Category, WordGroup> = {
+  restaurant: "food",
+  museum: "sightseeing",
+  sightseeing: "sightseeing",
+  shopping: "shopping",
+  park: "smalltalk",
+  other: "transit",
+};
+
 const XP_PER_LEVEL = 100;
 
 const WORD_COUNT = WORDS.filter((w) => w.type === "word").length;
 const IDIOM_COUNT = WORDS.filter((w) => w.type === "idiom").length;
 
 /**
- * The vocabulary half of the study app: single words and idioms, drilled with
- * the same review boxes and the same XP as the phrase tab.
+ * The study tab: single words and idioms drilled with review boxes, XP and a
+ * daily goal, so the deck is learnt by the time the trip starts.
  */
 export function VocabTab({ trip }: { trip: TripStore }) {
   const store = useLearners();
   const [view, setView] = useState<View>({ mode: "home" });
   /** Bumped to remount the quiz, which is how a fresh set of questions is drawn. */
   const [round, setRound] = useState(0);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const stats = store.me.stats;
   const overall = useMemo(() => countProgress(stats, WORDS), [stats]);
@@ -44,6 +55,18 @@ export function VocabTab({ trip }: { trip: TripStore }) {
     countdown !== null && countdown > 0
       ? Math.ceil((overall.total - overall.mastered) / countdown)
       : null;
+
+  const suggestions = useMemo(() => {
+    const counts = new Map<WordGroup, number>();
+    for (const place of trip.places) {
+      const group = CATEGORY_TO_GROUP[place.category] ?? "smalltalk";
+      counts.set(group, (counts.get(group) ?? 0) + 1);
+    }
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([group, count]) => ({ group, count }));
+  }, [trip.places]);
 
   const startQuiz = (title: string, options: WordSessionOptions) => {
     setRound((r) => r + 1);
@@ -83,7 +106,7 @@ export function VocabTab({ trip }: { trip: TripStore }) {
   return (
     <div className="tab-content">
       <div className="tab-header-row">
-        <h2>旅の単語・熟語</h2>
+        <h2>旅の英単語・英熟語</h2>
         <div className="ph-learner-switch">
           {LEARNER_IDS.map((id: LearnerId) => (
             <button
@@ -195,6 +218,32 @@ export function VocabTab({ trip }: { trip: TripStore }) {
         </button>
       </div>
 
+      {suggestions.length > 0 && (
+        <>
+          <h3 className="ph-section-title">行き先に合わせたおすすめ</h3>
+          <div className="ph-suggest">
+            {suggestions.map(({ group, count }) => {
+              const meta = WORD_GROUPS.find((g) => g.key === group)!;
+              return (
+                <button
+                  key={group}
+                  className="ph-suggest-btn"
+                  onClick={() => startQuiz(meta.label, { groups: [group], count: 10 })}
+                >
+                  <span className="ph-suggest-icon">{meta.icon}</span>
+                  <span>
+                    <b>{meta.label}</b>
+                    <span className="ph-suggest-note">
+                      登録した場所に{count}件 — 使う場面がありそうです
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+
       <h3 className="ph-section-title">種類で選ぶ</h3>
       <div className="wd-types">
         <button
@@ -245,9 +294,66 @@ export function VocabTab({ trip }: { trip: TripStore }) {
         })}
       </div>
 
-      <p className="hint">
-        XP・連続日数・1日の目標は英会話タブと共通です。名前や目標の変更は英会話タブの「学習の設定」から。
-      </p>
+      <h3 className="ph-section-title">2人の記録</h3>
+      <div className="ph-versus">
+        {LEARNER_IDS.map((id) => {
+          const learner = store.learners[id];
+          const learnerProgress = countProgress(learner.stats, WORDS);
+          return (
+            <div key={id} className={`ph-versus-card ${store.learnerId === id ? "on" : ""}`}>
+              <p className="ph-versus-name">{learner.name}</p>
+              <p className="ph-versus-level">Lv.{Math.floor(learner.xp / XP_PER_LEVEL) + 1}</p>
+              <p className="ph-versus-meta">{learner.xp} XP</p>
+              <p className="ph-versus-meta">習得 {learnerProgress.mastered}語</p>
+              <p className="ph-versus-meta">🔥 {learner.streak}日連続</p>
+            </div>
+          );
+        })}
+      </div>
+      {!store.canShare && (
+        <p className="hint">
+          Firebaseを設定すると、2人の記録がそれぞれのiPhoneで同期されます(設定タブ参照)。
+        </p>
+      )}
+
+      <div className="ph-settings">
+        <button className="link-button" onClick={() => setSettingsOpen((open) => !open)}>
+          {settingsOpen ? "▲ 学習の設定を閉じる" : "▼ 学習の設定"}
+        </button>
+        {settingsOpen && (
+          <div className="settings-form ph-settings-form">
+            <label>
+              <span className="field-label">表示名({store.me.name})</span>
+              <input
+                type="text"
+                value={store.me.name}
+                onChange={(e) => store.rename(e.target.value)}
+              />
+            </label>
+            <label>
+              <span className="field-label">1日の目標(問)</span>
+              <input
+                type="number"
+                min={5}
+                max={50}
+                step={5}
+                value={goal}
+                onChange={(e) => store.setDailyGoal(Number(e.target.value) || 10)}
+              />
+            </label>
+            <button
+              className="btn-danger"
+              onClick={() => {
+                if (confirm(`${store.me.name}の学習記録をすべて消します。よろしいですか?`)) {
+                  store.resetProgress();
+                }
+              }}
+            >
+              学習記録をリセット
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

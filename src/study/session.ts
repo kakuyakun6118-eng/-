@@ -1,7 +1,7 @@
 /**
  * Shapes shared by every study session in the app.
  *
- * A deck (phrases, vocabulary) decides *what* to ask; the session runner
+ * A deck (src/vocab) decides *what* to ask; the session runner
  * (src/components/StudySession.tsx) only knows how to show these.
  */
 

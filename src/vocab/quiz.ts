@@ -1,10 +1,10 @@
 /**
  * Question generation for the vocabulary deck.
  *
- * Same review boxes as the phrase deck (src/study/srs.ts) — a word you keep
- * getting right comes back later — but the questions are built for single
- * words and idioms: meaning first, then the example sentence, then spelling
- * the thing out letter by letter.
+ * Every answer nudges the word's review box (src/study/srs.ts), so a word you
+ * keep getting right comes back later. The questions climb the same way:
+ * meaning first, then the example sentence, then spelling the thing out
+ * letter by letter.
  */
 
 import { WORDS, WordEntry, WordGroup, WordType } from "./data";
