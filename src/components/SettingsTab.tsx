@@ -144,7 +144,8 @@ function Diagnostics({ trip }: { trip: TripStore }) {
     ["ログイン", authLabel, auth.state !== "error"],
     [
       "登録数",
-      `場所 ${trip.places.length} / 予定 ${trip.scheduleItems.length} / 持ち物 ${trip.packingItems.length}`,
+      `場所 ${trip.places.length} / 予定 ${trip.scheduleItems.length} / 持ち物 ${trip.packingItems.length}` +
+        ` / 予約 ${trip.reservations.length} / 支出 ${trip.expenses.length}`,
       true,
     ],
     ["起動方法", standalone ? "ホーム画面から" : "ブラウザから", true],
@@ -199,11 +200,14 @@ export function SettingsTab({ trip }: { trip: TripStore }) {
   const [checkIn, setCheckIn] = useState(info.checkIn ?? "");
   const [checkOut, setCheckOut] = useState(info.checkOut ?? "");
   const [notes, setNotes] = useState(info.notes ?? "");
+  const [usdJpy, setUsdJpy] = useState(info.usdJpy?.toString() ?? "");
   const [saved, setSaved] = useState(false);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
+    const rate = parseFloat(usdJpy);
     trip.updateTripInfo({
+      usdJpy: Number.isFinite(rate) && rate > 0 ? rate : undefined,
       startDate,
       endDate,
       hotelName: hotelName.trim() || undefined,
@@ -267,6 +271,22 @@ export function SettingsTab({ trip }: { trip: TripStore }) {
             <input value={checkOut} onChange={(e) => setCheckOut(e.target.value)} placeholder="11:00" />
           </label>
         </div>
+
+        <h3>為替レート</h3>
+        <label>
+          $1 = 何円
+          <input
+            type="text"
+            inputMode="decimal"
+            value={usdJpy}
+            onChange={(e) => setUsdJpy(e.target.value.replace(/[^0-9.]/g, ""))}
+            placeholder="155"
+          />
+          <span className="settings-hint">
+            「お金」タブでドル金額の横に出る円の目安に使います。自動取得はしないので、
+            出発前に実際のレートに合わせておくと目安が正確になります。
+          </span>
+        </label>
 
         <label>
           旅のメモ

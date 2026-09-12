@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTrip } from "./hooks/useTrip";
-import { TabBar, TabKey } from "./components/TabBar";
+import { SECONDARY_TABS, TabBar, TabKey, TAB_TITLES } from "./components/TabBar";
 import { PlacesTab } from "./components/PlacesTab";
 import { ScheduleTab } from "./components/ScheduleTab";
 import { ItineraryTab } from "./components/ItineraryTab";
@@ -8,16 +8,24 @@ import { SettingsTab } from "./components/SettingsTab";
 import { AutoPlanTab } from "./components/AutoPlanTab";
 import { PackingTab } from "./components/PackingTab";
 import { PhrasesTab } from "./components/PhrasesTab";
+import { TodayTab } from "./components/TodayTab";
+import { MoneyTab } from "./components/MoneyTab";
+import { MoreTab } from "./components/MoreTab";
+import { ReservationsTab } from "./components/ReservationsTab";
 import { Scene } from "./components/Scene";
 import { dateRange, daysUntil, formatDateLabel } from "./utils/date";
 import { AuthStatus, subscribeAuthStatus } from "./firebase";
 
 export default function App() {
-  const [tab, setTab] = useState<TabKey>("places");
+  const [tab, setTab] = useState<TabKey>("today");
   const [auth, setAuth] = useState<AuthStatus>({ state: "pending" });
   const trip = useTrip();
 
   useEffect(() => subscribeAuthStatus(setAuth), []);
+
+  // Coming back from a sub-screen should land on the hub, not wherever you
+  // were before it.
+  const isSecondary = SECONDARY_TABS.includes(tab);
 
   const nights = Math.max(0, dateRange(trip.tripInfo.startDate, trip.tripInfo.endDate).length - 1);
   const countdown = daysUntil(trip.tripInfo.startDate);
@@ -58,16 +66,27 @@ export default function App() {
         )}
       </header>
 
+      {isSecondary && (
+        <button className="subnav-back" onClick={() => setTab("more")}>
+          ‹ もっと
+          <span className="subnav-title">{TAB_TITLES[tab]}</span>
+        </button>
+      )}
+
       <main className="app-main">
         {trip.loading ? (
           <p className="loading">読み込み中...</p>
         ) : (
           <>
-            {tab === "places" && <PlacesTab trip={trip} />}
-            {tab === "plan" && <AutoPlanTab trip={trip} />}
+            {tab === "today" && <TodayTab trip={trip} onNavigate={setTab} />}
             {tab === "schedule" && <ScheduleTab trip={trip} />}
             {tab === "itinerary" && <ItineraryTab trip={trip} />}
+            {tab === "money" && <MoneyTab trip={trip} />}
+            {tab === "more" && <MoreTab trip={trip} onNavigate={setTab} />}
+            {tab === "places" && <PlacesTab trip={trip} />}
+            {tab === "plan" && <AutoPlanTab trip={trip} />}
             {tab === "packing" && <PackingTab trip={trip} />}
+            {tab === "reservations" && <ReservationsTab trip={trip} />}
             {tab === "phrases" && <PhrasesTab trip={trip} />}
             {tab === "settings" && <SettingsTab trip={trip} />}
           </>

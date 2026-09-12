@@ -3,6 +3,9 @@ import { dateRange, formatDateLabel, sortScheduleItems } from "../utils/date";
 import { mapsSearchUrl } from "../utils/maps";
 import { assignScenes, Scene } from "./Scene";
 import { CrowdBadge } from "./AutoPlanTab";
+import { ReservationLine } from "./ReservationsTab";
+import { useWeather } from "../hooks/useWeather";
+import { describeCode } from "../utils/weather";
 
 /**
  * Auto-generated meal placeholders ("ランチ(自由)") aren't real venues, so a
@@ -31,6 +34,13 @@ function buildShareText(trip: TripStore): string {
     for (const item of items) {
       lines.push(`  ${item.time ?? "--:--"} ${item.title}`);
     }
+    // Confirmation numbers are the part worth having in a message you can
+    // pull up without the app.
+    const bookings = trip.reservations.filter((r) => r.date === date);
+    for (const r of bookings) {
+      const conf = r.confirmationNo ? ` [確認番号 ${r.confirmationNo}]` : "";
+      lines.push(`  🎫 ${r.time ?? "--:--"} ${r.title}${conf}`);
+    }
     lines.push("");
   }
   return lines.join("\n");
@@ -38,6 +48,7 @@ function buildShareText(trip: TripStore): string {
 
 export function ItineraryTab({ trip }: { trip: TripStore }) {
   const dates = dateRange(trip.tripInfo.startDate, trip.tripInfo.endDate);
+  const weather = useWeather(trip.tripInfo.startDate, trip.tripInfo.endDate);
 
   // Each day's banner follows what is actually planned that day.
   const scenes = assignScenes(
@@ -96,6 +107,10 @@ export function ItineraryTab({ trip }: { trip: TripStore }) {
 
       {dates.map((date, index) => {
         const items = sortScheduleItems(trip.scheduleItems.filter((i) => i.date === date));
+        const bookings = trip.reservations
+          .filter((r) => r.date === date)
+          .sort((a, b) => (a.time ?? "99:99").localeCompare(b.time ?? "99:99"));
+        const fc = weather.forDate(date);
         return (
           <section key={date} className="itinerary-day">
             <div className="day-banner">
@@ -103,8 +118,20 @@ export function ItineraryTab({ trip }: { trip: TripStore }) {
               <div className="day-banner-label">
                 <span className="day-banner-num">DAY {index + 1}</span>
                 <span className="day-banner-date">{formatDateLabel(date)}</span>
+                {fc && (
+                  <span className="day-banner-weather">
+                    {describeCode(fc.code).icon} {Math.round(fc.maxC)}°/{Math.round(fc.minC)}°
+                  </span>
+                )}
               </div>
             </div>
+            {bookings.length > 0 && (
+              <div className="itinerary-bookings">
+                {bookings.map((r) => (
+                  <ReservationLine key={r.id} reservation={r} />
+                ))}
+              </div>
+            )}
             {items.length === 0 ? (
               <p className="empty-state">予定なし</p>
             ) : (

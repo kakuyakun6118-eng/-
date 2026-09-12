@@ -1955,3 +1955,756 @@ textarea {
 .pk-row-edit {
   margin-bottom: 6px;
 }
+
+/* --- もっと(サブ画面)--- */
+
+.subnav-back {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: var(--card-bg);
+  padding: 10px 16px;
+  font-size: 0.85rem;
+  color: var(--brand);
+  text-align: left;
+}
+
+.subnav-title {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.more-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.more-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  text-align: left;
+}
+
+.more-icon {
+  font-size: 1.4rem;
+}
+
+.more-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.more-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.more-sub {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.more-chevron {
+  color: var(--muted);
+  font-size: 1.3rem;
+}
+
+/* --- 今日 --- */
+
+.td-clocks {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.td-clock {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 6px;
+}
+
+.td-clock.primary {
+  border-color: var(--brand);
+  background: #ebf4ff;
+}
+
+.td-clock-city {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.td-clock.primary .td-clock-city {
+  color: var(--brand-dark);
+}
+
+.td-clock-time {
+  font-size: 1.7rem;
+  font-weight: 800;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.td-clock-date {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.td-countdown {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.td-countdown-num {
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: var(--brand);
+  line-height: 1;
+}
+
+.td-countdown-label {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.td-alert {
+  background: #fffaf0;
+  border: 1px solid #fbd38d;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  font-size: 0.85rem;
+}
+
+.td-alert p {
+  margin: 6px 0 0;
+}
+
+.td-section {
+  margin-bottom: 20px;
+}
+
+.td-section h3 {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+
+.td-prep {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.td-prep-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  text-align: left;
+}
+
+.td-prep-label {
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.td-prep-card strong {
+  font-size: 1.1rem;
+  color: var(--text);
+}
+
+.td-dayhead {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.td-daynum {
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  color: white;
+  background: var(--brand);
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+
+.td-daydate {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.td-weather-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.td-weather-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.td-weather-icon {
+  font-size: 2.4rem;
+}
+
+.td-weather-temp {
+  display: block;
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.td-weather-label {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.td-weather-advice {
+  margin: 10px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.td-weather-note {
+  margin: 8px 0 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.td-weather-error {
+  margin: 8px 0 0;
+  font-size: 0.76rem;
+  color: #9b2c2c;
+}
+
+.td-fc-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 12px;
+  margin-bottom: 6px;
+  font-size: 0.84rem;
+}
+
+.td-fc-date {
+  flex: 1;
+}
+
+.td-fc-icon {
+  font-size: 1.1rem;
+}
+
+.td-fc-temp {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.td-fc-rain,
+.td-fc-none {
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.td-item {
+  display: flex;
+  gap: 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+}
+
+.td-time {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--brand);
+  font-size: 0.9rem;
+}
+
+.td-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.td-item-title {
+  font-size: 0.92rem;
+}
+
+.td-item-note {
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+/* --- お金 --- */
+
+.mn-rate {
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.mn-switch,
+.mn-taxmode {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.mn-switch-btn,
+.mn-taxmode-btn {
+  flex: 1;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  border-radius: 10px;
+  padding: 9px 4px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.mn-switch-btn.active,
+.mn-taxmode-btn.active {
+  border-color: var(--brand);
+  background: #ebf4ff;
+  color: var(--brand);
+  font-weight: 700;
+}
+
+.mn-taxmode {
+  margin: 12px 0;
+}
+
+.mn-taxmode-btn {
+  font-size: 0.8rem;
+}
+
+.mn-amount-label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.mn-amount-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.mn-dollar {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.mn-amount {
+  flex: 1;
+  /* A flex item will not shrink below its intrinsic width without this, and
+     an input's intrinsic width at 1.8rem is far wider than the card. */
+  min-width: 0;
+  width: 100%;
+  font-size: 1.8rem;
+  font-weight: 700;
+  padding: 6px 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.mn-tips {
+  display: flex;
+  gap: 6px;
+}
+
+.mn-tip-btn {
+  flex: 1;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 10px 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.mn-tip-btn.active {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: white;
+}
+
+.mn-tip-custom {
+  width: 74px;
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+.mn-split {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.mn-split-btn {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.mn-split-btn.active {
+  border-color: var(--brand);
+  background: #ebf4ff;
+  color: var(--brand);
+  font-weight: 700;
+}
+
+.mn-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.85rem;
+  color: var(--muted);
+  padding: 4px 0;
+}
+
+.mn-yen {
+  display: block;
+  font-style: normal;
+  font-size: 0.7rem;
+  text-align: right;
+}
+
+.mn-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+  padding-top: 10px;
+  font-size: 0.9rem;
+}
+
+.mn-total strong {
+  font-size: 1.6rem;
+  color: var(--brand);
+  font-variant-numeric: tabular-nums;
+}
+
+.mn-total-yen {
+  margin: 2px 0 0;
+  text-align: right;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.mn-perperson {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+  font-size: 0.88rem;
+  text-align: right;
+}
+
+.mn-hint,
+.mn-rate-note {
+  margin: 10px 0 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.mn-rate-note {
+  margin-top: 18px;
+}
+
+.mn-summary-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.mn-summary-total strong {
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.mn-summary-payers {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0 0;
+}
+
+.mn-summary-payer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.mn-summary-payer strong {
+  font-size: 0.92rem;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.mn-settle {
+  margin: 12px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.mn-day h3 {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 18px 0 8px;
+}
+
+.mn-day-total {
+  font-variant-numeric: tabular-nums;
+}
+
+.mn-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  text-align: left;
+}
+
+.mn-item-icon {
+  font-size: 1.2rem;
+}
+
+.mn-item-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mn-item-title {
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.mn-item-payer {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.mn-item-amount {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--text);
+  text-align: right;
+}
+
+/* --- 予約・チケット --- */
+
+.rv-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+
+.rv-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.74rem;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.rv-kind {
+  background: #ebf4ff;
+  color: var(--brand-dark);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.rv-title {
+  display: block;
+  font-size: 1rem;
+}
+
+.rv-details {
+  margin: 8px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rv-details > div {
+  display: flex;
+  gap: 10px;
+  font-size: 0.8rem;
+}
+
+.rv-details dt {
+  width: 64px;
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+
+.rv-details dd {
+  margin: 0;
+  min-width: 0;
+  word-break: break-word;
+}
+
+/* The one thing you get asked to read out at the door. */
+.rv-conf {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  user-select: all;
+}
+
+.rv-note {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.rv-cancel {
+  margin: 8px 0 0;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.rv-cancel.soon {
+  color: #9c4221;
+  font-weight: 700;
+}
+
+.rv-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.rv-actions .btn-small {
+  text-decoration: none;
+}
+
+.rv-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: #fffaf0;
+  border: 1px solid #fbd38d;
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+}
+
+.rv-line-icon {
+  font-size: 1rem;
+}
+
+.rv-line-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.rv-line-title {
+  font-size: 0.86rem;
+}
+
+.rv-line-conf {
+  font-size: 0.72rem;
+  color: var(--muted);
+  user-select: all;
+}
+
+.itinerary-bookings {
+  margin-bottom: 8px;
+}
+
+.day-banner-weather {
+  margin-left: auto;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.settings-hint {
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.5;
+}

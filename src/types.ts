@@ -92,11 +92,18 @@ export interface TripInfo {
   arrivalTime?: string;
   /** Local departure time on the last day, "HH:mm". Limits the final day. */
   departureTime?: string;
+  /**
+   * Yen per US dollar, used to show a rough ¥ figure next to every $ amount.
+   * Entered by hand: a live rate would need a network call at exactly the
+   * moment you're standing at a till with no signal.
+   */
+  usdJpy?: number;
 }
 
 export const DEFAULT_TRIP_INFO: TripInfo = {
   startDate: "2026-09-18",
   endDate: "2026-09-23",
+  usdJpy: 155,
 };
 
 export interface PlanOptions {
@@ -185,6 +192,121 @@ export interface PackingItem {
 }
 
 export type NewPackingItem = Omit<PackingItem, "id" | "createdAt">;
+
+/** Who paid. Mirrors PackingOwner so the two lists read the same way. */
+export type Payer = "me" | "partner" | "shared";
+
+export const PAYER_LABELS: Record<Payer, string> = {
+  me: "わたし",
+  partner: "妻",
+  shared: "共同財布",
+};
+
+export type ExpenseCategory =
+  | "food"
+  | "transport"
+  | "sightseeing"
+  | "shopping"
+  | "hotel"
+  | "other";
+
+export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
+  "food",
+  "transport",
+  "sightseeing",
+  "shopping",
+  "hotel",
+  "other",
+];
+
+export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
+  food: "食事",
+  transport: "交通",
+  sightseeing: "観光・入場",
+  shopping: "買い物",
+  hotel: "宿泊",
+  other: "その他",
+};
+
+export const EXPENSE_CATEGORY_ICONS: Record<ExpenseCategory, string> = {
+  food: "🍽️",
+  transport: "🚇",
+  sightseeing: "🎡",
+  shopping: "🛍️",
+  hotel: "🏨",
+  other: "💳",
+};
+
+export interface Expense {
+  id: string;
+  /** Amount in US dollars. Yen is derived from TripInfo.usdJpy for display. */
+  amountUsd: number;
+  category: ExpenseCategory;
+  payer: Payer;
+  date: string; // YYYY-MM-DD
+  note?: string;
+  createdAt: number;
+}
+
+export type NewExpense = Omit<Expense, "id" | "createdAt">;
+
+export type ReservationKind =
+  | "restaurant"
+  | "show"
+  | "museum"
+  | "tour"
+  | "transport"
+  | "hotel"
+  | "other";
+
+export const RESERVATION_KINDS: ReservationKind[] = [
+  "restaurant",
+  "show",
+  "museum",
+  "tour",
+  "transport",
+  "hotel",
+  "other",
+];
+
+export const RESERVATION_KIND_LABELS: Record<ReservationKind, string> = {
+  restaurant: "レストラン",
+  show: "ショー・観劇",
+  museum: "美術館・展望台",
+  tour: "ツアー",
+  transport: "移動・送迎",
+  hotel: "宿泊",
+  other: "その他",
+};
+
+export const RESERVATION_KIND_ICONS: Record<ReservationKind, string> = {
+  restaurant: "🍽️",
+  show: "🎭",
+  museum: "🏛️",
+  tour: "🚌",
+  transport: "✈️",
+  hotel: "🏨",
+  other: "🎫",
+};
+
+export interface Reservation {
+  id: string;
+  title: string;
+  kind: ReservationKind;
+  date: string; // YYYY-MM-DD
+  time?: string; // HH:mm, local New York time
+  /** Confirmation / booking number, the thing you get asked for at the door. */
+  confirmationNo?: string;
+  partySize?: number;
+  /** Free-cancellation deadline, YYYY-MM-DD. Warned about while it is close. */
+  cancelBy?: string;
+  address?: string;
+  mapsUrl?: string;
+  note?: string;
+  createdAt: number;
+}
+
+export type NewReservation = Omit<Reservation, "id" | "createdAt">;
 
 /**
  * Phrase-learning progress. Each traveller gets their own record so the two
