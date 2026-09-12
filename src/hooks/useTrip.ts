@@ -13,11 +13,15 @@ import { authReady, db, isFirebaseConfigured, TRIP_ID } from "../firebase";
 import { LocalCollection, LocalDoc } from "../data/local";
 import {
   DEFAULT_TRIP_INFO,
+  Expense,
+  NewExpense,
   NewPackingItem,
   NewPlace,
+  NewReservation,
   NewScheduleItem,
   PackingItem,
   Place,
+  Reservation,
   ScheduleItem,
   TripInfo,
 } from "../types";
@@ -44,12 +48,16 @@ const localTripInfo = new LocalDoc<TripInfo>("ny-trip:info", DEFAULT_TRIP_INFO);
 const localPlaces = new LocalCollection<Place>("ny-trip:places");
 const localScheduleItems = new LocalCollection<ScheduleItem>("ny-trip:schedule");
 const localPackingItems = new LocalCollection<PackingItem>("ny-trip:packing");
+const localExpenses = new LocalCollection<Expense>("ny-trip:expenses");
+const localReservations = new LocalCollection<Reservation>("ny-trip:reservations");
 
 export function useTrip() {
   const [tripInfo, setTripInfo] = useState<TripInfo>(DEFAULT_TRIP_INFO);
   const [places, setPlaces] = useState<Place[]>([]);
   const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([]);
   const [packingItems, setPackingItems] = useState<PackingItem[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   /** Firestore refused to stream the data — otherwise the list just stays
    *  empty with no explanation of why. */
@@ -75,12 +83,20 @@ export function useTrip() {
       const unsubPacking = localPackingItems.subscribe((items) =>
         setPackingItems([...items].sort((a, b) => a.createdAt - b.createdAt)),
       );
+      const unsubExpenses = localExpenses.subscribe((items) =>
+        setExpenses([...items].sort((a, b) => a.createdAt - b.createdAt)),
+      );
+      const unsubReservations = localReservations.subscribe((items) =>
+        setReservations([...items].sort((a, b) => a.createdAt - b.createdAt)),
+      );
       setLoading(false);
       return () => {
         unsubInfo();
         unsubPlaces();
         unsubSchedule();
         unsubPacking();
+        unsubExpenses();
+        unsubReservations();
       };
     }
 
@@ -88,6 +104,8 @@ export function useTrip() {
     let unsubPlaces = () => {};
     let unsubSchedule = () => {};
     let unsubPacking = () => {};
+    let unsubExpenses = () => {};
+    let unsubReservations = () => {};
     let cancelled = false;
 
     authReady.then(() => {
@@ -140,6 +158,28 @@ export function useTrip() {
         onSyncError,
       );
 
+      const expensesRef = collection(db, "trips", TRIP_ID, "expenses");
+      unsubExpenses = onSnapshot(
+        expensesRef,
+        (snap) => {
+          const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Expense);
+          items.sort((a, b) => a.createdAt - b.createdAt);
+          setExpenses(items);
+        },
+        onSyncError,
+      );
+
+      const reservationsRef = collection(db, "trips", TRIP_ID, "reservations");
+      unsubReservations = onSnapshot(
+        reservationsRef,
+        (snap) => {
+          const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Reservation);
+          items.sort((a, b) => a.createdAt - b.createdAt);
+          setReservations(items);
+        },
+        onSyncError,
+      );
+
       setLoading(false);
     });
 
@@ -149,6 +189,8 @@ export function useTrip() {
       unsubPlaces();
       unsubSchedule();
       unsubPacking();
+      unsubExpenses();
+      unsubReservations();
     };
   }, []);
 
@@ -161,6 +203,8 @@ export function useTrip() {
       places,
       scheduleItems,
       packingItems,
+      expenses,
+      reservations,
 
       updateTripInfo: async (patch: Partial<TripInfo>) => {
         if (isFirebaseConfigured && db) {
@@ -240,8 +284,57 @@ export function useTrip() {
           localPackingItems.remove(id);
         }
       },
+
+      addExpense: async (expense: NewExpense) => {
+        const withTimestamp = { ...expense, createdAt: Date.now() };
+        if (isFirebaseConfigured && db) {
+          await addDoc(collection(db, "trips", TRIP_ID, "expenses"), forCreate(withTimestamp));
+        } else {
+          localExpenses.add(withTimestamp);
+        }
+      },
+      updateExpense: async (id: string, patch: Partial<Expense>) => {
+        if (isFirebaseConfigured && db) {
+          await updateDoc(doc(db, "trips", TRIP_ID, "expenses", id), forUpdate(patch));
+        } else {
+          localExpenses.update(id, patch);
+        }
+      },
+      removeExpense: async (id: string) => {
+        if (isFirebaseConfigured && db) {
+          await deleteDoc(doc(db, "trips", TRIP_ID, "expenses", id));
+        } else {
+          localExpenses.remove(id);
+        }
+      },
+
+      addReservation: async (reservation: NewReservation) => {
+        const withTimestamp = { ...reservation, createdAt: Date.now() };
+        if (isFirebaseConfigured && db) {
+          await addDoc(
+            collection(db, "trips", TRIP_ID, "reservations"),
+            forCreate(withTimestamp),
+          );
+        } else {
+          localReservations.add(withTimestamp);
+        }
+      },
+      updateReservation: async (id: string, patch: Partial<Reservation>) => {
+        if (isFirebaseConfigured && db) {
+          await updateDoc(doc(db, "trips", TRIP_ID, "reservations", id), forUpdate(patch));
+        } else {
+          localReservations.update(id, patch);
+        }
+      },
+      removeReservation: async (id: string) => {
+        if (isFirebaseConfigured && db) {
+          await deleteDoc(doc(db, "trips", TRIP_ID, "reservations", id));
+        } else {
+          localReservations.remove(id);
+        }
+      },
     }),
-    [loading, syncError, tripInfo, places, scheduleItems, packingItems],
+    [loading, syncError, tripInfo, places, scheduleItems, packingItems, expenses, reservations],
   );
 }
 
