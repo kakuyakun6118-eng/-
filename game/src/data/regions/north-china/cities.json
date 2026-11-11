@@ -1,0 +1,17 @@
+[
+  { "id": "luoyang", "name": "洛陽", "reading": "らくよう", "lon": 112.6, "lat": 34.72, "rank": "capital", "description": "後漢・魏・西晋の都。311年の永嘉の乱で陥落した。" },
+  { "id": "changan", "name": "長安", "reading": "ちょうあん", "lon": 108.87, "lat": 34.31, "rank": "capital", "description": "関中の中心。前漢の都で、西晋最後の皇帝・愍帝が拠った。" },
+  { "id": "pingyang", "name": "平陽", "reading": "へいよう", "lon": 111.52, "lat": 36.08, "rank": "capital", "description": "匈奴の劉氏が建てた漢(前趙)の都。" },
+  { "id": "xiangguo", "name": "襄国", "reading": "じょうこく", "lon": 114.5, "lat": 37.07, "rank": "major", "description": "石勒の本拠地。のちに後趙の都となる。" },
+  { "id": "ye", "name": "鄴", "reading": "ぎょう", "lon": 114.35, "lat": 36.33, "rank": "major", "description": "河北の要。曹操が本拠とした大都市。" },
+  { "id": "jinyang", "name": "晋陽", "reading": "しんよう", "lon": 112.55, "lat": 37.75, "rank": "major", "description": "并州の中心。劉琨が長く守ったが316年に失われた。" },
+  { "id": "ji", "name": "薊", "reading": "けい", "lon": 116.35, "lat": 39.9, "rank": "major", "description": "幽州の中心。現在の北京付近。" },
+  { "id": "shengle", "name": "盛楽", "reading": "せいらく", "lon": 111.8, "lat": 40.4, "rank": "major", "description": "拓跋部の本拠地。のちの北魏の発祥の地。" },
+  { "id": "guzang", "name": "姑臧", "reading": "こぞう", "lon": 102.63, "lat": 37.93, "rank": "capital", "description": "涼州の中心。河西回廊を押さえる張氏の本拠。" },
+  { "id": "shanggui", "name": "上邽", "reading": "じょうけい", "lon": 105.72, "lat": 34.58, "rank": "town", "description": "秦州の要地。晋の南陽王・司馬保が拠った。" },
+  { "id": "jiankang", "name": "建康", "reading": "けんこう", "lon": 118.8, "lat": 32.05, "rank": "capital", "description": "江南の中心。司馬睿がここで晋を再興した。" },
+  { "id": "xiangyang", "name": "襄陽", "reading": "じょうよう", "lon": 112.14, "lat": 32.02, "rank": "major", "description": "漢水のほとりの要衝。南北の境目にあたる。" },
+  { "id": "shouchun", "name": "寿春", "reading": "じゅしゅん", "lon": 116.78, "lat": 32.57, "rank": "town", "description": "淮水の南岸にある、江南を守る前線の城。" },
+  { "id": "chengdu", "name": "成都", "reading": "せいと", "lon": 104.07, "lat": 30.66, "rank": "capital", "description": "四川盆地の中心。李氏が建てた成漢の都。" },
+  { "id": "jicheng", "name": "棘城", "reading": "きょくじょう", "lon": 121.0, "lat": 41.6, "rank": "major", "description": "遼西にある慕容部の本拠地。" }
+]

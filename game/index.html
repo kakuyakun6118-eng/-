@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#10161d" />
+    <title>五胡乱華 天下統一録</title>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="map" aria-label="中国北部の3Dマップ"></canvas>
+      <div id="labels"></div>
+      <header class="title">
+        <h1>五胡乱華<small>天下統一録</small></h1>
+        <p class="scenario"></p>
+      </header>
+      <p id="hint">ドラッグで移動・ピンチで拡大縮小・都市をタップ</p>
+      <section id="info" hidden>
+        <div class="info-inner">
+          <div class="info-head">
+            <h2 class="info-name"></h2>
+            <span class="info-reading"></span>
+          </div>
+          <div class="info-owner">
+            <span class="info-label">所属</span>
+            <span class="info-chip"></span>
+            <span class="info-faction"></span>
+            <span class="info-detail"></span>
+          </div>
+          <p class="info-description"></p>
+          <button class="info-close" type="button" aria-label="閉じる">×</button>
+        </div>
+      </section>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
