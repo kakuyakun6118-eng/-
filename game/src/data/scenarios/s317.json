@@ -4,14 +4,62 @@
   "name": "西晋滅亡",
   "summary": "316年に長安が落ちて西晋が滅び、華北は諸民族の争う地となった。",
   "factions": [
-    { "id": "han_zhao", "name": "漢(前趙)", "people": "匈奴", "ruler": "劉聡", "color": "#c0473f" },
-    { "id": "shile", "name": "石勒軍(のちの後趙)", "people": "羯", "ruler": "石勒", "color": "#8a5cc4" },
-    { "id": "jin", "name": "晋(東晋)", "people": "漢人", "ruler": "司馬睿", "color": "#3c86c9" },
-    { "id": "qianliang", "name": "前涼", "people": "漢人", "ruler": "張寔", "color": "#d9932e" },
-    { "id": "dai", "name": "代(拓跋部)", "people": "鮮卑", "ruler": "拓跋鬱律", "color": "#3fa595" },
-    { "id": "duan", "name": "段部", "people": "鮮卑", "ruler": "段匹磾", "color": "#a3a044" },
-    { "id": "murong", "name": "慕容部", "people": "鮮卑", "ruler": "慕容廆", "color": "#cf62a4" },
-    { "id": "chenghan", "name": "成漢", "people": "巴氐", "ruler": "李雄", "color": "#55a556" }
+    {
+      "id": "han_zhao",
+      "name": "漢(前趙)",
+      "people": "匈奴",
+      "ruler": "劉聡",
+      "color": "#b3362f"
+    },
+    {
+      "id": "shile",
+      "name": "石勒軍(のちの後趙)",
+      "people": "羯",
+      "ruler": "石勒",
+      "color": "#6c42ad"
+    },
+    {
+      "id": "jin",
+      "name": "晋(東晋)",
+      "people": "漢人",
+      "ruler": "司馬睿",
+      "color": "#3c86c9"
+    },
+    {
+      "id": "qianliang",
+      "name": "前涼",
+      "people": "漢人",
+      "ruler": "張寔",
+      "color": "#c9a046"
+    },
+    {
+      "id": "dai",
+      "name": "代(拓跋部)",
+      "people": "鮮卑",
+      "ruler": "拓跋鬱律",
+      "color": "#3fa595"
+    },
+    {
+      "id": "duan",
+      "name": "段部",
+      "people": "鮮卑",
+      "ruler": "段匹磾",
+      "color": "#a3a044"
+    },
+    {
+      "id": "murong",
+      "name": "慕容部",
+      "people": "鮮卑",
+      "ruler": "慕容廆",
+      "color": "#cf62a4"
+    },
+    {
+      "id": "chenghan",
+      "name": "成漢",
+      "people": "巴氐",
+      "ruler": "李雄",
+      "color": "#55a556"
+    }
   ],
   "cityOwners": {
     "luoyang": "han_zhao",

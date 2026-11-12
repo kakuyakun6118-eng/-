@@ -7,6 +7,7 @@ import { InputController } from "../input/InputController";
 import { Campaign, type ArmyState } from "../sim/Campaign";
 import { distanceKm, type Route } from "../sim/pathfinding";
 import { TerrainGrid } from "../sim/TerrainGrid";
+import { Territory } from "../sim/Territory";
 import { ArmyLabels } from "../ui/ArmyLabels";
 import { ArmyPanel, type ArmyPanelMode } from "../ui/ArmyPanel";
 import { CityLabels } from "../ui/CityLabels";
@@ -16,6 +17,7 @@ import { Cities, type CityMarker } from "../world/Cities";
 import { RouteLine } from "../world/RouteLine";
 import { Terrain, type TerrainPad } from "../world/Terrain";
 import { HAZE_COLOR } from "../world/terrainMaterial";
+import { TerritoryTexture } from "../world/territoryTexture";
 import { toLonLat, toWorld } from "./geo";
 
 /** 指で押しやすいように、都市や軍団の周りこの距離(ピクセル)までをタップ範囲にする */
@@ -40,6 +42,9 @@ export class Game {
   /** ゲームの進行(動作確認のために外からも見られるようにしてある) */
   readonly campaign: Campaign;
   private readonly grid: TerrainGrid;
+  private readonly territory: Territory;
+  private readonly territoryTexture: TerritoryTexture;
+  private territoryVisible = true;
   private readonly allCities: City[] = [];
   private readonly labels: CityLabels;
   private readonly armyLabels: ArmyLabels;
@@ -111,6 +116,20 @@ export class Game {
 
     // 進軍の計算用の地形のマス(いまは地域が1つなので、その地域の分だけ作る)
     this.grid = new TerrainGrid(terrains[0].field, terrains[0].region.crossings);
+
+    // 領土:都市の所属から計算し、地形に重ねて表示する
+    this.territory = new Territory(this.grid, scenario.factions.map((f) => f.id));
+    this.territoryTexture = new TerritoryTexture(this.grid);
+    terrains[0].setTerritoryTexture(this.territoryTexture.texture, this.territoryTexture.width);
+    this.refreshTerritory();
+    const territoryButton = root.querySelector("#territory-toggle") as HTMLButtonElement;
+    territoryButton.addEventListener("click", () => {
+      this.territoryVisible = !this.territoryVisible;
+      territoryButton.setAttribute("aria-pressed", String(this.territoryVisible));
+      this.terrains[0].setTerritoryVisible(this.territoryVisible);
+      this.dirty = true;
+    });
+    terrains[0].setTerritoryVisible(true);
 
     // 軍団と経路の表示
     const heightAt = (lon: number, lat: number): number => {
@@ -197,6 +216,26 @@ export class Game {
     new ResizeObserver(() => this.resize()).observe(root);
     this.resize();
     this.renderer.setAnimationLoop(() => this.frame());
+  }
+
+  // ===== 領土 =====
+
+  /** いまの都市の所属から、領土を計算し直して表示に反映する */
+  private refreshTerritory(): void {
+    this.territory.compute(this.allCities, scenario.cityOwners);
+    this.territoryTexture.update(this.territory, scenario.factions.map((f) => new THREE.Color(f.color)));
+    this.dirty = true;
+  }
+
+  /**
+   * 都市の所属勢力を変える(将来の都市占領で使う)。
+   * 領土が塗り替わり、都市の旗とラベルの色も新しい勢力のものになる。
+   */
+  setCityOwner(cityId: string, factionId: string): void {
+    scenario.cityOwners[cityId] = factionId;
+    const marker = this.cities.setFaction(cityId, factionById(factionId));
+    if (marker) this.labels.refresh(marker);
+    this.refreshTerritory();
   }
 
   // ===== 軍団の操作 =====

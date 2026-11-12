@@ -21,6 +21,13 @@ export class CityLabels {
     }
   }
 
+  /** 都市の所属が変わったときに、ラベルの丸の色を直す */
+  refresh(marker: CityMarker): void {
+    const item = this.items.find((i) => i.marker === marker);
+    const dot = item?.el.querySelector(".dot") as HTMLElement | null;
+    if (dot) dot.style.background = marker.faction ? marker.faction.color : "#9a9a9a";
+  }
+
   /** カメラが動くたびに、ラベルを都市の真上に置き直す */
   update(camera: THREE.Camera, width: number, height: number, selected: CityMarker | null): void {
     for (const { marker, el } of this.items) {

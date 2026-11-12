@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { LON_SCALE, UNITS_PER_DEGREE } from "../core/geo";
 import { createNoiseTexture } from "../core/noise";
 import type { HeightField } from "./heightField";
+import { TERRITORY_EDGE_RANGE } from "./territoryTexture";
 
 /** 陰影を付けるときに、斜面をどれだけ強調するか(実際の何倍か) */
 const SHADING_EXAGGERATION = 5;
@@ -72,6 +73,9 @@ const fragmentShader = /* glsl */ `
   uniform vec3 uSun;      // 太陽の方向
   uniform vec3 uHaze;     // かすみの色
   uniform float uHazeDistance;
+  uniform sampler2D tTerritory;   // 領土の色と、境界までの距離
+  uniform float uTerritory;       // 領土表示の濃さ(0 = 表示しない)
+  uniform float uTerritoryWidth;  // 領土の絵の横の点の数
   varying vec2 vUv;
   varying vec3 vWorld;
 
@@ -153,6 +157,25 @@ const fragmentShader = /* glsl */ `
     vec3 light = vec3(0.46, 0.52, 0.62) * (0.55 + 0.45 * n.y) + vec3(1.0, 0.93, 0.80) * diff * 1.15;
     col *= light;
 
+    // --- 領土:勢力の色を半透明に重ね、境界に細い線を引く(水面は塗らない) ---
+    if (uTerritory > 0.0) {
+      vec4 tr = texture2D(tTerritory, vUv);
+      float strength = max(tr.r, max(tr.g, tr.b));
+      float owned = smoothstep(0.04, 0.16, strength);
+      vec3 hue = tr.rgb / max(strength, 0.001); // 境界でにじんでも色味が変わらないようにする
+      float d = tr.a * ${TERRITORY_EDGE_RANGE.toFixed(1)}; // 境界までの距離(絵の点の数)
+      // 地形の明暗を残したまま色を付ける。境界の近くは少し濃くする
+      float edge = 1.0 - smoothstep(1.5, 10.0, d);
+      float luma = dot(col, vec3(0.3, 0.59, 0.11));
+      col = mix(col, hue * (0.3 + 0.85 * luma), (0.26 + 0.22 * edge) * owned * uTerritory);
+      // 境界線:画面上でいつも同じくらいの細さに見えるよう、拡大率に合わせて幅を決める
+      float px = fwidth(vUv.x) * uTerritoryWidth;
+      // (距離はならしてあるので、境界の真上でも1.2前後の値になる。その分を足して線の位置を決める)
+      float lineHalf = 1.75 + max(0.0, 1.3 * px - 0.5);
+      float line = 1.0 - smoothstep(lineHalf, lineHalf + max(px, 0.35), d);
+      col = mix(col, mix(hue, vec3(1.0), 0.45), line * 0.8 * uTerritory * smoothstep(0.02, 0.1, strength));
+    }
+
     if (waterAmt > 0.0) {
       vec3 view = normalize(cameraPosition - vWorld);
       float sea = 1.0 - step(0.5, meters);
@@ -191,6 +214,9 @@ export function createTerrainMaterial(field: HeightField): THREE.ShaderMaterial 
       uSun: { value: new THREE.Vector3(-0.62, 0.52, -0.58).normalize() },
       uHaze: { value: HAZE_COLOR },
       uHazeDistance: { value: 400 },
+      tTerritory: { value: null },
+      uTerritory: { value: 0 },
+      uTerritoryWidth: { value: 1 },
     },
   });
 }

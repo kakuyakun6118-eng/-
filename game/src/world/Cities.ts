@@ -48,6 +48,24 @@ export class Cities {
     });
   }
 
+  /** 都市の所属勢力が変わったとき(占領など)に、旗の色を新しい勢力のものに作り替える */
+  setFaction(cityId: string, faction: Faction | undefined): CityMarker | undefined {
+    const m = this.markers.find((k) => k.city.id === cityId);
+    if (!m) return undefined;
+    const position = m.group.position.clone();
+    this.group.remove(m.group);
+    m.group.traverse((o) => {
+      if (o instanceof THREE.InstancedMesh) o.dispose();
+    });
+    m.model = new CityModel(buildCity(resolveCityLayout(m.city), m.city.id, faction ? faction.color : "#d8d2c4"));
+    m.model.group.position.copy(position);
+    m.model.setSelected(m === this.selected);
+    m.group = m.model.group;
+    m.faction = faction;
+    this.group.add(m.group);
+    return m;
+  }
+
   /** カメラの距離に合わせて、大きさと細かさを調整する */
   update(cameraDistance: number): void {
     // 遠いほど、城壁や楼閣を縦に強調して、城郭の輪郭を読み取りやすくする

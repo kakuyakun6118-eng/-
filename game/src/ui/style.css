@@ -795,3 +795,32 @@ body {
     top: calc(152px + env(safe-area-inset-top, 0px));
   }
 }
+
+/* ===== 領土表示のON/OFF ===== */
+#territory-toggle {
+  position: absolute;
+  top: calc(52px + env(safe-area-inset-top, 0px));
+  right: max(16px, env(safe-area-inset-right, 0px));
+  min-height: 32px;
+  padding: 4px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--label-bg);
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* ONのときは金色にして、押されている状態だと分かるようにする */
+#territory-toggle[aria-pressed="true"] {
+  border-color: var(--bronze);
+  background: var(--bronze);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+#territory-toggle:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}

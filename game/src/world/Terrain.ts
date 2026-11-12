@@ -84,6 +84,17 @@ export class Terrain {
     return new Terrain(region, await HeightField.load(region), pads);
   }
 
+  /** 領土の絵を地形に重ねる準備をする */
+  setTerritoryTexture(texture: THREE.Texture, width: number): void {
+    this.material.uniforms.tTerritory.value = texture;
+    this.material.uniforms.uTerritoryWidth.value = width;
+  }
+
+  /** 領土表示のON/OFF */
+  setTerritoryVisible(visible: boolean): void {
+    this.material.uniforms.uTerritory.value = visible ? 1 : 0;
+  }
+
   /** カメラが遠いほど、かすみ始める距離も遠くする */
   setCameraDistance(distance: number): void {
     this.material.uniforms.uHazeDistance.value = distance * 3.4 + 40;
