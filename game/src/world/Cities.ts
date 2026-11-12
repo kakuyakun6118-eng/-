@@ -71,7 +71,7 @@ export class Cities {
 
   /** カメラが遠いときはマーカーを大きくして、見失わないようにする */
   updateScale(cameraDistance: number): void {
-    const s = Math.max(0.7, Math.min(2.6, cameraDistance / 55));
+    const s = Math.max(0.3, Math.min(2.6, cameraDistance / 55));
     for (const m of this.markers) {
       m.group.scale.setScalar(s);
       m.labelAnchor.y = m.group.position.y + 2.1 * s;

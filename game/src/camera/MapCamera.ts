@@ -8,11 +8,11 @@ export interface WorldRect {
   maxZ: number;
 }
 
-const MIN_DISTANCE = 22;
-const MAX_DISTANCE = 150;
+const MIN_DISTANCE = 14;
+const MAX_DISTANCE = 125;
 /** 近づくほど低い角度から、遠ざかるほど真上に近い角度から見る */
-const PITCH_NEAR = THREE.MathUtils.degToRad(42);
-const PITCH_FAR = THREE.MathUtils.degToRad(62);
+const PITCH_NEAR = THREE.MathUtils.degToRad(36);
+const PITCH_FAR = THREE.MathUtils.degToRad(60);
 
 export class MapCamera {
   readonly camera = new THREE.PerspectiveCamera(42, 1, 1, 1200);
@@ -23,7 +23,14 @@ export class MapCamera {
   private readonly raycaster = new THREE.Raycaster();
   private readonly ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
-  constructor(private readonly limits: WorldRect) {
+  /**
+   * heightAt は、その地点の地面の高さを返す関数。
+   * 高原の上でもカメラが地面にめり込まないよう、見ている地点の高さに合わせる。
+   */
+  constructor(
+    private readonly limits: WorldRect,
+    private readonly heightAt: (x: number, z: number) => number,
+  ) {
     this.update();
   }
 
@@ -37,11 +44,13 @@ export class MapCamera {
     this.distance = THREE.MathUtils.clamp(this.distance, MIN_DISTANCE, MAX_DISTANCE);
     this.target.x = THREE.MathUtils.clamp(this.target.x, this.limits.minX, this.limits.maxX);
     this.target.z = THREE.MathUtils.clamp(this.target.z, this.limits.minZ, this.limits.maxZ);
+    this.target.y = this.heightAt(this.target.x, this.target.z);
+    this.ground.constant = -this.target.y;
     const t = (this.distance - MIN_DISTANCE) / (MAX_DISTANCE - MIN_DISTANCE);
     const pitch = THREE.MathUtils.lerp(PITCH_NEAR, PITCH_FAR, t);
     this.camera.position.set(
       this.target.x,
-      Math.sin(pitch) * this.distance,
+      this.target.y + Math.sin(pitch) * this.distance,
       this.target.z + Math.cos(pitch) * this.distance,
     );
     this.camera.lookAt(this.target);

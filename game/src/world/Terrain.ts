@@ -1,18 +1,18 @@
 // 1つの地域の地形を3Dの立体として作る。
 import * as THREE from "three";
-import { HEIGHT_SCALE, toWorld } from "../core/geo";
+import { metersToWorld, toWorld } from "../core/geo";
 import type { RegionData } from "../data/types";
 import { HeightField } from "./heightField";
-import { createTerrainTexture } from "./terrainTexture";
+import { createTerrainMaterial } from "./terrainMaterial";
 
 export class Terrain {
   readonly mesh: THREE.Mesh;
-  readonly field: HeightField;
+  private readonly material: THREE.ShaderMaterial;
 
-  constructor(readonly region: RegionData) {
-    this.field = new HeightField(region);
-    const { cols, rows } = this.field;
+  private constructor(readonly region: RegionData, readonly field: HeightField) {
     const { bounds, gridStep } = region.info;
+    const cols = Math.round((bounds.east - bounds.west) / gridStep) + 1;
+    const rows = Math.round((bounds.north - bounds.south) / gridStep) + 1;
 
     // 格子の各点に、位置と「絵のどこを貼るか」を入れていく
     const positions = new Float32Array(cols * rows * 3);
@@ -24,10 +24,10 @@ export class Terrain {
         const k = j * cols + i;
         const { x, z } = toWorld(lon, lat);
         positions[k * 3] = x;
-        positions[k * 3 + 1] = this.field.data[k] * HEIGHT_SCALE;
+        positions[k * 3 + 1] = metersToWorld(field.sample(lon, lat));
         positions[k * 3 + 2] = z;
         uvs[k * 2] = i / (cols - 1);
-        uvs[k * 2 + 1] = 1 - j / (rows - 1);
+        uvs[k * 2 + 1] = j / (rows - 1);
       }
     }
 
@@ -53,22 +53,23 @@ export class Terrain {
     geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
     geometry.setIndex(new THREE.BufferAttribute(indices, 1));
-    geometry.computeVertexNormals();
 
-    const material = new THREE.MeshLambertMaterial({
-      map: createTerrainTexture(this.field, region),
-    });
-    this.mesh = new THREE.Mesh(geometry, material);
+    this.material = createTerrainMaterial(field);
+    this.mesh = new THREE.Mesh(geometry, this.material);
   }
 
-  /** この地域に、その地点が含まれるか */
-  contains(lon: number, lat: number): boolean {
-    const b = this.region.info.bounds;
-    return lon >= b.west && lon <= b.east && lat >= b.south && lat <= b.north;
+  /** 地形ファイルを読み込んでから地形を作る */
+  static async create(region: RegionData): Promise<Terrain> {
+    return new Terrain(region, await HeightField.load(region));
+  }
+
+  /** カメラが遠いほど、かすみ始める距離も遠くする */
+  setCameraDistance(distance: number): void {
+    this.material.uniforms.uHazeDistance.value = distance * 3.4 + 40;
   }
 
   /** その地点の地面の高さ(3D空間での値) */
   heightAt(lon: number, lat: number): number {
-    return this.field.sample(lon, lat) * HEIGHT_SCALE;
+    return metersToWorld(this.field.sample(lon, lat));
   }
 }

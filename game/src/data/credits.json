@@ -1,0 +1,17 @@
+[
+  {
+    "title": "標高データ",
+    "source": "Terrain Tiles (AWS Open Data)",
+    "text": "SRTM and GMTED2010 terrain data courtesy of the U.S. Geological Survey. ETOPO1 terrain data: U.S. National Oceanic and Atmospheric Administration."
+  },
+  {
+    "title": "河川・湖のデータ",
+    "source": "Natural Earth",
+    "text": "Made with Natural Earth. Free vector and raster map data @ naturalearthdata.com."
+  },
+  {
+    "title": "3D表示",
+    "source": "three.js",
+    "text": "MIT License. Copyright © 2010-2026 three.js authors."
+  }
+]

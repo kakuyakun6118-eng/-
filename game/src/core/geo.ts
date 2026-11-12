@@ -11,8 +11,13 @@ export const UNITS_PER_DEGREE = 10;
 /** 経度1度は緯度1度より短いので、その比率(基準緯度での値) */
 export const LON_SCALE = Math.cos((ORIGIN_LAT * Math.PI) / 180);
 
-/** 地形の高さを何倍に強調するか(実際の比率だと山が平らに見えるため) */
-export const HEIGHT_SCALE = 1.6;
+/**
+ * 標高(メートル)を3D空間の高さに直す。
+ * 実際の比率だと山がほとんど平らに見えるので、約14倍に強調している。
+ */
+export function metersToWorld(meters: number): number {
+  return meters * 0.0013;
+}
 
 /** 緯度経度 → 3D空間の位置。東が +x、北が -z(画面の奥) */
 export function toWorld(lon: number, lat: number): { x: number; z: number } {

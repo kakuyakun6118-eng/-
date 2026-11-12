@@ -1,6 +1,7 @@
 /* 配置:地図を全画面に敷き、題字を左上、都市の情報を下端のパネルに重ねる */
 :root {
   --ink: #10161d;
+  --shade: rgba(10, 14, 20, 0.6);
   --panel: rgba(18, 26, 36, 0.92);
   --line: rgba(201, 164, 92, 0.45);
   --bronze: #d2ae68;
@@ -101,8 +102,11 @@ body {
   padding-top: calc(12px + env(safe-area-inset-top, 0px));
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-bottom: 28px;
   pointer-events: none;
-  text-shadow: 0 1px 6px var(--ink), 0 0 2px var(--ink);
+  text-shadow: 0 1px 6px var(--ink), 0 0 2px var(--ink), 0 0 12px var(--ink);
+  /* 明るい地形の上でも題字が読めるよう、後ろをうっすら暗くする */
+  background: radial-gradient(ellipse at top left, var(--shade), transparent 72%);
 }
 
 .title h1 {
@@ -141,7 +145,7 @@ body {
   text-align: center;
   font-size: 12px;
   color: var(--text);
-  text-shadow: 0 1px 5px var(--ink), 0 0 2px var(--ink);
+  text-shadow: 0 1px 5px var(--ink), 0 0 2px var(--ink), 0 0 10px var(--ink);
   pointer-events: none;
 }
 
@@ -244,4 +248,109 @@ body {
   outline: 2px solid var(--bronze);
   outline-offset: -6px;
   border-radius: 6px;
+}
+
+#credits-open {
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  right: max(16px, env(safe-area-inset-right, 0px));
+  min-height: 32px;
+  padding: 4px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--label-bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+#credits {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-block: 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: var(--shade);
+}
+
+.credits-inner {
+  max-width: 460px;
+  max-height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.credits-inner h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: 0.1em;
+}
+
+.credits-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.credits-item h3 {
+  margin: 0 0 2px;
+  font-size: 13px;
+  color: var(--bronze);
+}
+
+.credits-item p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+#credits-close {
+  align-self: flex-end;
+  min-height: 40px;
+  padding: 6px 18px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: none;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#credits-open:focus-visible,
+#credits-close:focus-visible {
+  outline: 2px solid var(--bronze);
+  outline-offset: 2px;
+}
+
+/* 横向きのiPhoneでは、情報パネルを右下の小さなカードにして地図を広く見せる */
+@media (orientation: landscape) and (max-height: 520px) {
+  #info {
+    left: auto;
+    right: max(16px, env(safe-area-inset-right, 0px));
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    width: min(340px, 48%);
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+
+  .info-name {
+    font-size: 22px;
+  }
 }

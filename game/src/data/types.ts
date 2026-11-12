@@ -9,48 +9,17 @@ export interface RegionInfo {
   name: string;
   /** 地域の範囲(緯度経度) */
   bounds: { west: number; east: number; south: number; north: number };
-  /** 地形の細かさ(度)。小さいほど細かく、重くなる */
+  /** 地形の立体の細かさ(度)。小さいほど細かく、重くなる */
   gridStep: number;
-}
-
-/** 高原など、広く盛り上がった土地 */
-export interface Highland {
-  id: string;
-  name: string;
-  center: LonLatPair;
-  /** 東西・南北の広がり(度) */
-  radius: [number, number];
-  height: number;
-}
-
-/** 山脈。点をつないだ線に沿って山が連なる */
-export interface Ridge {
-  id: string;
-  name: string;
-  height: number;
-  /** 山脈の幅(度) */
-  width: number;
-  points: LonLatPair[];
-}
-
-export interface Sea {
-  id: string;
-  name: string;
-  polygon: LonLatPair[];
-}
-
-export interface TerrainData {
-  highlands: Highland[];
-  ridges: Ridge[];
-  seas: Sea[];
 }
 
 export interface River {
   id: string;
   name: string;
-  /** 川の太さ(見た目用) */
+  /** 川の太さの目安(大河ほど大きい) */
   width: number;
-  points: LonLatPair[];
+  /** 流路。1本の川が複数の線に分かれていることがある */
+  lines: LonLatPair[][];
 }
 
 export type CityRank = "capital" | "major" | "town";
@@ -88,7 +57,8 @@ export interface Scenario {
 /** 1つの地域にまとめたデータ一式 */
 export interface RegionData {
   info: RegionInfo;
-  terrain: TerrainData;
+  /** 地形ファイル(標高と水辺を画像にしたもの)の場所 */
+  terrainUrl: string;
   rivers: River[];
   cities: City[];
 }

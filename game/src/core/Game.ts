@@ -7,7 +7,8 @@ import { CityLabels } from "../ui/CityLabels";
 import { InfoPanel } from "../ui/InfoPanel";
 import { Cities, type CityMarker } from "../world/Cities";
 import { Terrain } from "../world/Terrain";
-import { toWorld } from "./geo";
+import { HAZE_COLOR } from "../world/terrainMaterial";
+import { toLonLat, toWorld } from "./geo";
 
 /** 指で押しやすいように、都市の周りこの距離(ピクセル)までをタップ範囲にする */
 const PICK_RADIUS = 34;
@@ -25,13 +26,19 @@ export class Game {
   /** 画面を描き直す必要があるか。動きがないときは描かず、電池を節約する */
   private dirty = true;
 
-  constructor(private readonly root: HTMLElement) {
+  /** 地形ファイルを読み込んでからゲームを始める */
+  static async create(root: HTMLElement): Promise<Game> {
+    const terrains = await Promise.all(regions.map((region) => Terrain.create(region)));
+    return new Game(root, terrains);
+  }
+
+  private constructor(private readonly root: HTMLElement, private readonly terrains: Terrain[]) {
     const canvas = root.querySelector("#map") as HTMLCanvasElement;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.scene.background = new THREE.Color(0x10161d);
+    this.scene.background = HAZE_COLOR;
 
-    // 光:空からのやわらかい光 + 北西からの日差し(山の陰影を出す)
+    // 都市マーカー用の光(地形の陰影は world/terrainMaterial.ts が自分で計算する)
     this.scene.add(new THREE.HemisphereLight(0xffffff, 0x54483a, 1.5));
     const sun = new THREE.DirectionalLight(0xfff1d6, 2.2);
     sun.position.set(-60, 80, -40);
@@ -39,8 +46,8 @@ export class Game {
 
     // 地域ごとに地形を作り、その上に都市を置く
     const limits: WorldRect = { minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity };
-    for (const region of regions) {
-      const terrain = new Terrain(region);
+    for (const terrain of terrains) {
+      const region = terrain.region;
       this.scene.add(terrain.mesh);
       for (const city of region.cities) {
         this.cities.add(city, factionOfCity(city.id), terrain.heightAt(city.lon, city.lat));
@@ -63,11 +70,11 @@ export class Game {
     limits.minZ += insetZ;
     limits.maxZ -= insetZ;
 
-    // 最初は洛陽のあたりを見る
-    this.mapCamera = new MapCamera(limits);
-    const start = toWorld(112.6, 35.6);
+    // 最初は長安と洛陽のあたりを見る
+    this.mapCamera = new MapCamera(limits, (x, z) => this.groundHeight(x, z));
+    const start = toWorld(110.9, 35.1);
     this.mapCamera.target.set(start.x, 0, start.z);
-    this.mapCamera.distance = 95;
+    this.mapCamera.distance = 62;
     this.mapCamera.update();
 
     this.labels = new CityLabels(root.querySelector("#labels") as HTMLElement, this.cities.markers);
@@ -88,6 +95,18 @@ export class Game {
     new ResizeObserver(() => this.resize()).observe(root);
     this.resize();
     this.renderer.setAnimationLoop(() => this.frame());
+  }
+
+  /** 3D空間のある地点の、地面の高さ */
+  private groundHeight(x: number, z: number): number {
+    const { lon, lat } = toLonLat(x, z);
+    for (const terrain of this.terrains) {
+      const b = terrain.region.info.bounds;
+      if (lon >= b.west && lon <= b.east && lat >= b.south && lat <= b.north) {
+        return terrain.heightAt(lon, lat);
+      }
+    }
+    return 0;
   }
 
   /** 画面上のピクセル位置を、-1〜1 の座標に直す */
@@ -135,6 +154,7 @@ export class Game {
     if (!this.dirty) return;
     this.dirty = false;
     this.cities.updateScale(this.mapCamera.distance);
+    for (const terrain of this.terrains) terrain.setCameraDistance(this.mapCamera.distance);
     this.renderer.render(this.scene, this.mapCamera.camera);
     this.labels.update(this.mapCamera.camera, this.width, this.height, this.selected);
   }

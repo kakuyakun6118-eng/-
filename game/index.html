@@ -16,7 +16,8 @@
         <h1>五胡乱華<small>天下統一録</small></h1>
         <p class="scenario"></p>
       </header>
-      <p id="hint">ドラッグで移動・ピンチで拡大縮小・都市をタップ</p>
+      <p id="hint"></p>
+      <button id="credits-open" type="button">出典</button>
       <section id="info" hidden>
         <div class="info-inner">
           <div class="info-head">
@@ -31,6 +32,13 @@
           </div>
           <p class="info-description"></p>
           <button class="info-close" type="button" aria-label="閉じる">×</button>
+        </div>
+      </section>
+      <section id="credits" hidden>
+        <div class="credits-inner">
+          <h2>データの出典</h2>
+          <div class="credits-list"></div>
+          <button id="credits-close" type="button">閉じる</button>
         </div>
       </section>
     </div>

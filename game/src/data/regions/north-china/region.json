@@ -2,5 +2,5 @@
   "id": "north-china",
   "name": "華北・中原",
   "bounds": { "west": 99, "east": 125, "south": 28.5, "north": 43.5 },
-  "gridStep": 0.1
+  "gridStep": 0.05
 }
