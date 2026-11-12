@@ -40,7 +40,7 @@ export class Game {
         const pads: TerrainPad[] = [];
         for (const city of region.cities) {
           const layout = resolveCityLayout(city);
-          if (layout) pads.push({ lon: city.lon, lat: city.lat, radius: Math.hypot(...layout.size) / 2 + 0.25 });
+          pads.push({ lon: city.lon, lat: city.lat, radius: Math.hypot(...layout.size) / 2 + 0.25 });
         }
         return Terrain.create(region, pads);
       }),
@@ -78,9 +78,9 @@ export class Game {
     }
     this.scene.add(this.cities.group);
 
-    // 地図の外側が見えすぎないよう、見られる範囲を少し内側にする
-    const insetX = (limits.maxX - limits.minX) * 0.2;
-    const insetZ = (limits.maxZ - limits.minZ) * 0.2;
+    // 地図の外側が見えすぎないよう、見られる範囲を少しだけ内側にする(端に近い都市にも寄れる程度に)
+    const insetX = (limits.maxX - limits.minX) * 0.06;
+    const insetZ = (limits.maxZ - limits.minZ) * 0.06;
     limits.minX += insetX;
     limits.maxX -= insetX;
     limits.minZ += insetZ;
@@ -157,11 +157,13 @@ export class Game {
       const sx = (v.x * 0.5 + 0.5) * this.width;
       const sy = (-v.y * 0.5 + 0.5) * this.height;
       // 都市が画面上で大きいときは、その大きさ全体をタップ範囲にする
-      const scale = this.cities.scaleOf(marker, this.mapCamera.distance);
+      const scale = marker.group.scale.x;
       const reach = Math.max(PICK_RADIUS, marker.radius * scale * pixelsPerUnit * 0.8);
       // 都市本体と、その上のラベルのどちらを押しても選べるようにする
-      const labelY = sy - marker.height * scale * pixelsPerUnit - 14;
-      const d = Math.min(Math.hypot(sx - x, sy - y) / reach, Math.hypot(sx - x, labelY - y) / PICK_RADIUS);
+      v.copy(marker.labelAnchor).project(camera);
+      const lx = (v.x * 0.5 + 0.5) * this.width;
+      const ly = (-v.y * 0.5 + 0.5) * this.height - 14;
+      const d = Math.min(Math.hypot(sx - x, sy - y) / reach, Math.hypot(lx - x, ly - y) / PICK_RADIUS);
       if (d < bestScore) {
         bestScore = d;
         best = marker;

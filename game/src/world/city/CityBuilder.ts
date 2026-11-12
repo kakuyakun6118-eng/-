@@ -39,13 +39,14 @@ export interface CityBlueprint {
 
 // --- 色。建物は土・木・瓦の自然な色にし、勢力の色は旗だけに使う ---
 const C = {
-  ground: "#9a8c66",
-  outline: "#6d6148",
+  ground: "#8f8562",
+  outline: "#5a4f3b",
   street: "#c4b48e",
   court: "#b6a988",
-  earthWall: "#ab9066",
-  gateWall: "#9c8259",
-  parapet: "#c6b088",
+  earthWall: "#8a7654",
+  gateWall: "#7d6b4d",
+  parapet: "#b8a480",
+  walkway: "#c9b78f",
   wardWall: "#a8946c",
   wardRoofs: "#77736a",
   stone: "#8d897f",
@@ -207,6 +208,8 @@ export function buildCity(layout: CityLayout, cityId: string, flagColor: string)
       const [wx, wz] = onSide(e, s, 0, 0);
       // 城壁の本体(角で重なるよう、少し長めにする)
       add("wall", "body", tier, wx, 0, wz, len + thick, height, thick, rot, C.earthWall);
+      // 城壁の上の通路。明るい色にして、上空から壁の厚みが分かるようにする
+      add("box", "body", tier, wx, height, wz, len + thick * 0.7, height * 0.03, thick * 0.62, rot, C.walkway);
       // 胸壁:城壁の上の、外側と内側の縁
       for (const o of [0.3, -0.3]) {
         const [px, pz] = onSide(e, s, 0, thick * o);
@@ -291,8 +294,9 @@ export function buildCity(layout: CityLayout, cityId: string, flagColor: string)
   // ===== 地面・濠 =====
   const moatWidth = layout.moat ? 0.13 : 0;
   const moatGap = layout.moat ? 0.09 : 0;
-  const margin = wt * 0.7 + moatGap + moatWidth;
-  add("box", "body", 0, 0, -0.4, 0, W + margin * 2, 0.4, D + margin * 2, 0, C.ground);
+  const margin = moatGap + moatWidth;
+  // 城内の地面。城壁の外にはみ出させず、台座のように見えないようにする
+  add("box", "body", 0, 0, -0.3, 0, W + wt * 0.6, 0.3, D + wt * 0.6, 0, C.ground);
   if (layout.moat) {
     const r = moatGap + wt / 2 + moatWidth / 2;
     add("box", "water", 0, 0, 0.002, hd + r, W + r * 2 + moatWidth, 0.004, moatWidth, 0, C.water);
@@ -594,7 +598,7 @@ export function buildCity(layout: CityLayout, cityId: string, flagColor: string)
     }
 
     // 民家:東西に並ぶ列を、南北に何列か
-    const rowStep = 0.068;
+    const rowStep = 0.06;
     const rows = Math.max(1, Math.floor((d - 0.03) / rowStep));
     for (let r = 0; r < rows; r++) {
       const z = rect.z0 + 0.015 + (d - 0.03) * ((r + 0.5) / rows);
@@ -602,7 +606,7 @@ export function buildCity(layout: CityLayout, cityId: string, flagColor: string)
       while (x < rect.x1 - 0.05) {
         const hwid = 0.05 + rand() * 0.035;
         const hx = x + hwid / 2;
-        x += hwid + 0.012 + rand() * 0.012;
+        x += hwid + 0.008 + rand() * 0.01;
         if (hx + hwid / 2 > rect.x1 - 0.012) break;
         if (rand() > layout.density) continue;
         if (kind === "landmark" && Math.abs(hx - cx) < 0.11 && Math.abs(z - cz) < 0.09) continue;
@@ -630,8 +634,8 @@ export function buildCity(layout: CityLayout, cityId: string, flagColor: string)
 
   return {
     parts,
-    radius: Math.hypot(hw, hd) + margin * 0.5 + (layout.suburbs ? 0.15 : 0),
+    radius: Math.hypot(hw, hd) + margin * 0.5,
     height: maxHeight,
-    footprint: [W + wt + (moatGap + moatWidth) * 2, D + wt + (moatGap + moatWidth) * 2],
+    footprint: [W + wt * 1.5 + margin * 2, D + wt * 1.5 + margin * 2],
   };
 }

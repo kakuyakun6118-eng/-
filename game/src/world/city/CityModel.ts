@@ -13,6 +13,8 @@ export class CityModel {
   readonly group = new THREE.Group();
   readonly radius: number;
   readonly height: number;
+  /** 城壁の外側までの、東西・南北の大きさ */
+  readonly footprint: [number, number];
   /** 表示の切り替え単位ごとのまとまり(番号の意味は CityBuilder の DetailTier を参照) */
   private readonly tiers: THREE.Group[] = Array.from({ length: 5 }, () => new THREE.Group());
   /** 選択したときに、城壁に沿って淡く光る枠 */
@@ -21,6 +23,7 @@ export class CityModel {
   constructor(blueprint: CityBlueprint) {
     this.radius = blueprint.radius;
     this.height = blueprint.height;
+    this.footprint = blueprint.footprint;
     const lib = getCityParts();
 
     // 「形 + 質感 + 表示距離」が同じ部品をひとまとめにする

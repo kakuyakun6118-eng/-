@@ -34,8 +34,13 @@ export const credits: { title: string; source: string; text: string }[] = credit
 /** 都市の規模(1〜4)ごとの決まり */
 export const cityLevels = cityLevelRules as unknown as Record<string, CityLevelRule>;
 
+/** 都市の規模(1〜4)。データに書かれていなければ、都市の格から決める */
+export function cityLevelOf(city: City): 1 | 2 | 3 | 4 {
+  if (city.level) return city.level;
+  return city.rank === "capital" ? 3 : city.rank === "major" ? 2 : 1;
+}
+
 /** 規模ごとの標準の形に、その都市だけの個性を重ねて、設計図を作る */
-export function resolveCityLayout(city: City): CityLayout | null {
-  if (!city.level) return null;
-  return { ...cityLevels[String(city.level)].layout, ...city.layout };
+export function resolveCityLayout(city: City): CityLayout {
+  return { ...cityLevels[String(cityLevelOf(city))].layout, ...city.layout };
 }

@@ -95,7 +95,7 @@ export interface City {
   lat: number;
   rank: CityRank;
   description: string;
-  /** 都市の規模(1〜4)。指定があると、城壁や建物のある3D都市として表示する */
+  /** 都市の規模(1〜4)。城壁や建物の構えが変わる。省略すると都市の格から決める */
   level?: 1 | 2 | 3 | 4;
   /** 人口(ゲーム上の数値) */
   population?: number;

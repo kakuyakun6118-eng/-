@@ -1,135 +1,74 @@
-// 都市を3D空間に置く。
-// 規模(level)のデータがある都市は、城壁や建物のある3D都市として表示する。
-// まだデータのない都市は、従来の簡単な目印のまま表示する。
+// 都市を3D空間に置く。すべての都市を、城壁と建物のある城郭都市として表示する。
 import * as THREE from "three";
 import { toWorld } from "../core/geo";
 import { resolveCityLayout } from "../data";
-import type { City, CityRank, Faction } from "../data/types";
+import type { City, Faction } from "../data/types";
 import { buildCity } from "./city/CityBuilder";
 import { CityModel } from "./city/CityModel";
 
-const RANK_SIZE: Record<CityRank, number> = { capital: 1.0, major: 0.78, town: 0.6 };
+/** 広域表示で、どの都市も最低これくらいの大きさ(3D空間での長さ)に見えるようにする */
+const FAR_MIN_SIZE = 3.6;
 
 export interface CityMarker {
   city: City;
   faction: Faction | undefined;
   group: THREE.Group;
-  /** 3D都市のモデル(従来の目印の都市では null) */
-  model: CityModel | null;
-  /** 都市の半径(拡大率1のとき)。タップの当たり判定と選択の輪に使う */
+  model: CityModel;
+  /** 都市の半径(拡大率1のとき)。タップの当たり判定に使う */
   radius: number;
   /** 都市の高さ(拡大率1のとき) */
   height: number;
-  /** 名前ラベルを出す位置(都市の少し上) */
+  /** 広域表示での拡大率の上限。小さい都市ほど大きくして、見失わないようにする */
+  maxScale: number;
+  /** 名前ラベルを出す位置(都市の奥側、北の城壁の上) */
   labelAnchor: THREE.Vector3;
 }
 
 export class Cities {
   readonly group = new THREE.Group();
   readonly markers: CityMarker[] = [];
-  private readonly ring: THREE.Mesh;
   private selected: CityMarker | null = null;
-
-  constructor() {
-    // 選択中の都市を囲む輪(半径1。都市の大きさに合わせて拡大する)
-    this.ring = new THREE.Mesh(
-      new THREE.RingGeometry(1, 1.1, 64),
-      new THREE.MeshBasicMaterial({ color: 0xf2d489, transparent: true, opacity: 0.95, depthTest: false }),
-    );
-    this.ring.rotation.x = -Math.PI / 2;
-    this.ring.renderOrder = 2;
-    this.ring.visible = false;
-    this.group.add(this.ring);
-  }
 
   /** 都市を1つ追加する。heightAt は、ある地点(緯度経度)の地面の高さを返す関数 */
   add(city: City, faction: Faction | undefined, heightAt: (lon: number, lat: number) => number): void {
     const { x, z } = toWorld(city.lon, city.lat);
-    const layout = resolveCityLayout(city);
-    let group: THREE.Group;
-    let model: CityModel | null = null;
-    let radius: number;
-    let height: number;
-    let groundY = heightAt(city.lon, city.lat);
-
-    if (layout) {
-      model = new CityModel(buildCity(layout, city.id, faction ? faction.color : "#d8d2c4"));
-      group = model.group;
-      radius = model.radius;
-      height = model.height;
-      // 足もとの地面は Terrain が平らにならしてあるので、そのまま少しだけ浮かせて置く
-      groundY += 0.015;
-    } else {
-      group = this.createSimpleMarker(city, faction);
-      radius = 1.4;
-      height = 2.1;
-    }
-
-    group.position.set(x, groundY, z);
-    this.group.add(group);
-    this.markers.push({ city, faction, group, model, radius, height, labelAnchor: new THREE.Vector3(x, groundY, z) });
-  }
-
-  /** 従来の簡単な目印(まだ3D都市のデータがない都市用) */
-  private createSimpleMarker(city: City, faction: Faction | undefined): THREE.Group {
-    const size = RANK_SIZE[city.rank];
-    const group = new THREE.Group();
-    const wall = new THREE.Mesh(
-      new THREE.CylinderGeometry(size, size * 1.12, 0.5, 8),
-      new THREE.MeshLambertMaterial({ color: new THREE.Color(faction ? faction.color : "#9a9a9a") }),
-    );
-    wall.position.y = 0.25;
-    group.add(wall);
-    const roof = new THREE.Mesh(
-      new THREE.ConeGeometry(size * 0.62, size * 0.9, 4),
-      new THREE.MeshLambertMaterial({ color: 0x2e2a28 }),
-    );
-    roof.position.y = 0.5 + size * 0.45;
-    roof.rotation.y = Math.PI / 4;
-    group.add(roof);
-    if (city.rank === "capital") {
-      const top = new THREE.Mesh(
-        new THREE.SphereGeometry(0.2, 12, 8),
-        new THREE.MeshBasicMaterial({ color: 0xf2d489 }),
-      );
-      top.position.y = 0.5 + size * 0.9 + 0.15;
-      group.add(top);
-    }
-    return group;
-  }
-
-  /** いまの拡大率(カメラが遠いほど大きくして、見失わないようにする) */
-  scaleOf(marker: CityMarker, cameraDistance: number): number {
-    return marker.model
-      ? Math.max(1, Math.min(1.9, cameraDistance / 32))
-      : Math.max(0.3, Math.min(2.6, cameraDistance / 55));
+    const model = new CityModel(buildCity(resolveCityLayout(city), city.id, faction ? faction.color : "#d8d2c4"));
+    // 足もとの地面は Terrain が平らにならしてあるので、そのまま少しだけ浮かせて置く
+    model.group.position.set(x, heightAt(city.lon, city.lat) + 0.015, z);
+    this.group.add(model.group);
+    this.markers.push({
+      city,
+      faction,
+      group: model.group,
+      model,
+      radius: model.radius,
+      height: model.height,
+      maxScale: Math.min(3, Math.max(1.9, FAR_MIN_SIZE / Math.max(model.footprint[0], model.footprint[1]))),
+      labelAnchor: new THREE.Vector3(x, 0, z),
+    });
   }
 
   /** カメラの距離に合わせて、大きさと細かさを調整する */
   update(cameraDistance: number): void {
+    // 遠いほど、城壁や楼閣を縦に強調して、城郭の輪郭を読み取りやすくする
+    const lift = 1 + Math.max(0, Math.min(1, (cameraDistance - 36) / 60)) * 0.9;
     for (const m of this.markers) {
-      const s = this.scaleOf(m, cameraDistance);
-      m.group.scale.setScalar(s);
-      m.labelAnchor.y = m.group.position.y + (m.height + (m.model ? 0.12 : 0)) * s;
-      m.model?.setCameraDistance(cameraDistance);
-    }
-    if (this.selected && !this.selected.model) {
-      this.ring.scale.setScalar(this.selected.radius * this.scaleOf(this.selected, cameraDistance));
+      const s = Math.max(1, Math.min(m.maxScale, cameraDistance / 32));
+      m.group.scale.set(s, s * lift, s);
+      // ラベルは北の城壁の上に出す(手前の建物と重ならない)
+      m.labelAnchor.set(
+        m.group.position.x,
+        m.group.position.y + m.height * 0.75 * s * lift,
+        m.group.position.z - (m.model.footprint[1] / 2) * s,
+      );
+      m.model.setCameraDistance(cameraDistance);
     }
   }
 
-  /**
-   * 都市を選択する(null で解除)。
-   * 3D都市は、城壁に沿った淡い光と城門の幟で示す。従来の目印の都市は輪で示す。
-   */
+  /** 都市を選択する(null で解除)。城壁に沿った淡い光と、城門の幟で示す */
   select(marker: CityMarker | null): void {
-    this.selected?.model?.setSelected(false);
+    this.selected?.model.setSelected(false);
     this.selected = marker;
-    marker?.model?.setSelected(true);
-    this.ring.visible = marker !== null && !marker.model;
-    if (marker && !marker.model) {
-      this.ring.position.copy(marker.group.position);
-      this.ring.position.y += 0.03;
-    }
+    marker?.model.setSelected(true);
   }
 }
