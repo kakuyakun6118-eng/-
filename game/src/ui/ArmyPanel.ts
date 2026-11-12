@@ -18,6 +18,8 @@ export interface ArmyPanelActions {
   onCancel(): void;
   /** 「停止」が押された */
   onHalt(): void;
+  /** 「会戦準備」が押された */
+  onBattle(): void;
 }
 
 /** 軍団のデータ以外に、パネルへ渡す情報 */
@@ -27,6 +29,8 @@ export interface ArmyPanelInfo {
   speed: number;
   supply: SupplyState;
   supplied: boolean;
+  /** 敵と対峙していて、会戦準備画面を開けるか */
+  canBattle: boolean;
 }
 
 const SUPPLY_TEXT: Record<SupplyState, string> = { good: "良好", low: "残りわずか", out: "欠乏" };
@@ -41,6 +45,7 @@ export class ArmyPanel {
     this.q(".army-confirm").addEventListener("click", actions.onConfirm);
     this.q(".army-cancel").addEventListener("click", actions.onCancel);
     this.q(".army-halt").addEventListener("click", actions.onHalt);
+    this.q(".army-battle").addEventListener("click", actions.onBattle);
   }
 
   show(marker: ArmyMarker, info: ArmyPanelInfo): void {
@@ -71,6 +76,9 @@ export class ArmyPanel {
     supply.dataset.level = info.supply;
 
     this.q(".army-halt").hidden = marker.state.status !== "marching";
+    this.q(".army-battle").hidden = !info.canBattle;
+    // 対峙中に移動を命じると、戦闘をやめてその場を離れることになる
+    this.q(".army-move").textContent = info.canBattle ? "離脱" : "移動";
     this.root.hidden = false;
   }
 
@@ -87,7 +95,10 @@ export class ArmyPanel {
     this.q(".army-move").hidden = mode !== "info";
     this.q(".army-confirm").hidden = mode !== "confirm";
     this.q(".army-cancel").hidden = mode === "info";
-    if (mode !== "info") this.q(".army-halt").hidden = true;
+    if (mode !== "info") {
+      this.q(".army-halt").hidden = true;
+      this.q(".army-battle").hidden = true;
+    }
   }
 
   hide(): void {

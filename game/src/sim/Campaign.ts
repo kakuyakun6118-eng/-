@@ -1,6 +1,7 @@
 // ゲームの進行を計算する。日付を進め、軍団の行軍・食糧・疲労・士気・敵との接触を扱う。
 // ここは計算だけで、3D表示のことは知らない。変化があったら、登録された関数で知らせる。
 import { resolveCityLayout, scenario, totalTroops } from "../data";
+import { placeName } from "./battle";
 import type { Army, ArmyStatus, BattleEvent, City, UnitTypeId } from "../data/types";
 import { distanceKm, findRoute, type Route, type RoutePoint } from "./pathfinding";
 import type { TerrainGrid } from "./TerrainGrid";
@@ -30,6 +31,8 @@ export interface ArmyState {
   supplied: boolean;
   /** 接触判定をしない相手(離脱中に、同じ相手とすぐ再接触しないため) */
   ignore: Set<string>;
+  /** 攻めようとしている敵の都市(目的地がその都市のそばのときだけ入る) */
+  targetCityId: string | null;
 }
 
 export interface CampaignListener {
@@ -66,6 +69,7 @@ export class Campaign {
       progress: 0,
       supplied: false,
       ignore: new Set<string>(),
+      targetCityId: null,
     }));
     for (const s of this.armies) s.supplied = this.nearFriendlyCity(s);
   }
@@ -150,6 +154,15 @@ export class Campaign {
     this.withdraw(s);
     s.route = route;
     s.progress = 0;
+    // 目的地が敵の都市のそばなら、その都市を攻める意思があるとみなす。
+    // (通りかかっただけの都市とは、攻城戦にならない)
+    const end = route.points[route.points.length - 1];
+    const target = this.cities.find(
+      (c) =>
+        this.hostile(s.army, scenario.cityOwners[c.id]) &&
+        Math.hypot(c.lon - end.lon, c.lat - end.lat) < this.cityReach(c) + 0.3,
+    );
+    s.targetCityId = target ? target.id : null;
     // いま近くにいる敵とは、離れるまで接触判定をしない(その場から動けなくなるのを防ぐ)
     s.ignore.clear();
     for (const o of this.armies) {
@@ -166,17 +179,36 @@ export class Campaign {
     this.setStatus(s, "camping");
   }
 
-  /** 対峙していた相手から離れる。開始待ちの戦闘イベントは不成立にする */
+  /** 対峙していた相手から離れる。まだ始まっていない戦闘イベントは取り消しにする */
   private withdraw(s: ArmyState): void {
     if (s.status !== "fighting") return;
     for (const e of this.events) {
-      if (e.status !== "pending") continue;
+      if (e.status !== "pending" && e.status !== "preparing") continue;
       if (e.attackerArmyId !== s.army.id && e.defenderArmyId !== s.army.id) continue;
-      e.status = "withdrawn";
+      e.status = "cancelled";
       const otherId = e.attackerArmyId === s.army.id ? e.defenderArmyId : e.attackerArmyId;
       const other = otherId ? this.stateOf(otherId) : undefined;
       if (other && other.status === "fighting") this.setStatus(other, "camping");
     }
+  }
+
+  eventOf(battleId: string): BattleEvent | undefined {
+    return this.events.find((e) => e.battleId === battleId);
+  }
+
+  /** その軍団が関わっている、まだ決着していない戦闘イベント */
+  openEventOfArmy(armyId: string): BattleEvent | undefined {
+    return this.events.find(
+      (e) =>
+        (e.status === "pending" || e.status === "preparing" || e.status === "in_progress") &&
+        (e.attackerArmyId === armyId || e.defenderArmyId === armyId),
+    );
+  }
+
+  /** 戦闘イベントの状態を変える(会戦準備を開く・保留に戻す・開始する) */
+  setEventStatus(battleId: string, status: BattleEvent["status"]): void {
+    const e = this.eventOf(battleId);
+    if (e && e.status !== "completed" && e.status !== "cancelled") e.status = status;
   }
 
   private setStatus(s: ArmyState, status: ArmyStatus): void {
@@ -243,6 +275,7 @@ export class Campaign {
       }
     }
     for (const c of this.cities) {
+      if (c.id !== s.targetCityId) continue;
       const owner = scenario.cityOwners[c.id];
       if (!this.hostile(s.army, owner)) continue;
       if (Math.hypot(c.lon - s.army.lon, c.lat - s.army.lat) < this.cityReach(c) + 0.3) {
@@ -253,25 +286,44 @@ export class Campaign {
     return false;
   }
 
-  private startEvent(attacker: ArmyState, type: BattleEvent["type"], defender: ArmyState | null, city: City | null): void {
+  private startEvent(attacker: ArmyState, type: BattleEvent["battleType"], defender: ArmyState | null, city: City | null): void {
+    // 同じ相手との、まだ決着していない戦闘イベントがあれば、重ねて作らない
+    const duplicate = this.events.some(
+      (e) =>
+        (e.status === "pending" || e.status === "preparing" || e.status === "in_progress") &&
+        ((defender &&
+          ((e.attackerArmyId === attacker.army.id && e.defenderArmyId === defender.army.id) ||
+            (e.attackerArmyId === defender.army.id && e.defenderArmyId === attacker.army.id))) ||
+          (city && e.attackerArmyId === attacker.army.id && e.defenderCityId === city.id)),
+    );
+    attacker.route = null;
+    if (duplicate) {
+      this.setStatus(attacker, "fighting");
+      return;
+    }
+    const lon = defender ? (attacker.army.lon + defender.army.lon) / 2 : attacker.army.lon;
+    const lat = defender ? (attacker.army.lat + defender.army.lat) / 2 : attacker.army.lat;
     const event: BattleEvent = {
-      id: `battle_${this.nextEventId++}`,
-      type,
+      battleId: `battle_${this.nextEventId++}`,
+      battleType: type,
       attackerArmyId: attacker.army.id,
       defenderArmyId: defender ? defender.army.id : null,
       defenderCityId: city ? city.id : null,
-      lon: attacker.army.lon,
-      lat: attacker.army.lat,
+      location: { lon, lat, name: city ? city.name : placeName(this.cities, lon, lat) },
+      terrain: this.grid.kindAt(lon, lat),
+      attackerFactionId: attacker.army.factionId,
+      defenderFactionId: defender ? defender.army.factionId : scenario.cityOwners[city!.id],
       status: "pending",
-      day: Math.floor(this.day),
+      createdAt: { day: Math.floor(this.day), text: this.dateText() },
     };
     this.events.push(event);
-    attacker.route = null;
+    // 両軍を止めて対峙させ、時間も止める(プレイヤーが状況を確かめられるように)
     this.setStatus(attacker, "fighting");
     if (defender) {
       defender.route = null;
       this.setStatus(defender, "fighting");
     }
+    this.speed = 0;
     this.listener.onBattleEvent(event);
   }
 

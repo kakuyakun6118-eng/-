@@ -22,6 +22,7 @@
       </div>
       <div id="event" hidden>
         <p id="event-text"></p>
+        <button id="event-open" type="button">会戦準備へ</button>
         <button id="event-close" type="button">閉じる</button>
       </div>
       <p id="hint"></p>
@@ -78,12 +79,48 @@
           </dl>
           <div class="army-actions">
             <p class="army-message"></p>
+            <button class="army-battle" type="button" hidden>会戦準備</button>
             <button class="army-move" type="button">移動</button>
             <button class="army-halt" type="button" hidden>停止して野営</button>
             <button class="army-confirm" type="button" hidden>確定</button>
             <button class="army-cancel" type="button" hidden>キャンセル</button>
           </div>
           <button class="army-close" type="button" aria-label="閉じる">×</button>
+        </div>
+      </section>
+      <section id="battle" hidden>
+        <header class="battle-head">
+          <span class="battle-type"></span>
+          <h2 class="battle-name"></h2>
+          <p class="battle-meta"></p>
+        </header>
+        <div class="battle-side attacker">
+          <p class="battle-role">攻撃側</p>
+          <div class="battle-side-body"></div>
+        </div>
+        <div class="battle-view">
+          <div class="battle-detail" hidden>
+            <div class="battle-rows"></div>
+            <ul class="battle-notes"></ul>
+            <p class="battle-caution">優劣は目安です。勝敗は指揮と戦場の流れで決まります。</p>
+          </div>
+        </div>
+        <div class="battle-side defender">
+          <p class="battle-role">防御側</p>
+          <div class="battle-side-body"></div>
+        </div>
+        <footer class="battle-actions">
+          <button class="battle-back" type="button">戦略マップに戻る</button>
+          <button class="battle-info" type="button" aria-pressed="false">両軍情報</button>
+          <button class="battle-start" type="button">戦闘開始</button>
+        </footer>
+        <div class="battle-handoff" hidden>
+          <div class="battle-handoff-inner">
+            <h3>会戦の準備が整いました</h3>
+            <p>3D戦闘は次の段階で実装します。次の内容を戦闘画面へ引き継ぎます。</p>
+            <ul class="battle-handoff-list"></ul>
+            <button class="battle-handoff-back" type="button">戦略マップに戻る(戦闘は保留)</button>
+          </div>
         </div>
       </section>
       <section id="credits" hidden>

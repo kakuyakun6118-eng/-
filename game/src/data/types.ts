@@ -101,6 +101,8 @@ export interface City {
   population?: number;
   /** 城の防御力(ゲーム上の数値。0〜100) */
   defense?: number;
+  /** 守備兵力(ゲーム上の数値)。省略すると都市の規模から決める */
+  garrison?: number;
   /** その都市だけの個性。規模ごとの標準の形に上書きする */
   layout?: Partial<CityLayout>;
 }
@@ -182,21 +184,73 @@ export interface TerrainRule {
 /** 戦闘の種類:野戦 / 攻城戦 */
 export type BattleType = "field_battle" | "siege_battle";
 
-/** 戦闘イベント。敵と接触したときに作られ、会戦画面や攻城戦の入口になる */
+/**
+ * 戦闘イベントの状態。
+ * pending = 保留(対峙中) / preparing = 会戦準備画面を開いている / in_progress = 戦闘中
+ * completed = 決着 / cancelled = 離脱などで取り消し
+ */
+export type BattleStatus = "pending" | "preparing" | "in_progress" | "completed" | "cancelled";
+
+/** 戦闘イベント。敵と接触したときに作られ、会戦準備画面や会戦の入口になる */
 export interface BattleEvent {
-  id: string;
-  type: BattleType;
+  battleId: string;
+  battleType: BattleType;
   attackerArmyId: string;
-  /** 野戦のときの相手の軍団 */
+  /** 野戦のときの相手の軍団(攻城戦では null) */
   defenderArmyId: string | null;
-  /** 攻城戦のときの相手の都市 */
+  /** 攻城戦のときの相手の都市(野戦では null) */
   defenderCityId: string | null;
-  lon: number;
-  lat: number;
-  /** pending = 開始待ち / active = 戦闘中 / resolved = 決着 / withdrawn = 離脱して不成立 */
-  status: "pending" | "active" | "resolved" | "withdrawn";
-  /** 発生した日(ゲーム開始からの日数) */
-  day: number;
+  location: { lon: number; lat: number; name: string };
+  terrain: TerrainKind;
+  attackerFactionId: string;
+  defenderFactionId: string;
+  status: BattleStatus;
+  /** 発生した日(ゲーム開始からの日数と、画面に出す日付) */
+  createdAt: { day: number; text: string };
+}
+
+/** 都市の守り(攻城戦の防御側の情報) */
+export interface Fortification {
+  /** 城壁の規模(「王都」など) */
+  scale: string;
+  /** 城防御力(0〜100) */
+  defense: number;
+  /** 防御施設の一覧(角楼、望楼、水濠など) */
+  facilities: string[];
+}
+
+/** 会戦の片方の陣営。軍団でも都市でも同じ形で扱う */
+export interface BattleSide {
+  role: "attacker" | "defender";
+  kind: "army" | "city";
+  factionId: string;
+  armyId: string | null;
+  cityId: string | null;
+  name: string;
+  commander: Officer | null;
+  /** 兵種ごとの兵力(会戦開始時点の写し) */
+  troops: Record<UnitTypeId, number>;
+  morale: number;
+  fatigue: number;
+  food: number;
+  /** 都市のときだけ入る */
+  fortification: Fortification | null;
+}
+
+/**
+ * 会戦の設定。会戦準備画面と、次段階の3D戦闘に渡すデータ一式。
+ * 軍団のデータそのものは戦略マップ側が持ち続け、ここにはその時点の写しとIDだけを入れる。
+ * 戦闘の結果は、battleId と armyId を使って戦略マップ側へ書き戻す。
+ */
+export interface BattleSetup {
+  battleId: string;
+  battleType: BattleType;
+  name: string;
+  location: { lon: number; lat: number; name: string };
+  terrain: TerrainKind;
+  createdAt: { day: number; text: string };
+  attacker: BattleSide;
+  defender: BattleSide;
 }
 
 /** ある年代の勢力図 */

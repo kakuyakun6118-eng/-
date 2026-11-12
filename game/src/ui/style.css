@@ -824,3 +824,374 @@ body {
   outline: 2px solid var(--text);
   outline-offset: 2px;
 }
+
+/* ===== 会戦準備画面 =====
+   配置:上に戦闘名、左に攻撃側、右に防御側、下に操作。中央は空けて、戦略マップ(戦場)をそのまま見せる */
+#battle {
+  --att: #9a9a9a;
+  --def: #9a9a9a;
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas: "head head head" "att view def" "act act act";
+  gap: 8px;
+  padding-top: calc(8px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  pointer-events: none; /* 中央の窓では、地図をそのまま動かせる */
+}
+
+#battle > * {
+  pointer-events: auto;
+}
+
+/* 会戦準備画面を開いている間は、ふだんの題字やボタンを隠す */
+#app.battle-open .title,
+#app.battle-open #clock,
+#app.battle-open #credits-open,
+#app.battle-open #territory-toggle,
+#app.battle-open #hint {
+  display: none;
+}
+
+.battle-head {
+  grid-area: head;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+}
+
+.battle-type {
+  padding: 0 10px;
+  border: 1px solid var(--bad);
+  border-radius: 3px;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  color: var(--bad);
+}
+
+#battle[data-type="siege_battle"] .battle-type {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.battle-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+}
+
+.battle-meta {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* 両軍のカード:上の太い帯が勢力の色 */
+.battle-side {
+  --faction: #9a9a9a;
+  align-self: start;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 8px 12px 10px;
+  border: 1px solid var(--line);
+  border-top: 5px solid var(--faction);
+  border-radius: 4px;
+  background: var(--panel);
+}
+
+.battle-side.attacker {
+  grid-area: att;
+}
+
+.battle-side.defender {
+  grid-area: def;
+}
+
+.battle-role {
+  margin: 0 0 2px;
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  color: var(--bronze);
+}
+
+.battle-faction {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.battle-army {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.battle-commander,
+.battle-facilities {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.battle-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px 10px;
+  margin: 6px 0 2px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+}
+
+.battle-stats div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.battle-stats div:first-child,
+.battle-stats div.wide {
+  grid-column: 1 / -1;
+}
+
+.battle-stats dt,
+.battle-stats dd,
+.battle-value,
+.army-actions button {
+  white-space: nowrap;
+}
+
+.battle-stats dt {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--bronze);
+}
+
+.battle-stats dd {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.battle-stats div:first-child dd {
+  font-size: 18px;
+}
+
+/* 中央:ふだんは透明で戦場が見える。「両軍情報」を開くと比較表で覆う */
+.battle-view {
+  grid-area: view;
+  min-height: 0;
+  pointer-events: none !important;
+}
+
+.battle-detail {
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+  pointer-events: auto;
+}
+
+.battle-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* 1行:[攻撃側の値][棒] 項目名 [棒][防御側の値]。棒は中央から外へ伸びる */
+.battle-row {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) 44px minmax(0, 1fr) 84px;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.battle-value.attacker {
+  text-align: right;
+}
+
+.battle-value.lead {
+  color: var(--bronze);
+  font-weight: 700;
+}
+
+.battle-value.lead::after {
+  content: " ▲";
+  font-size: 9px;
+}
+
+.battle-label {
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.battle-bar {
+  display: flex;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--track);
+  overflow: hidden;
+}
+
+.battle-bar.attacker {
+  justify-content: flex-end;
+}
+
+.battle-bar.attacker i {
+  background: var(--att);
+}
+
+.battle-bar.defender i {
+  background: var(--def);
+}
+
+.battle-notes {
+  margin: 2px 0 0;
+  padding: 6px 0 0 16px;
+  border-top: 1px solid var(--line);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.battle-caution {
+  margin: 0;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.battle-actions {
+  grid-area: act;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.battle-actions button,
+.battle-handoff-back,
+#event-open,
+.army-actions .army-battle {
+  min-height: 44px;
+  padding: 4px 18px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.battle-actions .battle-start,
+#event-open,
+.army-actions .army-battle {
+  border-color: var(--bad);
+  background: var(--bad);
+  color: var(--text);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+#event-open {
+  min-height: 30px;
+  padding: 2px 12px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.battle-info[aria-pressed="true"] {
+  border-color: var(--bronze);
+  color: var(--bronze);
+}
+
+#battle button:focus-visible,
+#event-open:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+/* 「戦闘開始」のあとに出る、引き継ぎ内容の確認 */
+.battle-handoff {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-block: 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: var(--shade);
+}
+
+.battle-handoff-inner {
+  max-width: 520px;
+  max-height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px;
+  border: 1px solid var(--bronze);
+  border-radius: 6px;
+  background: var(--panel);
+}
+
+.battle-handoff-inner h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: 0.1em;
+}
+
+.battle-handoff-inner p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.battle-handoff-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+/* 縦向き:上に戦場、その下に両軍を左右に並べる */
+@media (orientation: portrait) {
+  #battle {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "head head" "view view" "att def" "act act";
+  }
+
+  .battle-side {
+    align-self: stretch;
+  }
+}

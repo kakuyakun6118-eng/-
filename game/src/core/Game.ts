@@ -2,14 +2,16 @@
 import * as THREE from "three";
 import { MapCamera, type WorldRect } from "../camera/MapCamera";
 import { armies as armyData, factionById, factionOfCity, officerById, regions, resolveCityLayout, scenario } from "../data";
-import type { BattleEvent, City } from "../data/types";
+import type { BattleEvent, BattleSetup, City } from "../data/types";
 import { InputController } from "../input/InputController";
+import { compareSides, createBattleSetup, placeName } from "../sim/battle";
 import { Campaign, type ArmyState } from "../sim/Campaign";
-import { distanceKm, type Route } from "../sim/pathfinding";
+import type { Route } from "../sim/pathfinding";
 import { TerrainGrid } from "../sim/TerrainGrid";
 import { Territory } from "../sim/Territory";
 import { ArmyLabels } from "../ui/ArmyLabels";
 import { ArmyPanel, type ArmyPanelMode } from "../ui/ArmyPanel";
+import { BattlePrep } from "../ui/BattlePrep";
 import { CityLabels } from "../ui/CityLabels";
 import { InfoPanel } from "../ui/InfoPanel";
 import { Armies, type ArmyMarker } from "../world/Armies";
@@ -30,7 +32,6 @@ const SPEEDS = [
   { speed: 4, label: "▶▶ 早送り" },
   { speed: 0, label: "Ⅱ 停止中" },
 ];
-const DIRECTIONS = ["北", "北東", "東", "南東", "南", "南西", "西", "北西"];
 
 export class Game {
   private readonly renderer: THREE.WebGLRenderer;
@@ -50,6 +51,16 @@ export class Game {
   private readonly armyLabels: ArmyLabels;
   private readonly panel: InfoPanel;
   private readonly armyPanel: ArmyPanel;
+  private readonly battlePrep: BattlePrep;
+  /** 会戦準備画面で開いている戦闘のID */
+  private openBattleId: string | null = null;
+  /** 知らせに出している戦闘のID(「会戦準備へ」で開く) */
+  private noticeBattleId: string | null = null;
+  /**
+   * 次段階の3D戦闘へ引き継ぐ、会戦の設定。「戦闘開始」を押すと入る。
+   * (動作確認のために外からも見られるようにしてある)
+   */
+  battleSetup: BattleSetup | null = null;
   private selected: CityMarker | null = null;
   private selectedArmy: ArmyMarker | null = null;
   /** 軍団パネルの段階(通常 / 移動先を選んでいる / 経路を確認している) */
@@ -57,6 +68,7 @@ export class Game {
   /** 確認中の経路(「確定」を押すと、この経路で行軍を始める) */
   private pendingRoute: Route | null = null;
   private speedIndex = 0;
+  private speedButton!: HTMLButtonElement;
   private lastFrame = performance.now();
   private width = 1;
   private height = 1;
@@ -184,6 +196,17 @@ export class Game {
       onConfirm: () => this.confirmMove(),
       onCancel: () => this.cancelMove(),
       onHalt: () => this.selectedArmy && this.campaign.halt(this.selectedArmy.state.army.id),
+      onBattle: () => {
+        const event = this.selectedArmy && this.campaign.openEventOfArmy(this.selectedArmy.state.army.id);
+        if (event) this.openBattlePrep(event.battleId);
+      },
+    });
+    this.battlePrep = new BattlePrep(root.querySelector("#battle") as HTMLElement, {
+      onStart: () => this.startBattle(),
+      onBack: () => this.closeBattlePrep(),
+    });
+    (root.querySelector("#event-open") as HTMLElement).addEventListener("click", () => {
+      if (this.noticeBattleId) this.openBattlePrep(this.noticeBattleId);
     });
 
     // 日付と、時間の進む速さの切り替え
@@ -194,6 +217,7 @@ export class Game {
       speedButton.textContent = SPEEDS[this.speedIndex].label;
     });
     speedButton.textContent = SPEEDS[0].label;
+    this.speedButton = speedButton;
     this.onDayChanged();
     (root.querySelector("#event-close") as HTMLElement).addEventListener("click", () => {
       (root.querySelector("#event") as HTMLElement).hidden = true;
@@ -241,6 +265,7 @@ export class Game {
   // ===== 軍団の操作 =====
 
   private onTap(x: number, y: number): void {
+    if (this.battlePrep.visible) return; // 会戦準備画面を開いている間は、地図のタップで選択しない
     // 移動先を選んでいる最中は、タップした地点を目的地にする
     if (this.selectedArmy && this.mode !== "info") {
       const point = this.pickGround(x, y);
@@ -318,26 +343,13 @@ export class Game {
       speed: this.campaign.marchSpeed(state),
       supply: this.campaign.supplyState(state),
       supplied: state.supplied,
+      canBattle: state.status === "fighting" && this.campaign.openEventOfArmy(state.army.id) !== undefined,
     });
     if (this.mode !== "info") this.armyPanel.setMode(this.mode, (this.root.querySelector(".army-message") as HTMLElement).textContent ?? "");
   }
 
-  /** 「長安の東 60km」のように、いちばん近い都市からの方角と距離で場所を表す */
   private describeLocation(lon: number, lat: number): string {
-    let best: City | null = null;
-    let bestKm = Infinity;
-    for (const c of this.allCities) {
-      const km = distanceKm(c, { lon, lat });
-      if (km < bestKm) {
-        bestKm = km;
-        best = c;
-      }
-    }
-    if (!best) return "不明";
-    if (bestKm < 25) return `${best.name}の近郊`;
-    const dx = (lon - best.lon) * Math.cos(lat * (Math.PI / 180));
-    const angle = (Math.atan2(dx, lat - best.lat) * 180) / Math.PI;
-    return `${best.name}の${DIRECTIONS[Math.round(((angle + 360) % 360) / 45) % 8]} ${Math.round(bestKm / 10) * 10}km`;
+    return placeName(this.allCities, lon, lat);
   }
 
   private onArmyChanged(state: ArmyState, statusChanged: boolean): void {
@@ -358,16 +370,74 @@ export class Game {
     if (this.mode === "info" && this.selectedArmy?.state.status === "marching") this.showRouteOfSelected();
   }
 
-  /** 敵と接触して戦闘イベントが発生したことを知らせる(会戦そのものは、まだ実装していない) */
+  // ===== 会戦 =====
+
+  /** 敵と接触して戦闘イベントが発生したことを知らせる。時間は自動で止まる */
   private showBattleEvent(event: BattleEvent): void {
-    const attacker = this.campaign.stateOf(event.attackerArmyId);
-    const defender = event.defenderArmyId ? this.campaign.stateOf(event.defenderArmyId) : undefined;
-    const city = event.defenderCityId ? this.allCities.find((c) => c.id === event.defenderCityId) : undefined;
-    const target = defender ? defender.army.name : city ? `${city.name}(${factionById(scenario.cityOwners[city.id])?.name ?? "所属なし"})` : "不明";
-    const kind = event.type === "field_battle" ? "野戦" : "攻城戦";
+    const setup = createBattleSetup(event, (id) => this.campaign.stateOf(id)?.army, this.allCities);
+    if (!setup) return;
+    this.noticeBattleId = event.battleId;
+    const kind = event.battleType === "field_battle" ? "野戦" : "攻城戦";
     (this.root.querySelector("#event-text") as HTMLElement).textContent =
-      `${kind}の発生:${attacker?.army.name ?? "不明"} 対 ${target}。両軍は対峙しています(会戦は次の段階で実装します)`;
+      `${kind}:${setup.name}。${setup.attacker.name}が${setup.defender.name}と対峙しました。時間を止めています`;
     (this.root.querySelector("#event") as HTMLElement).hidden = false;
+    this.syncSpeedButton();
+    this.dirty = true;
+  }
+
+  /** 時間の進む速さのボタンを、いまの速さ(進行側が止めた場合を含む)に合わせる */
+  private syncSpeedButton(): void {
+    const i = SPEEDS.findIndex((s) => s.speed === this.campaign.speed);
+    if (i >= 0) this.speedIndex = i;
+    this.speedButton.textContent = SPEEDS[this.speedIndex].label;
+  }
+
+  /** 会戦準備画面を開く。カメラを戦場へ寄せ、両軍の情報を表示する */
+  openBattlePrep(battleId: string): void {
+    const event = this.campaign.eventOf(battleId);
+    if (!event || event.status === "completed" || event.status === "cancelled") return;
+    const setup = createBattleSetup(event, (id) => this.campaign.stateOf(id)?.army, this.allCities);
+    if (!setup) return;
+    this.clearSelection();
+    this.campaign.setEventStatus(battleId, "preparing");
+    this.campaign.speed = 0;
+    this.syncSpeedButton();
+    this.openBattleId = battleId;
+    (this.root.querySelector("#event") as HTMLElement).hidden = true;
+    const { rows, notes } = compareSides(setup);
+    this.battlePrep.show(setup, rows, notes);
+    this.root.classList.add("battle-open");
+    // 戦場が中央の窓に収まるよう、カメラを寄せる(攻城戦は都市が入るよう少し引く)
+    const city = event.defenderCityId ? this.allCities.find((c) => c.id === event.defenderCityId) : undefined;
+    const lon = city ? (city.lon + event.location.lon) / 2 : event.location.lon;
+    const lat = city ? (city.lat + event.location.lat) / 2 : event.location.lat;
+    const w = toWorld(lon, lat);
+    this.glideTo(new THREE.Vector3(w.x, 0, w.z), city ? 20 : 15);
+    this.dirty = true;
+  }
+
+  /** 会戦準備画面を閉じて戦略マップに戻る。戦闘は保留のままで、両軍は対峙を続ける */
+  private closeBattlePrep(): void {
+    if (this.openBattleId) this.campaign.setEventStatus(this.openBattleId, "pending");
+    this.openBattleId = null;
+    this.battleSetup = null;
+    this.battlePrep.hide();
+    this.root.classList.remove("battle-open");
+    this.dirty = true;
+  }
+
+  /**
+   * 「戦闘開始」。次段階の3D戦闘へ渡す会戦の設定を確定する。
+   * 3D戦闘はまだ無いので、引き継ぐ内容を表示するところまで行う。
+   */
+  private startBattle(): void {
+    const event = this.openBattleId ? this.campaign.eventOf(this.openBattleId) : undefined;
+    if (!event) return;
+    const setup = createBattleSetup(event, (id) => this.campaign.stateOf(id)?.army, this.allCities);
+    if (!setup) return;
+    this.campaign.setEventStatus(event.battleId, "in_progress");
+    this.battleSetup = setup;
+    this.battlePrep.showHandOff(setup);
   }
 
   /** タップした画面上の点が、地形のどこ(緯度経度)にあたるかを調べる */
