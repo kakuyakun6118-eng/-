@@ -1,0 +1,13 @@
+{
+  "plain": { "name": "平原", "cost": 1.0 },
+  "grassland": { "name": "草原", "cost": 0.85 },
+  "desert": { "name": "砂漠", "cost": 1.5 },
+  "forest": { "name": "森林", "cost": 1.6 },
+  "hill": { "name": "丘陵", "cost": 2.0 },
+  "mountain": { "name": "山地", "cost": 4.0 },
+  "highMountain": { "name": "険しい山地", "cost": 9.0 },
+  "river": { "name": "川", "cost": 3.5 },
+  "crossing": { "name": "渡河地点", "cost": 5.0 },
+  "greatRiver": { "name": "大河", "cost": null },
+  "water": { "name": "海・湖", "cost": null }
+}

@@ -13,7 +13,7 @@ Game.create(root)
   .then((game) => {
     // 動作確認用:ブラウザの開発者ツールから __goko.focus(経度, 緯度, 距離) で移動できる
     (window as unknown as { __goko: Game }).__goko = game;
-    hint.textContent = "ドラッグで移動・ピンチで拡大縮小・都市をタップ";
+    hint.textContent = "ドラッグで移動・ピンチで拡大縮小・都市や軍団をタップ";
   })
   .catch((err) => {
     // 3D表示に対応していない端末などで失敗したとき、理由を画面に出す

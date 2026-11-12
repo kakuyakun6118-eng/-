@@ -149,10 +149,54 @@ export interface Army {
   facing: number;
   /** 兵種ごとの兵力 */
   troops: Record<UnitTypeId, number>;
-  /** 士気・疲労・食糧(0〜100。食糧は残り日数) */
+  /** 士気・疲労(0〜100)と、食糧の備蓄(日数) */
   morale: number;
   fatigue: number;
   food: number;
+  /** 最初の状態。省略すると野営 */
+  status?: ArmyStatus;
+}
+
+/** 軍団の状態:待機・行軍中・野営中・補給中・戦闘中(敵と対峙) */
+export type ArmyStatus = "idle" | "marching" | "camping" | "resupplying" | "fighting";
+
+/** 大河を渡れる場所(渡し場・橋) */
+export interface Crossing {
+  id: string;
+  name: string;
+  lon: number;
+  lat: number;
+}
+
+/** 地形の種類。進軍の速さが変わる */
+export type TerrainKind =
+  | "plain" | "grassland" | "desert" | "forest" | "hill" | "mountain" | "highMountain"
+  | "river" | "crossing" | "greatRiver" | "water";
+
+/** 地形ごとの決まり。cost は通りにくさ(平原が1。null は通れない) */
+export interface TerrainRule {
+  name: string;
+  cost: number | null;
+}
+
+/** 戦闘の種類:野戦 / 攻城戦 */
+export type BattleType = "field_battle" | "siege_battle";
+
+/** 戦闘イベント。敵と接触したときに作られ、会戦画面や攻城戦の入口になる */
+export interface BattleEvent {
+  id: string;
+  type: BattleType;
+  attackerArmyId: string;
+  /** 野戦のときの相手の軍団 */
+  defenderArmyId: string | null;
+  /** 攻城戦のときの相手の都市 */
+  defenderCityId: string | null;
+  lon: number;
+  lat: number;
+  /** pending = 開始待ち / active = 戦闘中 / resolved = 決着 / withdrawn = 離脱して不成立 */
+  status: "pending" | "active" | "resolved" | "withdrawn";
+  /** 発生した日(ゲーム開始からの日数) */
+  day: number;
 }
 
 /** ある年代の勢力図 */
@@ -173,4 +217,6 @@ export interface RegionData {
   terrainUrl: string;
   rivers: River[];
   cities: City[];
+  /** 大河の渡河地点 */
+  crossings: Crossing[];
 }

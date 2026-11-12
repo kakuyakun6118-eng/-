@@ -1,12 +1,14 @@
 // データの入口。地域やシナリオを増やすときは、ここに登録する。
 import type {
-  Army, City, CityLayout, CityLevelRule, Faction, Officer, RegionData, RegionInfo, River, Scenario, UnitType,
+  Army, City, CityLayout, Crossing, TerrainKind, TerrainRule, CityLevelRule, Faction, Officer, RegionData, RegionInfo, River, Scenario, UnitType,
 } from "./types";
 
 import ncRegion from "./regions/north-china/region.json";
 import ncTerrainUrl from "./regions/north-china/terrain.png";
 import ncRivers from "./regions/north-china/rivers.json";
 import ncCities from "./regions/north-china/cities.json";
+import ncCrossings from "./regions/north-china/crossings.json";
+import terrainCostRules from "./rules/terrainCosts.json";
 import s317 from "./scenarios/s317.json";
 import s317Armies from "./scenarios/s317.armies.json";
 import s317Officers from "./scenarios/s317.officers.json";
@@ -19,6 +21,7 @@ const northChina: RegionData = {
   terrainUrl: ncTerrainUrl,
   rivers: ncRivers as unknown as River[],
   cities: ncCities as unknown as City[],
+  crossings: ncCrossings as Crossing[],
 };
 
 /** 読み込む地域の一覧。将来は central-asia, europe などをここに足す */
@@ -69,3 +72,6 @@ export function officerById(id: string): Officer | undefined {
 export function totalTroops(army: Army): number {
   return army.troops.infantry + army.troops.cavalry + army.troops.archer;
 }
+
+/** 地形ごとの名前と通りにくさ */
+export const terrainRules = terrainCostRules as Record<TerrainKind, TerrainRule>;

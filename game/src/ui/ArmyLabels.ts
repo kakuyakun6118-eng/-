@@ -1,30 +1,59 @@
-// 軍団のラベル。軍団名と総兵力を、軍旗の上に表示する。
+// 軍団のラベル。軍団名・総兵力・状態を、軍団旗の上に表示する。
 import * as THREE from "three";
 import { totalTroops } from "../data";
+import type { ArmyStatus } from "../data/types";
 import type { ArmyMarker } from "../world/Armies";
 
+export const STATUS_TEXT: Record<ArmyStatus, string> = {
+  idle: "待機",
+  marching: "行軍中",
+  camping: "野営中",
+  resupplying: "補給中",
+  fighting: "対峙中",
+};
+
+interface Item {
+  marker: ArmyMarker;
+  el: HTMLDivElement;
+  troops: HTMLSpanElement;
+  status: HTMLSpanElement;
+}
+
 export class ArmyLabels {
-  private readonly items: { marker: ArmyMarker; el: HTMLDivElement }[] = [];
+  private readonly items: Item[] = [];
   private readonly v = new THREE.Vector3();
 
-  constructor(layer: HTMLElement, markers: ArmyMarker[]) {
-    for (const marker of markers) {
-      const el = document.createElement("div");
-      el.className = "army-label";
-      el.style.setProperty("--faction", marker.faction ? marker.faction.color : "#9a9a9a");
-      const name = document.createElement("span");
-      name.className = "army-name";
-      name.textContent = marker.army.name;
-      const troops = document.createElement("span");
-      troops.className = "army-troops";
-      troops.textContent = totalTroops(marker.army).toLocaleString("ja-JP");
-      el.append(name, troops);
-      layer.appendChild(el);
-      this.items.push({ marker, el });
-    }
+  constructor(private readonly layer: HTMLElement) {}
+
+  add(marker: ArmyMarker): void {
+    const el = document.createElement("div");
+    el.className = "army-label";
+    el.style.setProperty("--faction", marker.faction ? marker.faction.color : "#9a9a9a");
+    const name = document.createElement("span");
+    name.className = "army-name";
+    name.textContent = marker.state.army.name;
+    const troops = document.createElement("span");
+    troops.className = "army-troops";
+    const status = document.createElement("span");
+    status.className = "army-status";
+    el.append(name, troops, status);
+    this.layer.appendChild(el);
+    const item = { marker, el, troops, status };
+    this.items.push(item);
+    this.refresh(marker);
   }
 
-  /** カメラが動くたびに、ラベルを軍旗の上に置き直す */
+  /** 兵力や状態が変わったときに、文字を書き直す */
+  refresh(marker: ArmyMarker, selected = false): void {
+    const item = this.items.find((i) => i.marker === marker);
+    if (!item) return;
+    item.troops.textContent = totalTroops(marker.state.army).toLocaleString("ja-JP");
+    item.status.textContent = STATUS_TEXT[marker.state.status];
+    item.el.dataset.status = marker.state.status;
+    item.el.classList.toggle("selected", selected);
+  }
+
+  /** カメラが動くたびに、ラベルを軍団旗の上に置き直す */
   update(camera: THREE.Camera, width: number, height: number): void {
     for (const { marker, el } of this.items) {
       this.v.copy(marker.labelAnchor).project(camera);

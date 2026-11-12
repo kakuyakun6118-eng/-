@@ -16,6 +16,14 @@
         <h1>五胡乱華<small>天下統一録</small></h1>
         <p class="scenario"></p>
       </header>
+      <div id="clock">
+        <span id="clock-date"></span>
+        <button id="clock-speed" type="button" aria-label="時間の進む速さ"></button>
+      </div>
+      <div id="event" hidden>
+        <p id="event-text"></p>
+        <button id="event-close" type="button">閉じる</button>
+      </div>
       <p id="hint"></p>
       <button id="credits-open" type="button">出典</button>
       <section id="info" hidden>
@@ -42,6 +50,39 @@
             <button type="button" data-distance="8">近距離</button>
           </div>
           <button class="info-close" type="button" aria-label="閉じる">×</button>
+        </div>
+      </section>
+      <section id="army" hidden>
+        <div class="army-inner">
+          <div class="army-head">
+            <h2 class="army-title"></h2>
+            <span class="army-badge"></span>
+            <span class="army-owner"><span class="army-chip"></span><span class="army-faction"></span></span>
+            <span class="army-commander"></span>
+            <span class="army-location"></span>
+          </div>
+          <dl class="army-stats">
+            <div><dt>総兵力</dt><dd class="army-total"></dd></div>
+            <div><dt>歩兵</dt><dd class="army-infantry"></dd></div>
+            <div><dt>騎兵</dt><dd class="army-cavalry"></dd></div>
+            <div><dt>弓兵</dt><dd class="army-archer"></dd></div>
+            <div><dt>その他</dt><dd>0</dd></div>
+          </dl>
+          <dl class="army-stats">
+            <div><dt>士気</dt><dd class="army-meter army-morale"><span><i></i></span><b></b></dd></div>
+            <div><dt>疲労</dt><dd class="army-meter army-fatigue"><span><i></i></span><b></b></dd></div>
+            <div><dt>食糧</dt><dd class="army-food"></dd></div>
+            <div><dt>行軍速度</dt><dd class="army-speed"></dd></div>
+            <div><dt>補給</dt><dd class="army-supply"></dd></div>
+          </dl>
+          <div class="army-actions">
+            <p class="army-message"></p>
+            <button class="army-move" type="button">移動</button>
+            <button class="army-halt" type="button" hidden>停止して野営</button>
+            <button class="army-confirm" type="button" hidden>確定</button>
+            <button class="army-cancel" type="button" hidden>キャンセル</button>
+          </div>
+          <button class="army-close" type="button" aria-label="閉じる">×</button>
         </div>
       </section>
       <section id="credits" hidden>

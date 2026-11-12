@@ -20,6 +20,13 @@ export class ArmyModel {
     this.tiers[4].visible = false;
   }
 
+  /** 作り直すときに、古いモデルが使っていたメモリを返す */
+  dispose(): void {
+    this.group.traverse((o) => {
+      if (o instanceof THREE.InstancedMesh) o.dispose();
+    });
+  }
+
   setCameraDistance(distance: number): void {
     const near = distance < NEAR_DISTANCE;
     this.tiers[2].visible = near;

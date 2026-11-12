@@ -1,37 +1,63 @@
-// ゲーム全体のまとめ役。地形・都市・カメラ・入力・画面表示をつなぐ。
+// ゲーム全体のまとめ役。地形・都市・軍団・カメラ・入力・画面表示と、進行の計算(sim)をつなぐ。
 import * as THREE from "three";
 import { MapCamera, type WorldRect } from "../camera/MapCamera";
-import { armies, factionById, factionOfCity, officerById, regions, resolveCityLayout } from "../data";
+import { armies as armyData, factionById, factionOfCity, officerById, regions, resolveCityLayout, scenario } from "../data";
+import type { BattleEvent, City } from "../data/types";
 import { InputController } from "../input/InputController";
+import { Campaign, type ArmyState } from "../sim/Campaign";
+import { distanceKm, type Route } from "../sim/pathfinding";
+import { TerrainGrid } from "../sim/TerrainGrid";
 import { ArmyLabels } from "../ui/ArmyLabels";
+import { ArmyPanel, type ArmyPanelMode } from "../ui/ArmyPanel";
 import { CityLabels } from "../ui/CityLabels";
 import { InfoPanel } from "../ui/InfoPanel";
-import { Armies } from "../world/Armies";
+import { Armies, type ArmyMarker } from "../world/Armies";
 import { Cities, type CityMarker } from "../world/Cities";
+import { RouteLine } from "../world/RouteLine";
 import { Terrain, type TerrainPad } from "../world/Terrain";
 import { HAZE_COLOR } from "../world/terrainMaterial";
 import { toLonLat, toWorld } from "./geo";
 
-/** 指で押しやすいように、都市の周りこの距離(ピクセル)までをタップ範囲にする */
+/** 指で押しやすいように、都市や軍団の周りこの距離(ピクセル)までをタップ範囲にする */
 const PICK_RADIUS = 34;
-/** 選んだ都市へカメラを寄せるのにかける時間(ミリ秒) */
+/** 選んだ都市や軍団へカメラを寄せるのにかける時間(ミリ秒) */
 const GLIDE_MS = 600;
+/** 時間の進む速さの切り替え(0 = 一時停止) */
+const SPEEDS = [
+  { speed: 1, label: "▶ 通常" },
+  { speed: 4, label: "▶▶ 早送り" },
+  { speed: 0, label: "Ⅱ 停止中" },
+];
+const DIRECTIONS = ["北", "北東", "東", "南東", "南", "南西", "西", "北西"];
 
 export class Game {
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene = new THREE.Scene();
   private readonly mapCamera: MapCamera;
   private readonly cities = new Cities();
-  private readonly armies = new Armies();
+  private readonly armies: Armies;
+  private readonly route: RouteLine;
+  /** ゲームの進行(動作確認のために外からも見られるようにしてある) */
+  readonly campaign: Campaign;
+  private readonly grid: TerrainGrid;
+  private readonly allCities: City[] = [];
   private readonly labels: CityLabels;
   private readonly armyLabels: ArmyLabels;
   private readonly panel: InfoPanel;
+  private readonly armyPanel: ArmyPanel;
   private selected: CityMarker | null = null;
+  private selectedArmy: ArmyMarker | null = null;
+  /** 軍団パネルの段階(通常 / 移動先を選んでいる / 経路を確認している) */
+  private mode: ArmyPanelMode = "info";
+  /** 確認中の経路(「確定」を押すと、この経路で行軍を始める) */
+  private pendingRoute: Route | null = null;
+  private speedIndex = 0;
+  private lastFrame = performance.now();
   private width = 1;
   private height = 1;
   /** 画面を描き直す必要があるか。動きがないときは描かず、電池を節約する */
   private dirty = true;
-  /** 選んだ都市へカメラを寄せている途中の情報 */
+  /** 選んだ都市や軍団へカメラを寄せている途中の情報 */
   private glide: {
     fromX: number; fromZ: number; fromD: number; toX: number; toZ: number; toD: number; start: number;
   } | null = null;
@@ -58,7 +84,7 @@ export class Game {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.scene.background = HAZE_COLOR;
 
-    // 都市の建物用の光(地形の陰影は world/terrainMaterial.ts が自分で計算する)
+    // 都市の建物や兵士用の光(地形の陰影は world/terrainMaterial.ts が自分で計算する)
     this.scene.add(new THREE.HemisphereLight(0xffffff, 0x54483a, 1.5));
     const sun = new THREE.DirectionalLight(0xfff1d6, 2.2);
     sun.position.set(-60, 80, -40);
@@ -70,6 +96,7 @@ export class Game {
       const region = terrain.region;
       this.scene.add(terrain.mesh);
       for (const city of region.cities) {
+        this.allCities.push(city);
         this.cities.add(city, factionOfCity(city.id), (lon, lat) => terrain.heightAt(lon, lat));
       }
       const b = region.info.bounds;
@@ -82,14 +109,34 @@ export class Game {
     }
     this.scene.add(this.cities.group);
 
-    // 軍団を置く
-    for (const army of armies) {
-      this.armies.add(army, factionById(army.factionId), officerById(army.commanderId), (lon, lat) => {
-        const { x, z } = toWorld(lon, lat);
-        return this.groundHeight(x, z);
-      });
+    // 進軍の計算用の地形のマス(いまは地域が1つなので、その地域の分だけ作る)
+    this.grid = new TerrainGrid(terrains[0].field, terrains[0].region.crossings);
+
+    // 軍団と経路の表示
+    const heightAt = (lon: number, lat: number): number => {
+      const { x, z } = toWorld(lon, lat);
+      return this.groundHeight(x, z);
+    };
+    this.armies = new Armies(heightAt);
+    this.route = new RouteLine(heightAt);
+    this.scene.add(this.armies.group, this.route.group);
+    this.armyLabels = new ArmyLabels(root.querySelector("#labels") as HTMLElement);
+
+    // ゲームの進行。状態が変わるたびに、表示を合わせる
+    this.campaign = new Campaign(this.grid, armyData, this.allCities, {
+      onArmyMoved: (state) => {
+        const marker = this.armies.markerOf(state.army.id);
+        if (marker) this.armies.place(marker);
+        this.dirty = true;
+      },
+      onArmyChanged: (state, statusChanged) => this.onArmyChanged(state, statusChanged),
+      onBattleEvent: (event) => this.showBattleEvent(event),
+      onDayChanged: () => this.onDayChanged(),
+    });
+    for (const state of this.campaign.armies) {
+      const marker = this.armies.add(state, factionById(state.army.factionId), officerById(state.army.commanderId));
+      this.armyLabels.add(marker);
     }
-    this.scene.add(this.armies.group);
 
     // 地図の外側が見えすぎないよう、見られる範囲を少しだけ内側にする(端に近い都市にも寄れる程度に)
     const insetX = (limits.maxX - limits.minX) * 0.06;
@@ -107,8 +154,31 @@ export class Game {
     this.mapCamera.update();
 
     this.labels = new CityLabels(root.querySelector("#labels") as HTMLElement, this.cities.markers);
-    this.armyLabels = new ArmyLabels(root.querySelector("#labels") as HTMLElement, this.armies.markers);
-    this.panel = new InfoPanel(root.querySelector("#info") as HTMLElement, () => this.select(null), (d) => this.glideToSelected(d));
+    this.panel = new InfoPanel(
+      root.querySelector("#info") as HTMLElement,
+      () => this.clearSelection(),
+      (d) => this.selected && this.glideTo(this.selected.group.position, d),
+    );
+    this.armyPanel = new ArmyPanel(root.querySelector("#army") as HTMLElement, {
+      onClose: () => this.clearSelection(),
+      onMove: () => this.setMode("pick", "移動先を地図の上でタップしてください"),
+      onConfirm: () => this.confirmMove(),
+      onCancel: () => this.cancelMove(),
+      onHalt: () => this.selectedArmy && this.campaign.halt(this.selectedArmy.state.army.id),
+    });
+
+    // 日付と、時間の進む速さの切り替え
+    const speedButton = root.querySelector("#clock-speed") as HTMLButtonElement;
+    speedButton.addEventListener("click", () => {
+      this.speedIndex = (this.speedIndex + 1) % SPEEDS.length;
+      this.campaign.speed = SPEEDS[this.speedIndex].speed;
+      speedButton.textContent = SPEEDS[this.speedIndex].label;
+    });
+    speedButton.textContent = SPEEDS[0].label;
+    this.onDayChanged();
+    (root.querySelector("#event-close") as HTMLElement).addEventListener("click", () => {
+      (root.querySelector("#event") as HTMLElement).hidden = true;
+    });
 
     new InputController(canvas, {
       onPan: (fx, fy, tx, ty) => {
@@ -121,12 +191,186 @@ export class Game {
         this.mapCamera.zoom(factor, this.toNdc(x, y));
         this.dirty = true;
       },
-      onTap: (x, y) => this.select(this.pick(x, y)),
+      onTap: (x, y) => this.onTap(x, y),
     });
 
     new ResizeObserver(() => this.resize()).observe(root);
     this.resize();
     this.renderer.setAnimationLoop(() => this.frame());
+  }
+
+  // ===== 軍団の操作 =====
+
+  private onTap(x: number, y: number): void {
+    // 移動先を選んでいる最中は、タップした地点を目的地にする
+    if (this.selectedArmy && this.mode !== "info") {
+      const point = this.pickGround(x, y);
+      if (!point) return;
+      const state = this.selectedArmy.state;
+      const route = this.campaign.planRoute(state.army.id, point);
+      if (!route) {
+        this.pendingRoute = null;
+        this.route.hide();
+        this.setMode("pick", "そこへは進めません。別の場所をタップしてください");
+        return;
+      }
+      this.pendingRoute = route;
+      this.route.show(route);
+      const days = Math.max(1, Math.ceil(this.campaign.daysFor(state, route)));
+      this.setMode("confirm", `距離 ${Math.round(route.km)}km・到着まで約${days}日`);
+      return;
+    }
+    const army = this.pickArmy(x, y);
+    if (army) {
+      this.selectArmy(army);
+      return;
+    }
+    const city = this.pick(x, y);
+    if (city) this.selectCity(city);
+    else this.clearSelection();
+  }
+
+  private setMode(mode: ArmyPanelMode, message = ""): void {
+    this.mode = mode;
+    this.armyPanel.setMode(mode, message);
+    this.dirty = true;
+  }
+
+  private confirmMove(): void {
+    if (!this.selectedArmy || !this.pendingRoute) return;
+    this.campaign.orderMove(this.selectedArmy.state.army.id, this.pendingRoute);
+    this.pendingRoute = null;
+    this.setMode("info");
+    this.showRouteOfSelected();
+  }
+
+  private cancelMove(): void {
+    this.pendingRoute = null;
+    this.setMode("info");
+    this.showRouteOfSelected();
+    if (this.selectedArmy) this.refreshArmyPanel();
+  }
+
+  /** 選択中の軍団が行軍中なら、残りの経路を表示する。そうでなければ消す */
+  private showRouteOfSelected(): void {
+    const state = this.selectedArmy?.state;
+    if (state && state.status === "marching" && state.route) this.route.show(state.route, state.progress);
+    else this.route.hide();
+    this.dirty = true;
+  }
+
+  private selectArmy(marker: ArmyMarker): void {
+    this.clearSelection();
+    this.selectedArmy = marker;
+    this.armies.select(marker);
+    this.armyLabels.refresh(marker, true);
+    this.refreshArmyPanel();
+    this.setMode("info");
+    this.showRouteOfSelected();
+  }
+
+  private refreshArmyPanel(): void {
+    const marker = this.selectedArmy;
+    if (!marker) return;
+    const state = marker.state;
+    this.armyPanel.show(marker, {
+      location: this.describeLocation(state.army.lon, state.army.lat),
+      terrain: this.grid.kindAt(state.army.lon, state.army.lat),
+      speed: this.campaign.marchSpeed(state),
+      supply: this.campaign.supplyState(state),
+      supplied: state.supplied,
+    });
+    if (this.mode !== "info") this.armyPanel.setMode(this.mode, (this.root.querySelector(".army-message") as HTMLElement).textContent ?? "");
+  }
+
+  /** 「長安の東 60km」のように、いちばん近い都市からの方角と距離で場所を表す */
+  private describeLocation(lon: number, lat: number): string {
+    let best: City | null = null;
+    let bestKm = Infinity;
+    for (const c of this.allCities) {
+      const km = distanceKm(c, { lon, lat });
+      if (km < bestKm) {
+        bestKm = km;
+        best = c;
+      }
+    }
+    if (!best) return "不明";
+    if (bestKm < 25) return `${best.name}の近郊`;
+    const dx = (lon - best.lon) * Math.cos(lat * (Math.PI / 180));
+    const angle = (Math.atan2(dx, lat - best.lat) * 180) / Math.PI;
+    return `${best.name}の${DIRECTIONS[Math.round(((angle + 360) % 360) / 45) % 8]} ${Math.round(bestKm / 10) * 10}km`;
+  }
+
+  private onArmyChanged(state: ArmyState, statusChanged: boolean): void {
+    const marker = this.armies.markerOf(state.army.id);
+    if (!marker) return; // 最初の準備中は、まだ表示が作られていない
+    this.armies.sync(marker);
+    this.armyLabels.refresh(marker, marker === this.selectedArmy);
+    if (marker === this.selectedArmy) {
+      this.refreshArmyPanel();
+      if (statusChanged && this.mode === "info") this.showRouteOfSelected();
+    }
+    this.dirty = true;
+  }
+
+  private onDayChanged(): void {
+    (this.root.querySelector("#clock-date") as HTMLElement).textContent = this.campaign.dateText();
+    // 行軍中の軍団を選んでいるときは、進んだ分だけ経路の点線を短くする
+    if (this.mode === "info" && this.selectedArmy?.state.status === "marching") this.showRouteOfSelected();
+  }
+
+  /** 敵と接触して戦闘イベントが発生したことを知らせる(会戦そのものは、まだ実装していない) */
+  private showBattleEvent(event: BattleEvent): void {
+    const attacker = this.campaign.stateOf(event.attackerArmyId);
+    const defender = event.defenderArmyId ? this.campaign.stateOf(event.defenderArmyId) : undefined;
+    const city = event.defenderCityId ? this.allCities.find((c) => c.id === event.defenderCityId) : undefined;
+    const target = defender ? defender.army.name : city ? `${city.name}(${factionById(scenario.cityOwners[city.id])?.name ?? "所属なし"})` : "不明";
+    const kind = event.type === "field_battle" ? "野戦" : "攻城戦";
+    (this.root.querySelector("#event-text") as HTMLElement).textContent =
+      `${kind}の発生:${attacker?.army.name ?? "不明"} 対 ${target}。両軍は対峙しています(会戦は次の段階で実装します)`;
+    (this.root.querySelector("#event") as HTMLElement).hidden = false;
+  }
+
+  /** タップした画面上の点が、地形のどこ(緯度経度)にあたるかを調べる */
+  private pickGround(x: number, y: number): { lon: number; lat: number } | null {
+    const ndc = this.toNdc(x, y);
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(ndc, this.mapCamera.camera);
+    const { origin, direction } = ray.ray;
+    // 視線に沿って少しずつ進み、地面より下に入ったところを探す
+    const step = Math.max(0.05, this.mapCamera.distance / 400);
+    const p = new THREE.Vector3();
+    for (let t = 0; t < this.mapCamera.distance * 6; t += step) {
+      p.copy(origin).addScaledVector(direction, t);
+      if (p.y <= this.groundHeight(p.x, p.z)) return toLonLat(p.x, p.z);
+    }
+    return null;
+  }
+
+  /** タップした位置にある軍団を探す。なければ null */
+  private pickArmy(x: number, y: number): ArmyMarker | null {
+    const camera = this.mapCamera.camera;
+    const v = new THREE.Vector3();
+    const pixelsPerUnit =
+      this.height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * this.mapCamera.distance);
+    let best: ArmyMarker | null = null;
+    let bestScore = 1;
+    for (const marker of this.armies.markers) {
+      v.copy(marker.group.position).project(camera);
+      if (v.z > 1) continue;
+      const sx = (v.x * 0.5 + 0.5) * this.width;
+      const sy = (-v.y * 0.5 + 0.5) * this.height;
+      const reach = Math.max(PICK_RADIUS, marker.model.radius * this.armies.scaleOf(marker) * pixelsPerUnit * 0.8);
+      v.copy(marker.labelAnchor).project(camera);
+      const lx = (v.x * 0.5 + 0.5) * this.width;
+      const ly = (-v.y * 0.5 + 0.5) * this.height - 12;
+      const d = Math.min(Math.hypot(sx - x, sy - y) / reach, Math.hypot(lx - x, ly - y) / PICK_RADIUS);
+      if (d < bestScore) {
+        bestScore = d;
+        best = marker;
+      }
+    }
+    return best;
   }
 
   /** カメラを指定した場所へ向ける(都市へのジャンプなどに使う) */
@@ -186,20 +430,33 @@ export class Game {
     return best;
   }
 
-  private select(marker: CityMarker | null): void {
+  private selectCity(marker: CityMarker): void {
+    this.clearSelection();
     this.selected = marker;
     this.cities.select(marker);
+    this.panel.show(marker.city, marker.faction);
     // 選んだ都市が画面の中ほど(情報パネルに隠れない位置)に来るよう、カメラを静かに寄せる
-    if (marker) this.glideToSelected(this.mapCamera.distance);
-    if (marker) this.panel.show(marker.city, marker.faction);
-    else this.panel.hide();
+    this.glideTo(marker.group.position, this.mapCamera.distance);
     this.dirty = true;
   }
 
-  /** 選択中の都市へ、指定した距離までカメラを静かに動かす */
-  private glideToSelected(distance: number): void {
-    if (!this.selected) return;
-    const p = this.selected.group.position;
+  /** 都市と軍団の選択をすべて解除する */
+  private clearSelection(): void {
+    if (this.selectedArmy) this.armyLabels.refresh(this.selectedArmy, false);
+    this.selected = null;
+    this.selectedArmy = null;
+    this.pendingRoute = null;
+    this.mode = "info";
+    this.cities.select(null);
+    this.armies.select(null);
+    this.route.hide();
+    this.panel.hide();
+    this.armyPanel.hide();
+    this.dirty = true;
+  }
+
+  /** 指定した地点へ、指定した距離までカメラを静かに動かす */
+  private glideTo(p: THREE.Vector3, distance: number): void {
     this.glide = {
       fromX: this.mapCamera.target.x,
       fromZ: this.mapCamera.target.z,
@@ -220,6 +477,11 @@ export class Game {
   }
 
   private frame(): void {
+    // ゲームの時間を進める
+    const now = performance.now();
+    this.campaign.update((now - this.lastFrame) / 1000);
+    this.lastFrame = now;
+
     if (this.glide) {
       const t = Math.min(1, (performance.now() - this.glide.start) / GLIDE_MS);
       const k = 1 - Math.pow(1 - t, 3); // 最初は速く、終わりはゆっくり
@@ -235,6 +497,7 @@ export class Game {
     this.dirty = false;
     this.cities.update(this.mapCamera.distance);
     this.armies.update(this.mapCamera.distance);
+    this.route.update(this.mapCamera.distance);
     for (const terrain of this.terrains) terrain.setCameraDistance(this.mapCamera.distance);
     this.renderer.render(this.scene, this.mapCamera.camera);
     this.labels.update(this.mapCamera.camera, this.width, this.height, this.selected);
