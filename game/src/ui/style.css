@@ -223,6 +223,35 @@ body {
   color: var(--muted);
 }
 
+.info-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin: 0;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.info-stats div {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.info-stats dt {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--bronze);
+}
+
+.info-stats dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 .info-description {
   margin: 0;
   font-size: 13px;

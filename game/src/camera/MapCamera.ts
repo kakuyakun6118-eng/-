@@ -8,14 +8,14 @@ export interface WorldRect {
   maxZ: number;
 }
 
-const MIN_DISTANCE = 14;
+const MIN_DISTANCE = 5;
 const MAX_DISTANCE = 125;
 /** 近づくほど低い角度から、遠ざかるほど真上に近い角度から見る */
-const PITCH_NEAR = THREE.MathUtils.degToRad(36);
+const PITCH_NEAR = THREE.MathUtils.degToRad(33);
 const PITCH_FAR = THREE.MathUtils.degToRad(60);
 
 export class MapCamera {
-  readonly camera = new THREE.PerspectiveCamera(42, 1, 1, 1200);
+  readonly camera = new THREE.PerspectiveCamera(42, 1, 0.5, 1200);
   /** カメラが見ている地面の点 */
   readonly target = new THREE.Vector3();
   distance = 120;

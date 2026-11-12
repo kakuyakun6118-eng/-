@@ -1,12 +1,12 @@
 // ゲーム全体のまとめ役。地形・都市・カメラ・入力・画面表示をつなぐ。
 import * as THREE from "three";
 import { MapCamera, type WorldRect } from "../camera/MapCamera";
-import { factionOfCity, regions } from "../data";
+import { factionOfCity, regions, resolveCityLayout } from "../data";
 import { InputController } from "../input/InputController";
 import { CityLabels } from "../ui/CityLabels";
 import { InfoPanel } from "../ui/InfoPanel";
 import { Cities, type CityMarker } from "../world/Cities";
-import { Terrain } from "../world/Terrain";
+import { Terrain, type TerrainPad } from "../world/Terrain";
 import { HAZE_COLOR } from "../world/terrainMaterial";
 import { toLonLat, toWorld } from "./geo";
 
@@ -28,7 +28,17 @@ export class Game {
 
   /** 地形ファイルを読み込んでからゲームを始める */
   static async create(root: HTMLElement): Promise<Game> {
-    const terrains = await Promise.all(regions.map((region) => Terrain.create(region)));
+    const terrains = await Promise.all(
+      regions.map((region) => {
+        // 3D都市を建てる場所は、あらかじめ地面を平らにしておく
+        const pads: TerrainPad[] = [];
+        for (const city of region.cities) {
+          const layout = resolveCityLayout(city);
+          if (layout) pads.push({ lon: city.lon, lat: city.lat, radius: Math.hypot(...layout.size) / 2 + 0.3 });
+        }
+        return Terrain.create(region, pads);
+      }),
+    );
     return new Game(root, terrains);
   }
 
@@ -38,7 +48,7 @@ export class Game {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.scene.background = HAZE_COLOR;
 
-    // 都市マーカー用の光(地形の陰影は world/terrainMaterial.ts が自分で計算する)
+    // 都市の建物用の光(地形の陰影は world/terrainMaterial.ts が自分で計算する)
     this.scene.add(new THREE.HemisphereLight(0xffffff, 0x54483a, 1.5));
     const sun = new THREE.DirectionalLight(0xfff1d6, 2.2);
     sun.position.set(-60, 80, -40);
@@ -50,7 +60,7 @@ export class Game {
       const region = terrain.region;
       this.scene.add(terrain.mesh);
       for (const city of region.cities) {
-        this.cities.add(city, factionOfCity(city.id), terrain.heightAt(city.lon, city.lat));
+        this.cities.add(city, factionOfCity(city.id), (lon, lat) => terrain.heightAt(lon, lat));
       }
       const b = region.info.bounds;
       const nw = toWorld(b.west, b.north);
@@ -97,6 +107,15 @@ export class Game {
     this.renderer.setAnimationLoop(() => this.frame());
   }
 
+  /** カメラを指定した場所へ向ける(都市へのジャンプなどに使う) */
+  focus(lon: number, lat: number, distance: number): void {
+    const p = toWorld(lon, lat);
+    this.mapCamera.target.set(p.x, 0, p.z);
+    this.mapCamera.distance = distance;
+    this.mapCamera.update();
+    this.dirty = true;
+  }
+
   /** 3D空間のある地点の、地面の高さ */
   private groundHeight(x: number, z: number): number {
     const { lon, lat } = toLonLat(x, z);
@@ -114,20 +133,28 @@ export class Game {
     return new THREE.Vector2((x / this.width) * 2 - 1, -(y / this.height) * 2 + 1);
   }
 
-  /** タップした位置に一番近い都市を探す。近くになければ null */
+  /** タップした位置にある都市を探す。なければ null */
   private pick(x: number, y: number): CityMarker | null {
+    const camera = this.mapCamera.camera;
     const v = new THREE.Vector3();
+    // 3D空間の長さ1が、画面の中央付近で何ピクセルになるか
+    const pixelsPerUnit =
+      this.height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * this.mapCamera.distance);
     let best: CityMarker | null = null;
-    let bestDist = PICK_RADIUS;
+    let bestScore = 1;
     for (const marker of this.cities.markers) {
-      v.copy(marker.group.position).project(this.mapCamera.camera);
+      v.copy(marker.group.position).project(camera);
       if (v.z > 1) continue;
       const sx = (v.x * 0.5 + 0.5) * this.width;
       const sy = (-v.y * 0.5 + 0.5) * this.height;
-      // マーカー本体と、その上のラベルのどちらを押しても選べるようにする
-      const d = Math.min(Math.hypot(sx - x, sy - y), Math.hypot(sx - x, sy - 22 - y));
-      if (d < bestDist) {
-        bestDist = d;
+      // 都市が画面上で大きいときは、その大きさ全体をタップ範囲にする
+      const scale = this.cities.scaleOf(marker, this.mapCamera.distance);
+      const reach = Math.max(PICK_RADIUS, marker.radius * scale * pixelsPerUnit * 0.8);
+      // 都市本体と、その上のラベルのどちらを押しても選べるようにする
+      const labelY = sy - marker.height * scale * pixelsPerUnit - 14;
+      const d = Math.min(Math.hypot(sx - x, sy - y) / reach, Math.hypot(sx - x, labelY - y) / PICK_RADIUS);
+      if (d < bestScore) {
+        bestScore = d;
         best = marker;
       }
     }
@@ -153,7 +180,7 @@ export class Game {
   private frame(): void {
     if (!this.dirty) return;
     this.dirty = false;
-    this.cities.updateScale(this.mapCamera.distance);
+    this.cities.update(this.mapCamera.distance);
     for (const terrain of this.terrains) terrain.setCameraDistance(this.mapCamera.distance);
     this.renderer.render(this.scene, this.mapCamera.camera);
     this.labels.update(this.mapCamera.camera, this.width, this.height, this.selected);

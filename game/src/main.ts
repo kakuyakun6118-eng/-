@@ -10,7 +10,9 @@ const hint = root.querySelector("#hint") as HTMLElement;
 hint.textContent = "地形を読み込んでいます…";
 
 Game.create(root)
-  .then(() => {
+  .then((game) => {
+    // 動作確認用:ブラウザの開発者ツールから __goko.focus(経度, 緯度, 距離) で移動できる
+    (window as unknown as { __goko: Game }).__goko = game;
     hint.textContent = "ドラッグで移動・ピンチで拡大縮小・都市をタップ";
   })
   .catch((err) => {
