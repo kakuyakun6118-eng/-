@@ -3,32 +3,11 @@
 //
 // 座標の決まり:都市の中心が原点。x は東、z は南、y は上。地面は y = 0。
 import type { CityLayout, PalaceSpec } from "../../data/types";
+import type { DetailTier, Part } from "../parts/instancing";
 import type { PartShape, PartSurface } from "./CityParts";
 
-/**
- * 部品をいつ表示するか。
- * 0 = いつも / 1 = 中距離から / 2 = 近距離だけ / 3 = 遠いときだけ(近づくと細かい部品に置き換わる)
- * 4 = 都市を選択しているときだけ
- */
-export type DetailTier = 0 | 1 | 2 | 3 | 4;
-
-export interface CityPart {
-  shape: PartShape;
-  surface: PartSurface;
-  tier: DetailTier;
-  x: number;
-  y: number;
-  z: number;
-  sx: number;
-  sy: number;
-  sz: number;
-  /** 上から見た回転(ラジアン) */
-  rot: number;
-  color: string;
-}
-
 export interface CityBlueprint {
-  parts: CityPart[];
+  parts: Part[];
   /** 都市の半径(タップの当たり判定に使う) */
   radius: number;
   /** いちばん高い建物の高さ(都市名ラベルの位置に使う) */
@@ -94,7 +73,7 @@ function hashString(s: string): number {
 }
 
 export function buildCity(layout: CityLayout, cityId: string, flagColor: string): CityBlueprint {
-  const parts: CityPart[] = [];
+  const parts: Part[] = [];
   const rand = createRandom(hashString(cityId));
   const pick = <T>(list: T[]): T => list[Math.floor(rand() * list.length)];
 

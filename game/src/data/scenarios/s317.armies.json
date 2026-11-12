@@ -1,0 +1,32 @@
+[
+  {
+    "id": "army_liu_yao", "name": "劉曜軍", "factionId": "han_zhao", "commanderId": "liu_yao",
+    "lon": 109.5, "lat": 34.9, "facing": 90,
+    "troops": { "infantry": 20000, "cavalry": 8000, "archer": 6000 },
+    "morale": 78, "fatigue": 20, "food": 60
+  },
+  {
+    "id": "army_shi_hu", "name": "石虎軍", "factionId": "shile", "commanderId": "shi_hu",
+    "lon": 114.8, "lat": 36.72, "facing": 180,
+    "troops": { "infantry": 5000, "cavalry": 4000, "archer": 1000 },
+    "morale": 85, "fatigue": 10, "food": 45
+  },
+  {
+    "id": "army_zu_ti", "name": "祖逖軍", "factionId": "jin", "commanderId": "zu_ti",
+    "lon": 115.6, "lat": 34.0, "facing": 0,
+    "troops": { "infantry": 3500, "cavalry": 500, "archer": 1000 },
+    "morale": 92, "fatigue": 15, "food": 30
+  },
+  {
+    "id": "army_tuoba", "name": "拓跋軍", "factionId": "dai", "commanderId": "tuoba_yulv",
+    "lon": 112.55, "lat": 40.05, "facing": 160,
+    "troops": { "infantry": 0, "cavalry": 4500, "archer": 500 },
+    "morale": 80, "fatigue": 5, "food": 40
+  },
+  {
+    "id": "army_duan", "name": "段文鴦隊", "factionId": "duan", "commanderId": "duan_wenyang",
+    "lon": 116.3, "lat": 39.25, "facing": 200,
+    "troops": { "infantry": 0, "cavalry": 800, "archer": 200 },
+    "morale": 75, "fatigue": 30, "food": 15
+  }
+]

@@ -1,11 +1,16 @@
 // データの入口。地域やシナリオを増やすときは、ここに登録する。
-import type { City, CityLayout, CityLevelRule, Faction, RegionData, RegionInfo, River, Scenario } from "./types";
+import type {
+  Army, City, CityLayout, CityLevelRule, Faction, Officer, RegionData, RegionInfo, River, Scenario, UnitType,
+} from "./types";
 
 import ncRegion from "./regions/north-china/region.json";
 import ncTerrainUrl from "./regions/north-china/terrain.png";
 import ncRivers from "./regions/north-china/rivers.json";
 import ncCities from "./regions/north-china/cities.json";
 import s317 from "./scenarios/s317.json";
+import s317Armies from "./scenarios/s317.armies.json";
+import s317Officers from "./scenarios/s317.officers.json";
+import unitTypeList from "./rules/unitTypes.json";
 import creditList from "./credits.json";
 import cityLevelRules from "./rules/cityLevels.json";
 
@@ -43,4 +48,24 @@ export function cityLevelOf(city: City): 1 | 2 | 3 | 4 {
 /** 規模ごとの標準の形に、その都市だけの個性を重ねて、設計図を作る */
 export function resolveCityLayout(city: City): CityLayout {
   return { ...cityLevels[String(cityLevelOf(city))].layout, ...city.layout };
+}
+
+/** 兵種の一覧 */
+export const unitTypes = unitTypeList as UnitType[];
+
+/** 現在のシナリオの武将と軍団 */
+export const officers = s317Officers as Officer[];
+export const armies = s317Armies as Army[];
+
+export function factionById(id: string): Faction | undefined {
+  return scenario.factions.find((f) => f.id === id);
+}
+
+export function officerById(id: string): Officer | undefined {
+  return officers.find((o) => o.id === id);
+}
+
+/** 軍団の総兵力 */
+export function totalTroops(army: Army): number {
+  return army.troops.infantry + army.troops.cavalry + army.troops.archer;
 }

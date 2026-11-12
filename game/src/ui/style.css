@@ -95,6 +95,36 @@ body {
   flex: none;
 }
 
+/* 軍団のラベル:左端の帯が勢力の色 */
+.army-label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 1px 7px 1px 6px;
+  border-left: 4px solid var(--faction);
+  border-radius: 2px;
+  background: var(--label-bg);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: nowrap;
+  will-change: transform;
+}
+
+.army-label .army-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+.army-label .army-troops {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--bronze);
+}
+
 .title {
   position: absolute;
   top: 0;

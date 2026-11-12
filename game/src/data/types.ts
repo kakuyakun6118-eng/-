@@ -113,6 +113,48 @@ export interface Faction {
   color: string;
 }
 
+export type UnitTypeId = "infantry" | "cavalry" | "archer";
+
+/** 兵種の決まり */
+export interface UnitType {
+  id: UnitTypeId;
+  name: string;
+  /** 行軍の速さ(歩兵を1とした比) */
+  speed: number;
+  description: string;
+}
+
+/** 武将 */
+export interface Officer {
+  id: string;
+  name: string;
+  reading: string;
+  factionId: string;
+  /** 統率(0〜100) */
+  leadership: number;
+  /** 武勇(0〜100) */
+  valor: number;
+}
+
+/** 軍団。地図の上を動き、会戦の結果もここに書き戻す */
+export interface Army {
+  id: string;
+  name: string;
+  factionId: string;
+  /** 指揮官(武将のID) */
+  commanderId: string;
+  lon: number;
+  lat: number;
+  /** 向き(度)。0 = 北、90 = 東、180 = 南、270 = 西 */
+  facing: number;
+  /** 兵種ごとの兵力 */
+  troops: Record<UnitTypeId, number>;
+  /** 士気・疲労・食糧(0〜100。食糧は残り日数) */
+  morale: number;
+  fatigue: number;
+  food: number;
+}
+
 /** ある年代の勢力図 */
 export interface Scenario {
   id: string;

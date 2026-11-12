@@ -1,0 +1,5 @@
+[
+  { "id": "infantry", "name": "歩兵", "speed": 1.0, "description": "陣形を組んで戦う軍の主力。" },
+  { "id": "cavalry", "name": "騎兵", "speed": 1.8, "description": "突撃と側面攻撃を担う。平原で強い。" },
+  { "id": "archer", "name": "弓兵", "speed": 1.0, "description": "離れた敵を射る。接近戦は苦手。" }
+]

@@ -1,10 +1,12 @@
 // ゲーム全体のまとめ役。地形・都市・カメラ・入力・画面表示をつなぐ。
 import * as THREE from "three";
 import { MapCamera, type WorldRect } from "../camera/MapCamera";
-import { factionOfCity, regions, resolveCityLayout } from "../data";
+import { armies, factionById, factionOfCity, officerById, regions, resolveCityLayout } from "../data";
 import { InputController } from "../input/InputController";
+import { ArmyLabels } from "../ui/ArmyLabels";
 import { CityLabels } from "../ui/CityLabels";
 import { InfoPanel } from "../ui/InfoPanel";
+import { Armies } from "../world/Armies";
 import { Cities, type CityMarker } from "../world/Cities";
 import { Terrain, type TerrainPad } from "../world/Terrain";
 import { HAZE_COLOR } from "../world/terrainMaterial";
@@ -20,7 +22,9 @@ export class Game {
   private readonly scene = new THREE.Scene();
   private readonly mapCamera: MapCamera;
   private readonly cities = new Cities();
+  private readonly armies = new Armies();
   private readonly labels: CityLabels;
+  private readonly armyLabels: ArmyLabels;
   private readonly panel: InfoPanel;
   private selected: CityMarker | null = null;
   private width = 1;
@@ -78,6 +82,15 @@ export class Game {
     }
     this.scene.add(this.cities.group);
 
+    // 軍団を置く
+    for (const army of armies) {
+      this.armies.add(army, factionById(army.factionId), officerById(army.commanderId), (lon, lat) => {
+        const { x, z } = toWorld(lon, lat);
+        return this.groundHeight(x, z);
+      });
+    }
+    this.scene.add(this.armies.group);
+
     // 地図の外側が見えすぎないよう、見られる範囲を少しだけ内側にする(端に近い都市にも寄れる程度に)
     const insetX = (limits.maxX - limits.minX) * 0.06;
     const insetZ = (limits.maxZ - limits.minZ) * 0.06;
@@ -94,6 +107,7 @@ export class Game {
     this.mapCamera.update();
 
     this.labels = new CityLabels(root.querySelector("#labels") as HTMLElement, this.cities.markers);
+    this.armyLabels = new ArmyLabels(root.querySelector("#labels") as HTMLElement, this.armies.markers);
     this.panel = new InfoPanel(root.querySelector("#info") as HTMLElement, () => this.select(null), (d) => this.glideToSelected(d));
 
     new InputController(canvas, {
@@ -220,8 +234,10 @@ export class Game {
     if (!this.dirty) return;
     this.dirty = false;
     this.cities.update(this.mapCamera.distance);
+    this.armies.update(this.mapCamera.distance);
     for (const terrain of this.terrains) terrain.setCameraDistance(this.mapCamera.distance);
     this.renderer.render(this.scene, this.mapCamera.camera);
     this.labels.update(this.mapCamera.camera, this.width, this.height, this.selected);
+    this.armyLabels.update(this.mapCamera.camera, this.width, this.height);
   }
 }
