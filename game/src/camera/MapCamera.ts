@@ -11,7 +11,7 @@ export interface WorldRect {
 const MIN_DISTANCE = 5;
 const MAX_DISTANCE = 125;
 /** 近づくほど低い角度から、遠ざかるほど真上に近い角度から見る */
-const PITCH_NEAR = THREE.MathUtils.degToRad(33);
+const PITCH_NEAR = THREE.MathUtils.degToRad(43);
 const PITCH_FAR = THREE.MathUtils.degToRad(60);
 
 export class MapCamera {
@@ -53,6 +53,9 @@ export class MapCamera {
       this.target.y + Math.sin(pitch) * this.distance,
       this.target.z + Math.cos(pitch) * this.distance,
     );
+    // カメラの真下の地面より必ず上にいるようにする(手前の山にめり込まないように)
+    const floor = this.heightAt(this.camera.position.x, this.camera.position.z) + 1.2;
+    if (this.camera.position.y < floor) this.camera.position.y = floor;
     this.camera.lookAt(this.target);
     this.camera.updateMatrixWorld();
   }

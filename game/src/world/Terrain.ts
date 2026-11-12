@@ -96,8 +96,8 @@ export class Terrain {
       const { x, z } = toWorld(lon, lat);
       for (const pad of this.pads) {
         const d = Math.hypot(x - pad.x, z - pad.z);
-        if (d < pad.radius * 2.4) {
-          const t = Math.max(0, Math.min(1, (d - pad.radius * 1.25) / (pad.radius * 1.15)));
+        if (d < pad.radius * 1.5) {
+          const t = Math.max(0, Math.min(1, (d - pad.radius) / (pad.radius * 0.5)));
           const w = 1 - t * t * (3 - 2 * t);
           h = h * (1 - w) + pad.height * w;
         }

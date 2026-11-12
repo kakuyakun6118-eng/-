@@ -34,6 +34,8 @@ export interface PalaceSpec {
   halls: number;
   /** 1 = 役所、2 = 宮殿(屋根が二重になる) */
   grade: 1 | 2;
+  /** 塀ではなく、角楼と門のある城壁で囲む(内城・宮城) */
+  fortified?: boolean;
 }
 
 /** 都市の「設計図」。これをもとに3Dの都市を組み立てる */
@@ -54,8 +56,18 @@ export interface CityLayout {
   wallTowers: number;
   /** 民家の密度(0〜1) */
   density: number;
-  /** 楼閣・市場などの主要施設の数 */
+  /** 坊(塀で囲まれた住宅区画)1つの大きさの目安 */
+  wardSize?: number;
+  /** 大通りの幅。省略すると城門の幅から決める */
+  avenueWidth?: number;
+  /** 街の中の楼閣の数 */
   landmarks: number;
+  /** 市場の数 */
+  markets?: number;
+  /** 役所の数 */
+  offices?: number;
+  /** 宮殿のない都市の中心に置く建物(tower = 鼓楼、hall = 庁舎) */
+  centerpiece?: "tower" | "hall";
   palaces?: PalaceSpec[];
   /** 城の角にある小さな城(金墉城・子城など) */
   citadel?: { corner: "nw" | "ne" | "sw" | "se"; size: number };

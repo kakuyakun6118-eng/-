@@ -2,35 +2,39 @@
   "1": {
     "label": "小城",
     "layout": {
-      "size": [0.9, 0.8], "wallHeight": 0.07, "wallThickness": 0.05, "gateWidth": 0.1,
+      "size": [0.9, 0.8], "wallHeight": 0.08, "wallThickness": 0.06, "gateWidth": 0.1,
       "gates": { "n": 1, "s": 1, "e": 0, "w": 0 }, "gateStoreys": 1,
-      "cornerTowers": false, "wallTowers": 0, "density": 0.35, "landmarks": 0
+      "cornerTowers": false, "wallTowers": 0, "density": 0.6, "wardSize": 0.34,
+      "landmarks": 0, "markets": 0, "offices": 0, "centerpiece": "hall"
     }
   },
   "2": {
     "label": "郡城",
     "layout": {
-      "size": [1.3, 1.1], "wallHeight": 0.09, "wallThickness": 0.06, "gateWidth": 0.12,
+      "size": [1.35, 1.15], "wallHeight": 0.1, "wallThickness": 0.075, "gateWidth": 0.12,
       "gates": { "n": 1, "s": 1, "e": 1, "w": 1 }, "gateStoreys": 1,
-      "cornerTowers": true, "wallTowers": 1, "density": 0.5, "landmarks": 1
+      "cornerTowers": true, "wallTowers": 1, "density": 0.7, "wardSize": 0.36,
+      "landmarks": 1, "markets": 1, "offices": 1, "centerpiece": "tower"
     }
   },
   "3": {
     "label": "州都",
     "layout": {
-      "size": [1.8, 1.5], "wallHeight": 0.11, "wallThickness": 0.07, "gateWidth": 0.14,
+      "size": [1.9, 1.6], "wallHeight": 0.13, "wallThickness": 0.095, "gateWidth": 0.14,
       "gates": { "n": 1, "s": 2, "e": 1, "w": 1 }, "gateStoreys": 2,
-      "cornerTowers": true, "wallTowers": 2, "density": 0.6, "landmarks": 3,
-      "palaces": [{ "center": [0, -0.12], "size": [0.26, 0.3], "halls": 2, "grade": 1 }]
+      "cornerTowers": true, "wallTowers": 2, "density": 0.75, "wardSize": 0.38,
+      "landmarks": 2, "markets": 1, "offices": 1,
+      "palaces": [{ "center": [0, -0.1], "size": [0.3, 0.34], "halls": 2, "grade": 1, "fortified": true }]
     }
   },
   "4": {
     "label": "王都",
     "layout": {
-      "size": [2.6, 2.4], "wallHeight": 0.13, "wallThickness": 0.09, "gateWidth": 0.17,
+      "size": [2.8, 2.6], "wallHeight": 0.16, "wallThickness": 0.12, "gateWidth": 0.18,
       "gates": { "n": 3, "s": 3, "e": 3, "w": 3 }, "gateStoreys": 2, "grandGate": true,
-      "cornerTowers": true, "wallTowers": 3, "density": 0.65, "landmarks": 5, "suburbs": 60,
-      "palaces": [{ "center": [0, -0.12], "size": [0.34, 0.42], "halls": 4, "grade": 2 }]
+      "cornerTowers": true, "wallTowers": 3, "density": 0.8, "wardSize": 0.4,
+      "landmarks": 4, "markets": 2, "offices": 2, "suburbs": 70,
+      "palaces": [{ "center": [0, -0.08], "size": [0.36, 0.42], "halls": 4, "grade": 2, "fortified": true }]
     }
   }
 }

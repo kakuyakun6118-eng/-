@@ -14,7 +14,8 @@ export class InfoPanel {
   private readonly population: HTMLElement;
   private readonly defense: HTMLElement;
 
-  constructor(private readonly root: HTMLElement, onClose: () => void) {
+  /** onZoom は「広域・中距離・近距離」ボタンが押されたとき、その距離を受け取る */
+  constructor(private readonly root: HTMLElement, onClose: () => void, onZoom: (distance: number) => void) {
     const q = (sel: string) => root.querySelector(sel) as HTMLElement;
     this.name = q(".info-name");
     this.reading = q(".info-reading");
@@ -27,6 +28,9 @@ export class InfoPanel {
     this.population = q(".info-population");
     this.defense = q(".info-defense");
     q(".info-close").addEventListener("click", onClose);
+    root.querySelectorAll<HTMLButtonElement>(".info-zoom button").forEach((b) => {
+      b.addEventListener("click", () => onZoom(Number(b.dataset.distance)));
+    });
   }
 
   show(city: City, faction: Faction | undefined): void {

@@ -12,6 +12,8 @@ import { toLonLat, toWorld } from "./geo";
 
 /** 指で押しやすいように、都市の周りこの距離(ピクセル)までをタップ範囲にする */
 const PICK_RADIUS = 34;
+/** 選んだ都市へカメラを寄せるのにかける時間(ミリ秒) */
+const GLIDE_MS = 600;
 
 export class Game {
   private readonly renderer: THREE.WebGLRenderer;
@@ -25,6 +27,10 @@ export class Game {
   private height = 1;
   /** 画面を描き直す必要があるか。動きがないときは描かず、電池を節約する */
   private dirty = true;
+  /** 選んだ都市へカメラを寄せている途中の情報 */
+  private glide: {
+    fromX: number; fromZ: number; fromD: number; toX: number; toZ: number; toD: number; start: number;
+  } | null = null;
 
   /** 地形ファイルを読み込んでからゲームを始める */
   static async create(root: HTMLElement): Promise<Game> {
@@ -34,7 +40,7 @@ export class Game {
         const pads: TerrainPad[] = [];
         for (const city of region.cities) {
           const layout = resolveCityLayout(city);
-          if (layout) pads.push({ lon: city.lon, lat: city.lat, radius: Math.hypot(...layout.size) / 2 + 0.3 });
+          if (layout) pads.push({ lon: city.lon, lat: city.lat, radius: Math.hypot(...layout.size) / 2 + 0.25 });
         }
         return Terrain.create(region, pads);
       }),
@@ -88,14 +94,16 @@ export class Game {
     this.mapCamera.update();
 
     this.labels = new CityLabels(root.querySelector("#labels") as HTMLElement, this.cities.markers);
-    this.panel = new InfoPanel(root.querySelector("#info") as HTMLElement, () => this.select(null));
+    this.panel = new InfoPanel(root.querySelector("#info") as HTMLElement, () => this.select(null), (d) => this.glideToSelected(d));
 
     new InputController(canvas, {
       onPan: (fx, fy, tx, ty) => {
+        this.glide = null; // 手で動かしたら、自動の移動はやめる
         this.mapCamera.pan(this.toNdc(fx, fy), this.toNdc(tx, ty));
         this.dirty = true;
       },
       onZoom: (factor, x, y) => {
+        this.glide = null;
         this.mapCamera.zoom(factor, this.toNdc(x, y));
         this.dirty = true;
       },
@@ -109,6 +117,7 @@ export class Game {
 
   /** カメラを指定した場所へ向ける(都市へのジャンプなどに使う) */
   focus(lon: number, lat: number, distance: number): void {
+    this.glide = null;
     const p = toWorld(lon, lat);
     this.mapCamera.target.set(p.x, 0, p.z);
     this.mapCamera.distance = distance;
@@ -164,9 +173,26 @@ export class Game {
   private select(marker: CityMarker | null): void {
     this.selected = marker;
     this.cities.select(marker);
+    // 選んだ都市が画面の中ほど(情報パネルに隠れない位置)に来るよう、カメラを静かに寄せる
+    if (marker) this.glideToSelected(this.mapCamera.distance);
     if (marker) this.panel.show(marker.city, marker.faction);
     else this.panel.hide();
     this.dirty = true;
+  }
+
+  /** 選択中の都市へ、指定した距離までカメラを静かに動かす */
+  private glideToSelected(distance: number): void {
+    if (!this.selected) return;
+    const p = this.selected.group.position;
+    this.glide = {
+      fromX: this.mapCamera.target.x,
+      fromZ: this.mapCamera.target.z,
+      fromD: this.mapCamera.distance,
+      toX: p.x,
+      toZ: p.z + distance * 0.07,
+      toD: distance,
+      start: performance.now(),
+    };
   }
 
   private resize(): void {
@@ -178,6 +204,17 @@ export class Game {
   }
 
   private frame(): void {
+    if (this.glide) {
+      const t = Math.min(1, (performance.now() - this.glide.start) / GLIDE_MS);
+      const k = 1 - Math.pow(1 - t, 3); // 最初は速く、終わりはゆっくり
+      this.mapCamera.target.x = this.glide.fromX + (this.glide.toX - this.glide.fromX) * k;
+      this.mapCamera.target.z = this.glide.fromZ + (this.glide.toZ - this.glide.fromZ) * k;
+      // 距離は掛け算でなめらかに変える(拡大縮小の速さが一定に感じられる)
+      this.mapCamera.distance = this.glide.fromD * Math.pow(this.glide.toD / this.glide.fromD, k);
+      this.mapCamera.update();
+      this.dirty = true;
+      if (t >= 1) this.glide = null;
+    }
     if (!this.dirty) return;
     this.dirty = false;
     this.cities.update(this.mapCamera.distance);

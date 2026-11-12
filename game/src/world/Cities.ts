@@ -101,7 +101,7 @@ export class Cities {
   /** いまの拡大率(カメラが遠いほど大きくして、見失わないようにする) */
   scaleOf(marker: CityMarker, cameraDistance: number): number {
     return marker.model
-      ? Math.max(1, Math.min(2.4, cameraDistance / 50))
+      ? Math.max(1, Math.min(1.9, cameraDistance / 32))
       : Math.max(0.3, Math.min(2.6, cameraDistance / 55));
   }
 
@@ -113,16 +113,21 @@ export class Cities {
       m.labelAnchor.y = m.group.position.y + (m.height + (m.model ? 0.12 : 0)) * s;
       m.model?.setCameraDistance(cameraDistance);
     }
-    if (this.selected) {
+    if (this.selected && !this.selected.model) {
       this.ring.scale.setScalar(this.selected.radius * this.scaleOf(this.selected, cameraDistance));
     }
   }
 
-  /** 選択中の都市に輪を表示する(null で消す) */
+  /**
+   * 都市を選択する(null で解除)。
+   * 3D都市は、城壁に沿った淡い光と城門の幟で示す。従来の目印の都市は輪で示す。
+   */
   select(marker: CityMarker | null): void {
+    this.selected?.model?.setSelected(false);
     this.selected = marker;
-    this.ring.visible = marker !== null;
-    if (marker) {
+    marker?.model?.setSelected(true);
+    this.ring.visible = marker !== null && !marker.model;
+    if (marker && !marker.model) {
       this.ring.position.copy(marker.group.position);
       this.ring.position.y += 0.03;
     }
