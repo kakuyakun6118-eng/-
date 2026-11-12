@@ -123,6 +123,70 @@
           </div>
         </div>
       </section>
+      <section id="battle-hud" hidden>
+        <header class="hud-top">
+          <div class="hud-strength attacker">
+            <span class="hud-side-name attacker"></span>
+            <span class="hud-men attacker"></span>
+            <span class="hud-strength-bar"><i></i></span>
+          </div>
+          <div class="hud-center">
+            <span class="hud-name"></span>
+            <span class="hud-time"></span>
+            <button class="hud-pause" type="button"></button>
+            <button class="hud-speed" type="button"></button>
+          </div>
+          <div class="hud-strength defender">
+            <span class="hud-side-name defender"></span>
+            <span class="hud-men defender"></span>
+            <span class="hud-strength-bar"><i></i></span>
+          </div>
+        </header>
+        <div class="hud-list attacker" aria-label="自軍の部隊"></div>
+        <div class="hud-list defender" aria-label="敵軍の部隊"></div>
+        <footer class="hud-bottom">
+          <p class="hud-tip">自軍の部隊をタップして選び、地面をタップで移動、敵をタップで攻撃</p>
+          <div class="hud-unit" hidden>
+            <div class="hud-unit-info">
+              <strong class="hud-unit-name"></strong>
+              <span class="hud-unit-class"></span>
+              <span class="hud-unit-state"></span>
+              <span class="hud-unit-commander"></span>
+            </div>
+            <dl class="hud-unit-stats">
+              <div><dt>兵力</dt><dd class="hud-unit-men"></dd></div>
+              <div><dt>士気</dt><dd class="hud-meter hud-unit-morale"><span><i></i></span><b></b></dd></div>
+              <div><dt>疲労</dt><dd class="hud-meter hud-unit-fatigue"><span><i></i></span><b></b></dd></div>
+            </dl>
+            <div class="hud-orders">
+              <button class="hud-order hud-hold" type="button">待機</button>
+              <button class="hud-order hud-pursue" type="button" aria-pressed="false">追撃</button>
+              <button class="hud-order hud-retreat" type="button">撤退</button>
+            </div>
+          </div>
+          <div class="hud-tools">
+            <button class="hud-rotate-left" type="button" aria-label="左に回す">⟲</button>
+            <button class="hud-rotate-right" type="button" aria-label="右に回す">⟳</button>
+            <button class="hud-overview" type="button">全景</button>
+            <button class="hud-follow" type="button" aria-pressed="false">追従</button>
+            <button class="hud-advance-all" type="button">全軍前進</button>
+            <button class="hud-retreat-all" type="button">全軍撤退</button>
+          </div>
+        </footer>
+        <div class="hud-confirm" hidden>
+          <p>全軍を撤退させますか? 背を向けて退くので、追撃で損害が出ます。</p>
+          <button class="hud-confirm-yes" type="button">撤退する</button>
+          <button class="hud-confirm-no" type="button">戦いを続ける</button>
+        </div>
+        <div class="hud-result" hidden>
+          <div class="hud-result-inner">
+            <h2 class="hud-result-title"></h2>
+            <p class="hud-result-summary"></p>
+            <div class="hud-result-table"></div>
+            <button class="hud-leave" type="button">戦略マップへ戻る</button>
+          </div>
+        </div>
+      </section>
       <section id="credits" hidden>
         <div class="credits-inner">
           <h2>データの出典</h2>

@@ -8,6 +8,8 @@ export interface InputHandlers {
   onZoom(factor: number, x: number, y: number): void;
   /** (x, y) をタップ(クリック)した */
   onTap(x: number, y: number): void;
+  /** 2本の指をひねった(ラジアン。時計回りが正)。回転に対応する画面だけが受け取る */
+  onRotate?(angle: number): void;
 }
 
 /** これ以上動いたら「タップ」ではなく「ドラッグ」とみなす距離(ピクセル) */
@@ -75,6 +77,12 @@ export class InputController {
       this.handlers.onPan(prevMid.x, prevMid.y, curMid.x, curMid.y);
       if (prevDist > 0 && curDist > 0) {
         this.handlers.onZoom(prevDist / curDist, curMid.x, curMid.y);
+      }
+      if (this.handlers.onRotate) {
+        let turn = Math.atan2(cur.y - other.y, cur.x - other.x) - Math.atan2(prev.y - other.y, prev.x - other.x);
+        if (turn > Math.PI) turn -= Math.PI * 2;
+        if (turn < -Math.PI) turn += Math.PI * 2;
+        if (Math.abs(turn) < 0.5) this.handlers.onRotate(turn);
       }
       this.pointers.set(e.pointerId, cur);
     }

@@ -132,10 +132,12 @@ export interface Officer {
   name: string;
   reading: string;
   factionId: string;
-  /** 統率(0〜100) */
+  /** 統率(0〜100)。部隊の士気と戦闘能力に効く */
   leadership: number;
-  /** 武勇(0〜100) */
+  /** 武勇(0〜100)。本人と本陣の戦闘能力に効く */
   valor: number;
+  /** 知略(0〜100)。側面を突かれたときの粘りや、射撃の精度などの戦術補正に効く */
+  intelligence: number;
 }
 
 /** 軍団。地図の上を動き、会戦の結果もここに書き戻す */
@@ -207,6 +209,18 @@ export interface BattleEvent {
   status: BattleStatus;
   /** 発生した日(ゲーム開始からの日数と、画面に出す日付) */
   createdAt: { day: number; text: string };
+  /** 決着したあとの記録(勝敗と損害) */
+  record?: BattleRecord;
+}
+
+/** 戦闘の記録。イベントに残して、あとから戦歴として見られるようにする */
+export interface BattleRecord {
+  winner: "attacker" | "defender" | "draw";
+  /** 決着の理由:全滅 / 主力の敗走 / 撤退 / 時間切れ */
+  reason: "annihilated" | "routed" | "retreated" | "timeout";
+  durationSeconds: number;
+  attackerLosses: number;
+  defenderLosses: number;
 }
 
 /** 都市の守り(攻城戦の防御側の情報) */

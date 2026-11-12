@@ -70,6 +70,14 @@ export class Armies {
     return this.markers.find((m) => m.state.army.id === armyId);
   }
 
+  /** 壊滅した軍団を、地図から取り除く */
+  remove(marker: ArmyMarker): void {
+    if (this.selected === marker) this.select(null);
+    this.group.remove(marker.group);
+    marker.model.dispose();
+    this.markers.splice(this.markers.indexOf(marker), 1);
+  }
+
   /** いまの状態に合った姿(陣形か野営)に作り直す */
   rebuild(marker: ArmyMarker): void {
     const army = marker.state.army;

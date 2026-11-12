@@ -2,7 +2,9 @@
 import * as THREE from "three";
 import { MapCamera, type WorldRect } from "../camera/MapCamera";
 import { armies as armyData, factionById, factionOfCity, officerById, regions, resolveCityLayout, scenario } from "../data";
-import type { BattleEvent, BattleSetup, City } from "../data/types";
+import { BattleScreen } from "../battle/BattleScreen";
+import type { BattleResult } from "../battle/types";
+import type { BattleEvent, BattleSetup, City, TerrainKind } from "../data/types";
 import { InputController } from "../input/InputController";
 import { compareSides, createBattleSetup, placeName } from "../sim/battle";
 import { Campaign, type ArmyState } from "../sim/Campaign";
@@ -61,6 +63,8 @@ export class Game {
    * (動作確認のために外からも見られるようにしてある)
    */
   battleSetup: BattleSetup | null = null;
+  /** 進行中の3D会戦(戦略マップを表示しているときは null) */
+  battle: BattleScreen | null = null;
   private selected: CityMarker | null = null;
   private selectedArmy: ArmyMarker | null = null;
   /** 軍団パネルの段階(通常 / 移動先を選んでいる / 経路を確認している) */
@@ -99,6 +103,8 @@ export class Game {
     const canvas = root.querySelector("#map") as HTMLCanvasElement;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // 影は会戦の戦場でだけ使う(戦略マップには影を落とす光がないので、負荷は増えない)
+    this.renderer.shadowMap.enabled = true;
     this.scene.background = HAZE_COLOR;
 
     // 都市の建物や兵士用の光(地形の陰影は world/terrainMaterial.ts が自分で計算する)
@@ -163,6 +169,14 @@ export class Game {
       onArmyChanged: (state, statusChanged) => this.onArmyChanged(state, statusChanged),
       onBattleEvent: (event) => this.showBattleEvent(event),
       onDayChanged: () => this.onDayChanged(),
+      onArmyRemoved: (state) => {
+        const marker = this.armies.markerOf(state.army.id);
+        if (!marker) return;
+        if (marker === this.selectedArmy) this.clearSelection();
+        this.armyLabels.remove(marker);
+        this.armies.remove(marker);
+        this.dirty = true;
+      },
     });
     for (const state of this.campaign.armies) {
       const marker = this.armies.add(state, factionById(state.army.factionId), officerById(state.army.commanderId));
@@ -225,16 +239,19 @@ export class Game {
 
     new InputController(canvas, {
       onPan: (fx, fy, tx, ty) => {
+        if (this.battle) return this.battle.onPan(fx, fy, tx, ty);
         this.glide = null; // 手で動かしたら、自動の移動はやめる
         this.mapCamera.pan(this.toNdc(fx, fy), this.toNdc(tx, ty));
         this.dirty = true;
       },
       onZoom: (factor, x, y) => {
+        if (this.battle) return this.battle.onZoom(factor, x, y);
         this.glide = null;
         this.mapCamera.zoom(factor, this.toNdc(x, y));
         this.dirty = true;
       },
-      onTap: (x, y) => this.onTap(x, y),
+      onTap: (x, y) => (this.battle ? this.battle.onTap(x, y) : this.onTap(x, y)),
+      onRotate: (angle) => this.battle?.onRotate(angle),
     });
 
     new ResizeObserver(() => this.resize()).observe(root);
@@ -355,6 +372,7 @@ export class Game {
   private onArmyChanged(state: ArmyState, statusChanged: boolean): void {
     const marker = this.armies.markerOf(state.army.id);
     if (!marker) return; // 最初の準備中は、まだ表示が作られていない
+    marker.commander = officerById(state.army.commanderId); // 会戦で指揮官を失うことがある
     this.armies.sync(marker);
     this.armyLabels.refresh(marker, marker === this.selectedArmy);
     if (marker === this.selectedArmy) {
@@ -377,6 +395,7 @@ export class Game {
     const setup = createBattleSetup(event, (id) => this.campaign.stateOf(id)?.army, this.allCities);
     if (!setup) return;
     this.noticeBattleId = event.battleId;
+    (this.root.querySelector("#event-open") as HTMLElement).hidden = false;
     const kind = event.battleType === "field_battle" ? "野戦" : "攻城戦";
     (this.root.querySelector("#event-text") as HTMLElement).textContent =
       `${kind}:${setup.name}。${setup.attacker.name}が${setup.defender.name}と対峙しました。時間を止めています`;
@@ -427,8 +446,8 @@ export class Game {
   }
 
   /**
-   * 「戦闘開始」。次段階の3D戦闘へ渡す会戦の設定を確定する。
-   * 3D戦闘はまだ無いので、引き継ぐ内容を表示するところまで行う。
+   * 「戦闘開始」。会戦の設定を確定し、野戦なら3D戦場へ移る。
+   * 攻城戦の3D戦闘はまだ無いので、引き継ぐ内容を表示するところまで行う。
    */
   private startBattle(): void {
     const event = this.openBattleId ? this.campaign.eventOf(this.openBattleId) : undefined;
@@ -437,7 +456,52 @@ export class Game {
     if (!setup) return;
     this.campaign.setEventStatus(event.battleId, "in_progress");
     this.battleSetup = setup;
-    this.battlePrep.showHandOff(setup);
+    if (setup.battleType !== "field_battle") {
+      this.battlePrep.showHandOff(setup);
+      return;
+    }
+
+    // 戦場のまわり8方向の地形を調べる(正面 = 攻撃側から見た防御側の方角から、時計回り)。
+    // 遠景の山並みに反映して、戦略マップの地形とつじつまを合わせる
+    const a = this.campaign.stateOf(event.attackerArmyId)?.army;
+    const d = event.defenderArmyId ? this.campaign.stateOf(event.defenderArmyId)?.army : undefined;
+    const bearing = a && d ? Math.atan2((d.lon - a.lon) * Math.cos((a.lat * Math.PI) / 180), d.lat - a.lat) : 0;
+    const surroundings: TerrainKind[] = [];
+    for (let k = 0; k < 8; k++) {
+      const angle = bearing + (k * Math.PI) / 4;
+      surroundings.push(this.grid.kindAt(setup.location.lon + Math.sin(angle) * 0.5, setup.location.lat + Math.cos(angle) * 0.5));
+    }
+
+    this.battlePrep.hide();
+    this.root.classList.remove("battle-open");
+    this.root.classList.add("in-battle");
+    // プレイヤーは、自分が動かした軍団(攻撃側)を指揮する
+    this.battle = new BattleScreen(
+      this.renderer, this.root.querySelector("#battle-hud") as HTMLElement, setup, surroundings, "attacker",
+      (result) => this.finishBattle(result),
+    );
+    this.battle.resize(this.width, this.height);
+  }
+
+  /** 会戦を終えて戦略マップに戻る。結果を軍団へ書き戻し、イベントを決着済みにする */
+  private finishBattle(result: BattleResult): void {
+    const setup = this.battleSetup;
+    this.battle?.dispose();
+    this.battle = null;
+    this.root.classList.remove("in-battle");
+    this.openBattleId = null;
+    this.battleSetup = null;
+    this.campaign.applyBattleResult(result);
+    // 結果を知らせに出す
+    if (setup) {
+      const winner = result.winner === "draw" ? "引き分け" : `${(result.winner === "attacker" ? setup.attacker : setup.defender).name}の勝利`;
+      this.noticeBattleId = null;
+      (this.root.querySelector("#event-open") as HTMLElement).hidden = true;
+      (this.root.querySelector("#event-text") as HTMLElement).textContent =
+        `${setup.name}:${winner}。損害は ${setup.attacker.name} ${result.attackerLosses.toLocaleString("ja-JP")}人、${setup.defender.name} ${result.defenderLosses.toLocaleString("ja-JP")}人`;
+      (this.root.querySelector("#event") as HTMLElement).hidden = false;
+    }
+    this.dirty = true;
   }
 
   /** タップした画面上の点が、地形のどこ(緯度経度)にあたるかを調べる */
@@ -582,14 +646,22 @@ export class Game {
     this.height = Math.max(1, this.root.clientHeight);
     this.renderer.setSize(this.width, this.height, false);
     this.mapCamera.setViewport(this.width, this.height);
+    this.battle?.resize(this.width, this.height);
     this.dirty = true;
   }
 
   private frame(): void {
-    // ゲームの時間を進める
     const now = performance.now();
-    this.campaign.update((now - this.lastFrame) / 1000);
+    const dt = (now - this.lastFrame) / 1000;
     this.lastFrame = now;
+    // 会戦中は戦場だけを動かして描く。戦略マップの時間は止まっている
+    if (this.battle) {
+      this.battle.update(dt);
+      this.battle.render();
+      return;
+    }
+    // ゲームの時間を進める
+    this.campaign.update(dt);
 
     if (this.glide) {
       const t = Math.min(1, (performance.now() - this.glide.start) / GLIDE_MS);

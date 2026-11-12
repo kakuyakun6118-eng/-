@@ -43,6 +43,14 @@ export class ArmyLabels {
     this.refresh(marker);
   }
 
+  /** 壊滅した軍団のラベルを消す */
+  remove(marker: ArmyMarker): void {
+    const i = this.items.findIndex((k) => k.marker === marker);
+    if (i < 0) return;
+    this.items[i].el.remove();
+    this.items.splice(i, 1);
+  }
+
   /** 兵力や状態が変わったときに、文字を書き直す */
   refresh(marker: ArmyMarker, selected = false): void {
     const item = this.items.find((i) => i.marker === marker);

@@ -1195,3 +1195,454 @@ body {
     align-self: stretch;
   }
 }
+
+/* ===== 3D会戦の画面表示 =====
+   配置:上に戦況、左右の端に両軍の部隊一覧、下に選択中の部隊と命令。中央は戦場を広く見せる */
+#app.in-battle .title,
+#app.in-battle #clock,
+#app.in-battle #credits-open,
+#app.in-battle #territory-toggle,
+#app.in-battle #hint,
+#app.in-battle #labels,
+#app.in-battle #event,
+#app.in-battle #army,
+#app.in-battle #info {
+  display: none;
+}
+
+#battle-hud {
+  --att: #9a9a9a;
+  --def: #9a9a9a;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  font-size: 12px;
+}
+
+#battle-hud > * {
+  pointer-events: auto;
+}
+
+#battle-hud button {
+  min-height: 40px;
+  padding: 2px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+#battle-hud button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+#battle-hud button[aria-pressed="true"] {
+  border-color: var(--bronze);
+  color: var(--bronze);
+}
+
+#battle-hud button:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+}
+
+/* 上部:両軍の残存兵力と、戦闘名・経過時間・停止・速度 */
+.hud-top {
+  position: absolute;
+  top: calc(6px + env(safe-area-inset-top, 0px));
+  left: max(16px, env(safe-area-inset-left, 0px));
+  right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+}
+
+.hud-strength {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1px 8px;
+  align-items: baseline;
+}
+
+.hud-strength.defender {
+  grid-template-columns: auto minmax(0, 1fr);
+  text-align: right;
+}
+
+.hud-strength.defender .hud-side-name {
+  order: 2;
+}
+
+.hud-side-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.hud-men {
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-strength-bar {
+  grid-column: 1 / -1;
+  order: 3;
+  display: flex;
+  height: 6px;
+  border-radius: 2px;
+  background: var(--track);
+  overflow: hidden;
+}
+
+.hud-strength.attacker i {
+  background: var(--att);
+}
+
+.hud-strength.defender .hud-strength-bar {
+  justify-content: flex-end;
+}
+
+.hud-strength.defender i {
+  background: var(--def);
+}
+
+.hud-center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hud-name {
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: var(--bronze);
+}
+
+.hud-time {
+  min-width: 38px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+#battle-hud .hud-center button {
+  min-height: 32px;
+  font-size: 12px;
+}
+
+/* 左右の部隊一覧 */
+.hud-list {
+  position: absolute;
+  top: calc(64px + env(safe-area-inset-top, 0px));
+  bottom: calc(112px + env(safe-area-inset-bottom, 0px));
+  width: 78px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow-y: auto;
+}
+
+.hud-list.attacker {
+  left: max(16px, env(safe-area-inset-left, 0px));
+}
+
+.hud-list.defender {
+  right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+#battle-hud .hud-chip {
+  flex: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0 4px;
+  min-height: 34px;
+  padding: 2px 6px 4px;
+  border-left: 4px solid var(--att);
+  text-align: left;
+  font-size: 10px;
+}
+
+.hud-list.defender .hud-chip {
+  border-left-color: var(--def);
+  opacity: 1;
+}
+
+.hud-chip-men {
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-chip-bar {
+  grid-column: 1 / -1;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--track);
+  overflow: hidden;
+}
+
+.hud-chip-bar i {
+  display: block;
+  height: 100%;
+  background: var(--good);
+}
+
+.hud-chip.selected {
+  outline: 2px solid var(--bronze);
+  outline-offset: -2px;
+}
+
+.hud-chip[data-state="routing"] .hud-chip-name,
+.hud-chip[data-state="gone"] .hud-chip-name {
+  color: var(--bad);
+  text-decoration: line-through;
+}
+
+.hud-chip[data-state="melee"] .hud-chip-men {
+  color: var(--warn);
+}
+
+/* 下部:選択中の部隊と命令、カメラと全軍への指示 */
+.hud-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding-top: 6px;
+  padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+}
+
+.hud-tip {
+  flex: 1 1 200px;
+  margin: 0;
+  color: var(--muted);
+}
+
+.hud-unit {
+  flex: 1 1 320px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.hud-unit-info {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  color: var(--muted);
+}
+
+.hud-unit-name {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--text);
+}
+
+.hud-unit-state {
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  color: var(--bronze);
+}
+
+.hud-unit-state[data-state="melee"],
+.hud-unit-state[data-state="routing"] {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+
+.hud-unit-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  margin: 0;
+}
+
+.hud-unit-stats div {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.hud-unit-stats dt {
+  font-size: 10px;
+  color: var(--bronze);
+}
+
+.hud-unit-stats dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-meter {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.hud-meter span {
+  width: 46px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--track);
+  overflow: hidden;
+}
+
+.hud-meter i {
+  display: block;
+  height: 100%;
+  background: var(--good);
+}
+
+.hud-unit-fatigue i {
+  background: var(--warn);
+}
+
+.hud-orders,
+.hud-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+#battle-hud .hud-order {
+  min-width: 60px;
+  font-weight: 600;
+}
+
+#battle-hud .hud-retreat-all {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+
+/* 確認と結果 */
+.hud-confirm {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(420px, calc(100% - 32px));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--bad);
+  border-radius: 6px;
+  background: var(--panel);
+}
+
+.hud-confirm p {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.hud-result {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-block: 12px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: var(--shade);
+}
+
+.hud-result-inner {
+  width: min(520px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 18px;
+  border: 1px solid var(--bronze);
+  border-radius: 6px;
+  background: var(--panel);
+}
+
+.hud-result-title {
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 28px;
+  letter-spacing: 0.4em;
+  color: var(--bronze);
+}
+
+.hud-result-title[data-outcome="lose"] {
+  color: var(--bad);
+}
+
+.hud-result-summary {
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.hud-result-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px minmax(0, 1fr);
+  gap: 8px;
+  padding: 2px 0;
+  border-bottom: 1px solid var(--track);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-result-row .attacker {
+  text-align: right;
+}
+
+.hud-result-row .label {
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--bronze);
+}
+
+.hud-result-row:first-child {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+#battle-hud .hud-leave {
+  align-self: center;
+  min-height: 44px;
+  padding: 4px 24px;
+  border-color: var(--bronze);
+  background: var(--bronze);
+  color: var(--ink);
+  font-weight: 700;
+}

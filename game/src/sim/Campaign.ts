@@ -2,6 +2,7 @@
 // ここは計算だけで、3D表示のことは知らない。変化があったら、登録された関数で知らせる。
 import { resolveCityLayout, scenario, totalTroops } from "../data";
 import { placeName } from "./battle";
+import type { BattleResult, CommanderFate, SideResult } from "../battle/types";
 import type { Army, ArmyStatus, BattleEvent, City, UnitTypeId } from "../data/types";
 import { distanceKm, findRoute, type Route, type RoutePoint } from "./pathfinding";
 import type { TerrainGrid } from "./TerrainGrid";
@@ -33,6 +34,8 @@ export interface ArmyState {
   ignore: Set<string>;
   /** 攻めようとしている敵の都市(目的地がその都市のそばのときだけ入る) */
   targetCityId: string | null;
+  /** 直近の会戦での指揮官の状態(負傷・捕虜・戦死) */
+  commanderFate?: CommanderFate;
 }
 
 export interface CampaignListener {
@@ -44,6 +47,8 @@ export interface CampaignListener {
   onBattleEvent(event: BattleEvent): void;
   /** 日付が変わった */
   onDayChanged(day: number): void;
+  /** 軍団が壊滅して、地図から消えた */
+  onArmyRemoved(state: ArmyState): void;
 }
 
 export class Campaign {
@@ -325,6 +330,58 @@ export class Campaign {
     }
     this.speed = 0;
     this.listener.onBattleEvent(event);
+  }
+
+  /**
+   * 会戦の結果を、戦略マップの軍団へ書き戻す。会戦側のデータを反映する入口は、ここだけにする。
+   * 兵力・士気・疲労・食糧・指揮官の状態を更新し、イベントを決着済みにして記録を残す。
+   * 壊滅した軍団は地図から消え、敗れた軍団は勝者から離れる方向へ後退する。
+   */
+  applyBattleResult(result: BattleResult): void {
+    const event = this.eventOf(result.battleId);
+    if (!event || event.status === "completed") return;
+    event.status = "completed";
+    event.record = {
+      winner: result.winner,
+      reason: result.reason,
+      durationSeconds: result.durationSeconds,
+      attackerLosses: result.attackerLosses,
+      defenderLosses: result.defenderLosses,
+    };
+
+    const apply = (armyId: string | null, r: SideResult): ArmyState | null => {
+      const s = armyId ? this.stateOf(armyId) : undefined;
+      if (!s) return null;
+      const a = s.army;
+      a.troops = { ...r.after };
+      a.morale = r.morale;
+      a.fatigue = r.fatigue;
+      a.food = Math.max(0, a.food - 1);
+      s.commanderFate = r.commander;
+      if (r.commander === "killed" || r.commander === "captured") a.commanderId = ""; // 指揮官を失った
+      s.route = null;
+      if (r.outcome === "annihilated" || totalTroops(a) <= 0) {
+        this.armies.splice(this.armies.indexOf(s), 1);
+        this.listener.onArmyRemoved(s);
+        return null;
+      }
+      s.status = "fighting"; // いったん状態を確定させてから、野営に切り替える
+      this.setStatus(s, "camping");
+      return s;
+    };
+    const attacker = apply(event.attackerArmyId, result.sides.attacker);
+    const defender = apply(event.defenderArmyId, result.sides.defender);
+
+    // 敗れた軍団は、勝者から離れる方向へ後退する
+    const loser = result.winner === "attacker" ? defender : result.winner === "defender" ? attacker : null;
+    const winner = result.winner === "attacker" ? attacker : result.winner === "defender" ? defender : null;
+    if (loser && winner) {
+      const dx = loser.army.lon - winner.army.lon;
+      const dy = loser.army.lat - winner.army.lat;
+      const len = Math.hypot(dx, dy) || 1;
+      const route = this.planRoute(loser.army.id, { lon: loser.army.lon + (dx / len) * 0.9, lat: loser.army.lat + (dy / len) * 0.9 });
+      if (route) this.orderMove(loser.army.id, route);
+    }
   }
 
   /** 1日ごとの消耗と回復 */
