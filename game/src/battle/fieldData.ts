@@ -77,6 +77,8 @@ export interface FieldInfo {
   /** 景色の範囲の標高(メートル) */
   minMeters: number;
   maxMeters: number;
+  /** 景色の範囲の平均の標高(メートル)。地域の景観を選ぶのに使う */
+  meanMeters: number;
 }
 
 export class FieldMap {
@@ -117,7 +119,7 @@ export class FieldMap {
     const meters = new Float32Array(N * N);
     if (site) {
       await field.readSite(site, meters);
-      field.info = { source: "aw3d30", label: "実標高 AW3D30(約30m)", minMeters: 0, maxMeters: 0 };
+      field.info = { source: "aw3d30", label: "実標高 AW3D30(約30m)", minMeters: 0, maxMeters: 0, meanMeters: 0 };
     } else {
       for (let j = 0; j < N; j++) {
         for (let i = 0; i < N; i++) {
@@ -126,7 +128,7 @@ export class FieldMap {
           field.cover[j * N + i] = coarse.isWater(p.lon, p.lat) ? COVER.water : COVER.grass;
         }
       }
-      field.info = { source: "coarse", label: "実標高(低解像度 約1.4km)・この地点の30mデータは未収録", minMeters: 0, maxMeters: 0 };
+      field.info = { source: "coarse", label: "実標高(低解像度 約1.4km)・この地点の30mデータは未収録", minMeters: 0, maxMeters: 0, meanMeters: 0 };
     }
     field.finish(meters, site !== null);
     return field;
@@ -193,6 +195,7 @@ export class FieldMap {
       hi = Math.max(hi, meters[n]);
       this.heights[n] = (meters[n] - this.baseMeters) * k;
     }
+    this.info.meanMeters = Math.round(meters.reduce((sum, v) => sum + v, 0) / meters.length);
     this.info.minMeters = Math.round(lo);
     this.info.maxMeters = Math.round(hi);
 
@@ -223,6 +226,10 @@ export class FieldMap {
     const j = Math.max(0, Math.min(N - 1, Math.round((z + VIEW_HALF) / CELL)));
     return j * N + i;
   }
+
+  /** 地形データの格子の、1辺の点の数と間隔(描画用の絵を作るのに使う) */
+  static readonly GRID = N;
+  static readonly CELL = CELL;
 
   /** 地面の高さ(戦場の長さ) */
   heightAt(x: number, z: number): number {

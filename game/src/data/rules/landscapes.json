@@ -1,0 +1,29 @@
+[
+  {
+    "id": "loess",
+    "name": "黄土地帯",
+    "basis": "ゲーム上の設定。黄土高原から黄河中流にかけての、黄色い土と乾いた草地を表す。4世紀の植生を示す直接の資料に基づくものではない。",
+    "match": { "west": 103, "east": 113.2, "south": 34, "north": 40.5 },
+    "grassA": "#8f9a58", "grassB": "#a8a866", "dryGrass": "#bfb078", "soil": "#b89a62", "sand": "#cdb47e",
+    "rock": "#a8997e", "rockDark": "#84765f", "forestFloor": "#56683a", "shrub": "#7f8a52", "wetland": "#6f8458",
+    "soilBias": 0.12, "dryBias": 0.25, "pineFrom": 900, "scatter": 0.003
+  },
+  {
+    "id": "taihang",
+    "name": "太行山地",
+    "basis": "ゲーム上の設定。石灰岩や砂岩の岩肌が出る山地と、松柏・ナラ類の林、低木の斜面を表す。現代の植林を含む土地被覆データを配置の手がかりにしており、4世紀の植生そのものではない。",
+    "match": { "minMeanMeters": 150 },
+    "grassA": "#72893f", "grassB": "#8b9a4c", "dryGrass": "#a59f62", "soil": "#9d8358", "sand": "#b9a47a",
+    "rock": "#9c9484", "rockDark": "#6f695f", "forestFloor": "#3e5630", "shrub": "#667a42", "wetland": "#5f7a50",
+    "soilBias": 0.0, "dryBias": 0.05, "pineFrom": 250, "scatter": 0.004
+  },
+  {
+    "id": "north-china-plain",
+    "name": "華北平原",
+    "basis": "ゲーム上の設定。黄河の運んだ土の平原で、草地と耕されなくなった畑がまだらに広がり、水辺や集落跡に楡・柳・ポプラの木立がある景色とした。戦乱で荒れた時期という想定で、現代の耕地・市街地は草地として扱っている。",
+    "match": {},
+    "grassA": "#7c9347", "grassB": "#98a257", "dryGrass": "#b4aa6c", "soil": "#a98c5c", "sand": "#c8b07c",
+    "rock": "#9a917f", "rockDark": "#756d60", "forestFloor": "#47603a", "shrub": "#72864a", "wetland": "#64805a",
+    "soilBias": 0.06, "dryBias": 0.12, "pineFrom": 1200, "scatter": 0.006
+  }
+]

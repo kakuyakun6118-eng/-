@@ -93,7 +93,7 @@ export class BattleScreen {
       },
     });
     this.hud.setTerrainInfo(
-      `${this.field.info.label}・標高 ${this.field.info.minMeters}〜${this.field.info.maxMeters}m`,
+      `${this.field.info.label}・標高 ${this.field.info.minMeters}〜${this.field.info.maxMeters}m・景観設定 ${this.battlefield.landscape.name}`,
       this.field.info.source === "coarse",
     );
     this.hud.update(null);
@@ -192,6 +192,7 @@ export class BattleScreen {
     if (this.following && u && !u.escaped && u.state !== "gone") this.camera.lookAt(u.x, u.z, Math.min(1, dt * 4));
     this.view.setSelection(u && !u.escaped && u.state !== "gone" ? u : null);
     this.view.update(step, this.camera.distance);
+    this.battlefield.update(step, this.camera.distance);
 
     this.hudTimer -= dt;
     if (this.hudTimer <= 0) {
