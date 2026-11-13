@@ -130,6 +130,13 @@ id, name, category(`real_estate` / `private_equity` / `crypto` / `insurance` / `
 ### `manual_asset_valuations`
 id, manual_asset_id, valuation_date, value, liability_amount, method(`appraisal` / `comparable` / `self_estimate` / `latest_round`), note
 
+**計上ルール(ご回答により確定):**
+- 不動産は **純資産額 = 評価額 − ローン残高** を総資産に計上
+- 詳細画面では評価額・ローン残高・純資産額を並べて表示
+- 純資産額がマイナス(債務超過)の場合もそのまま計上し、警告表示
+- 未上場株式・その他は評価額をそのまま計上(借入があれば同様に差し引き)
+- 最終評価日からの経過日数を表示し、180日以上経過で「評価が古い」バッジ
+
 ---
 
 ## 4.5 市場データ
