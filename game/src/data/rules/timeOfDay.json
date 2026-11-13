@@ -1,0 +1,5 @@
+{
+  "morning": { "name": "朝", "sun": [0.72, 0.3, -0.3], "sunColor": "#ffd9a8", "sunIntensity": 2.3, "skyLight": "#d6e2f0", "groundLight": "#6a6252", "ambient": 1.05, "horizon": "#e2d6c6", "zenith": "#7ea6cf", "fogNear": 300, "fogFar": 2600 },
+  "noon": { "name": "昼", "sun": [-0.6, 0.5, -0.38], "sunColor": "#fff0d6", "sunIntensity": 2.7, "skyLight": "#dde9f5", "groundLight": "#6f6650", "ambient": 1.25, "horizon": "#c6d4da", "zenith": "#6d9bcb", "fogNear": 380, "fogFar": 3000 },
+  "evening": { "name": "夕方", "sun": [-0.78, 0.24, 0.2], "sunColor": "#ffb878", "sunIntensity": 2.4, "skyLight": "#d8cfd6", "groundLight": "#5e5448", "ambient": 0.95, "horizon": "#e8c8a4", "zenith": "#6f86b4", "fogNear": 280, "fogFar": 2500 }
+}

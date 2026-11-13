@@ -1679,3 +1679,100 @@ body {
   background: var(--panel);
   font-size: 14px;
 }
+
+/* 会戦中の知らせ(命令に従わない、本陣が崩れた、陣形の説明など) */
+.hud-toast {
+  position: absolute;
+  top: calc(84px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 220px);
+  margin: 0;
+  padding: 6px 14px;
+  border: 1px solid var(--bronze);
+  border-radius: 4px;
+  background: var(--panel);
+  font-size: 13px;
+  text-align: center;
+  pointer-events: none !important;
+}
+
+/* 命令のボタンが増えたので、少し小さくして2段に収める */
+#battle-hud .hud-order,
+#battle-hud .hud-tools button {
+  min-height: 38px;
+  min-width: 0;
+  padding: 2px 9px;
+  font-size: 12px;
+}
+
+.hud-list {
+  bottom: calc(150px + env(safe-area-inset-bottom, 0px));
+}
+
+/* 会戦の下の操作欄は、戦場を広く見せるために低く抑える */
+#battle-hud .hud-bottom {
+  gap: 3px 10px;
+  padding-top: 4px;
+  padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
+}
+
+#battle-hud .hud-order,
+#battle-hud .hud-tools button {
+  min-height: 34px;
+  padding: 1px 8px;
+}
+
+.hud-unit {
+  gap: 2px 10px;
+}
+
+.hud-unit-name {
+  font-size: 14px;
+}
+
+.hud-orders,
+.hud-tools {
+  gap: 4px;
+}
+
+.hud-list {
+  bottom: calc(122px + env(safe-area-inset-bottom, 0px));
+}
+
+/* 選択中の部隊:1行目に名前と数値、2行目に命令のボタンを並べる */
+.hud-unit {
+  flex: 1 1 100%;
+}
+
+.hud-orders {
+  flex-basis: 100%;
+}
+
+/* 結果画面:行数が多いので、横向きのiPhoneの高さに収まるよう詰める */
+.hud-result-inner {
+  gap: 4px;
+  padding: 8px 16px;
+}
+
+.hud-result-title {
+  font-size: 20px;
+}
+
+.hud-result-summary {
+  font-size: 11px;
+}
+
+.hud-result-row {
+  padding: 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.hud-result-row:first-child {
+  font-size: 13px;
+}
+
+#battle-hud .hud-leave {
+  min-height: 38px;
+}

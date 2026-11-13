@@ -5,6 +5,7 @@
 import * as THREE from "three";
 import { createNoiseTexture } from "../core/noise";
 import landscapeList from "../data/rules/landscapes.json";
+import timeData from "../data/rules/timeOfDay.json";
 import { FIELD } from "./deploy";
 import { COVER, fbm, FieldMap, VIEW_HALF } from "./fieldData";
 import { treeGeometry, type TreeKind } from "./trees";
@@ -43,8 +44,25 @@ export function pickLandscape(lon: number, lat: number, meanMeters: number): Lan
   );
 }
 
-const HORIZON = new THREE.Color("#c6d4da");
-const ZENITH = new THREE.Color("#6d9bcb");
+/** 光の雰囲気(朝・昼・夕方)。値は data/rules/timeOfDay.json にある */
+export type TimeOfDay = "morning" | "noon" | "evening";
+
+interface TimeSetting {
+  name: string;
+  /** 太陽の方向(x, 高さ, z) */
+  sun: number[];
+  sunColor: string;
+  sunIntensity: number;
+  skyLight: string;
+  groundLight: string;
+  ambient: number;
+  horizon: string;
+  zenith: string;
+  fogNear: number;
+  fogFar: number;
+}
+
+const TIMES = timeData as Record<TimeOfDay, TimeSetting>;
 /** 地面の格子の、1辺の点の数。中心ほど細かく、外側ほど粗くする */
 const GRID = 221;
 /** 遠景(戦略マップの実標高)を作る範囲の半分 */
@@ -53,9 +71,6 @@ const FAR_GRID = 51;
 const MAX_TREES = 1600;
 /** 傾きを絵に入れるときの上限(これ以上は同じ値になる) */
 const SLOPE_MAX = 1.2;
-
-/** 太陽の方向(北西のやや低い位置から照らすと、尾根と谷の陰影がはっきり出る) */
-const SUN = new THREE.Vector3(-0.6, 0.5, -0.38).normalize();
 
 const smooth = (a: number, b: number, x: number): number => {
   const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
@@ -232,7 +247,9 @@ const GROUND_COLOR = /* glsl */ `
   // --- 水辺:岸は湿った土。浅瀬は川底が透け、深い所は暗い色になる ---
   float gW = gCover.a + ( nSmall - 0.5 ) * 0.06;
   float gShore = smoothstep( 0.05, 0.22, gW );
-  gCol = mix( gCol, uSoil * vec3( 0.52, 0.5, 0.42 ), gShore * 0.7 );
+  // 岸は、湿った泥の所と、砂のたまった所(砂州)がまだらになる
+  vec3 gBank = mix( uSoil * vec3( 0.5, 0.48, 0.4 ), uSand * 0.92, smoothstep( 0.42, 0.62, nMid * 0.6 + nBig * 0.4 ) );
+  gCol = mix( gCol, gBank, gShore * 0.75 );
   gWaterAmt = smoothstep( 0.22, 0.32, gW );
   if ( gWaterAmt > 0.0 ) {
     vec2 gFlow = uTime * vec2( 0.035, 0.021 );
@@ -273,9 +290,17 @@ export class Battlefield {
   private readonly uniforms: Record<string, THREE.IUniform>;
   private readonly trees: TreeBatch[] = [];
   private readonly textures: THREE.Texture[] = [];
-  private time = 0;
+  private clock = 0;
+  /** この戦場の、光の雰囲気 */
+  readonly time: TimeSetting;
+  private readonly horizon: THREE.Color;
 
-  constructor(readonly field: FieldMap) {
+  constructor(readonly field: FieldMap, timeOfDay: TimeOfDay = "noon") {
+    this.time = TIMES[timeOfDay];
+    const SUN = new THREE.Vector3(this.time.sun[0], this.time.sun[1], this.time.sun[2]).normalize();
+    const HORIZON = new THREE.Color(this.time.horizon);
+    const ZENITH = new THREE.Color(this.time.zenith);
+    this.horizon = HORIZON;
     const land = pickLandscape(field.lon, field.lat, field.info.meanMeters);
     this.landscape = land;
     const col = (hex: string): THREE.Color => new THREE.Color(hex);
@@ -414,8 +439,8 @@ export class Battlefield {
     this.group.add(sky);
 
     // ----- 光:空からの柔らかい光と、影を落とす太陽 -----
-    this.group.add(new THREE.HemisphereLight(0xdde9f5, 0x6f6650, 1.25));
-    this.sun = new THREE.DirectionalLight(0xfff0d6, 2.7);
+    this.group.add(new THREE.HemisphereLight(this.time.skyLight, this.time.groundLight, this.time.ambient));
+    this.sun = new THREE.DirectionalLight(this.time.sunColor, this.time.sunIntensity);
     this.sun.position.copy(SUN).multiplyScalar(340);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(1024, 1024);
@@ -459,8 +484,15 @@ export class Battlefield {
         // 木立がかたまって生えるよう、ゆるやかな濃淡を掛ける
         const clump = fbm(px / 38, pz / 38, 17);
         let kind: TreeKind | null = null;
+        // 尾根は木がまばらに、谷筋は密になる(まわりとの高さの差で判断する)
+        const around =
+          (field.heightAt(px + 14, pz) + field.heightAt(px - 14, pz) + field.heightAt(px, pz + 14) + field.heightAt(px, pz - 14)) / 4;
+        const relief = field.heightAt(px, pz) - around;
+        const terrainDensity = relief > 0.6 ? 0.55 : relief < -0.5 ? 1.25 : 1;
         if (cover === COVER.tree) {
-          if (r > 0.8 + (clump - 0.5) * 0.3) continue;
+          // 森の中にも、ところどころ空き地を残す(部隊が通り抜けられる)
+          if (fbm(px / 26, pz / 26, 31) > 0.68) continue;
+          if (r > (0.8 + (clump - 0.5) * 0.3) * terrainDensity) continue;
           const pine = smooth(land.pineFrom, land.pineFrom + 450, field.metersAt(px, pz)) * 0.8 + smooth(0.25, 0.5, field.slopeAt(px, pz)) * 0.3;
           const pick = rand();
           kind = pick < pine ? "pine" : pick < pine + (1 - pine) * 0.45 ? "broadleafA" : pick < pine + (1 - pine) * 0.8 ? "broadleafB" : pick < 0.97 ? "poplar" : "shrub";
@@ -516,8 +548,8 @@ export class Battlefield {
 
   /** 空と、遠くがかすむ空気をシーンに設定する */
   applyTo(scene: THREE.Scene): void {
-    scene.background = HORIZON;
-    scene.fog = new THREE.Fog(HORIZON, 380, 3000);
+    scene.background = this.horizon;
+    scene.fog = new THREE.Fog(this.horizon, this.time.fogNear, this.time.fogFar);
     scene.add(this.group);
   }
 
@@ -526,8 +558,8 @@ export class Battlefield {
    * (木は場所がばらばらな順に並べてあるので、先頭から一部だけ描いても、まんべんなく間引かれる)
    */
   update(dt: number, cameraDistance: number): void {
-    this.time += dt;
-    this.uniforms.uTime.value = this.time;
+    this.clock += dt;
+    this.uniforms.uTime.value = this.clock;
     const keep = cameraDistance < 150 ? 1 : cameraDistance < 300 ? 0.75 : 0.5;
     for (const t of this.trees) t.mesh.count = Math.ceil(t.total * keep);
   }

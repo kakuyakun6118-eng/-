@@ -33,13 +33,33 @@ export interface UnitClass {
   piercing?: boolean;
 }
 
+/** 陣形:横陣・縦陣・方陣・楔形陣 */
+export type FormationId = "line" | "column" | "square" | "wedge";
+
+/** 陣形ごとの決まり(data/rules/formations.json)。数値は、横陣を1とした倍率 */
+export interface Formation {
+  name: string;
+  note: string;
+  /** 隊列の横と奥行きの比(大きいほど横に広い) */
+  aspect: number;
+  attack: number;
+  defense: number;
+  speed: number;
+  antiCavalry: number;
+  charge: number;
+  /** 矢の受けやすさ */
+  missile: number;
+  /** 側面・背後を突かれたときの不利の大きさ(0 なら、どの方向からでも正面扱い) */
+  flank: number;
+}
+
 /** 部隊の状態 */
 export type UnitState = "idle" | "moving" | "melee" | "shooting" | "routing" | "retreating" | "gone";
 
 /** 部隊への命令 */
 export type UnitOrder =
   | { kind: "hold" }
-  | { kind: "move"; x: number; z: number }
+  | { kind: "move"; x: number; z: number; keepFacing?: boolean } // keepFacing = 敵に向いたまま下がる(後退)
   | { kind: "attack"; targetId: string }
   | { kind: "pursue"; targetId?: string } // 近くの敵を自分で探して攻める(targetId は、いま狙っている相手)
   | { kind: "retreat" };
@@ -60,6 +80,9 @@ export interface BattleUnit {
   z: number;
   /** 向き(ラジアン)。0 で -z 方向、時計回り */
   facing: number;
+  formation: FormationId;
+  /** 待機中に向いていたい方角(「向きを変える」命令で入る) */
+  faceTo: number | null;
   /** 隊列の横の人数(兵士の人形の数)と、いまの幅・奥行き */
   columns: number;
   width: number;
@@ -87,6 +110,7 @@ export interface BattleUnit {
 export type BattleFx =
   | { kind: "volley"; fromX: number; fromZ: number; toX: number; toZ: number; flight: number; count: number }
   | { kind: "impact"; x: number; z: number }
+  | { kind: "dust"; x: number; z: number }
   | { kind: "rout"; unitId: string }
   | { kind: "commanderDown"; side: SideId };
 

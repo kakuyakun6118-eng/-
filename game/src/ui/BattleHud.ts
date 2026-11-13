@@ -1,7 +1,7 @@
 // 会戦中の画面表示。上部に戦況、左右に両軍の部隊一覧、下部に選択中の部隊と命令、終了後に結果を出す。
 import { factionById } from "../data";
 import type { BattleSim } from "../battle/BattleSim";
-import { unitClasses } from "../battle/deploy";
+import { formations, unitClasses } from "../battle/deploy";
 import type { BattleResult, BattleUnit, CommanderFate, SideId, SideResult, UnitState } from "../battle/types";
 
 export interface BattleHudActions {
@@ -9,6 +9,16 @@ export interface BattleHudActions {
   onHold(): void;
   onPursue(): void;
   onRetreatUnit(): void;
+  onAdvance(): void;
+  onFallBack(): void;
+  /** 陣形を切り替える */
+  onFormation(): void;
+  /** 部隊の向きを変える(-1 = 左、1 = 右) */
+  onTurn(direction: number): void;
+  /** 複数選択の入・切 */
+  onMulti(): void;
+  onSelectAll(): void;
+  onCloseUp(): void;
   onFollow(): void;
   onOverview(): void;
   onRotate(direction: number): void;
@@ -43,6 +53,7 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, te
 
 export class BattleHud {
   private readonly q: (sel: string) => HTMLElement;
+  private toastTimer = 0;
   private readonly chips = new Map<string, { root: HTMLElement; men: HTMLElement; bar: HTMLElement }>();
 
   constructor(private readonly root: HTMLElement, private readonly sim: BattleSim, actions: BattleHudActions) {
@@ -54,6 +65,14 @@ export class BattleHud {
     on(".hud-hold", actions.onHold);
     on(".hud-pursue", actions.onPursue);
     on(".hud-retreat", actions.onRetreatUnit);
+    on(".hud-advance", actions.onAdvance);
+    on(".hud-fallback", actions.onFallBack);
+    on(".hud-formation", actions.onFormation);
+    on(".hud-turn-left", () => actions.onTurn(-1));
+    on(".hud-turn-right", () => actions.onTurn(1));
+    on(".hud-multi", actions.onMulti);
+    on(".hud-select-all", actions.onSelectAll);
+    on(".hud-closeup", actions.onCloseUp);
     on(".hud-follow", actions.onFollow);
     on(".hud-overview", actions.onOverview);
     on(".hud-rotate-left", () => actions.onRotate(-1));
@@ -89,7 +108,9 @@ export class BattleHud {
     }
     this.q(".hud-result").hidden = true;
     this.q(".hud-confirm").hidden = true;
-    this.setSelected(null);
+    this.setSelected(null, 0);
+    this.setMulti(false);
+    this.q(".hud-toast").hidden = true;
     this.setPaused(false);
     this.setSpeed(1);
     root.hidden = false;
@@ -100,6 +121,21 @@ export class BattleHud {
     const el = this.q(".hud-terrain");
     el.textContent = `地形:${text}`;
     el.dataset.coarse = String(coarse);
+  }
+
+  setMulti(on: boolean): void {
+    this.q(".hud-multi").setAttribute("aria-pressed", String(on));
+  }
+
+  /** 画面の中央上に、短い知らせを数秒だけ出す */
+  toast(text: string): void {
+    const el = this.q(".hud-toast");
+    el.textContent = text;
+    el.hidden = false;
+    window.clearTimeout(this.toastTimer);
+    this.toastTimer = window.setTimeout(() => {
+      el.hidden = true;
+    }, 3500);
   }
 
   setPaused(paused: boolean): void {
@@ -115,7 +151,7 @@ export class BattleHud {
   }
 
   /** 上部の戦況と、左右の部隊一覧を、いまの状態に合わせる */
-  update(selected: BattleUnit | null): void {
+  update(selected: BattleUnit | null, selectedIds: string[] = []): void {
     const sim = this.sim;
     const m = Math.floor(sim.time / 60);
     const s = Math.floor(sim.time % 60);
@@ -130,18 +166,19 @@ export class BattleHud {
       chip.men.textContent = u.state === "gone" || u.escaped ? "—" : fmt(u.men);
       chip.bar.style.width = `${u.morale}%`;
       chip.root.dataset.state = u.escaped ? "gone" : u.state;
-      chip.root.classList.toggle("selected", u === selected);
+      chip.root.classList.toggle("selected", selectedIds.includes(u.id));
     }
-    this.setSelected(selected);
+    this.setSelected(selected, selectedIds.length);
   }
 
   /** 下部の部隊パネル */
-  private setSelected(u: BattleUnit | null): void {
+  private setSelected(u: BattleUnit | null, count: number): void {
     this.q(".hud-unit").hidden = u === null;
     this.q(".hud-tip").hidden = u !== null;
     if (!u) return;
     const side = u.side === "attacker" ? this.sim.setup.attacker : this.sim.setup.defender;
-    this.q(".hud-unit-name").textContent = u.name;
+    this.q(".hud-unit-name").textContent = count > 1 ? `${u.name} ほか${count - 1}部隊` : u.name;
+    this.q(".hud-formation").textContent = `陣形:${formations[u.formation].name}`;
     this.q(".hud-unit-class").textContent = unitClasses[u.classId].name;
     const state = this.q(".hud-unit-state");
     state.textContent = STATE_TEXT[u.escaped ? "gone" : u.state];
@@ -200,12 +237,19 @@ export class BattleHud {
     row("結果", OUTCOME_TEXT[a.outcome], OUTCOME_TEXT[d.outcome]);
     row("戦闘前", fmt(total(a.before)), fmt(total(d.before)));
     row("残存兵力", fmt(total(a.after)), fmt(total(d.after)));
+    // 兵種別の損害(戦闘前 → 戦闘後)
+    for (const [key, label] of [["infantry", "歩兵"], ["cavalry", "騎兵"], ["archer", "弓兵"]] as const) {
+      const show = (r: SideResult): string => (r.before[key] > 0 ? `${fmt(r.before[key])} → ${fmt(r.after[key])}` : "—");
+      row(label, show(a), show(d));
+    }
     row("戦死", fmt(a.killed), fmt(d.killed));
     row("負傷", fmt(a.wounded), fmt(d.wounded));
     row("捕虜", fmt(a.captured), fmt(d.captured));
     row("逃散", fmt(a.scattered), fmt(d.scattered));
     row("士気", String(a.morale), String(d.morale));
     row("指揮官", sim.setup.attacker.commander ? FATE_TEXT[a.commander] : "—", sim.setup.defender.commander ? FATE_TEXT[d.commander] : "—");
+    // 戦果:相手に与えた損害(戦死・負傷・捕虜・逃散の合計)
+    row("戦果", `敵 ${fmt(result.defenderLosses)}人`, `敵 ${fmt(result.attackerLosses)}人`);
     this.q(".hud-result").hidden = false;
   }
 

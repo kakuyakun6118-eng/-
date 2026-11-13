@@ -45,28 +45,37 @@ export function buildResult(
       // 倒れた兵のうち、45%が戦死、55%が負傷。勝った側は負傷兵の多くを収容できる
       const dead = Math.round(fallen * 0.45);
       const hurt = fallen - dead;
-      const recovered = Math.round(hurt * (won ? 0.7 : lost ? 0.25 : 0.5));
+      const recovered = Math.round(hurt * (won ? 0.7 : lost ? 0.15 : 0.5));
       // 敗れた側は、置き去りにした負傷兵と、逃げた兵の一部が捕虜になる。逃げた兵の一部は戻らない
-      const taken = lost ? Math.round((hurt - recovered) * 0.6 + fled * 0.25) : 0;
-      const gone = Math.round(fled * (lost ? 0.15 : 0.05));
+      // 自分から整然と撤退した場合は、崩れて逃げた場合より、捕まる兵も散る兵もずっと少ない
+      const orderly = reason === "retreated";
+      const takenRate = lost ? (orderly ? 0.04 : 0.25) : 0;
+      const taken = lost ? Math.round((hurt - recovered) * 0.6 + fled * takenRate) : 0;
+      const gone = Math.round(fled * (lost ? (orderly ? 0.03 : 0.15) : 0.05));
       killed += dead;
       wounded += hurt;
       captured += taken;
       scattered += gone;
-      after[type] = Math.max(0, standing + recovered + fled - (lost ? Math.round(fled * 0.25) : 0) - gone);
+      after[type] = Math.max(0, standing + recovered + fled - Math.round(fled * takenRate) - gone);
     }
 
-    // 指揮官:本陣が壊滅したら戦死・捕虜・負傷のいずれか。敗走しただけなら、まれに捕まる
+    // 指揮官:本陣が受けた損害が大きいほど危険になる。本陣が壊滅すれば、戦死・捕虜・負傷のいずれかになる
     const command = mine.find((u) => u.isCommand);
     let commander: CommanderFate = "healthy";
-    if (!src.commander) commander = "healthy";
-    else if (!command || command.men <= 0) {
+    if (src.commander) {
       const r = rand();
-      commander = r < 0.45 ? "killed" : r < 0.75 ? "captured" : "wounded";
-    } else if (lost && (command.escaped || command.state === "routing")) {
-      commander = rand() < 0.2 ? "captured" : rand() < 0.3 ? "wounded" : "healthy";
-    } else if (command.men < command.maxMen * 0.5 && rand() < 0.4) {
-      commander = "wounded";
+      const risk = command ? 1 - command.men / Math.max(1, command.maxMen) : 1;
+      if (!command || command.men <= 0) {
+        commander = r < 0.45 ? "killed" : r < 0.75 ? "captured" : "wounded";
+      } else if (lost && (command.escaped || command.state === "routing")) {
+        // 敗れて逃げる途中:討たれるか、捕まるか、傷を負うか
+        const killed = 0.25 * risk;
+        const captured = killed + 0.08 + 0.25 * risk;
+        const wounded = captured + 0.3 * risk;
+        commander = r < killed ? "killed" : r < captured ? "captured" : r < wounded ? "wounded" : "healthy";
+      } else if (r < 0.5 * risk) {
+        commander = r < 0.08 * risk ? "killed" : "wounded";
+      }
     }
 
     const totalBefore = before.infantry + before.cavalry + before.archer;
@@ -74,7 +83,7 @@ export function buildResult(
     const outcome: SideResult["outcome"] =
       winner === "draw" ? "draw"
       : won ? "victory"
-      : totalAfter < Math.max(100, totalBefore * 0.06) ? "annihilated"
+      : totalAfter < totalBefore * 0.2 ? "annihilated"
       : reason === "retreated" ? "retreated"
       : "routed";
     const avg = (f: (u: BattleUnit) => number): number =>

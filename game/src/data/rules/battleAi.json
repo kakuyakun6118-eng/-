@@ -1,0 +1,5 @@
+{
+  "easy": { "name": "易しい", "thinkSeconds": 2.0, "aggression": 1.35, "retreatBelow": 0.0, "flanking": false, "kiting": false, "formations": false, "holdSeconds": 45 },
+  "normal": { "name": "普通", "thinkSeconds": 1.0, "aggression": 1.0, "retreatBelow": 0.3, "flanking": true, "kiting": true, "formations": true, "holdSeconds": 25 },
+  "hard": { "name": "難しい", "thinkSeconds": 0.5, "aggression": 0.85, "retreatBelow": 0.38, "flanking": true, "kiting": true, "formations": true, "holdSeconds": 12 }
+}

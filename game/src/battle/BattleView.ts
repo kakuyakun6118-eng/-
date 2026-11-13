@@ -4,8 +4,9 @@
 import * as THREE from "three";
 import { factionById } from "../data";
 import type { BattleSim } from "./BattleSim";
-import { unitClasses } from "./deploy";
-import { getSoldiers, type SoldierShape } from "./soldiers";
+import { formationSlot, unitClasses } from "./deploy";
+import { DustFx } from "./effects";
+import { getSoldiers, soldierClock, type SoldierShape } from "./soldiers";
 import type { BattleUnit, UnitClassId } from "./types";
 
 /** カメラがこれより遠いときは、兵士を1体おきに描いて軽くする */
@@ -41,9 +42,11 @@ export class BattleView {
   private fallenCount = 0;
   private readonly arrows: THREE.InstancedMesh;
   private readonly flying: Arrow[] = [];
-  private readonly selection: THREE.Mesh;
+  /** 選択中の部隊の足もとに出す枠(複数選択に備えて、いくつか用意しておく) */
+  private readonly selections: THREE.Mesh[] = [];
   private readonly targetMark: THREE.Mesh;
   private readonly dummy = new THREE.Object3D();
+  private readonly dust = new DustFx();
 
   constructor(private readonly sim: BattleSim) {
     const soldiers = getSoldiers();
@@ -60,6 +63,9 @@ export class BattleView {
       mesh.castShadow = true;
       mesh.frustumCulled = false;
       mesh.count = 0;
+      // 兵士ごとの「動きのずれ」と「動きの種類」(脚や腕を振るのに使う)
+      mesh.geometry = mesh.geometry.clone();
+      mesh.geometry.setAttribute("anim", new THREE.InstancedBufferAttribute(new Float32Array(count * 2), 2));
       this.meshes.set(shape, mesh);
       this.group.add(mesh);
     }
@@ -78,6 +84,8 @@ export class BattleView {
     this.fallen.receiveShadow = true;
     this.group.add(this.fallen);
 
+    this.group.add(this.dust.points);
+
     // 矢
     this.arrows = new THREE.InstancedMesh(new THREE.BoxGeometry(0.07, 0.07, 1.5), new THREE.MeshBasicMaterial({ color: "#f3ecd8" }), MAX_ARROWS);
     this.arrows.count = 0;
@@ -95,7 +103,7 @@ export class BattleView {
       this.group.add(m);
       return m;
     };
-    this.selection = mark(0xf2d489);
+    for (let i = 0; i < 12; i++) this.selections.push(mark(0xf2d489));
     this.targetMark = mark(0xe05a48);
   }
 
@@ -105,14 +113,19 @@ export class BattleView {
   }
 
   /** 選択中の部隊と、その命令の目標(移動先や攻撃相手)を表示する */
-  setSelection(unit: BattleUnit | null): void {
-    this.selection.visible = unit !== null;
+  setSelection(units: BattleUnit[]): void {
     this.targetMark.visible = false;
+    this.selections.forEach((m, i) => {
+      const u = units[i];
+      m.visible = !!u;
+      if (!u) return;
+      m.position.set(u.x, this.sim.field.heightAt(u.x, u.z) + 0.25, u.z);
+      m.rotation.y = -u.facing;
+      m.scale.set(u.width + 2.5, 1, u.depth + 2.5);
+    });
+    // 命令の目標(移動先や攻撃相手)は、最後に選んだ部隊のものを表示する
+    const unit = units[units.length - 1];
     if (!unit) return;
-    const h = this.sim.field.heightAt(unit.x, unit.z);
-    this.selection.position.set(unit.x, h + 0.25, unit.z);
-    this.selection.rotation.y = -unit.facing;
-    this.selection.scale.set(unit.width + 2.5, 1, unit.depth + 2.5);
     const o = unit.order;
     const target = o.kind === "attack" || o.kind === "pursue" ? (o.targetId ? this.sim.unit(o.targetId) : undefined) : undefined;
     if (target && target.men > 0 && !target.escaped) {
@@ -134,14 +147,16 @@ export class BattleView {
     const field = sim.field;
     const thin = cameraDistance > THIN_DISTANCE;
     const counts = new Map<SoldierShape, number>();
-    const put = (shape: SoldierShape, color: THREE.Color): void => {
+    const put = (shape: SoldierShape, color: THREE.Color, phase: number, mode: number): void => {
       const mesh = this.meshes.get(shape)!;
       const i = counts.get(shape) ?? 0;
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
       mesh.setColorAt(i, color);
+      (mesh.geometry.getAttribute("anim") as THREE.InstancedBufferAttribute).setXY(i, phase, mode);
       counts.set(shape, i + 1);
     };
+    soldierClock.value = sim.time;
     const t = sim.time;
     let flag = 0;
 
@@ -162,20 +177,14 @@ export class BattleView {
       const cos = Math.cos(u.facing);
       const sin = Math.sin(u.facing);
       const cavalry = cls.category === "cavalry";
-      const rowGap = cls.spacing * (cavalry ? 1.5 : 1);
-      const rows = Math.ceil(want / u.columns);
       const loose = u.state === "routing" ? 2.6 : u.state === "melee" ? 1.25 : 1;
       const moving = u.state === "moving" || u.state === "routing" || u.state === "retreating";
       const stride = cavalry ? 0.22 : 0.12;
 
       for (let k = 0; k < want; k++) {
-        const row = Math.floor(k / u.columns);
-        const inRow = Math.min(u.columns, want - row * u.columns);
-        const col = k % u.columns;
         let f = list[k];
         // 隊列の中の持ち場(部隊から見て、右へ・後ろへ)
-        const right = (col - (inRow - 1) / 2) * cls.spacing;
-        const back = (row - (rows - 1) / 2) * rowGap;
+        const { right, back, row } = formationSlot(u, k, want);
         if (!f) {
           f = { x: 0, z: 0, phase: Math.random() * 6.28, jx: (Math.random() - 0.5) * 0.5, jz: (Math.random() - 0.5) * 0.5 };
           f.x = u.x + right * cos - back * sin;
@@ -204,11 +213,14 @@ export class BattleView {
         );
         dummy.scale.setScalar(1);
         // 本陣の先頭の1体は、指揮官として描く
+        // 動きの種類:走る・歩く・武器を振るう(前の2列)・射る・立つ
+        const mode = moving ? (u.running || u.state === "routing" ? 2 : 1) : u.state === "melee" ? (row < 2 ? 3 : 0) : u.state === "shooting" ? 4 : 0;
+        // 本陣の先頭の1体は、指揮官として描く
         if (u.isCommand && k === 0) {
           dummy.scale.setScalar(1.3);
-          put("general", color);
+          put("general", color, f.phase, mode);
         } else {
-          put(u.classId, color);
+          put(u.classId, color, f.phase, mode);
         }
       }
 
@@ -238,6 +250,7 @@ export class BattleView {
       mesh.count = counts.get(shape) ?? 0;
       mesh.instanceMatrix.needsUpdate = true;
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      mesh.geometry.getAttribute("anim").needsUpdate = true;
     }
     this.poles.count = this.cloths.count = flag;
     this.poles.instanceMatrix.needsUpdate = true;
@@ -246,6 +259,7 @@ export class BattleView {
 
     this.readFx();
     this.updateArrows();
+    this.dust.update(dt);
   }
 
   private addFallen(x: number, z: number, angle: number): void {
@@ -266,6 +280,9 @@ export class BattleView {
   private readFx(): void {
     const field = this.sim.field;
     for (const fx of this.sim.fx) {
+      // 砂煙:騎兵の土煙は少し、部隊がぶつかった瞬間は大きく立つ
+      if (fx.kind === "dust") this.dust.spawn(fx.x, field.heightAt(fx.x, fx.z), fx.z, 2, 5);
+      if (fx.kind === "impact") this.dust.spawn(fx.x, field.heightAt(fx.x, fx.z), fx.z, 12, 12);
       if (fx.kind !== "volley") continue;
       for (let i = 0; i < fx.count && this.flying.length < MAX_ARROWS; i++) {
         const sx = fx.fromX + (Math.random() - 0.5) * 12;
@@ -312,7 +329,14 @@ export class BattleView {
   }
 
   dispose(): void {
+    for (const mesh of this.meshes.values()) mesh.geometry.dispose(); // 兵士ごとの動きの情報を持たせた写し
     for (const mesh of [...this.meshes.values(), this.poles, this.cloths, this.fallen, this.arrows]) mesh.dispose();
+    this.dust.dispose();
+  }
+
+  /** 画面の大きさが変わったら、砂煙の見かけの大きさを合わせる */
+  setViewportHeight(height: number): void {
+    this.dust.setViewportHeight(height);
   }
 }
 

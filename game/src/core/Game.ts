@@ -2,6 +2,7 @@
 import * as THREE from "three";
 import { MapCamera, type WorldRect } from "../camera/MapCamera";
 import { armies as armyData, factionById, factionOfCity, officerById, regions, resolveCityLayout, scenario } from "../data";
+import type { Difficulty } from "../battle/ai";
 import { BattleScreen } from "../battle/BattleScreen";
 import type { BattleResult } from "../battle/types";
 import type { BattleEvent, BattleSetup, City } from "../data/types";
@@ -65,6 +66,8 @@ export class Game {
   battleSetup: BattleSetup | null = null;
   /** 進行中の3D会戦(戦略マップを表示しているときは null) */
   battle: BattleScreen | null = null;
+  /** 敵AIの難易度(easy / normal / hard) */
+  difficulty: Difficulty = "normal";
   private selected: CityMarker | null = null;
   private selectedArmy: ArmyMarker | null = null;
   /** 軍団パネルの段階(通常 / 移動先を選んでいる / 経路を確認している) */
@@ -466,6 +469,10 @@ export class Game {
     const d = event.defenderArmyId ? this.campaign.stateOf(event.defenderArmyId)?.army : undefined;
     const bearing = a && d ? Math.atan2((d.lon - a.lon) * Math.cos((a.lat * Math.PI) / 180), d.lat - a.lat) : 0;
 
+    // 光の雰囲気:会戦が起きた時刻(1日のうちのいつか)から決める
+    const hour = (this.campaign.day % 1) * 24;
+    const timeOfDay = hour < 9 ? "morning" : hour < 17 ? "noon" : "evening";
+
     this.battlePrep.hide();
     this.root.classList.remove("battle-open");
     const loading = this.root.querySelector("#battle-loading") as HTMLElement;
@@ -473,7 +480,7 @@ export class Game {
     // 会戦地点の実地形を読み込んでから、戦場へ移る。プレイヤーは、自分が動かした軍団(攻撃側)を指揮する
     BattleScreen.create(
       this.renderer, this.root.querySelector("#battle-hud") as HTMLElement, setup, this.terrains[0].field, bearing,
-      "attacker", (result) => this.finishBattle(result),
+      { playerSide: "attacker", difficulty: this.difficulty, timeOfDay }, (result) => this.finishBattle(result),
     )
       .then((battle) => {
         this.root.classList.add("in-battle");

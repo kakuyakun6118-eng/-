@@ -1,0 +1,6 @@
+{
+  "line": { "name": "横陣", "note": "正面を広く展開する標準の陣形", "aspect": 3.0, "attack": 1.0, "defense": 1.0, "speed": 1.0, "antiCavalry": 1.0, "charge": 1.0, "missile": 1.0, "flank": 1.0 },
+  "column": { "name": "縦陣", "note": "狭い場所を速く進む。正面が狭く、戦う力は落ちる", "aspect": 0.45, "attack": 0.8, "defense": 0.9, "speed": 1.2, "antiCavalry": 0.9, "charge": 0.9, "missile": 1.15, "flank": 1.2 },
+  "square": { "name": "方陣", "note": "四方を向いて騎兵の突撃に備える。動きは遅く、矢には弱い", "aspect": 1.0, "attack": 0.8, "defense": 1.15, "speed": 0.5, "antiCavalry": 1.7, "charge": 0.3, "missile": 1.3, "flank": 0.0 },
+  "wedge": { "name": "楔形陣", "note": "先頭をとがらせて突破を狙う。突撃は強いが、守りと側面が弱い", "aspect": 2.0, "attack": 1.15, "defense": 0.8, "speed": 1.05, "antiCavalry": 0.8, "charge": 1.45, "missile": 1.0, "flank": 1.25 }
+}

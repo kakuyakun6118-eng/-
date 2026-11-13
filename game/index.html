@@ -162,19 +162,28 @@
             </dl>
             <div class="hud-orders">
               <button class="hud-order hud-hold" type="button">待機</button>
+              <button class="hud-order hud-advance" type="button">前進</button>
+              <button class="hud-order hud-fallback" type="button">後退</button>
               <button class="hud-order hud-pursue" type="button" aria-pressed="false">追撃</button>
               <button class="hud-order hud-retreat" type="button">撤退</button>
+              <button class="hud-order hud-formation" type="button">陣形</button>
+              <button class="hud-order hud-turn-left" type="button" aria-label="部隊を左へ向ける">↶向き</button>
+              <button class="hud-order hud-turn-right" type="button" aria-label="部隊を右へ向ける">向き↷</button>
             </div>
           </div>
           <div class="hud-tools">
-            <button class="hud-rotate-left" type="button" aria-label="左に回す">⟲</button>
-            <button class="hud-rotate-right" type="button" aria-label="右に回す">⟳</button>
-            <button class="hud-overview" type="button">全景</button>
-            <button class="hud-follow" type="button" aria-pressed="false">追従</button>
+            <button class="hud-multi" type="button" aria-pressed="false">複数選択</button>
+            <button class="hud-select-all" type="button">全選択</button>
             <button class="hud-advance-all" type="button">全軍前進</button>
             <button class="hud-retreat-all" type="button">全軍撤退</button>
+            <button class="hud-rotate-left" type="button" aria-label="視点を左に回す">⟲</button>
+            <button class="hud-rotate-right" type="button" aria-label="視点を右に回す">⟳</button>
+            <button class="hud-overview" type="button">全景</button>
+            <button class="hud-closeup" type="button">近景</button>
+            <button class="hud-follow" type="button" aria-pressed="false">追従</button>
           </div>
         </footer>
+        <p class="hud-toast" hidden></p>
         <div class="hud-confirm" hidden>
           <p>全軍を撤退させますか? 背を向けて退くので、追撃で損害が出ます。</p>
           <button class="hud-confirm-yes" type="button">撤退する</button>

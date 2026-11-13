@@ -1,10 +1,12 @@
 // 会戦の設定(BattleSetup)から、戦場に並べる部隊の一覧を作る。
 // 歩兵を前衛、弓兵を後衛、騎兵を両翼、指揮官の本陣を後方に置く。
 import unitClassData from "../data/rules/battleUnits.json";
+import formationData from "../data/rules/formations.json";
 import type { BattleSetup, BattleSide, UnitTypeId } from "../data/types";
-import type { BattleUnit, SideId, UnitClass, UnitClassId } from "./types";
+import type { BattleUnit, Formation, FormationId, SideId, UnitClass, UnitClassId } from "./types";
 
 export const unitClasses = unitClassData as unknown as Record<UnitClassId, UnitClass>;
+export const formations = formationData as Record<FormationId, Formation>;
 
 /** 戦場の大きさ(横・奥行き) */
 export const FIELD = { width: 340, depth: 250 };
@@ -28,15 +30,58 @@ export interface Deployment {
   menPerFigure: number;
 }
 
-/** 部隊の人数から、隊列の横の人数と、幅・奥行きを決める */
+/** 兵士の人形の、前後の間隔 */
+function rowGapOf(u: BattleUnit): number {
+  const cls = unitClasses[u.classId];
+  return cls.spacing * (cls.category === "cavalry" ? 1.5 : 1);
+}
+
+/** 部隊の人数と陣形から、隊列の横の人数と、幅・奥行きを決める */
 export function shapeUnit(u: BattleUnit, menPerFigure: number): void {
   const cls = unitClasses[u.classId];
   const figures = Math.max(1, Math.ceil(u.men / menPerFigure));
-  // 最初に決めた横の人数は変えず、減った分だけ後ろの列から薄くなる
-  if (u.columns === 0) u.columns = Math.max(3, Math.ceil(Math.sqrt(figures * (cls.category === "cavalry" ? 2.2 : 3))));
+  if (u.formation === "wedge") {
+    // 楔形:先頭が1人で、後ろへ行くほど2人ずつ増える
+    const rows = Math.ceil(Math.sqrt(figures));
+    u.columns = rows * 2 - 1;
+    u.width = u.columns * cls.spacing * 0.75;
+    u.depth = rows * rowGapOf(u);
+    return;
+  }
+  // 最初に決めた横の人数は変えず、減った分だけ後ろの列から薄くなる(陣形を変えたら決め直す)
+  if (u.columns === 0) {
+    const aspect = formations[u.formation].aspect * (cls.category === "cavalry" ? 0.73 : 1);
+    u.columns = Math.max(2, Math.ceil(Math.sqrt(figures * aspect)));
+  }
   const rows = Math.ceil(figures / u.columns);
   u.width = Math.min(figures, u.columns) * cls.spacing;
-  u.depth = rows * cls.spacing * (cls.category === "cavalry" ? 1.5 : 1);
+  u.depth = rows * rowGapOf(u);
+}
+
+/** 陣形を変える */
+export function setFormation(u: BattleUnit, formation: FormationId, menPerFigure: number): void {
+  u.formation = formation;
+  u.columns = 0;
+  shapeUnit(u, menPerFigure);
+}
+
+/**
+ * 隊列の中の、k 番目の兵士の持ち場(部隊の中心から見て、右へ・後ろへ)。
+ * total は、いま表示している兵士の人形の数。
+ */
+export function formationSlot(u: BattleUnit, k: number, total: number): { right: number; back: number; row: number } {
+  const cls = unitClasses[u.classId];
+  const gap = rowGapOf(u);
+  if (u.formation === "wedge") {
+    const row = Math.floor(Math.sqrt(k));
+    const rows = Math.ceil(Math.sqrt(total));
+    const col = k - row * row;
+    return { right: (col - row) * cls.spacing * 0.75, back: (row - (rows - 1) / 2) * gap, row };
+  }
+  const rows = Math.ceil(total / u.columns);
+  const row = Math.floor(k / u.columns);
+  const inRow = Math.min(u.columns, total - row * u.columns);
+  return { right: ((k % u.columns) - (inRow - 1) / 2) * cls.spacing, back: (row - (rows - 1) / 2) * gap, row };
 }
 
 function makeUnits(side: BattleSide, sideId: SideId): BattleUnit[] {
@@ -59,6 +104,8 @@ function makeUnits(side: BattleSide, sideId: SideId): BattleUnit[] {
       x: 0,
       z: 0,
       facing: sideId === "attacker" ? 0 : Math.PI,
+      formation: "line",
+      faceTo: null,
       columns: 0,
       width: 1,
       depth: 1,
