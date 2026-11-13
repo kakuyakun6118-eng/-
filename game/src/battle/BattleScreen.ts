@@ -1,6 +1,7 @@
 // 3D会戦の画面。戦場・部隊の表示・計算・カメラ・画面表示をつなぎ、タッチ操作を部隊への命令に変える。
 import * as THREE from "three";
-import type { BattleSetup, TerrainKind } from "../data/types";
+import type { BattleSetup } from "../data/types";
+import type { HeightField } from "../world/heightField";
 import { BattleHud } from "../ui/BattleHud";
 import { BattleCamera } from "./BattleCamera";
 import { Battlefield } from "./Battlefield";
@@ -30,19 +31,26 @@ export class BattleScreen {
   private height = 1;
 
   /**
-   * surroundings は、戦場のまわり8方向の戦略マップ上の地形(遠景の山並みに使う)。
-   * onLeave は、結果画面で「戦略マップへ戻る」が押されたときに呼ばれる。
+   * 会戦地点の実地形を読み込んでから、戦場を作る。
+   * coarse は戦略マップの標高データ(遠景と、高解像度データが無い地点で使う)。
+   * bearing は、攻撃側から見た防御側の方角。onLeave は、結果画面で「戦略マップへ戻る」が押されたときに呼ばれる。
    */
-  constructor(
+  static async create(
+    renderer: THREE.WebGLRenderer, hudRoot: HTMLElement, setup: BattleSetup, coarse: HeightField, bearing: number,
+    playerSide: SideId, onLeave: (result: BattleResult) => void,
+  ): Promise<BattleScreen> {
+    const field = await FieldMap.load(setup.location.lon, setup.location.lat, bearing, coarse);
+    return new BattleScreen(renderer, hudRoot, setup, field, playerSide, onLeave);
+  }
+
+  private constructor(
     private readonly renderer: THREE.WebGLRenderer, hudRoot: HTMLElement,
-    setup: BattleSetup, surroundings: TerrainKind[], playerSide: SideId,
+    setup: BattleSetup, field: FieldMap, playerSide: SideId,
     onLeave: (result: BattleResult) => void,
   ) {
-    let seed = 0;
-    for (const ch of setup.battleId + setup.location.name) seed = (Math.imul(seed, 31) + ch.charCodeAt(0)) >>> 0;
-    this.field = new FieldMap(setup.terrain, seed % 100000);
+    this.field = field;
     this.sim = new BattleSim(setup, deploy(setup), this.field, playerSide);
-    this.battlefield = new Battlefield(this.field, surroundings);
+    this.battlefield = new Battlefield(this.field);
     this.battlefield.applyTo(this.scene);
     this.view = new BattleView(this.sim);
     this.scene.add(this.view.group);
@@ -84,6 +92,10 @@ export class BattleScreen {
         if (this.sim.result) onLeave(this.sim.result);
       },
     });
+    this.hud.setTerrainInfo(
+      `${this.field.info.label}・標高 ${this.field.info.minMeters}〜${this.field.info.maxMeters}m`,
+      this.field.info.source === "coarse",
+    );
     this.hud.update(null);
   }
 
@@ -163,11 +175,9 @@ export class BattleScreen {
   private pickGround(x: number, y: number): { x: number; z: number } | null {
     const { origin, direction } = this.camera.ray(this.toNdc(x, y));
     const p = new THREE.Vector3();
-    for (let t = 0; t < 900; t += 1.5) {
+    for (let t = 0; t < 1800; t += 1.5) {
       p.copy(origin).addScaledVector(direction, t);
-      const cx = Math.max(-FIELD.width / 2, Math.min(FIELD.width / 2, p.x));
-      const cz = Math.max(-FIELD.depth / 2, Math.min(FIELD.depth / 2, p.z));
-      if (p.y <= this.field.heightAt(cx, cz)) return { x: p.x, z: p.z };
+      if (p.y <= this.field.heightAt(p.x, p.z)) return { x: p.x, z: p.z };
     }
     return null;
   }
@@ -202,8 +212,6 @@ export class BattleScreen {
   dispose(): void {
     this.hud.hide();
     this.view.dispose();
-    this.scene.traverse((o) => {
-      if (o instanceof THREE.Mesh && !(o instanceof THREE.InstancedMesh)) o.geometry.dispose();
-    });
+    this.battlefield.dispose();
   }
 }

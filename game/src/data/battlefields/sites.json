@@ -1,0 +1,26 @@
+[
+  {
+    "id": "xiangguo-plain",
+    "name": "襄国・鄴の東の平原",
+    "bounds": {
+      "west": 114.65,
+      "east": 115.35,
+      "south": 36.3,
+      "north": 36.9
+    },
+    "width": 1041,
+    "height": 1112
+  },
+  {
+    "id": "fukou-taihang",
+    "name": "太行山麓・滏口",
+    "bounds": {
+      "west": 113.75,
+      "east": 114.65,
+      "south": 36.2,
+      "north": 36.8
+    },
+    "width": 1341,
+    "height": 1112
+  }
+]

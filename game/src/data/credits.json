@@ -1,8 +1,18 @@
 [
   {
-    "title": "標高データ",
+    "title": "戦略マップの標高",
     "source": "Terrain Tiles (AWS Open Data)",
     "text": "SRTM and GMTED2010 terrain data courtesy of the U.S. Geological Survey. ETOPO1 terrain data: U.S. National Oceanic and Atmospheric Administration."
+  },
+  {
+    "title": "会戦の戦場の標高",
+    "source": "ALOS World 3D - 30m (AW3D30)",
+    "text": "© JAXA。解像度は約30m(1秒角)の地表面標高。原データは宇宙航空研究開発機構(JAXA)の提供で、無償で利用できる(商用を含む。出典の表示が必要)。本ゲームでは60m間隔に間引いて使用。"
+  },
+  {
+    "title": "会戦の戦場の土地被覆・水域",
+    "source": "ESA WorldCover 10m 2021 v200",
+    "text": "© ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium. CC BY 4.0. 現代(2021年)の樹林・草地・裸地・水域の分布。"
   },
   {
     "title": "河川・湖のデータ",

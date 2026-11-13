@@ -44,6 +44,15 @@ export class HeightField {
     return new HeightField(region, img.naturalWidth, img.naturalHeight, meters, water);
   }
 
+  /** その地点が水辺(川・湖・海)か */
+  isWater(lon: number, lat: number): boolean {
+    const b = this.region.info.bounds;
+    const i = Math.round(((lon - b.west) / (b.east - b.west)) * (this.width - 1));
+    const j = Math.round(((b.north - lat) / (b.north - b.south)) * (this.height - 1));
+    if (i < 0 || j < 0 || i >= this.width || j >= this.height) return false;
+    return this.water[j * this.width + i] > 128;
+  }
+
   /** 好きな地点の標高(メートル)を、まわりの点からなめらかに求める */
   sample(lon: number, lat: number): number {
     const b = this.region.info.bounds;

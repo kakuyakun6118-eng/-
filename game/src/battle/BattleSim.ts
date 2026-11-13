@@ -303,18 +303,43 @@ export class BattleSim {
 
     const water = this.field.waterAt(u.x, u.z);
     const forest = this.field.inForest(u.x, u.z);
-    u.running = moving && wantRun && u.fatigue < 88 && water === 0 && (u.engaged.length === 0 || fleeing);
+    const cavalry = cls.category === "cavalry";
+    const slope = this.field.slopeAt(u.x, u.z);
+    // 騎兵は、斜面(約14度以上)では駆けられない。突撃もできなくなる
+    u.running =
+      moving && wantRun && u.fatigue < 88 && water === 0 && (u.engaged.length === 0 || fleeing) && !(cavalry && slope > 0.25);
     if (moving) {
       let speed = u.running ? cls.run : cls.walk;
       if (water > 0) speed *= water >= 1 ? 0.45 : 0.7;
       if (forest) speed *= cls.category === "cavalry" ? 0.55 : 0.8;
       speed *= 1 - 0.3 * (u.fatigue / 100);
-      const dx = tx - u.x;
-      const dz = tz - u.z;
+      // 斜面では遅くなる。騎兵は歩兵より大きく遅くなる
+      speed *= Math.max(0.3, 1 - slope * (cavalry ? 2.2 : 1.4));
+      let dx = tx - u.x;
+      let dz = tz - u.z;
       const len = Math.hypot(dx, dz) || 1;
-      const stepLen = Math.min(len, speed * dt);
-      u.x += (dx / len) * stepLen;
-      u.z += (dz / len) * stepLen;
+      dx /= len;
+      dz /= len;
+      // 進む先が深い水や急斜面なら、左右へ向きを変えて通れる所を探す(谷や崖のふちに沿って回り込む)。
+      // どちらにも進めなければ、その場で止まる
+      const probe = 7;
+      let open = this.field.blocked(u.x, u.z, cavalry); // すでに入り込んでいる場合は、そのまま抜け出させる
+      if (!open) {
+        for (const turn of [0, 0.6, -0.6, 1.2, -1.2, 1.8, -1.8]) {
+          const cos = Math.cos(turn);
+          const sin = Math.sin(turn);
+          const nx = dx * cos - dz * sin;
+          const nz = dx * sin + dz * cos;
+          if (this.field.blocked(u.x + nx * probe, u.z + nz * probe, cavalry)) continue;
+          dx = nx;
+          dz = nz;
+          open = true;
+          break;
+        }
+      }
+      const stepLen = open ? Math.min(len, speed * dt) : 0;
+      u.x += dx * stepLen;
+      u.z += dz * stepLen;
       this.turnToward(u, Math.atan2(dx, -dz), dt);
       if (u.state !== "routing" && u.state !== "retreating") u.state = "moving";
       u.fatigue = Math.min(100, u.fatigue + (u.running ? 0.55 : 0.12) * dt);
@@ -399,6 +424,7 @@ export class BattleSim {
     const flank = this.flankFactor(attacker, defender);
     let power = cls.charge;
     if (this.field.inForest(defender.x, defender.z)) power *= 0.4; // 森では勢いが付かない
+    if (this.field.slopeAt(defender.x, defender.z) > 0.2) power *= 0.5; // 斜面でも勢いが付かない
     if (this.field.heightAt(attacker.x, attacker.z) < this.field.heightAt(defender.x, defender.z) - 1.5) power *= 0.7;
     // 槍兵は、正面からの騎兵の突撃を受け止める
     if (cls.category === "cavalry" && flank === 1) power /= dcls.antiCavalry * 1.4;

@@ -22,6 +22,8 @@ npm run build    # dist/index.html に1ファイルで出力
 - `src/ui/` … 文字やパネルなどの画面表示
 - `tools/bake_terrain.py` … 実物の標高データから地形ファイルを作るスクリプト。
   地図の範囲を変えるときだけ使う
+- `tools/bake_battlefield.py` … 会戦の戦場用に、AW3D30の標高とWorldCoverの土地被覆を切り出すスクリプト。
+  `src/data/battlefields/sites.json` に範囲を足して実行すると、収録範囲が増える
 
 ## データの出典
 
@@ -29,6 +31,10 @@ npm run build    # dist/index.html に1ファイルで出力
   SRTM and GMTED2010 terrain data courtesy of the U.S. Geological Survey.
   ETOPO1 terrain data: U.S. National Oceanic and Atmospheric Administration.
 - 河川・湖: Made with [Natural Earth](https://www.naturalearthdata.com/) (パブリックドメイン)。
+- 会戦の戦場の標高: ALOS World 3D - 30m (AW3D30) © JAXA。
+  [OpenTopography](https://opentopography.org/) の公開サーバーから取得し、60m間隔に間引いて同梱。
+- 会戦の戦場の土地被覆・水域: © ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021)
+  processed by ESA WorldCover consortium (CC BY 4.0)。
 - 3D表示: [three.js](https://threejs.org/) (MIT License)。
 
 同じ内容をゲーム内の「出典」ボタンにも表示しています。

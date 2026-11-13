@@ -1,9 +1,28 @@
-// 戦場の地形のデータ(起伏・森・川)。地形の種類から自動で作る。
-// ここは計算用で、3Dの見た目は Battlefield.ts が同じデータから作る。
-import type { TerrainKind } from "../data/types";
+// 戦場の地形データ。会戦地点の緯度経度から、実物の標高・土地被覆・水域を読み込んで作る。
+// 乱数で地形を作ることはしない。高解像度のデータ(AW3D30)が未収録の地点では、
+// 戦略マップの実標高(低解像度)を使い、そのことを画面に明示する。
+//
+// 座標の決まり:会戦地点が原点。-z が「攻撃側から見た防御側の方角」、+x がその右手。
+// 長さの単位は、戦場の長さ1 = METERS_PER_UNIT メートル(兵士1体が十数人分にあたるのに合わせた縮尺)。
+import { findBattlefieldSite, type BattlefieldSite } from "../data/battlefields";
+import type { HeightField } from "../world/heightField";
 import { FIELD } from "./deploy";
 
+/** 戦場の長さ1が、実際の何メートルにあたるか */
+export const METERS_PER_UNIT = 12;
+/**
+ * 高さの倍率。1 = 水平と同じ比率(実際の地形のまま)。
+ * 起伏を見やすくしたいときだけ、1.5 程度まで上げる。
+ */
+export const VERTICAL_EXAGGERATION = 1;
+/** 景色として作る範囲の半分(戦場の長さ)。600 × 12m = 中心から7.2km */
+export const VIEW_HALF = 600;
 const CELL = 4;
+const N = (VIEW_HALF * 2) / CELL + 1;
+const METERS_PER_DEGREE = 111190;
+
+/** 土地被覆の番号(tools/bake_battlefield.py と同じ) */
+export const COVER = { grass: 0, tree: 1, shrub: 2, bare: 3, water: 4, wetland: 5 } as const;
 
 function hash(ix: number, iy: number, seed: number): number {
   let n = Math.imul(ix, 374761393) + Math.imul(iy, 668265263) + Math.imul(seed, 1442695041);
@@ -26,97 +45,235 @@ function noise(x: number, y: number, seed: number): number {
   return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
 }
 
-/** なめらかなノイズを重ねたもの(0〜1) */
+/** なめらかなノイズ(0〜1)。地表の色むらや木の配置にだけ使う。地形の高さには使わない */
 export function fbm(x: number, y: number, seed: number): number {
   return noise(x, y, seed) * 0.55 + noise(x * 2.1, y * 2.1, seed + 7) * 0.3 + noise(x * 4.3, y * 4.3, seed + 13) * 0.15;
 }
 
-/** 地形の種類ごとの、起伏の大きさ・森の割合・川の有無 */
-const PROFILES: Record<string, { relief: number; ridge: number; forest: number; river: number }> = {
-  plain: { relief: 1.6, ridge: 0, forest: 0.08, river: 0 },
-  grassland: { relief: 2.2, ridge: 0, forest: 0.02, river: 0 },
-  desert: { relief: 3.0, ridge: 0, forest: 0, river: 0 },
-  forest: { relief: 3.0, ridge: 2, forest: 0.5, river: 0 },
-  hill: { relief: 5.0, ridge: 9, forest: 0.18, river: 0 },
-  mountain: { relief: 8.0, ridge: 16, forest: 0.25, river: 0 },
-  highMountain: { relief: 10.0, ridge: 20, forest: 0.12, river: 0 },
-  river: { relief: 1.6, ridge: 0, forest: 0.1, river: 13 },
-  crossing: { relief: 1.4, ridge: 0, forest: 0.06, river: 22 },
-};
+function loadPixels(url: string): Promise<{ data: Uint8ClampedArray; width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+      ctx.drawImage(img, 0, 0);
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      const out = { data, width: canvas.width, height: canvas.height };
+      canvas.width = canvas.height = 0; // 読み終わったら、すぐにメモリを返す
+      resolve(out);
+    };
+    img.onerror = () => reject(new Error("戦場の地形データを読み込めませんでした"));
+    img.src = url;
+  });
+}
+
+/** 地形データの出どころ(画面に表示する) */
+export interface FieldInfo {
+  /** aw3d30 = 高解像度の実標高 / coarse = 戦略マップの実標高(低解像度) */
+  source: "aw3d30" | "coarse";
+  label: string;
+  /** 景色の範囲の標高(メートル) */
+  minMeters: number;
+  maxMeters: number;
+}
 
 export class FieldMap {
-  readonly cols = Math.round(FIELD.width / CELL) + 1;
-  readonly rows = Math.round(FIELD.depth / CELL) + 1;
-  private readonly heights: Float32Array;
-  private readonly forest: Uint8Array;
-  /** 川の幅(0 なら川はない) */
-  readonly riverWidth: number;
-  readonly dry: boolean;
+  /** 各点の高さ(戦場の長さ。会戦地点を0とする) */
+  private readonly heights = new Float32Array(N * N);
+  private readonly slopes = new Float32Array(N * N);
+  private readonly cover = new Uint8Array(N * N);
+  /** 0 = 陸 / 1 = 浅瀬 / 2 = 深い水 */
+  private readonly water = new Uint8Array(N * N);
+  private baseMeters = 0;
+  info!: FieldInfo;
 
-  constructor(readonly terrain: TerrainKind, readonly seed: number) {
-    const p = PROFILES[terrain] ?? PROFILES.plain;
-    this.riverWidth = p.river;
-    this.dry = terrain === "desert" || terrain === "grassland";
-    this.heights = new Float32Array(this.cols * this.rows);
-    this.forest = new Uint8Array(this.cols * this.rows);
-    for (let j = 0; j < this.rows; j++) {
-      for (let i = 0; i < this.cols; i++) {
-        const x = i * CELL - FIELD.width / 2;
-        const z = j * CELL - FIELD.depth / 2;
-        let h = (fbm(x / 60, z / 60, seed) - 0.5) * 2 * p.relief;
-        // 丘陵や山地では、防御側(奥)に尾根を置く。守る側が高所を取れる
-        if (p.ridge > 0) {
-          h += p.ridge * Math.exp(-(((z + 78) / 46) ** 2)) * (0.55 + 0.45 * fbm(x / 80 + 9, z / 80, seed + 3));
+  private constructor(
+    readonly lon: number, readonly lat: number,
+    /** 攻撃側から見た防御側の方角(ラジアン。0 = 北、時計回り) */
+    readonly bearing: number,
+    private readonly coarse: HeightField,
+  ) {}
+
+  /** 戦場の位置 (x, z) が、実際のどの緯度経度にあたるか */
+  toLonLat(x: number, z: number): { lon: number; lat: number } {
+    const cos = Math.cos(this.bearing);
+    const sin = Math.sin(this.bearing);
+    const east = (x * cos - z * sin) * METERS_PER_UNIT;
+    const north = (-x * sin - z * cos) * METERS_PER_UNIT;
+    return {
+      lon: this.lon + east / (METERS_PER_DEGREE * Math.cos((this.lat * Math.PI) / 180)),
+      lat: this.lat + north / METERS_PER_DEGREE,
+    };
+  }
+
+  /** 会戦地点の実地形を読み込んで、戦場の地形データを作る */
+  static async load(lon: number, lat: number, bearing: number, coarse: HeightField): Promise<FieldMap> {
+    const field = new FieldMap(lon, lat, bearing, coarse);
+    // 景色の範囲(回転しても収まるよう、対角線ぶんの余裕を取る)が、まるごと収録されているか
+    const reach = (VIEW_HALF * Math.SQRT2 * METERS_PER_UNIT) / METERS_PER_DEGREE;
+    const site = findBattlefieldSite(lon, lat, reach / Math.cos((lat * Math.PI) / 180), reach);
+    const meters = new Float32Array(N * N);
+    if (site) {
+      await field.readSite(site, meters);
+      field.info = { source: "aw3d30", label: "実標高 AW3D30(約30m)", minMeters: 0, maxMeters: 0 };
+    } else {
+      for (let j = 0; j < N; j++) {
+        for (let i = 0; i < N; i++) {
+          const p = field.toLonLat(i * CELL - VIEW_HALF, j * CELL - VIEW_HALF);
+          meters[j * N + i] = coarse.sample(p.lon, p.lat);
+          field.cover[j * N + i] = coarse.isWater(p.lon, p.lat) ? COVER.water : COVER.grass;
         }
-        // 川:戦場の中央を東西に流れる。川底は低い
-        if (p.river > 0) {
-          const d = Math.abs(z - this.riverCenter(x));
-          if (d < p.river) h -= 1.6 * (1 - (d / p.river) ** 2);
-        }
-        this.heights[j * this.cols + i] = h;
-        // 森:まだらに生える。両軍が並ぶ場所の真ん中は空けておく
-        const open = Math.abs(x) < 70 && Math.abs(Math.abs(z) - 62) < 22;
-        const f = fbm(x / 45 + 30, z / 45 + 30, seed + 21);
-        this.forest[j * this.cols + i] =
-          !open && f > 1 - p.forest * 1.15 && (p.river === 0 || Math.abs(z - this.riverCenter(x)) > p.river + 6) ? 1 : 0;
+      }
+      field.info = { source: "coarse", label: "実標高(低解像度 約1.4km)・この地点の30mデータは未収録", minMeters: 0, maxMeters: 0 };
+    }
+    field.finish(meters, site !== null);
+    return field;
+  }
+
+  /** 収録範囲の画像から、戦場の向きに合わせて標高・土地被覆・水域を読み取る */
+  private async readSite(site: BattlefieldSite, meters: Float32Array): Promise<void> {
+    const [terrain, water] = await Promise.all([loadPixels(site.terrainUrl), loadPixels(site.waterUrl)]);
+    const b = site.bounds;
+    const W = terrain.width;
+    const H = terrain.height;
+    const elev = (i: number, j: number): number => terrain.data[(j * W + i) * 4] * 256 + terrain.data[(j * W + i) * 4 + 1];
+    for (let j = 0; j < N; j++) {
+      for (let i = 0; i < N; i++) {
+        const p = this.toLonLat(i * CELL - VIEW_HALF, j * CELL - VIEW_HALF);
+        const fx = Math.max(0, Math.min(W - 1.001, ((p.lon - b.west) / (b.east - b.west)) * (W - 1)));
+        const fy = Math.max(0, Math.min(H - 1.001, ((b.north - p.lat) / (b.north - b.south)) * (H - 1)));
+        const x0 = Math.floor(fx);
+        const y0 = Math.floor(fy);
+        const tx = fx - x0;
+        const ty = fy - y0;
+        meters[j * N + i] =
+          (elev(x0, y0) * (1 - tx) + elev(x0 + 1, y0) * tx) * (1 - ty) +
+          (elev(x0, y0 + 1) * (1 - tx) + elev(x0 + 1, y0 + 1) * tx) * ty;
+        const nx = Math.round(fx);
+        const ny = Math.round(fy);
+        const isWater = water.data[(ny * water.width + nx) * 4] > 127;
+        this.cover[j * N + i] = isWater ? COVER.water : terrain.data[(ny * W + nx) * 4 + 2];
       }
     }
   }
 
-  /** 川の中心線の位置(東西の位置 x に対する z) */
-  riverCenter(x: number): number {
-    return 12 * Math.sin(x / 55 + (this.seed % 7));
+  /** 読み取った標高から、高さ・傾き・水の深さを計算する */
+  private finish(meters: Float32Array, smooth: boolean): void {
+    // AW3D30は地表面の高さ(木や建物を含む)なので、細かいでこぼこを軽くならす
+    if (smooth) {
+      const tmp = new Float32Array(N * N);
+      for (let j = 0; j < N; j++) {
+        for (let i = 0; i < N; i++) {
+          let sum = 0;
+          let n = 0;
+          for (let dj = -1; dj <= 1; dj++) {
+            for (let di = -1; di <= 1; di++) {
+              const x = i + di;
+              const y = j + dj;
+              if (x < 0 || y < 0 || x >= N || y >= N) continue;
+              const w = di === 0 && dj === 0 ? 4 : 1;
+              sum += meters[y * N + x] * w;
+              n += w;
+            }
+          }
+          tmp[j * N + i] = sum / n;
+        }
+      }
+      meters.set(tmp);
+    }
+    const c = Math.floor(N / 2);
+    this.baseMeters = meters[c * N + c];
+    let lo = Infinity;
+    let hi = -Infinity;
+    const k = VERTICAL_EXAGGERATION / METERS_PER_UNIT;
+    for (let n = 0; n < N * N; n++) {
+      lo = Math.min(lo, meters[n]);
+      hi = Math.max(hi, meters[n]);
+      this.heights[n] = (meters[n] - this.baseMeters) * k;
+    }
+    this.info.minMeters = Math.round(lo);
+    this.info.maxMeters = Math.round(hi);
+
+    for (let j = 0; j < N; j++) {
+      for (let i = 0; i < N; i++) {
+        const l = this.heights[j * N + Math.max(0, i - 1)];
+        const r = this.heights[j * N + Math.min(N - 1, i + 1)];
+        const u = this.heights[Math.max(0, j - 1) * N + i];
+        const d = this.heights[Math.min(N - 1, j + 1) * N + i];
+        this.slopes[j * N + i] = Math.hypot(r - l, d - u) / (2 * CELL) / VERTICAL_EXAGGERATION;
+        // 水:岸から100m以上離れた所は深く、渡れない。それ以外は浅瀬
+        if (this.cover[j * N + i] !== COVER.water) continue;
+        let wet = 0;
+        for (let dj = -2; dj <= 2; dj++) {
+          for (let di = -2; di <= 2; di++) {
+            const x = Math.max(0, Math.min(N - 1, i + di));
+            const y = Math.max(0, Math.min(N - 1, j + dj));
+            if (this.cover[y * N + x] === COVER.water) wet++;
+          }
+        }
+        this.water[j * N + i] = wet >= 22 ? 2 : 1;
+      }
+    }
   }
 
-  /** 地面の高さ */
+  private index(x: number, z: number): number {
+    const i = Math.max(0, Math.min(N - 1, Math.round((x + VIEW_HALF) / CELL)));
+    const j = Math.max(0, Math.min(N - 1, Math.round((z + VIEW_HALF) / CELL)));
+    return j * N + i;
+  }
+
+  /** 地面の高さ(戦場の長さ) */
   heightAt(x: number, z: number): number {
-    const fx = Math.max(0, Math.min(this.cols - 1.001, (x + FIELD.width / 2) / CELL));
-    const fz = Math.max(0, Math.min(this.rows - 1.001, (z + FIELD.depth / 2) / CELL));
+    const fx = Math.max(0, Math.min(N - 1.001, (x + VIEW_HALF) / CELL));
+    const fz = Math.max(0, Math.min(N - 1.001, (z + VIEW_HALF) / CELL));
     const i = Math.floor(fx);
     const j = Math.floor(fz);
     const tx = fx - i;
     const tz = fz - j;
     const h = this.heights;
-    const c = this.cols;
     return (
-      (h[j * c + i] * (1 - tx) + h[j * c + i + 1] * tx) * (1 - tz) +
-      (h[(j + 1) * c + i] * (1 - tx) + h[(j + 1) * c + i + 1] * tx) * tz
+      (h[j * N + i] * (1 - tx) + h[j * N + i + 1] * tx) * (1 - tz) +
+      (h[(j + 1) * N + i] * (1 - tx) + h[(j + 1) * N + i + 1] * tx) * tz
     );
   }
 
-  /** 森の中か */
-  inForest(x: number, z: number): boolean {
-    const i = Math.round((x + FIELD.width / 2) / CELL);
-    const j = Math.round((z + FIELD.depth / 2) / CELL);
-    if (i < 0 || j < 0 || i >= this.cols || j >= this.rows) return false;
-    return this.forest[j * this.cols + i] === 1;
+  /** 実際の標高(メートル) */
+  metersAt(x: number, z: number): number {
+    return this.baseMeters + (this.heightAt(x, z) * METERS_PER_UNIT) / VERTICAL_EXAGGERATION;
   }
 
-  /** 川の中か。浅瀬(戦場の中央付近)では半分の深さとして 0.5 を返す */
+  /** 景色の範囲の外(遠景)の高さ。戦略マップの実標高から求める */
+  farHeightAt(x: number, z: number): number {
+    const p = this.toLonLat(x, z);
+    return ((this.coarse.sample(p.lon, p.lat) - this.baseMeters) * VERTICAL_EXAGGERATION) / METERS_PER_UNIT;
+  }
+
+  /** 傾き(高さ ÷ 水平距離。0.25 で約14度、0.5 で約27度) */
+  slopeAt(x: number, z: number): number {
+    return this.slopes[this.index(x, z)];
+  }
+
+  /** 土地被覆の番号 */
+  coverAt(x: number, z: number): number {
+    return this.cover[this.index(x, z)];
+  }
+
+  inForest(x: number, z: number): boolean {
+    return this.cover[this.index(x, z)] === COVER.tree;
+  }
+
+  /** 水の深さ。0 = 陸 / 0.5 = 浅瀬(渡れるが遅い) / 1 = 深い水(渡れない) */
   waterAt(x: number, z: number): number {
-    if (this.riverWidth === 0) return 0;
-    const d = Math.abs(z - this.riverCenter(x));
-    if (d > this.riverWidth * 0.8) return 0;
-    return Math.abs(x) < 28 ? 0.5 : 1;
+    const w = this.water[this.index(x, z)];
+    return w === 2 ? 1 : w === 1 ? 0.5 : 0;
+  }
+
+  /** その場所へ進めないか。深い水と、急すぎる斜面(騎兵は歩兵より緩い斜面で止まる)は通れない */
+  blocked(x: number, z: number, cavalry: boolean): boolean {
+    if (Math.abs(x) > FIELD.width / 2 + 40) return false;
+    const n = this.index(x, z);
+    return this.water[n] === 2 || this.slopes[n] > (cavalry ? 0.45 : 0.8);
   }
 }

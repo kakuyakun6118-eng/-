@@ -95,6 +95,13 @@ export class BattleHud {
     root.hidden = false;
   }
 
+  /** 地形データの出どころを表示する。低解像度のときは、目立つ色にする */
+  setTerrainInfo(text: string, coarse: boolean): void {
+    const el = this.q(".hud-terrain");
+    el.textContent = `地形:${text}`;
+    el.dataset.coarse = String(coarse);
+  }
+
   setPaused(paused: boolean): void {
     this.q(".hud-pause").textContent = paused ? "▶ 再開" : "Ⅱ 停止";
   }

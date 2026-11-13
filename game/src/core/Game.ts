@@ -4,7 +4,7 @@ import { MapCamera, type WorldRect } from "../camera/MapCamera";
 import { armies as armyData, factionById, factionOfCity, officerById, regions, resolveCityLayout, scenario } from "../data";
 import { BattleScreen } from "../battle/BattleScreen";
 import type { BattleResult } from "../battle/types";
-import type { BattleEvent, BattleSetup, City, TerrainKind } from "../data/types";
+import type { BattleEvent, BattleSetup, City } from "../data/types";
 import { InputController } from "../input/InputController";
 import { compareSides, createBattleSetup, placeName } from "../sim/battle";
 import { Campaign, type ArmyState } from "../sim/Campaign";
@@ -461,26 +461,41 @@ export class Game {
       return;
     }
 
-    // 戦場のまわり8方向の地形を調べる(正面 = 攻撃側から見た防御側の方角から、時計回り)。
-    // 遠景の山並みに反映して、戦略マップの地形とつじつまを合わせる
+    // 攻撃側から見た防御側の、実際の方角。戦場の「奥」をこの方角に合わせる
     const a = this.campaign.stateOf(event.attackerArmyId)?.army;
     const d = event.defenderArmyId ? this.campaign.stateOf(event.defenderArmyId)?.army : undefined;
     const bearing = a && d ? Math.atan2((d.lon - a.lon) * Math.cos((a.lat * Math.PI) / 180), d.lat - a.lat) : 0;
-    const surroundings: TerrainKind[] = [];
-    for (let k = 0; k < 8; k++) {
-      const angle = bearing + (k * Math.PI) / 4;
-      surroundings.push(this.grid.kindAt(setup.location.lon + Math.sin(angle) * 0.5, setup.location.lat + Math.cos(angle) * 0.5));
-    }
 
     this.battlePrep.hide();
     this.root.classList.remove("battle-open");
-    this.root.classList.add("in-battle");
-    // プレイヤーは、自分が動かした軍団(攻撃側)を指揮する
-    this.battle = new BattleScreen(
-      this.renderer, this.root.querySelector("#battle-hud") as HTMLElement, setup, surroundings, "attacker",
-      (result) => this.finishBattle(result),
-    );
-    this.battle.resize(this.width, this.height);
+    const loading = this.root.querySelector("#battle-loading") as HTMLElement;
+    loading.hidden = false;
+    // 会戦地点の実地形を読み込んでから、戦場へ移る。プレイヤーは、自分が動かした軍団(攻撃側)を指揮する
+    BattleScreen.create(
+      this.renderer, this.root.querySelector("#battle-hud") as HTMLElement, setup, this.terrains[0].field, bearing,
+      "attacker", (result) => this.finishBattle(result),
+    )
+      .then((battle) => {
+        this.root.classList.add("in-battle");
+        this.battle = battle;
+        battle.resize(this.width, this.height);
+      })
+      .catch((err) => {
+        // 地形を読み込めなかったら、会戦を始めずに保留へ戻す
+        console.error(err);
+        this.campaign.setEventStatus(event.battleId, "pending");
+        this.showNotice("戦場の地形データを読み込めませんでした。会戦は保留に戻しました");
+      })
+      .finally(() => {
+        loading.hidden = true;
+      });
+  }
+
+  /** 画面上部に、短い知らせを出す */
+  private showNotice(text: string): void {
+    (this.root.querySelector("#event-open") as HTMLElement).hidden = true;
+    (this.root.querySelector("#event-text") as HTMLElement).textContent = text;
+    (this.root.querySelector("#event") as HTMLElement).hidden = false;
   }
 
   /** 会戦を終えて戦略マップに戻る。結果を軍団へ書き戻し、イベントを決着済みにする */

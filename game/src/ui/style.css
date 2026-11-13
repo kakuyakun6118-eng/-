@@ -1646,3 +1646,36 @@ body {
   color: var(--ink);
   font-weight: 700;
 }
+
+/* 戦場の地形データの出どころ */
+.hud-terrain {
+  position: absolute;
+  top: calc(58px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 220px);
+  margin: 0;
+  padding: 1px 10px;
+  border-radius: 3px;
+  background: var(--label-bg);
+  font-size: 10px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.hud-terrain[data-coarse="true"] {
+  color: var(--warn);
+}
+
+#battle-loading {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  padding: 12px 20px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+  font-size: 14px;
+}

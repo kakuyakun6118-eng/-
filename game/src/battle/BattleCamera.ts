@@ -4,10 +4,10 @@ import { FIELD } from "./deploy";
 import type { FieldMap } from "./fieldData";
 
 const MIN_DISTANCE = 22;
-const MAX_DISTANCE = 330;
+const MAX_DISTANCE = 620;
 
 export class BattleCamera {
-  readonly camera = new THREE.PerspectiveCamera(42, 1, 1, 2000);
+  readonly camera = new THREE.PerspectiveCamera(42, 1, 1, 7000);
   readonly target = new THREE.Vector3();
   distance = 170;
   /** 水平の向き(ラジアン)。0 で攻撃側の後ろから防御側を見る */
@@ -37,7 +37,7 @@ export class BattleCamera {
 
   update(): void {
     this.distance = THREE.MathUtils.clamp(this.distance, MIN_DISTANCE, MAX_DISTANCE);
-    this.pitch = THREE.MathUtils.clamp(this.pitch, 0.3, 1.35);
+    this.pitch = THREE.MathUtils.clamp(this.pitch, 0.22, 1.35);
     this.target.x = THREE.MathUtils.clamp(this.target.x, -FIELD.width / 2, FIELD.width / 2);
     this.target.z = THREE.MathUtils.clamp(this.target.z, -FIELD.depth / 2, FIELD.depth / 2);
     this.target.y = this.field.heightAt(this.target.x, this.target.z);
@@ -48,6 +48,9 @@ export class BattleCamera {
       this.target.y + Math.sin(this.pitch) * this.distance,
       this.target.z + Math.cos(this.yaw) * flat,
     );
+    // 手前の山にめり込まないよう、カメラの真下の地面より必ず上にいる
+    const floor = this.field.heightAt(this.camera.position.x, this.camera.position.z) + 4;
+    if (this.camera.position.y < floor) this.camera.position.y = floor;
     this.camera.lookAt(this.target);
     this.camera.updateMatrixWorld();
   }
