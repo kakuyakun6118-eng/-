@@ -31,6 +31,7 @@
       <button id="credits-open" type="button">出典</button>
       <button id="territory-toggle" type="button" aria-pressed="true">領土</button>
       <button id="menu-open" class="menu-open" type="button">メニュー</button>
+      <button id="persons-open" type="button">人物</button>
       <section id="info" hidden>
         <div class="info-inner">
           <div class="info-head">
@@ -201,6 +202,56 @@
             <p class="hud-result-summary"></p>
             <div class="hud-result-table"></div>
             <button class="hud-leave" type="button">戦略マップへ戻る</button>
+          </div>
+        </div>
+      </section>
+      <section id="persons" hidden>
+        <div class="persons-inner">
+          <div class="persons-head">
+            <h2>人物</h2>
+            <select class="persons-faction" aria-label="勢力で絞る"></select>
+            <select class="persons-role" aria-label="役割で絞る">
+              <option value="">すべての役割</option>
+              <option value="ruler">君主</option>
+              <option value="general">武将</option>
+              <option value="strategist">軍師</option>
+            </select>
+            <select class="persons-sort" aria-label="並べ替え">
+              <option value="">並び:勢力順</option>
+              <option value="leadership">統率の高い順</option>
+              <option value="war">武力の高い順</option>
+              <option value="intelligence">知力の高い順</option>
+              <option value="politics">政治の高い順</option>
+              <option value="charisma">魅力の高い順</option>
+            </select>
+            <span class="persons-count"></span>
+            <button class="persons-close" type="button">閉じる</button>
+          </div>
+          <div class="persons-body">
+            <div class="persons-list"></div>
+            <div class="person-detail" hidden>
+              <div class="person-top">
+                <figure>
+                  <img class="person-portrait" alt="" />
+                  <figcaption class="person-portrait-note"></figcaption>
+                </figure>
+                <div class="person-main">
+                  <div class="person-title"><h3 class="person-name"></h3><span class="person-reading"></span></div>
+                  <p class="person-years"></p>
+                  <p class="person-line"></p>
+                  <p class="person-post"></p>
+                  <div class="person-stats"></div>
+                </div>
+              </div>
+              <p class="person-traits"></p>
+              <p class="person-bio"></p>
+              <div class="person-appoint-box">
+                <select class="person-target" aria-label="任命先"></select>
+                <button class="person-appoint" type="button">任命する</button>
+              </div>
+              <p class="person-message" role="status"></p>
+              <p class="person-note">能力値と特性は、ゲーム上の設定です(史実の評価そのものではありません)。</p>
+            </div>
           </div>
         </div>
       </section>

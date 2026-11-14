@@ -1,7 +1,7 @@
 // ゲームの進行を計算する。日付を進め、軍団の行軍・食糧・疲労・士気・敵との接触を扱う。
 // ここは計算だけで、3D表示のことは知らない。変化があったら、登録された関数で知らせる。
-import { resolveCityLayout, scenario, totalTroops } from "../data";
-import { initialCityState, placeName } from "./battle";
+import { personById, resolveCityLayout, scenario, totalTroops } from "../data";
+import { governorIdOf, initialCityState, placeName } from "./battle";
 import { seasonOf, type CampaignSave, type Relation } from "./save";
 import type { BattleResult, CommanderFate, SideResult } from "../battle/types";
 import type { Army, ArmyStatus, BattleEvent, City, CityState, PersonStatus, UnitTypeId } from "../data/types";
@@ -70,7 +70,7 @@ export class Campaign {
   constructor(
     private readonly grid: TerrainGrid,
     armies: Army[],
-    private readonly cities: City[],
+    readonly cities: City[],
     private readonly listener: CampaignListener,
   ) {
     // 元のデータを書き換えないよう、写しを取って使う
@@ -127,6 +127,39 @@ export class Campaign {
     if (fate === "killed") this.personStates[personId] = "dead";
     else if (fate === "captured") this.personStates[personId] = "captured";
     else if (fate === "wounded") this.personStates[personId] = "wounded";
+  }
+
+  /** その人物の、いまの役目(太守・守将か、軍団の指揮官)。無ければ null */
+  postOf(personId: string): { kind: "city" | "army"; id: string; label: string } | null {
+    const army = this.armies.find((s) => s.army.commanderId === personId);
+    if (army) return { kind: "army", id: army.army.id, label: `${army.army.name} 指揮官` };
+    const city = this.cities.find((c) => governorIdOf(c, this.cityStates[c.id]) === personId);
+    if (city) return { kind: "city", id: city.id, label: `${city.name} ${personById(personId)?.role === "ruler" ? "在城(君主)" : city.kind === "pass" ? "守将" : "太守"}` };
+    return null;
+  }
+
+  /**
+   * 人物を、太守・守将か軍団の指揮官に任命する(target が null なら、任を解く)。
+   * できないときは、理由を文字で返す。できたときは null。
+   */
+  appoint(personId: string, target: { kind: "city" | "army"; id: string } | null): string | null {
+    const person = personById(personId);
+    if (!person) return "人物が見つかりません";
+    if (this.personStatus(personId) !== "active") return "負傷・捕虜・死亡の人物は任命できません";
+    const city = target?.kind === "city" ? this.cities.find((c) => c.id === target.id) : undefined;
+    const army = target?.kind === "army" ? this.stateOf(target.id) : undefined;
+    if (target && !city && !army) return "任命先が見つかりません";
+    if (city && scenario.cityOwners[city.id] !== person.factionId) return "ほかの勢力の都市には任命できません";
+    if (army && army.army.factionId !== person.factionId) return "ほかの勢力の軍団には任命できません";
+    if (army && army.status === "fighting") return "戦闘中の軍団の指揮官は替えられません";
+    // いまの役目を解く(1人が持てる役目は1つ)
+    for (const s of this.armies) if (s.army.commanderId === personId) s.army.commanderId = "";
+    for (const c of this.cities) {
+      if (governorIdOf(c, this.cityStates[c.id]) === personId) this.cityStates[c.id] = { ...this.cityState(c), governorId: null };
+    }
+    if (city) this.cityStates[city.id] = { ...this.cityState(city), governorId: personId, governorFate: "healthy" };
+    if (army) army.army.commanderId = personId;
+    return null;
   }
 
   /** 勢力の組ごとの関係。書かれていない組は戦争(いまは切り替える手段がない) */
@@ -599,17 +632,18 @@ export class Campaign {
         wallDamage: Math.max(prev.wallDamage, result.siege.wallDamage),
         gateDamage: Math.max(prev.gateDamage, result.siege.gateDamage),
         governorFate: d.commander,
-        governorId: prev.governorId,
+        governorId: governorIdOf(city, prev) ?? null,
       };
-      this.recordFate(prev.governorId, d.commander);
-      if (d.commander === "killed" || d.commander === "captured") state.governorId = undefined;
+      const governorId = governorIdOf(city, prev);
+      this.recordFate(governorId, d.commander);
+      if (d.commander === "killed" || d.commander === "captured") state.governorId = null;
       if (result.siege.captured) {
         // 落城:攻撃側の勢力のものになる。守備隊は、仮に攻撃側の兵から1,000人を置いたものとする(軍団の兵力は減らさない)
         state.garrison = 1000;
         state.morale = 60;
-        this.recordFate(prev.governorId, d.commander === "killed" ? "killed" : "captured");
-        state.governorFate = "captured";
-        state.governorId = undefined;
+        this.recordFate(governorId, d.commander === "killed" ? "killed" : "captured");
+        state.governorFate = "healthy"; // 新しい持ち主のもとでは、太守はまだいない
+        state.governorId = null;
         this.listener.onCityCaptured(city.id, event.attackerFactionId);
       } else if (attacker) {
         // 攻め落とせなかった軍団は、都市から離れる方向へ退く

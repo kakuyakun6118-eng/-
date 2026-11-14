@@ -18,6 +18,7 @@ import { ArmyPanel, type ArmyPanelMode } from "../ui/ArmyPanel";
 import { BattlePrep } from "../ui/BattlePrep";
 import { CityLabels } from "../ui/CityLabels";
 import { InfoPanel } from "../ui/InfoPanel";
+import { PersonScreen } from "../ui/PersonScreen";
 import { AUTO_SLOT, SaveMenu } from "../ui/SaveMenu";
 import { SaveStore } from "./saveStore";
 import { Armies, type ArmyMarker } from "../world/Armies";
@@ -83,6 +84,7 @@ export class Game {
   private rate = 1;
   /** 操作する勢力(null なら制限なし) */
   private playerFactionId: string | null = null;
+  private personScreen!: PersonScreen;
   private territoryOpacity = 1;
   /** セーブデータの保存先(動作確認のために外からも見られるようにしてある) */
   readonly saves = new SaveStore();
@@ -279,6 +281,13 @@ export class Game {
     for (const b of root.querySelectorAll<HTMLElement>(".menu-open")) {
       b.addEventListener("click", () => void this.menu.open());
     }
+    // 人物の一覧と任命
+    this.personScreen = new PersonScreen(root.querySelector("#persons") as HTMLElement, {
+      campaign: () => this.campaign,
+      playerFactionId: () => this.playerFactionId,
+      onAppointed: () => this.refreshPosts(),
+    });
+    (root.querySelector("#persons-open") as HTMLElement).addEventListener("click", () => this.personScreen.open());
     this.onDayChanged();
     (root.querySelector("#event-close") as HTMLElement).addEventListener("click", () => {
       (root.querySelector("#event") as HTMLElement).hidden = true;
@@ -471,6 +480,16 @@ export class Game {
     if (!st || !this.playerFactionId) return;
     const income = this.campaign.incomeOf(this.playerFactionId);
     el.textContent = `金 ${Math.round(st.gold).toLocaleString("ja-JP")}(+${income.gold}) 糧 ${Math.round(st.grain).toLocaleString("ja-JP")}(+${income.grain})`;
+  }
+
+  /** 任命のあと、軍団の旗印(指揮官の名前)と、開いているパネルを合わせる */
+  private refreshPosts(): void {
+    for (const s of this.campaign.armies) {
+      const marker = this.armies.markerOf(s.army.id);
+      if (marker) marker.commander = officerById(s.army.commanderId);
+    }
+    if (this.selected) this.selectCity(this.selected);
+    if (this.selectedArmy) this.selectArmy(this.selectedArmy);
   }
 
   private settings(): GameSettings {

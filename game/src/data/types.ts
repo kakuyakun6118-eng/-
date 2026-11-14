@@ -196,6 +196,8 @@ export interface Person {
   favoredUnit: UnitTypeId | null;
   /** 人物の説明・経歴 */
   bio: string;
+  /** 生没年に異説があるとき true */
+  datesUncertain?: boolean;
 }
 
 /** 以前の名前(武将)。同じものを指す */
@@ -330,8 +332,8 @@ export interface CityState {
   morale: number;
   wallDamage: number;
   gateDamage: number;
-  /** いまの太守・守将(人物ID。任命で変わる) */
-  governorId?: string;
+  /** いまの太守・守将(人物ID。任命で変わる)。null は「いない」。書かれていなければ、都市データの最初の太守 */
+  governorId?: string | null;
   /** 守将の状態(戦死・捕虜なら、守将はいなくなる) */
   governorFate?: "healthy" | "wounded" | "captured" | "killed";
 }
@@ -381,6 +383,8 @@ export interface Scenario {
   cityOwners: Record<string, string>;
   /** 所属が史料で確かめにくく、推定で置いた都市 */
   uncertainOwners?: string[];
+  /** 開始時に都市・関所を守る人物(都市ID・関所ID → 人物ID) */
+  governors?: Record<string, string>;
   /** 関所ID → 勢力ID */
   passOwners?: Record<string, string>;
   ownerNote?: string;

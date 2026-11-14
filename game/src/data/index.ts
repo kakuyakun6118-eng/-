@@ -55,6 +55,20 @@ export const regions: RegionData[] = [northChina];
 
 /** 現在のシナリオ */
 export const scenario: Scenario = s317 as Scenario;
+// 開始時の太守・守将を、都市と関所に書き込む
+for (const c of northChina.cities) c.governorId = scenario.governors?.[c.id] ?? c.governorId;
+
+// 肖像画像:portraits/{人物ID}.webp(png・jpg も可)があれば使う。無い人物は、画面側で仮のシルエットを出す
+const portraitFiles = import.meta.glob("./portraits/*.{webp,png,jpg,jpeg}", { eager: true, query: "?url", import: "default" }) as Record<string, string>;
+const portraits = new Map<string, string>();
+for (const [path, url] of Object.entries(portraitFiles)) {
+  const id = path.slice(path.lastIndexOf("/") + 1, path.lastIndexOf("."));
+  portraits.set(id, url);
+}
+export function portraitOf(personId: string): string | undefined {
+  return portraits.get(personId);
+}
+
 // 関所の所属も、都市と同じ表で引けるようにする
 Object.assign(scenario.cityOwners, scenario.passOwners ?? {});
 

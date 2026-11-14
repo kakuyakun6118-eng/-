@@ -1,4 +1,5 @@
 // 都市をタップしたときに、画面の下に出る情報パネル。
+import { governorIdOf } from "../sim/battle";
 import { cityLevelOf, cityLevels, personById } from "../data";
 import type { City, CityState, Faction } from "../data/types";
 
@@ -38,7 +39,7 @@ export class InfoPanel {
     this.chip.style.background = faction ? faction.color : "#9a9a9a";
     this.faction.textContent = (faction ? faction.name : "所属なし") + (uncertain ? "(推定)" : "");
     this.detail.textContent = faction ? `${faction.people} ・ 君主 ${faction.ruler}` : "";
-    const governor = personById(state?.governorId ?? city.governorId);
+    const governor = personById(governorIdOf(city, state));
     const extra = [
       `守備兵 ${(state?.garrison ?? city.garrison ?? 0).toLocaleString("ja-JP")}`,
       governor ? `${city.kind === "pass" ? "守将" : "太守"} ${governor.name}` : city.kind === "pass" ? "守将なし" : "太守なし",

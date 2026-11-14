@@ -46,6 +46,15 @@ function battleName(event: BattleEvent, cities: City[]): string {
   return n.km < 25 ? `${n.city.name}の戦い` : `${n.city.name}${n.direction}の戦い`;
 }
 
+/** いまの太守・守将の人物ID(いなければ undefined) */
+export function governorIdOf(city: City, state?: CityState): string | undefined {
+  if (!state || state.governorId === undefined) {
+    const lost = state?.governorFate === "killed" || state?.governorFate === "captured";
+    return lost ? undefined : city.governorId;
+  }
+  return state.governorId ?? undefined;
+}
+
 /** 都市の、戦いを受ける前の状態(守備兵・食糧・士気は、データか規模から決める) */
 export function initialCityState(city: City): CityState {
   return {
@@ -111,8 +120,7 @@ function citySide(city: City, factionId: string, state: CityState): BattleSide {
   // 守備兵は歩兵と弓兵で構成する(城を守るのに騎兵は使わない)
   const garrison = state.garrison;
   // 守将:都市データに名前があれば、能力値は仮の値で指揮官とする(戦死・捕虜になっていれば不在)
-  const lost = state.governorFate === "killed" || state.governorFate === "captured";
-  const governor: Officer | null = (!lost && personById(state.governorId ?? city.governorId)) || null;
+  const governor: Officer | null = personById(governorIdOf(city, state)) ?? null;
   return {
     role: "defender",
     kind: "city",
