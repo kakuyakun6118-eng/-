@@ -117,7 +117,7 @@ export class PersonScreen {
     this.q(".person-years").textContent = years + age;
     const status = campaign.personStatus(p.id);
     const post = campaign.postOf(p.id);
-    this.q(".person-line").textContent = `${faction?.name ?? "所属なし"}・${ROLE_LABEL[p.role]}・${p.title || "官職不明"}`;
+    this.q(".person-line").textContent = `${faction?.name ?? "所属なし"}・${ROLE_LABEL[p.role]}・${p.title || "官職不明"}${p.people ? `・${p.people}${p.peopleNote ? "(注)" : ""}` : ""}`;
     this.q(".person-post").textContent = `状態:${STATUS_LABEL[status]} / 役目:${post ? post.label : "なし"}`;
     this.q(".person-stats").replaceChildren(
       ...STATS.map(([key, label]) => {

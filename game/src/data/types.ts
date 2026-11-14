@@ -198,6 +198,10 @@ export interface Person {
   favoredUnit: UnitTypeId | null;
   /** 人物の説明・経歴 */
   bio: string;
+  /** 民族(漢・匈奴・羯・鮮卑・氐・羌 など)。確かでないものは「不明」 */
+  people?: string;
+  /** 民族についての注記(推定の根拠など) */
+  peopleNote?: string;
   /** 所属・生存・活動が確かでないときの注記(画面に出す) */
   note?: string;
   /** 生没年に異説があるとき true */

@@ -1,5 +1,6 @@
 // 会戦準備画面。攻撃側を左、防御側を右に置き、中央は戦略マップ(戦場と両軍の陣営)をそのまま見せる。
 // 「両軍情報」で、兵力・士気などを左右の棒で比べる表に切り替える。
+import { fillPortrait } from "./portrait";
 import { factionById, terrainRules } from "../data";
 import type { BattleSetup, BattleSide } from "../data/types";
 import type { ComparisonRow } from "../sim/battle";
@@ -22,6 +23,21 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, te
 
 const fmt = (n: number): string => Math.round(n).toLocaleString("ja-JP");
 const total = (s: BattleSide): number => s.troops.infantry + s.troops.cavalry + s.troops.archer;
+
+/** 指揮官・守将の行。人物がいれば、肖像(人物画面と同じ処理)を添える */
+function commanderLine(side: BattleSide): HTMLElement {
+  const line = document.createElement("p");
+  line.className = "battle-commander";
+  if (side.commander) {
+    const img = document.createElement("img");
+    img.className = "battle-face";
+    img.alt = "";
+    fillPortrait(img, side.commander);
+    line.append(img);
+  }
+  line.append(side.commander ? `${side.kind === "city" ? "守将" : "指揮官"} ${side.commander.name}` : side.kind === "city" ? "守将 不明" : "指揮官なし");
+  return line;
+}
 
 export class BattlePrep {
   private readonly q: (sel: string) => HTMLElement;
@@ -96,7 +112,7 @@ export class BattlePrep {
     body.append(
       el("p", "battle-faction", faction ? faction.name : "所属なし"),
       el("h3", "battle-army", side.name),
-      el("p", "battle-commander", side.commander ? `指揮官 ${side.commander.name}` : side.kind === "city" ? "守将 不明" : "指揮官なし"),
+      commanderLine(side),
     );
     const stats = el("dl", "battle-stats");
     const add = (label: string, value: string): void => {

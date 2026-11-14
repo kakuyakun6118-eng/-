@@ -17,7 +17,8 @@
    "charisma": 30,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "西晋の2代皇帝。政治を自分で執ることができず、后や諸王に実権を握られた。"
+   "bio": "西晋の2代皇帝。政治を自分で執ることができず、后や諸王に実権を握られた。",
+   "people": "漢"
   },
   {
    "id": "sima_lun",
@@ -35,7 +36,8 @@
    "charisma": 30,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "司馬懿の子。賈后を廃して朝廷を握り、301年には自ら帝位についたが、諸王に攻められて死んだ。"
+   "bio": "司馬懿の子。賈后を廃して朝廷を握り、301年には自ら帝位についたが、諸王に攻められて死んだ。",
+   "people": "漢"
   },
   {
    "id": "sun_xiu",
@@ -53,7 +55,8 @@
    "charisma": 25,
    "traits": [],
    "favoredUnit": null,
-   "bio": "司馬倫の腹心。実際の政治を取りしきった。"
+   "bio": "司馬倫の腹心。実際の政治を取りしきった。",
+   "people": "漢"
   },
   {
    "id": "zhang_hong",
@@ -71,7 +74,8 @@
    "charisma": 40,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "司馬倫の将。斉王の軍と潁水のあたりで戦った。"
+   "bio": "司馬倫の将。斉王の軍と潁水のあたりで戦った。",
+   "people": "漢"
   },
   {
    "id": "shi_yi",
@@ -89,7 +93,8 @@
    "charisma": 32,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "司馬倫の将。"
+   "bio": "司馬倫の将。",
+   "people": "漢"
   },
   {
    "id": "xu_chao",
@@ -107,7 +112,8 @@
    "charisma": 32,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "司馬倫の将。"
+   "bio": "司馬倫の将。",
+   "people": "漢"
   },
   {
    "id": "sun_hui",
@@ -125,7 +131,8 @@
    "charisma": 25,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "孫秀の子。軍を率いたが敗れた。"
+   "bio": "孫秀の子。軍を率いたが敗れた。",
+   "people": "漢"
   },
   {
    "id": "sima_yue",
@@ -143,7 +150,8 @@
    "charisma": 58,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "晋の皇族。八王の乱の最後の勝者となり、朝廷を握った。"
+   "bio": "晋の皇族。八王の乱の最後の勝者となり、朝廷を握った。",
+   "people": "漢"
   },
   {
    "id": "sima_ai",
@@ -161,7 +169,8 @@
    "charisma": 72,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "晋の皇族。のちに洛陽で朝廷を支えたが、諸王に攻められて死んだ。"
+   "bio": "晋の皇族。のちに洛陽で朝廷を支えたが、諸王に攻められて死んだ。",
+   "people": "漢"
   },
   {
    "id": "wang_rong",
@@ -179,7 +188,8 @@
    "charisma": 66,
    "traits": [],
    "favoredUnit": null,
-   "bio": "竹林の七賢の一人。乱世に身を保つことを第一とした。"
+   "bio": "竹林の七賢の一人。乱世に身を保つことを第一とした。",
+   "people": "漢"
   },
   {
    "id": "wang_yan",
@@ -197,7 +207,8 @@
    "charisma": 78,
    "traits": [],
    "favoredUnit": null,
-   "bio": "清談の名士。高い地位にありながら、国の危機に手を打たなかったとされる。"
+   "bio": "清談の名士。高い地位にありながら、国の危機に手を打たなかったとされる。",
+   "people": "漢"
   },
   {
    "id": "yue_guang",
@@ -215,7 +226,8 @@
    "charisma": 76,
    "traits": [],
    "favoredUnit": null,
-   "bio": "清談の名士。成都王の岳父。"
+   "bio": "清談の名士。成都王の岳父。",
+   "people": "漢"
   },
   {
    "id": "lu_ji",
@@ -233,7 +245,8 @@
    "charisma": 70,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "呉の名将・陸遜の孫。文章で名高い。のちに成都王の軍を率いて敗れた。"
+   "bio": "呉の名将・陸遜の孫。文章で名高い。のちに成都王の軍を率いて敗れた。",
+   "people": "漢"
   },
   {
    "id": "lu_yun",
@@ -251,7 +264,8 @@
    "charisma": 70,
    "traits": [],
    "favoredUnit": null,
-   "bio": "陸機の弟。"
+   "bio": "陸機の弟。",
+   "people": "漢"
   },
   {
    "id": "liu_hong",
@@ -269,7 +283,8 @@
    "charisma": 88,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "のちに荊州を治め、乱のなかで民を安んじた名臣。陶侃を見いだした。"
+   "bio": "のちに荊州を治め、乱のなかで民を安んじた名臣。陶侃を見いだした。",
+   "people": "漢"
   },
   {
    "id": "zhang_gui",
@@ -287,7 +302,8 @@
    "charisma": 86,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "安定の人。301年に自ら望んで涼州へ赴き、河西を安定させた。前涼の祖。"
+   "bio": "安定の人。301年に自ら望んで涼州へ赴き、河西を安定させた。前涼の祖。",
+   "people": "漢"
   },
   {
    "id": "wang_jun",
@@ -305,7 +321,8 @@
    "charisma": 40,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "幽州に拠り、鮮卑の段部・宇文部と婚姻を結んで力を持った。のちに帝位をうかがい、石勒に滅ぼされた。"
+   "bio": "幽州に拠り、鮮卑の段部・宇文部と婚姻を結んで力を持った。のちに帝位をうかがい、石勒に滅ぼされた。",
+   "people": "漢"
   },
   {
    "id": "sima_teng",
@@ -323,7 +340,8 @@
    "charisma": 38,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "司馬越の弟。并州を治めた。"
+   "bio": "司馬越の弟。并州を治めた。",
+   "people": "漢"
   },
   {
    "id": "sima_mo",
@@ -341,7 +359,8 @@
    "charisma": 42,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "司馬越の弟。のちに関中を任された。"
+   "bio": "司馬越の弟。のちに関中を任された。",
+   "people": "漢"
   },
   {
    "id": "gou_xi",
@@ -359,7 +378,8 @@
    "charisma": 40,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "厳しい軍律で知られた名将。「屠伯」と恐れられた。"
+   "bio": "厳しい軍律で知られた名将。「屠伯」と恐れられた。",
+   "people": "漢"
   },
   {
    "id": "ji_shao",
@@ -377,7 +397,8 @@
    "charisma": 78,
    "traits": [],
    "favoredUnit": null,
-   "bio": "嵆康の子。のちに恵帝を身をもってかばい、死んだ。"
+   "bio": "嵆康の子。のちに恵帝を身をもってかばい、死んだ。",
+   "people": "漢"
   },
   {
    "id": "zhao_xin",
@@ -395,7 +416,8 @@
    "charisma": 38,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "益州で自立をはかり、流民の李氏を使ったが、やがて李特に討たれた。"
+   "bio": "益州で自立をはかり、流民の李氏を使ったが、やがて李特に討たれた。",
+   "people": "漢"
   },
   {
    "id": "luo_shang",
@@ -413,7 +435,8 @@
    "charisma": 35,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "益州で李氏と長く戦った。"
+   "bio": "益州で李氏と長く戦った。",
+   "people": "漢"
   },
   {
    "id": "li_te",
@@ -431,7 +454,9 @@
    "charisma": 86,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "略陽から蜀へ流れた人々の長。成漢の基を作った。李雄の父。"
+   "bio": "略陽から蜀へ流れた人々の長。成漢の基を作った。李雄の父。",
+   "people": "巴氐",
+   "peopleNote": "賨(そう)とも呼ばれる"
   },
   {
    "id": "li_liu",
@@ -449,7 +474,9 @@
    "charisma": 66,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "李特の弟。兄の死後、一時その軍を継いだ。"
+   "bio": "李特の弟。兄の死後、一時その軍を継いだ。",
+   "people": "巴氐",
+   "peopleNote": "賨(そう)とも呼ばれる"
   },
   {
    "id": "zhou_qi",
@@ -467,7 +494,8 @@
    "charisma": 74,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "江南の豪族。たびたび江南の乱を鎮めた。"
+   "bio": "江南の豪族。たびたび江南の乱を鎮めた。",
+   "people": "漢"
   },
   {
    "id": "gu_rong",
@@ -485,7 +513,8 @@
    "charisma": 82,
    "traits": [],
    "favoredUnit": null,
-   "bio": "呉郡の顧氏。江南の人々の中心として、司馬睿を支えた。"
+   "bio": "呉郡の顧氏。江南の人々の中心として、司馬睿を支えた。",
+   "people": "漢"
   },
   {
    "id": "meng_guan",
@@ -503,7 +532,8 @@
    "charisma": 50,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "氐の斉万年の乱を鎮めた将。"
+   "bio": "氐の斉万年の乱を鎮めた将。",
+   "people": "漢"
   },
   {
    "id": "xun_fan",
@@ -521,7 +551,8 @@
    "charisma": 70,
    "traits": [],
    "favoredUnit": null,
-   "bio": "潁川の荀氏。洛陽が落ちたのち、仮の朝廷(行台)を立てた。"
+   "bio": "潁川の荀氏。洛陽が落ちたのち、仮の朝廷(行台)を立てた。",
+   "people": "漢"
   },
   {
    "id": "huangfu_zhong",
@@ -539,7 +570,8 @@
    "charisma": 50,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "秦州を治めた。のちに河間王と争って囲まれた。"
+   "bio": "秦州を治めた。のちに河間王と争って囲まれた。",
+   "people": "漢"
   },
   {
    "id": "sima_ying",
@@ -557,7 +589,8 @@
    "charisma": 68,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "晋の皇族。鄴に拠り、一時は朝廷を動かした。"
+   "bio": "晋の皇族。鄴に拠り、一時は朝廷を動かした。",
+   "people": "漢"
   },
   {
    "id": "lu_zhi",
@@ -575,7 +608,8 @@
    "charisma": 66,
    "traits": [],
    "favoredUnit": null,
-   "bio": "范陽の盧氏。司馬穎を支えた謀臣。"
+   "bio": "范陽の盧氏。司馬穎を支えた謀臣。",
+   "people": "漢"
   },
   {
    "id": "shi_chao",
@@ -593,7 +627,8 @@
    "charisma": 40,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "石苞の孫。司馬穎の軍を率いた。"
+   "bio": "石苞の孫。司馬穎の軍を率いた。",
+   "people": "漢"
   },
   {
    "id": "liu_yuan",
@@ -611,7 +646,8 @@
    "charisma": 94,
    "traits": [],
    "favoredUnit": "cavalry",
-   "bio": "匈奴の単于の子孫。漢の文化に通じ、304年に漢王を称した。漢(前趙)の祖。"
+   "bio": "匈奴の単于の子孫。漢の文化に通じ、304年に漢王を称した。漢(前趙)の祖。",
+   "people": "匈奴"
   },
   {
    "id": "liu_xuan",
@@ -629,7 +665,8 @@
    "charisma": 76,
    "traits": [],
    "favoredUnit": null,
-   "bio": "劉淵の大叔父。匈奴の国を再び興すことを説き、劉淵を立てた。"
+   "bio": "劉淵の大叔父。匈奴の国を再び興すことを説き、劉淵を立てた。",
+   "people": "匈奴"
   },
   {
    "id": "qian_xiu",
@@ -647,7 +684,8 @@
    "charisma": 35,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "文才で知られた。司馬穎の将となった。"
+   "bio": "文才で知られた。司馬穎の将となった。",
+   "people": "漢"
   },
   {
    "id": "gongshi_fan",
@@ -665,7 +703,8 @@
    "charisma": 42,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "司馬穎の旧将。のちに河北で兵を挙げた。"
+   "bio": "司馬穎の旧将。のちに河北で兵を挙げた。",
+   "people": "漢"
   },
   {
    "id": "sima_yong",
@@ -683,7 +722,8 @@
    "charisma": 45,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "晋の皇族。長安に拠り、張方の軍を使って朝廷を動かした。"
+   "bio": "晋の皇族。長安に拠り、張方の軍を使って朝廷を動かした。",
+   "people": "漢"
   },
   {
    "id": "zhang_fang",
@@ -701,7 +741,8 @@
    "charisma": 30,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "司馬顒の将。勇猛だが残忍で、洛陽を荒らした。"
+   "bio": "司馬顒の将。勇猛だが残忍で、洛陽を荒らした。",
+   "people": "漢"
   },
   {
    "id": "li_han",
@@ -719,7 +760,8 @@
    "charisma": 30,
    "traits": [],
    "favoredUnit": null,
-   "bio": "司馬顒の謀臣。"
+   "bio": "司馬顒の謀臣。",
+   "people": "漢"
   },
   {
    "id": "liu_chen",
@@ -737,7 +779,8 @@
    "charisma": 64,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "のちに朝廷の命を受けて司馬顒を攻めたが、敗れた。"
+   "bio": "のちに朝廷の命を受けて司馬顒を攻めたが、敗れた。",
+   "people": "漢"
   },
   {
    "id": "sima_jiong",
@@ -755,7 +798,8 @@
    "charisma": 55,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "晋の皇族。301年に兵を挙げて司馬倫を倒したが、驕って人望を失った。"
+   "bio": "晋の皇族。301年に兵を挙げて司馬倫を倒したが、驕って人望を失った。",
+   "people": "漢"
   },
   {
    "id": "dong_ai",
@@ -773,7 +817,8 @@
    "charisma": 32,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "司馬冏の腹心の将。"
+   "bio": "司馬冏の腹心の将。",
+   "people": "漢"
   },
   {
    "id": "ge_yu",
@@ -791,7 +836,8 @@
    "charisma": 32,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "司馬冏の腹心。"
+   "bio": "司馬冏の腹心。",
+   "people": "漢"
   },
   {
    "id": "sun_hui2",
@@ -809,7 +855,8 @@
    "charisma": 55,
    "traits": [],
    "favoredUnit": null,
-   "bio": "呉の孫氏の一族。司馬冏を諫めた。"
+   "bio": "呉の孫氏の一族。司馬冏を諫めた。",
+   "people": "漢"
   },
   {
    "id": "cao_shu",
@@ -827,7 +874,8 @@
    "charisma": 70,
    "traits": [],
    "favoredUnit": null,
-   "bio": "良い地方官として知られた。"
+   "bio": "良い地方官として知られた。",
+   "people": "漢"
   },
   {
    "id": "tuoba_luguan",
@@ -845,7 +893,8 @@
    "charisma": 60,
    "traits": [],
    "favoredUnit": "cavalry",
-   "bio": "拓跋部を三つに分け、自らは東部を治めた。"
+   "bio": "拓跋部を三つに分け、自らは東部を治めた。",
+   "people": "鮮卑"
   },
   {
    "id": "tuoba_yituo",
@@ -863,7 +912,8 @@
    "charisma": 68,
    "traits": [],
    "favoredUnit": "cavalry",
-   "bio": "拓跋部の中部を治めた。西へ遠征して多くの部を従えた。"
+   "bio": "拓跋部の中部を治めた。西へ遠征して多くの部を従えた。",
+   "people": "鮮卑"
   },
   {
    "id": "tuoba_yilu",
@@ -881,7 +931,8 @@
    "charisma": 66,
    "traits": [],
    "favoredUnit": "cavalry",
-   "bio": "拓跋部の西部を治めた。のちに三部をまとめ、晋から代公・代王に封じられた。"
+   "bio": "拓跋部の西部を治めた。のちに三部をまとめ、晋から代公・代王に封じられた。",
+   "people": "鮮卑"
   },
   {
    "id": "wei_cao",
@@ -899,7 +950,8 @@
    "charisma": 62,
    "traits": [],
    "favoredUnit": null,
-   "bio": "代郡の人。拓跋部に仕えて重んじられ、晋との間を取り持った。"
+   "bio": "代郡の人。拓跋部に仕えて重んじられ、晋との間を取り持った。",
+   "people": "漢"
   },
   {
    "id": "wuwuchen",
@@ -918,7 +970,8 @@
    "traits": [],
    "favoredUnit": "cavalry",
    "bio": "鮮卑・段部の長。王浚と婚姻を結び、遼西公に封じられた。",
-   "note": "このころ部の長だったとするのは推定"
+   "note": "このころ部の長だったとするのは推定",
+   "people": "鮮卑"
   },
   {
    "id": "yuwen_mogui",
@@ -937,7 +990,9 @@
    "traits": [],
    "favoredUnit": "cavalry",
    "bio": "宇文部の長。部を強くして単于を名のったと伝わる。",
-   "note": "在位の年ははっきりしない(推定)"
+   "note": "在位の年ははっきりしない(推定)",
+   "people": "鮮卑",
+   "peopleNote": "宇文部は匈奴の系統とも伝わる"
   },
   {
    "id": "chaekgye",
@@ -955,7 +1010,8 @@
    "charisma": 55,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "百済の王。"
+   "bio": "百済の王。",
+   "people": "百済"
   },
   {
    "id": "girim",
@@ -973,7 +1029,8 @@
    "charisma": 62,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "新羅の王。"
+   "bio": "新羅の王。",
+   "people": "新羅"
   },
   {
    "id": "yang_maosou",
@@ -991,7 +1048,8 @@
    "charisma": 72,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "氐族の楊氏。296年に人々を率いて仇池に拠った。"
+   "bio": "氐族の楊氏。296年に人々を率いて仇池に拠った。",
+   "people": "氐"
   },
   {
    "id": "chen_min",
@@ -1009,7 +1067,8 @@
    "charisma": 40,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "江淮で乱を鎮めて名を上げた。のちに江南で自立をはかって敗れた。"
+   "bio": "江淮で乱を鎮めて名を上げた。のちに江南で自立をはかって敗れた。",
+   "people": "漢"
   },
   {
    "id": "sima_lue",
@@ -1027,7 +1086,8 @@
    "charisma": 50,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "司馬越の弟。青州を任された。"
+   "bio": "司馬越の弟。青州を任された。",
+   "people": "漢"
   },
   {
    "id": "sima_xiao",
@@ -1045,7 +1105,8 @@
    "charisma": 66,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "晋の皇族。許昌に拠り、司馬越を助けた。"
+   "bio": "晋の皇族。許昌に拠り、司馬越を助けた。",
+   "people": "漢"
   },
   {
    "id": "liu_yu",
@@ -1063,7 +1124,8 @@
    "charisma": 55,
    "traits": [],
    "favoredUnit": null,
-   "bio": "劉琨の兄。范陽王・東海王に仕え、謀臣として重んじられた。"
+   "bio": "劉琨の兄。范陽王・東海王に仕え、謀臣として重んじられた。",
+   "people": "漢"
   },
   {
    "id": "qi_hong",
@@ -1081,7 +1143,8 @@
    "charisma": 42,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "王浚の将。鮮卑の騎兵を率いて各地で戦った。"
+   "bio": "王浚の将。鮮卑の騎兵を率いて各地で戦った。",
+   "people": "漢"
   },
   {
    "id": "sun_wei",
@@ -1099,7 +1162,8 @@
    "charisma": 40,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "王浚の将。"
+   "bio": "王浚の将。",
+   "people": "漢"
   },
   {
    "id": "zao_song",
@@ -1117,7 +1181,8 @@
    "charisma": 30,
    "traits": [],
    "favoredUnit": null,
-   "bio": "王浚の女婿。政治を任されたが、評判は悪かった。"
+   "bio": "王浚の女婿。政治を任されたが、評判は悪かった。",
+   "people": "漢"
   },
   {
    "id": "liu_he",
@@ -1135,7 +1200,8 @@
    "charisma": 35,
    "traits": [],
    "favoredUnit": "cavalry",
-   "bio": "劉淵の長子。310年に位を継いだが、すぐに劉聡に倒された。"
+   "bio": "劉淵の長子。310年に位を継いだが、すぐに劉聡に倒された。",
+   "people": "匈奴"
   },
   {
    "id": "huyan_yi",
@@ -1153,7 +1219,8 @@
    "charisma": 45,
    "traits": [],
    "favoredUnit": "cavalry",
-   "bio": "匈奴の呼延氏。劉淵の后の一族。"
+   "bio": "匈奴の呼延氏。劉淵の后の一族。",
+   "people": "匈奴"
   },
   {
    "id": "chen_yuanda",
@@ -1171,7 +1238,8 @@
    "charisma": 74,
    "traits": [],
    "favoredUnit": null,
-   "bio": "匈奴の人。劉聡の行いをたびたび命がけで諫めた。"
+   "bio": "匈奴の人。劉聡の行いをたびたび命がけで諫めた。",
+   "people": "匈奴"
   },
   {
    "id": "li_li",
@@ -1189,7 +1257,9 @@
    "charisma": 52,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "李雄の叔父。成の軍を率いた。"
+   "bio": "李雄の叔父。成の軍を率いた。",
+   "people": "巴氐",
+   "peopleNote": "賨(そう)とも呼ばれる"
   },
   {
    "id": "liu_yi",
@@ -1207,7 +1277,8 @@
    "charisma": 66,
    "traits": [],
    "favoredUnit": "cavalry",
-   "bio": "劉淵の子。劉聡の皇太弟に立てられたが、のちに陥れられた。"
+   "bio": "劉淵の子。劉聡の皇太弟に立てられたが、のちに陥れられた。",
+   "people": "匈奴"
   },
   {
    "id": "diao_ying",
@@ -1225,7 +1296,8 @@
    "charisma": 45,
    "traits": [],
    "favoredUnit": null,
-   "bio": "石勒の初めのころの謀臣。のちに張賓に代わられた。"
+   "bio": "石勒の初めのころの謀臣。のちに張賓に代わられた。",
+   "people": "漢"
   },
   {
    "id": "wang_mi",
@@ -1243,7 +1315,8 @@
    "charisma": 62,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "東莱の人。乱を起こして「飛豹」と呼ばれ、のちに漢に従って洛陽を攻めた。"
+   "bio": "東莱の人。乱を起こして「飛豹」と呼ばれ、のちに漢に従って洛陽を攻めた。",
+   "people": "漢"
   },
   {
    "id": "liu_tun",
@@ -1261,7 +1334,8 @@
    "charisma": 58,
    "traits": [],
    "favoredUnit": null,
-   "bio": "晋の旧臣。王弥に、青州に拠るよう勧めた。"
+   "bio": "晋の旧臣。王弥に、青州に拠るよう勧めた。",
+   "people": "漢"
   },
   {
    "id": "zhang_song",
@@ -1279,7 +1353,8 @@
    "charisma": 45,
    "traits": [],
    "favoredUnit": null,
-   "bio": "王弥の配下。"
+   "bio": "王弥の配下。",
+   "people": "漢"
   },
   {
    "id": "xu_miao",
@@ -1298,7 +1373,8 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "王弥の配下の将。",
-   "note": "名前と立場は、はっきりしない(推定)"
+   "note": "名前と立場は、はっきりしない(推定)",
+   "people": "漢"
   },
   {
    "id": "liu_yan",
@@ -1316,7 +1392,8 @@
    "charisma": 52,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "劉琨の兄の子。河北の守りを任された。"
+   "bio": "劉琨の兄の子。河北の守りを任された。",
+   "people": "漢"
   },
   {
    "id": "jia_pi",
@@ -1334,7 +1411,8 @@
    "charisma": 72,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "安定の人。のちに関中の兵を集めて長安を取り戻した。"
+   "bio": "安定の人。のちに関中の兵を集めて長安を取り戻した。",
+   "people": "漢"
   },
   {
    "id": "zhao_ran",
@@ -1352,7 +1430,8 @@
    "charisma": 35,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "司馬模の将。のちに漢に降り、関中攻めの先鋒となった。"
+   "bio": "司馬模の将。のちに漢に降り、関中攻めの先鋒となった。",
+   "people": "漢"
   },
   {
    "id": "suo_chen",
@@ -1370,7 +1449,8 @@
    "charisma": 50,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "敦煌の索氏。のちに長安の朝廷を支えた。"
+   "bio": "敦煌の索氏。のちに長安の朝廷を支えた。",
+   "people": "漢"
   },
   {
    "id": "qu_yun",
@@ -1388,7 +1468,8 @@
    "charisma": 62,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "金城の麴氏。のちに長安の朝廷を支えた。"
+   "bio": "金城の麴氏。のちに長安の朝廷を支えた。",
+   "people": "漢"
   },
   {
    "id": "shan_jian",
@@ -1406,7 +1487,8 @@
    "charisma": 66,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "竹林の七賢・山濤の子。襄陽を任されたが、酒を好んで政治を顧みなかったと伝わる。"
+   "bio": "竹林の七賢・山濤の子。襄陽を任されたが、酒を好んで政治を顧みなかったと伝わる。",
+   "people": "漢"
   },
   {
    "id": "wang_cheng",
@@ -1424,7 +1506,8 @@
    "charisma": 62,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "王衍の弟。名士だが、荊州を治めきれなかった。"
+   "bio": "王衍の弟。名士だが、荊州を治めきれなかった。",
+   "people": "漢"
   },
   {
    "id": "zhang_guang",
@@ -1442,7 +1525,8 @@
    "charisma": 62,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "漢中を治め、乱と戦った。"
+   "bio": "漢中を治め、乱と戦った。",
+   "people": "漢"
   },
   {
    "id": "zhang_tong",
@@ -1460,7 +1544,8 @@
    "charisma": 62,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "遼東の人。楽浪・帯方の二郡に拠って、長く高句麗と戦った。のちに民を連れて慕容廆のもとへ移った。"
+   "bio": "遼東の人。楽浪・帯方の二郡に拠って、長く高句麗と戦った。のちに民を連れて慕容廆のもとへ移った。",
+   "people": "漢"
   },
   {
    "id": "hua_yi",
@@ -1479,7 +1564,8 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "江州を治めて人望があったが、司馬睿の命令に従わず、討たれた。",
-   "note": "311年のいつ討たれたかは確かめていない"
+   "note": "311年のいつ討たれたかは確かめていない",
+   "people": "漢"
   },
   {
    "id": "du_tao",
@@ -1497,7 +1583,8 @@
    "charisma": 70,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "蜀の人。荊州・湘州へ流れた人々に推されて兵を挙げた。"
+   "bio": "蜀の人。荊州・湘州へ流れた人々に推されて兵を挙げた。",
+   "people": "漢"
   },
   {
    "id": "wang_zhen",
@@ -1516,7 +1603,8 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "杜弢の配下の将。",
-   "note": "このころの活動は確かめられていない"
+   "note": "このころの活動は確かめられていない",
+   "people": "漢"
   },
   {
    "id": "tuoba_liuxiu",
@@ -1534,7 +1622,8 @@
    "charisma": 45,
    "traits": [],
    "favoredUnit": "cavalry",
-   "bio": "猗盧の長子。勇猛で、各地の戦いに出た。のちに父と争った。"
+   "bio": "猗盧の長子。勇猛で、各地の戦いに出た。のちに父と争った。",
+   "people": "鮮卑"
   },
   {
    "id": "wei_xiong",
@@ -1552,7 +1641,8 @@
    "charisma": 58,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "衛操の一族。猗盧の将として重んじられた。"
+   "bio": "衛操の一族。猗盧の将として重んじられた。",
+   "people": "漢"
   },
   {
    "id": "ji_dan",
@@ -1570,7 +1660,8 @@
    "charisma": 56,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "箕澹とも書く。猗盧の将。のちに人々を連れて劉琨のもとへ移った。"
+   "bio": "箕澹とも書く。猗盧の将。のちに人々を連れて劉琨のもとへ移った。",
+   "people": "漢"
   },
   {
    "id": "tuoba_pugen",
@@ -1588,7 +1679,8 @@
    "charisma": 52,
    "traits": [],
    "favoredUnit": "cavalry",
-   "bio": "猗㐌の子。"
+   "bio": "猗㐌の子。",
+   "people": "鮮卑"
   },
   {
    "id": "tuyuhun_khan",
@@ -1606,7 +1698,8 @@
    "charisma": 78,
    "traits": [],
    "favoredUnit": "cavalry",
-   "bio": "慕容廆の兄(母が違う)。弟と別れて西へ移り、その名が国の名となった。"
+   "bio": "慕容廆の兄(母が違う)。弟と別れて西へ移り、その名が国の名となった。",
+   "people": "鮮卑"
   },
   {
    "id": "liu_qiao",
@@ -1624,7 +1717,8 @@
    "charisma": 50,
    "traits": [],
    "favoredUnit": "infantry",
-   "bio": "豫州を治めた。范陽王と争った。"
+   "bio": "豫州を治めた。范陽王と争った。",
+   "people": "漢"
   },
   {
    "id": "zhang_jun",
@@ -1643,7 +1737,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "張寔の子。叔父の張茂を継ぎ、河西を最も栄えさせた。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "liu_xi",
@@ -1662,7 +1756,7 @@
    "traits": [],
    "favoredUnit": "cavalry",
    "bio": "劉曜の子。父が捕らえられたのち、長安を捨てて上邽へ退いた。",
-   "_b": 2
+   "people": "匈奴"
   },
   {
    "id": "jiang_ying",
@@ -1681,8 +1775,8 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "劉熙が去ったあとの長安に拠り、後趙に降った。",
-   "_b": 2,
-   "note": "名前と立場は、はっきりしない(推定)"
+   "note": "名前と立場は、はっきりしない(推定)",
+   "people": "漢"
   },
   {
    "id": "tuoba_yihuai",
@@ -1701,7 +1795,7 @@
    "traits": [],
    "favoredUnit": "cavalry",
    "bio": "鬱律の子。賀蘭部に守られ、のちに代王に立てられた。",
-   "_b": 2
+   "people": "鮮卑"
   },
   {
    "id": "sima_yan",
@@ -1720,8 +1814,8 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "東晋の3代皇帝。幼くして即位し、庾亮や王導が政治を執った。",
-   "_b": 2,
-   "note": "開始時は幼少(君主のため例外として登場)"
+   "note": "開始時は幼少(君主のため例外として登場)",
+   "people": "漢"
   },
   {
    "id": "yu_bing",
@@ -1740,7 +1834,7 @@
    "traits": [],
    "favoredUnit": null,
    "bio": "庾亮の弟。のちに王導の後を受けて政治を執った。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "yu_yi",
@@ -1759,7 +1853,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "庾亮の弟。のちに荊州を治め、北伐を志した。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "yin_hao",
@@ -1778,7 +1872,7 @@
    "traits": [],
    "favoredUnit": null,
    "bio": "清談で名高い名士。のちに桓温に対抗する役を任され、北伐に失敗した。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "chu_pou",
@@ -1797,7 +1891,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "のちに娘が皇后となり、北伐の軍を率いた。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "zhao_yin",
@@ -1816,7 +1910,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "王導に用いられた将。蘇峻の乱で戦った。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "shi_hong",
@@ -1835,8 +1929,8 @@
    "traits": [],
    "favoredUnit": "cavalry",
    "bio": "石勒の子。学問を好んだ。父の死後に位を継いだが、石虎に除かれた。",
-   "_b": 2,
-   "note": "生年は推定"
+   "note": "生年は推定",
+   "people": "羯"
   },
   {
    "id": "shi_sui",
@@ -1855,7 +1949,7 @@
    "traits": [],
    "favoredUnit": "cavalry",
    "bio": "石虎の長子。勇猛だが、残忍で知られる。",
-   "_b": 2
+   "people": "羯"
   },
   {
    "id": "guo_jing",
@@ -1874,7 +1968,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "石勒が奴隷だったころの恩人。のちに将となり、襄陽を攻め取った。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "ma_qiu",
@@ -1893,8 +1987,8 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "後趙の将。残忍さで恐れられた。",
-   "_b": 2,
-   "note": "このころの活動は確かめられていない"
+   "note": "このころの活動は確かめられていない",
+   "people": "漢"
   },
   {
    "id": "li_qi",
@@ -1913,7 +2007,8 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "李雄の子。のちに李班を除いて位についた。",
-   "_b": 2
+   "people": "巴氐",
+   "peopleNote": "賨(そう)とも呼ばれる"
   },
   {
    "id": "fu_sheng",
@@ -1932,7 +2027,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "苻健の子。片目で、怪力で知られた。多くの臣を殺し、暴君と記される。",
-   "_b": 2
+   "people": "氐"
   },
   {
    "id": "fu_jian",
@@ -1951,7 +2046,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "苻雄の子。357年に苻生を廃して位につき、王猛を用いて華北を統一した。",
-   "_b": 2
+   "people": "氐"
   },
   {
    "id": "fu_fa",
@@ -1970,7 +2065,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "苻堅の兄(母が違う)。苻生を廃するのに加わった。",
-   "_b": 2
+   "people": "氐"
   },
   {
    "id": "fu_rong",
@@ -1989,7 +2084,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "苻堅の弟。学問と政治に優れ、のちに淝水の戦いで先鋒を率いた。",
-   "_b": 2
+   "people": "氐"
   },
   {
    "id": "fu_huangmei",
@@ -2008,7 +2103,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "苻氏の一族の将。357年に鄧羌とともに姚襄を破った。",
-   "_b": 2
+   "people": "氐"
   },
   {
    "id": "fu_liu",
@@ -2027,7 +2122,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "苻健の子。蒲坂を任された。のちに背いた。",
-   "_b": 2
+   "people": "氐"
   },
   {
    "id": "fu_sou",
@@ -2046,7 +2141,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "苻健の子。陝を任された。のちに背いた。",
-   "_b": 2
+   "people": "氐"
   },
   {
    "id": "fu_shuang",
@@ -2065,7 +2160,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "苻堅の弟。上邽を任された。のちに背いた。",
-   "_b": 2
+   "people": "氐"
   },
   {
    "id": "deng_qiang",
@@ -2084,7 +2179,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "前秦きっての猛将。張蚝とともに「万人の敵」と呼ばれた。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "lv_polou",
@@ -2103,7 +2198,7 @@
    "traits": [],
    "favoredUnit": null,
    "bio": "略陽の氐の有力者。苻堅に王猛を推した。呂光の父。",
-   "_b": 2
+   "people": "氐"
   },
   {
    "id": "qiang_wang",
@@ -2122,7 +2217,8 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "苻堅に従って、苻生を廃するのに加わった。",
-   "_b": 2
+   "people": "氐",
+   "peopleNote": "推定"
   },
   {
    "id": "liang_pinglao",
@@ -2141,7 +2237,8 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "苻堅の腹心。苻生を廃するよう勧めた。",
-   "_b": 2
+   "people": "氐",
+   "peopleNote": "推定"
   },
   {
    "id": "wang_meng",
@@ -2160,8 +2257,8 @@
    "traits": [],
    "favoredUnit": null,
    "bio": "北海の人。貧しい暮らしから苻堅に見いだされ、前秦の宰相として国を強くした。",
-   "_b": 2,
-   "note": "このころは、まだ官についていない"
+   "note": "このころは、まだ官についていない",
+   "people": "漢"
   },
   {
    "id": "li_wei",
@@ -2180,7 +2277,7 @@
    "traits": [],
    "favoredUnit": null,
    "bio": "苻堅の母方の縁者。苻堅と王猛を支えた。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "dong_rong",
@@ -2199,7 +2296,7 @@
    "traits": [],
    "favoredUnit": null,
    "bio": "苻生に重んじられ、多くの臣を陥れた。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "lv_guang",
@@ -2218,7 +2315,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "呂婆楼の子。のちに西域へ遠征し、後涼を建てた。",
-   "_b": 2
+   "people": "氐"
   },
   {
    "id": "xu_cheng",
@@ -2237,7 +2334,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "前秦の将。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "murong_jun",
@@ -2256,7 +2353,7 @@
    "traits": [],
    "favoredUnit": "cavalry",
    "bio": "慕容皝の子。冉閔を滅ぼして河北を取り、皇帝を称した。",
-   "_b": 2
+   "people": "鮮卑"
   },
   {
    "id": "murong_ke",
@@ -2275,7 +2372,7 @@
    "traits": [],
    "favoredUnit": "cavalry",
    "bio": "慕容皝の子。戦えば必ず勝ち、政治にも優れた前燕の柱。",
-   "_b": 2
+   "people": "鮮卑"
   },
   {
    "id": "murong_chui",
@@ -2294,7 +2391,7 @@
    "traits": [],
    "favoredUnit": "cavalry",
    "bio": "慕容皝の子。若いころから戦功を重ねた。のちに前秦に亡命し、後燕を建てた。",
-   "_b": 2
+   "people": "鮮卑"
   },
   {
    "id": "murong_ping",
@@ -2313,7 +2410,7 @@
    "traits": [],
    "favoredUnit": "cavalry",
    "bio": "慕容廆の子。のちに前燕の政治を握り、国を傾けた。",
-   "_b": 2
+   "people": "鮮卑"
   },
   {
    "id": "murong_de",
@@ -2332,7 +2429,7 @@
    "traits": [],
    "favoredUnit": "cavalry",
    "bio": "慕容皝の末子。のちに南燕を建てた。",
-   "_b": 2
+   "people": "鮮卑"
   },
   {
    "id": "yang_wu",
@@ -2351,7 +2448,7 @@
    "traits": [],
    "favoredUnit": null,
    "bio": "慕容氏3代に仕えた重臣。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "huangfu_zhen",
@@ -2370,7 +2467,7 @@
    "traits": [],
    "favoredUnit": null,
    "bio": "慕容氏に仕えた賢臣。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "muyu_gen",
@@ -2389,7 +2486,7 @@
    "traits": [],
    "favoredUnit": "cavalry",
    "bio": "慕容氏の旧臣の将。のちに政権を争って除かれた。",
-   "_b": 2
+   "people": "鮮卑"
   },
   {
    "id": "yue_wan",
@@ -2408,7 +2505,8 @@
    "traits": [],
    "favoredUnit": "cavalry",
    "bio": "前燕の将・臣。のちに戸籍を正して、権力者に恨まれた。",
-   "_b": 2
+   "people": "鮮卑",
+   "peopleNote": "推定"
   },
   {
    "id": "li_ji",
@@ -2427,7 +2525,7 @@
    "traits": [],
    "favoredUnit": null,
    "bio": "李産の子。慕容儁に仕えた。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "fu_yan",
@@ -2446,7 +2544,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "前燕の将。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "lv_hu",
@@ -2465,8 +2563,8 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "もとは冉閔の配下。野王に拠り、燕と晋の間で動いた。",
-   "_b": 2,
-   "note": "所属は推定(自立に近い)"
+   "note": "所属は推定(自立に近い)",
+   "people": "漢"
   },
   {
    "id": "sima_dan",
@@ -2485,7 +2583,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "東晋の5代皇帝。幼くして即位し、母の褚太后が政治を見た。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "huan_wen",
@@ -2504,7 +2602,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "桓彝の子。成漢を滅ぼし、北伐で洛陽を取り戻した。東晋の実権を握った。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "huan_chong",
@@ -2523,7 +2621,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "桓温の弟。兄の死後、朝廷と争わず、長江中流を守った。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "huan_huo",
@@ -2542,7 +2640,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "桓温の弟。荊州の守りを担った。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "xi_chao",
@@ -2561,7 +2659,7 @@
    "traits": [],
    "favoredUnit": null,
    "bio": "郗鑒の孫。桓温の謀臣。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "xie_an",
@@ -2580,7 +2678,7 @@
    "traits": [],
    "favoredUnit": null,
    "bio": "陳郡の謝氏。長く仕官せず、のちに宰相として東晋を支えた。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "xie_shang",
@@ -2599,7 +2697,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "謝鯤の子。淮南を治めた。357年に没する。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "xie_yi",
@@ -2618,7 +2716,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "謝安の兄。謝玄の父。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "xie_wan",
@@ -2637,7 +2735,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "謝安の弟。名士だが、軍を率いて失敗した。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "xie_xuan",
@@ -2656,7 +2754,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "謝安の甥。北府の兵を鍛え、淝水で前秦の大軍を破った。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "xie_shi",
@@ -2675,7 +2773,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "謝安の弟。淝水の戦いで全軍の総大将を務めた。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "wang_xizhi",
@@ -2694,7 +2792,7 @@
    "traits": [],
    "favoredUnit": null,
    "bio": "琅邪の王氏。書の名人。このころは官を辞していた。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "wang_tanzhi",
@@ -2713,7 +2811,7 @@
    "traits": [],
    "favoredUnit": null,
    "bio": "太原の王氏。のちに謝安とともに桓温を抑えた。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "wang_biaozhi",
@@ -2732,7 +2830,7 @@
    "traits": [],
    "favoredUnit": null,
    "bio": "琅邪の王氏。朝廷の制度に詳しかった。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "sima_yu",
@@ -2751,7 +2849,7 @@
    "traits": [],
    "favoredUnit": null,
    "bio": "元帝の子。長く政治を補佐し、のちに帝位についた(簡文帝)。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "xun_xian",
@@ -2770,7 +2868,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "荀崧の子。若くして徐州・兗州の守りを任された。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "xi_tan",
@@ -2789,7 +2887,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "郗鑒の子。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "sima_xun",
@@ -2808,7 +2906,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "漢中を任された。たびたび関中へ攻め入り、のちに背いた。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "yuan_zhen",
@@ -2827,7 +2925,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "のちに豫州を任され、北伐の失敗の責めを負わされて背いた。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "dai_shi",
@@ -2846,7 +2944,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "桓温が洛陽を取り戻したのち、その守りに残された。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "mao_muzhi",
@@ -2865,7 +2963,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "毛宝の子。桓温の将。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "zhuge_you",
@@ -2884,7 +2982,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "北伐の軍を率いたが、前燕に敗れた。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "zhang_xuanjing",
@@ -2903,8 +3001,8 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "張重華の子。幼くして立てられ、張瓘らが実権を握った。",
-   "_b": 2,
-   "note": "開始時は幼少(君主のため例外として登場)"
+   "note": "開始時は幼少(君主のため例外として登場)",
+   "people": "漢"
   },
   {
    "id": "zhang_guan",
@@ -2923,7 +3021,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "張氏の一族。幼い主を立てて政治を握った。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "song_hun",
@@ -2942,7 +3040,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "宋配の子孫。のちに張瓘を倒して政治を正した。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "song_cheng",
@@ -2961,7 +3059,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "宋混の弟。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "shiyijian",
@@ -2980,7 +3078,7 @@
    "traits": [],
    "favoredUnit": "cavalry",
    "bio": "鬱律の子。代の国の制度を整え、長く治めた。",
-   "_b": 2
+   "people": "鮮卑"
   },
   {
    "id": "yan_feng",
@@ -2999,7 +3097,7 @@
    "traits": [],
    "favoredUnit": null,
    "bio": "代郡の人。什翼犍に仕え、前秦への使者も務めた。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "xu_qian",
@@ -3018,7 +3116,7 @@
    "traits": [],
    "favoredUnit": null,
    "bio": "代郡の人。什翼犍に仕えた。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "tuoba_shi",
@@ -3037,7 +3135,7 @@
    "traits": [],
    "favoredUnit": "cavalry",
    "bio": "什翼犍の子。拓跋珪の父。",
-   "_b": 2
+   "people": "鮮卑"
   },
   {
    "id": "liu_kuren",
@@ -3056,7 +3154,8 @@
    "traits": [],
    "favoredUnit": "cavalry",
    "bio": "什翼犍の甥。代が滅んだのち、前秦のもとで代の東半分を治め、幼い拓跋珪を守った。",
-   "_b": 2
+   "people": "匈奴",
+   "peopleNote": "独孤部。匈奴の系統とされる"
   },
   {
    "id": "liu_xiwuqi",
@@ -3075,7 +3174,7 @@
    "traits": [],
    "favoredUnit": "cavalry",
    "bio": "劉務桓の子。のちに鉄弗部を継いだ。",
-   "_b": 2
+   "people": "匈奴"
   },
   {
    "id": "liu_weichen",
@@ -3094,7 +3193,7 @@
    "traits": [],
    "favoredUnit": "cavalry",
    "bio": "劉務桓の子。代と前秦の間で寝返りを繰り返した。赫連勃勃の父。",
-   "_b": 2
+   "people": "匈奴"
   },
   {
    "id": "suixi",
@@ -3113,7 +3212,7 @@
    "traits": [],
    "favoredUnit": "cavalry",
    "bio": "葉延の子。穏やかな人柄と伝わる。",
-   "_b": 2
+   "people": "鮮卑"
   },
   {
    "id": "yang_jun",
@@ -3132,7 +3231,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "仇池の楊氏。一族の争いのなかで位についた。",
-   "_b": 2
+   "people": "氐"
   },
   {
    "id": "yang_shi",
@@ -3151,7 +3250,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "楊俊の子。のちに仇池を継いだ。",
-   "_b": 2
+   "people": "氐"
   },
   {
    "id": "geunchogo",
@@ -3170,7 +3269,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "百済を最も強くした王。のちに高句麗の平壌を攻めた。",
-   "_b": 2
+   "people": "百済"
   },
   {
    "id": "geungusu",
@@ -3189,7 +3288,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "近肖古王の子。父を助けて高句麗と戦った。",
-   "_b": 2
+   "people": "百済"
   },
   {
    "id": "naemul",
@@ -3208,7 +3307,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "新羅の王。金氏が位を継ぐようになった初めの王とされる。",
-   "_b": 2
+   "people": "新羅"
   },
   {
    "id": "zhang_ping_bing",
@@ -3227,8 +3326,8 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "もとは後趙の并州刺史。後趙が滅んだのち、并州の砦をまとめて自立し、秦と燕の間で動いた。",
-   "_b": 2,
-   "note": "317年の豫州の張平とは別人"
+   "note": "317年の豫州の張平とは別人",
+   "people": "漢"
   },
   {
    "id": "zhang_hao",
@@ -3247,7 +3346,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "張平の養子。怪力の猛将。のちに前秦に仕え、鄧羌と並び称された。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "yao_xiang",
@@ -3266,7 +3365,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "姚弋仲の子。人望が厚く、羌の人々を率いて各地を転戦した。357年、関中をうかがって戦死した。",
-   "_b": 2
+   "people": "羌"
   },
   {
    "id": "yao_chang",
@@ -3285,7 +3384,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "姚弋仲の子。兄の死後、前秦に降った。のちに背いて後秦を建てた。",
-   "_b": 2
+   "people": "羌"
   },
   {
    "id": "quan_yi",
@@ -3304,7 +3403,7 @@
    "traits": [],
    "favoredUnit": null,
    "bio": "姚襄の謀臣。のちに苻堅の腹心となった。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "yin_chi",
@@ -3323,7 +3422,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "天水の尹氏。姚氏に従った。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "xue_zan",
@@ -3342,7 +3441,7 @@
    "traits": [],
    "favoredUnit": null,
    "bio": "姚襄に従った。のちに苻堅の腹心となった。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "sima_yao",
@@ -3361,7 +3460,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "東晋の9代皇帝。謝安に政治を任せていた。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "xie_yan",
@@ -3380,7 +3479,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "謝安の子。淝水の戦いで精兵を率いた。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "huan_yi2",
@@ -3399,8 +3498,8 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "淝水の戦いに加わった将。笛の名手としても知られる。",
-   "_b": 2,
-   "note": "桓彝とは別人"
+   "note": "桓彝とは別人",
+   "people": "漢"
   },
   {
    "id": "liu_laozhi",
@@ -3419,7 +3518,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "北府の兵の猛将。淝水の前に、洛澗で前秦の先鋒を破った。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "huan_shiqian",
@@ -3438,7 +3537,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "桓豁の子。勇猛で知られた。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "huan_shimin",
@@ -3457,7 +3556,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "桓豁の子。のちに荊州を任された。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "hu_bin",
@@ -3476,7 +3575,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "淝水の戦いの前に、水軍を率いて寿春の救援に向かった。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "he_qian",
@@ -3495,7 +3594,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "北府の将。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "zhuge_kan",
@@ -3514,7 +3613,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "北府の将。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "sima_daozi",
@@ -3533,7 +3632,7 @@
    "traits": [],
    "favoredUnit": null,
    "bio": "孝武帝の弟。のちに政治を握り、朝廷を乱した。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "wang_guobao",
@@ -3552,7 +3651,7 @@
    "traits": [],
    "favoredUnit": null,
    "bio": "王坦之の子。謝安に退けられたが、のちに司馬道子に用いられた。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "wang_xianzhi",
@@ -3571,7 +3670,7 @@
    "traits": [],
    "favoredUnit": null,
    "bio": "王羲之の子。書の名人。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "wang_xun2",
@@ -3590,8 +3689,8 @@
    "traits": [],
    "favoredUnit": null,
    "bio": "王導の孫。",
-   "_b": 2,
-   "note": "317年の王遜(寧州刺史)とは別人"
+   "note": "317年の王遜(寧州刺史)とは別人",
+   "people": "漢"
   },
   {
    "id": "yin_zhongkan",
@@ -3610,7 +3709,7 @@
    "traits": [],
    "favoredUnit": null,
    "bio": "名士。のちに荊州を任された。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "yang_liang",
@@ -3629,8 +3728,8 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "梁州の将。",
-   "_b": 2,
-   "note": "このころの活動は確かめられていない"
+   "note": "このころの活動は確かめられていない",
+   "people": "漢"
   },
   {
    "id": "guo_quan",
@@ -3649,7 +3748,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "桓氏の配下の将。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "huan_xuan2",
@@ -3668,8 +3767,8 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "桓温の末子。のちに帝位を奪ったが、劉裕らに倒された。",
-   "_b": 2,
-   "note": "桓宣とは別人"
+   "note": "桓宣とは別人",
+   "people": "漢"
   },
   {
    "id": "murong_chong",
@@ -3688,7 +3787,7 @@
    "traits": [],
    "favoredUnit": "cavalry",
    "bio": "前燕の最後の皇帝の弟。前秦に仕えさせられたが、のちに背いて西燕を率いた。",
-   "_b": 2
+   "people": "鮮卑"
   },
   {
    "id": "murong_hong",
@@ -3707,7 +3806,7 @@
    "traits": [],
    "favoredUnit": "cavalry",
    "bio": "慕容暐の弟。のちに背いて、西燕の基を作った。",
-   "_b": 2
+   "people": "鮮卑"
   },
   {
    "id": "murong_wei",
@@ -3726,7 +3825,7 @@
    "traits": [],
    "favoredUnit": null,
    "bio": "前燕の最後の皇帝。前秦に降ったのち、官位を与えられて長安にいた。",
-   "_b": 2
+   "people": "鮮卑"
   },
   {
    "id": "murong_nong",
@@ -3745,7 +3844,7 @@
    "traits": [],
    "favoredUnit": "cavalry",
    "bio": "慕容垂の子。父を助けて後燕を建てた。",
-   "_b": 2
+   "people": "鮮卑"
   },
   {
    "id": "murong_bao",
@@ -3764,7 +3863,7 @@
    "traits": [],
    "favoredUnit": "cavalry",
    "bio": "慕容垂の子。のちに後燕を継いだ。",
-   "_b": 2
+   "people": "鮮卑"
   },
   {
    "id": "murong_kai",
@@ -3783,7 +3882,7 @@
    "traits": [],
    "favoredUnit": "cavalry",
    "bio": "慕容恪の子。叔父の慕容垂に従った。",
-   "_b": 2
+   "people": "鮮卑"
   },
   {
    "id": "qifu_guoren",
@@ -3802,7 +3901,7 @@
    "traits": [],
    "favoredUnit": "cavalry",
    "bio": "隴西の鮮卑・乞伏部の長。のちに西秦を建てた。",
-   "_b": 2
+   "people": "鮮卑"
   },
   {
    "id": "zhai_bin",
@@ -3821,7 +3920,7 @@
    "traits": [],
    "favoredUnit": "cavalry",
    "bio": "丁零の翟氏の長。前秦のもとで河南にいた。のちに背いた。",
-   "_b": 2
+   "people": "丁零"
   },
   {
    "id": "tuoba_gui",
@@ -3840,8 +3939,8 @@
    "traits": [],
    "favoredUnit": "cavalry",
    "bio": "拓跋寔の子。代が滅んだのち、劉庫仁に守られて育った。のちに北魏を建てた。",
-   "_b": 2,
-   "note": "開始時は12歳"
+   "note": "開始時は12歳",
+   "people": "鮮卑"
   },
   {
    "id": "yang_ding",
@@ -3860,7 +3959,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "仇池の楊氏の一族。苻堅に仕えた勇将。のちに仇池を再び興した。",
-   "_b": 2
+   "people": "氐"
   },
   {
    "id": "fu_pi",
@@ -3879,7 +3978,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "苻堅の子。鄴の守りを任された。",
-   "_b": 2
+   "people": "氐"
   },
   {
    "id": "fu_hui",
@@ -3898,7 +3997,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "苻堅の子。洛陽の守りを任された。",
-   "_b": 2
+   "people": "氐"
   },
   {
    "id": "fu_rui",
@@ -3917,7 +4016,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "苻堅の子。勇ましいが、軽はずみだったと伝わる。",
-   "_b": 2
+   "people": "氐"
   },
   {
    "id": "fu_lang",
@@ -3936,7 +4035,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "苻堅の従兄の子。学問で知られた。",
-   "_b": 2
+   "people": "氐"
   },
   {
    "id": "fu_hong2",
@@ -3955,7 +4054,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "苻堅の子。父の出征のあいだ、長安を守った。",
-   "_b": 2
+   "people": "氐"
   },
   {
    "id": "liang_cheng",
@@ -3974,7 +4073,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "前秦の将。淝水の前に洛澗で劉牢之に討たれた。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "mao_dang",
@@ -3993,7 +4092,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "前秦の将。襄陽攻めに加わった。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "shi_yue_qin",
@@ -4012,8 +4111,8 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "前秦の将。出征に反対した一人。",
-   "_b": 2,
-   "note": "317年の石越(石勒の将)とは別人"
+   "note": "317年の石越(石勒の将)とは別人",
+   "people": "漢"
   },
   {
    "id": "dou_chong",
@@ -4032,7 +4131,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "前秦の将。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "zhu_xu",
@@ -4051,7 +4150,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "晋の将として襄陽を守り、落城して前秦に仕えさせられた。淝水では晋に内通した。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "wang_yong",
@@ -4070,7 +4169,7 @@
    "traits": [],
    "favoredUnit": null,
    "bio": "王猛の子。のちに苻丕を支えた。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "zhang_tianxi",
@@ -4089,7 +4188,7 @@
    "traits": [],
    "favoredUnit": null,
    "bio": "前涼の最後の主。前秦に降ったのち、長安にいた。淝水で晋へ移った。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "liang_xi",
@@ -4108,7 +4207,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "前秦の涼州刺史。",
-   "_b": 2
+   "people": "漢"
   },
   {
    "id": "shilian",
@@ -4127,7 +4226,7 @@
    "traits": [],
    "favoredUnit": "cavalry",
    "bio": "吐谷渾の主。前秦に従った。",
-   "_b": 2
+   "people": "鮮卑"
   },
   {
    "id": "sosurim",
@@ -4146,7 +4245,7 @@
    "traits": [],
    "favoredUnit": "infantry",
    "bio": "高句麗の王。仏教を受け入れ、太学を置き、律令を定めた。",
-   "_b": 2
+   "people": "高句麗"
   }
  ]
 }

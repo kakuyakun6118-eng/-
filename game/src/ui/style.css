@@ -3222,3 +3222,20 @@ select:focus-visible {
 #persons .person-row-name {
   font-family: var(--font-display);
 }
+
+/* 会戦準備の指揮官の肖像 */
+.battle-commander {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.battle-face {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border: 1px solid var(--gold-dim);
+  border-radius: 2px;
+  object-fit: cover;
+  background: #130c0a;
+}
