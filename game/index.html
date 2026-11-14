@@ -288,6 +288,7 @@
             <button class="persons-close scenarios-close" type="button">閉じる</button>
           </div>
           <div class="scenarios-list"></div>
+          <p class="scenarios-foot">背景の山水は装飾で、実際の地理を表すものではありません。地図は、ゲームの中の3Dマップをご覧ください。</p>
         </div>
       </section>
       <section id="menu" hidden>
@@ -308,14 +309,9 @@
               <h3>設定</h3>
               <label for="menu-faction">操作する勢力(選ぶと、ほかの勢力が自動で動きます)</label>
               <select id="menu-faction"></select>
-              <label for="menu-difficulty">敵の強さ</label>
-              <select id="menu-difficulty">
-                <option value="veryEasy">非常に易しい</option>
-                <option value="easy">易しい</option>
-                <option value="normal">普通</option>
-                <option value="hard">難しい</option>
-                <option value="veryHard">非常に難しい</option>
-              </select>
+              <label>敵の強さ(難易度)</label>
+              <div id="menu-difficulty" class="difficulty-cards" role="radiogroup" aria-label="敵の強さ"></div>
+              <p class="difficulty-note">資金や兵が無から増えることはありません。変わるのは、敵の判断の速さ・攻める基準・徴兵の量・軍団の数です。地形を読んだ戦略判断は、まだ実装していません。</p>
               <label for="menu-opacity">領土の色の濃さ</label>
               <input id="menu-opacity" type="range" min="0.3" max="1.6" step="0.1" />
               <h3>書き出しと読み込み</h3>

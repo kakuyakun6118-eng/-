@@ -11,6 +11,7 @@ import ncCrossings from "./regions/north-china/crossings.json";
 import ncRoads from "./regions/north-china/roads.json";
 import ncPasses from "./regions/north-china/passes.json";
 import terrainCostRules from "./rules/terrainCosts.json";
+import portraitManifest from "./portraits.manifest.json";
 import catalog from "./scenarios/catalog.json";
 import extraPersons from "./scenarios/persons.extra.json";
 import s300 from "./scenarios/s300.json";
@@ -124,15 +125,22 @@ export function switchScenario(id: string): void {
 // (都市データに書かれた太守は317年のもの。ほかの年代では使わない)
 for (const c of northChina.cities) c.governorId = scenario.governors?.[c.id] ?? (scenario.id === "s317" ? c.governorId : undefined);
 
-// 肖像画像:portraits/{人物ID}.webp(png・jpg も可)があれば使う。無い人物は、画面側で仮のシルエットを出す
-const portraitFiles = import.meta.glob("./portraits/*.{webp,png,jpg,jpeg}", { eager: true, query: "?url", import: "default" }) as Record<string, string>;
-const portraits = new Map<string, string>();
-for (const [path, url] of Object.entries(portraitFiles)) {
-  const id = path.slice(path.lastIndexOf("/") + 1, path.lastIndexOf("."));
-  portraits.set(id, url);
+// 肖像画像:public/portraits/<人物ID>.webp(png・jpg も可)。年齢で絵を変えるときは <人物ID>@<年>.webp を足す。
+// 置いてある画像の一覧(portraits.manifest.json)は、tools/portraits.cjs が作る。無い人物は、画面側で仮のシルエットを出す
+const portraitFiles = new Map<string, { year: number; file: string }[]>();
+for (const file of portraitManifest.files as string[]) {
+  const m = /^([a-z0-9_]+)(?:@(\d+))?\.[a-z]+$/i.exec(file);
+  if (!m) continue;
+  const list = portraitFiles.get(m[1]) ?? [];
+  list.push({ year: m[2] ? Number(m[2]) : -Infinity, file });
+  portraitFiles.set(m[1], list);
 }
+/** その人物の肖像の場所。シナリオの開始年以前で、いちばん新しい年の絵を選ぶ(無ければ undefined) */
 export function portraitOf(personId: string): string | undefined {
-  return portraits.get(personId);
+  const list = portraitFiles.get(personId);
+  if (!list) return undefined;
+  const best = list.filter((x) => x.year <= scenario.year).sort((a, b) => b.year - a.year)[0];
+  return best ? `portraits/${best.file}` : undefined;
 }
 
 // 関所の所属も、都市と同じ表で引けるようにする

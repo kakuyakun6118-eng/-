@@ -2602,3 +2602,623 @@ body {
   margin-left: auto;
   margin-right: 8px;
 }
+
+/* =====================================================================
+   中国古代王朝風の意匠(Version 21)
+   漆黒・深い朱・古金・翡翠・生成りを基本に、漆塗りの板、青銅の細い枠、木札、朱印を表す。
+   ここより上の配置や大きさはそのままに、色・枠・書体だけを上書きしている。
+   ===================================================================== */
+:root {
+  --ink: #0c0908;
+  --lacquer: #1a100d;
+  --lacquer-2: #26140f;
+  --vermilion: #a32a20;
+  --vermilion-2: #6f1a14;
+  --gold: #c8a252;
+  --gold-dim: rgba(200, 162, 82, 0.5);
+  --jade: #5c9c84;
+  --kinari: #efe6d0;
+  --kinari-2: #dccfae;
+  --sumi: #2a211b;
+  --shade: rgba(8, 6, 5, 0.66);
+  --panel: rgba(22, 14, 11, 0.95);
+  --line: rgba(200, 162, 82, 0.5);
+  --bronze: #d6b46a;
+  --good: #7fb89e;
+  --warn: #dba445;
+  --bad: #d4634e;
+  --text: #f1e9d6;
+  --muted: #b8ab90;
+  --label-bg: rgba(24, 14, 11, 0.86);
+  --font-display: "Hiragino Mincho ProN", "Yu Mincho", "Songti SC", "Noto Serif JP", serif;
+  /* 絹の織り目(ごく薄い縦横の筋) */
+  --silk: repeating-linear-gradient(0deg, rgba(255, 240, 210, 0.018) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(255, 240, 210, 0.014) 0 1px, transparent 1px 3px);
+  /* 漆塗りの板 */
+  --board: linear-gradient(180deg, rgba(48, 24, 18, 0.96), rgba(20, 12, 10, 0.97));
+}
+
+/* --- 漆塗りの板に、青銅の二重の細枠 --- */
+.menu-inner,
+.persons-inner,
+#clock,
+#event,
+#credits .credits-inner,
+.battle-detail,
+.hud-result,
+.hud-confirm {
+  border: 1px solid var(--gold-dim);
+  border-radius: 3px;
+  background: var(--silk), var(--board);
+  box-shadow: inset 0 0 0 3px rgba(12, 9, 8, 0.9), inset 0 0 0 4px rgba(200, 162, 82, 0.22), 0 10px 30px rgba(0, 0, 0, 0.55);
+}
+
+#info,
+#army {
+  background: var(--silk), var(--board);
+  border-top: 1px solid var(--gold-dim);
+  box-shadow: inset 0 3px 0 rgba(12, 9, 8, 0.9), inset 0 4px 0 rgba(200, 162, 82, 0.22), 0 -8px 24px rgba(0, 0, 0, 0.45);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* 四隅の金具(大きな板だけ) */
+.menu-inner,
+.persons-inner {
+  position: relative;
+}
+
+.menu-inner::before,
+.persons-inner::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--gold), var(--gold)) left top / 14px 1.5px no-repeat,
+    linear-gradient(var(--gold), var(--gold)) left top / 1.5px 14px no-repeat,
+    linear-gradient(var(--gold), var(--gold)) right top / 14px 1.5px no-repeat,
+    linear-gradient(var(--gold), var(--gold)) right top / 1.5px 14px no-repeat,
+    linear-gradient(var(--gold), var(--gold)) left bottom / 14px 1.5px no-repeat,
+    linear-gradient(var(--gold), var(--gold)) left bottom / 1.5px 14px no-repeat,
+    linear-gradient(var(--gold), var(--gold)) right bottom / 14px 1.5px no-repeat,
+    linear-gradient(var(--gold), var(--gold)) right bottom / 1.5px 14px no-repeat;
+  opacity: 0.8;
+}
+
+/* --- 見出し:明朝の題字に、金の細い罫 --- */
+.menu-head h2,
+.persons-head h2,
+.menu-block h3,
+.diplomacy-side h3 {
+  font-family: var(--font-display);
+  color: var(--kinari);
+  letter-spacing: 0.16em;
+}
+
+.menu-head,
+.persons-head {
+  padding-bottom: 6px;
+  border-bottom: 1px solid transparent;
+  border-image: linear-gradient(90deg, transparent, var(--gold) 12%, var(--gold) 88%, transparent) 1;
+}
+
+.menu-block h3 {
+  padding-left: 8px;
+  border-left: 3px solid var(--vermilion);
+}
+
+/* --- 題字 --- */
+.title h1 {
+  font-size: 24px;
+  letter-spacing: 0.2em;
+  color: var(--kinari);
+}
+
+.title h1 small {
+  color: var(--gold);
+  letter-spacing: 0.42em;
+}
+
+.title .scenario {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 1px 8px;
+  border: 1px solid var(--vermilion);
+  border-radius: 2px;
+  background: rgba(111, 26, 20, 0.55);
+  color: var(--kinari);
+  font-family: var(--font-display);
+  letter-spacing: 0.08em;
+  text-shadow: none;
+}
+
+/* --- 木札の釦(ぼたん) --- */
+#credits-open,
+#territory-toggle,
+#menu-open,
+.menu-open,
+#persons-open,
+#diplomacy-open,
+#clock-pause,
+#clock-speed,
+#event-close,
+#event-open,
+#menu button,
+#persons button,
+#diplomacy button,
+#scenarios button,
+#info button,
+#army button,
+.battle-actions button,
+.hud-tools button,
+.hud-orders button,
+.hud-pause,
+.hud-speed,
+#credits button {
+  border: 1px solid var(--gold-dim);
+  border-radius: 2px;
+  background: linear-gradient(180deg, #3b1e17, #21110d);
+  color: var(--kinari);
+  font-family: var(--font-display);
+  letter-spacing: 0.06em;
+  box-shadow: inset 0 1px 0 rgba(255, 230, 180, 0.1), 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+#credits-open,
+#territory-toggle,
+#menu-open,
+#persons-open,
+#diplomacy-open {
+  min-width: 64px;
+  border-left: 3px solid var(--gold);
+  font-size: 13px;
+}
+
+#territory-toggle[aria-pressed="true"],
+.battle-info[aria-pressed="true"],
+.hud-multi[aria-pressed="true"],
+.hud-follow[aria-pressed="true"],
+.hud-pursue[aria-pressed="true"] {
+  background: linear-gradient(180deg, #d9b968, #a8843a);
+  border-color: #f0d998;
+  color: #1c120c;
+}
+
+/* 大事な釦は朱 */
+#event-open,
+.battle-start,
+.person-appoint,
+.scenario-card button:not(:disabled),
+.info-raise {
+  background: linear-gradient(180deg, #b63327, #76190f);
+  border-color: #e0b56a;
+  color: #fff3dc;
+}
+
+button:disabled {
+  opacity: 0.55;
+}
+
+button:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.info-close,
+.army-close {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: var(--gold) !important;
+}
+
+/* --- 入力欄 --- */
+#menu select,
+#persons select,
+#menu textarea,
+.person-target {
+  border: 1px solid var(--gold-dim);
+  border-radius: 2px;
+  background: #130c0a;
+  color: var(--kinari);
+  font-family: var(--font-body);
+}
+
+#menu-opacity {
+  accent-color: var(--gold);
+}
+
+/* --- 地図の上の札 --- */
+.city-label {
+  border: 1px solid rgba(200, 162, 82, 0.4);
+  border-radius: 2px;
+  background: linear-gradient(180deg, rgba(52, 26, 19, 0.92), rgba(24, 14, 11, 0.92));
+  color: var(--kinari);
+  letter-spacing: 0.06em;
+}
+
+.city-label.rank-capital {
+  border-color: var(--gold);
+}
+
+.city-label.pass {
+  border-style: dashed;
+  color: var(--bronze);
+}
+
+.city-label.selected {
+  outline: none;
+  border-color: #f0d998;
+  box-shadow: 0 0 0 1px var(--vermilion), 0 0 10px rgba(240, 217, 152, 0.4);
+  color: #fff3dc;
+}
+
+.army-label {
+  border-top: 1px solid rgba(200, 162, 82, 0.3);
+  border-right: 1px solid rgba(200, 162, 82, 0.3);
+  border-bottom: 1px solid rgba(200, 162, 82, 0.3);
+  background: linear-gradient(180deg, rgba(30, 18, 14, 0.92), rgba(16, 10, 8, 0.92));
+}
+
+/* --- 都市・軍団の情報 --- */
+.info-name,
+.army-name-big,
+.person-name {
+  font-family: var(--font-display);
+  color: var(--kinari);
+  letter-spacing: 0.1em;
+}
+
+.info-label,
+.info-stats dt {
+  color: var(--gold);
+}
+
+/* --- 朱印 --- */
+.seal {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border: 2px solid #c9463a;
+  border-radius: 3px;
+  background: radial-gradient(circle at 30% 30%, #b8382c, #8a1f17);
+  box-shadow: inset 0 0 0 1px rgba(255, 220, 200, 0.25);
+  color: #f7e6d2;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+  transform: rotate(-3deg);
+}
+
+/* --- 難易度の札 --- */
+.difficulty-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.difficulty-card {
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  grid-template-rows: auto auto auto;
+  column-gap: 8px;
+  align-items: center;
+  min-height: 44px;
+  padding: 6px 8px !important;
+  text-align: left;
+  cursor: pointer;
+}
+
+.difficulty-card .seal {
+  grid-row: 1 / 3;
+  filter: grayscale(1) brightness(0.7);
+}
+
+.difficulty-card strong {
+  font-size: 14px;
+  letter-spacing: 0.12em;
+}
+
+.difficulty-lead,
+.difficulty-detail {
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  line-height: 1.45;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+
+.difficulty-detail {
+  grid-column: 1 / 3;
+  margin-top: 2px;
+  color: #9d9079;
+}
+
+.difficulty-card[aria-checked="true"] {
+  border-color: #f0d998 !important;
+  box-shadow: 0 0 0 1px var(--gold), inset 0 0 18px rgba(200, 162, 82, 0.18) !important;
+}
+
+.difficulty-card[aria-checked="true"] .seal {
+  filter: none;
+}
+
+.difficulty-card[aria-checked="true"] strong {
+  color: #f0d998;
+}
+
+.difficulty-note {
+  margin: 4px 0 0;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* --- 人物・外交 --- */
+.person-row {
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: rgba(255, 240, 210, 0.035);
+}
+
+.person-row[aria-pressed="true"] {
+  border-color: var(--gold);
+  background: linear-gradient(90deg, rgba(163, 42, 32, 0.35), rgba(200, 162, 82, 0.1));
+}
+
+.person-row img,
+.person-portrait,
+.diplomacy-face {
+  border: 1px solid var(--gold-dim);
+  border-radius: 2px;
+  background: #130c0a;
+}
+
+.person-portrait {
+  box-shadow: inset 0 0 0 2px #130c0a, 0 0 0 1px rgba(200, 162, 82, 0.25);
+}
+
+.person-stats b {
+  background: linear-gradient(90deg, #8f6f2e, #e0c070);
+}
+
+.person-post,
+.person-traits {
+  color: var(--bronze);
+}
+
+.diplomacy-row {
+  grid-template-columns: 10px 26px minmax(0, 1.3fr) minmax(0, 1fr) 40px auto;
+  border-radius: 2px;
+  background: rgba(255, 240, 210, 0.035);
+}
+
+.diplomacy-face {
+  width: 26px;
+  height: 26px;
+  object-fit: cover;
+}
+
+.diplomacy-state[data-relation="war"] {
+  color: #e2705c;
+}
+
+.diplomacy-state[data-relation="alliance"] {
+  color: var(--jade);
+}
+
+/* --- シナリオの選択:絹の巻物の上に、年代順の札 --- */
+#scenarios .persons-inner {
+  width: min(980px, 100%);
+  border-color: #8a6a34;
+  background:
+    url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 300' preserveAspectRatio='none'%3E%3Cg fill='%232a211b'%3E%3Cpath opacity='.07' d='M0 300V190l60-50 40 30 70-90 50 60 60-40 80 90 60-70 70 50 60-80 90 110 60-40 100 70v160z'/%3E%3Cpath opacity='.09' d='M0 300v-60l90-40 60 20 110-70 70 50 120-60 90 70 110-50 150 80v60z'/%3E%3Cpath opacity='.05' d='M560 70c20-14 46-14 70-4-30-2-50 2-70 4zM120 60c16-10 40-12 60-2-26-2-44 0-60 2z'/%3E%3C/g%3E%3C/svg%3E") center bottom / 100% 70% no-repeat,
+    repeating-linear-gradient(0deg, rgba(90, 70, 40, 0.035) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, #efe6d0, #e2d5b4);
+  box-shadow: inset 0 0 0 3px #efe6d0, inset 0 0 0 4px rgba(120, 84, 34, 0.45), inset 0 0 60px rgba(120, 84, 34, 0.22), 0 10px 30px rgba(0, 0, 0, 0.6);
+  color: var(--sumi);
+}
+
+#scenarios .persons-inner::before {
+  opacity: 0;
+}
+
+#scenarios .persons-head {
+  border-image: linear-gradient(90deg, transparent, #8a6a34 12%, #8a6a34 88%, transparent) 1;
+}
+
+#scenarios .persons-head h2 {
+  color: var(--sumi);
+  font-size: 19px;
+}
+
+.scenarios-hint,
+.scenarios-foot {
+  color: #6b5a42;
+}
+
+.scenarios-foot {
+  margin: 0;
+  font-size: 9.5px;
+}
+
+.scenarios-list {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.scenario-card {
+  position: relative;
+  gap: 1px;
+  padding: 6px 8px 7px;
+  border: 1px solid rgba(120, 84, 34, 0.55);
+  border-radius: 2px;
+  background: linear-gradient(180deg, rgba(255, 252, 240, 0.72), rgba(243, 234, 208, 0.72));
+  box-shadow: 0 1px 3px rgba(60, 40, 10, 0.25);
+  color: var(--sumi);
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+.scenario-card .seal {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  font-size: 14px;
+}
+
+.scenario-card[data-status="planned"] {
+  opacity: 0.6;
+  border-style: dashed;
+}
+
+.scenario-card[data-status="planned"] .seal {
+  filter: grayscale(1);
+}
+
+.scenario-card[data-status="current"] {
+  border-color: var(--vermilion);
+  background: linear-gradient(180deg, rgba(255, 246, 228, 0.9), rgba(246, 226, 196, 0.9));
+  box-shadow: 0 0 0 1px var(--vermilion), 0 2px 6px rgba(120, 30, 20, 0.3);
+}
+
+.scenario-year {
+  color: var(--vermilion-2);
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+}
+
+.scenario-card strong {
+  color: #1c140f;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+}
+
+.scenario-card p {
+  flex: none;
+  color: #4a3d2f;
+}
+
+.scenario-card dl {
+  flex: 1;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0 6px;
+  margin: 3px 0 4px;
+  padding-top: 3px;
+  border-top: 1px solid rgba(120, 84, 34, 0.3);
+  font-size: 10px;
+}
+
+.scenario-card dt {
+  color: var(--vermilion-2);
+  white-space: nowrap;
+}
+
+.scenario-card dd {
+  margin: 0;
+  color: #3a2f25;
+}
+
+#scenarios .scenario-card button:disabled {
+  background: none;
+  border-color: rgba(120, 84, 34, 0.4);
+  box-shadow: none;
+  color: #6b5a42;
+  opacity: 1;
+}
+
+#scenarios .scenarios-close {
+  background: linear-gradient(180deg, #4a2a1f, #2a1611);
+}
+
+@media (max-width: 700px) {
+  .scenarios-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .difficulty-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- 会戦の画面:数字の読みやすさを優先し、枠と釦の色だけを合わせる --- */
+.battle-head,
+.battle-actions,
+.hud-top,
+.hud-bottom {
+  background: var(--silk), linear-gradient(180deg, rgba(34, 18, 14, 0.94), rgba(14, 9, 8, 0.94));
+  border-color: var(--gold-dim);
+}
+
+.battle-name,
+.hud-name {
+  font-family: var(--font-display);
+  letter-spacing: 0.1em;
+  color: var(--kinari);
+}
+
+.hud-retreat,
+.hud-retreat-all {
+  border-color: #d4634e !important;
+  color: #ffd9cf !important;
+}
+
+/* 縦に長い画面で、メニューの板が上下にはみ出さないようにする */
+#menu,
+.menu-inner {
+  box-sizing: border-box;
+}
+
+#menu {
+  align-items: stretch;
+}
+
+.menu-inner {
+  max-height: 100%;
+  align-self: center;
+}
+
+/* 難易度の札の説明は、折り返して全部見せる */
+.difficulty-card,
+.difficulty-card span {
+  white-space: normal;
+}
+
+.difficulty-lead {
+  align-self: start;
+}
+
+/* 地図の上の札は、文字の間を詰めて、重なりを減らす */
+.city-label {
+  letter-spacing: 0.02em;
+}
+
+/* 人物の一覧の行は、木札ではなく、薄い帯にする(たくさん並ぶので、軽く見せる) */
+#persons .person-row {
+  padding: 2px 6px;
+  border: 1px solid transparent;
+  background: rgba(255, 240, 210, 0.035);
+  box-shadow: none;
+  font-family: var(--font-body);
+  letter-spacing: 0;
+}
+
+#persons .person-row[aria-pressed="true"] {
+  border-color: var(--gold);
+  background: linear-gradient(90deg, rgba(163, 42, 32, 0.35), rgba(200, 162, 82, 0.1));
+}
+
+#persons .person-row-name {
+  font-family: var(--font-display);
+}

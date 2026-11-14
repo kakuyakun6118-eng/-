@@ -561,7 +561,8 @@ export class Game {
 
   private changeSettings(change: Partial<GameSettings>): void {
     if (change.playerFactionId !== undefined) this.playerFactionId = change.playerFactionId;
-    if (change.difficulty) this.difficulty = change.difficulty;
+    // 画面で選べるのは4段階。古いセーブの「非常に易しい」は「易しい」として扱う
+    if (change.difficulty) this.difficulty = change.difficulty === "veryEasy" ? "easy" : change.difficulty;
     // 戦略AIは、操作勢力を選んでいるあいだだけ動く(選んだ勢力以外が自動で動く)
     this.campaign.playerFactionId = this.playerFactionId;
     this.campaign.difficulty = this.difficulty;

@@ -1,4 +1,5 @@
-import { factionById, persons, portraitOf, scenario } from "../data";
+import { factionById, persons, scenario } from "../data";
+import { fillPortrait } from "./portrait";
 import type { Person, PersonRole, PersonStatus } from "../data/types";
 import type { Campaign } from "../sim/Campaign";
 
@@ -18,16 +19,6 @@ export interface PersonScreenActions {
   playerFactionId: () => string | null;
   /** 任命のあと、地図の表示を合わせる */
   onAppointed: () => void;
-}
-
-/** 肖像が無い人物のための、仮のシルエット(勢力の色を背景にした胸像の影) */
-function silhouette(color: string): string {
-  const svg =
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"><rect width="96" height="96" fill="${color}" opacity="0.35"/>` +
-    `<rect width="96" height="96" fill="#1a222c" opacity="0.55"/>` +
-    `<path d="M48 16c-9 0-15 7-15 17 0 7 3 13 8 16l-2 6c-12 3-21 9-25 20v21h68V75c-4-11-13-17-25-20l-2-6c5-3 8-9 8-16 0-10-6-17-15-17z" fill="#0d1218" opacity="0.85"/>` +
-    `<path d="M40 14h16l3 6H37z" fill="#0d1218" opacity="0.85"/></svg>`;
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
 /** 人物の一覧と詳細。任命(太守・守将・軍団の指揮官)もここから行う */
@@ -71,11 +62,6 @@ export class PersonScreen {
     return list;
   }
 
-  private portrait(p: Person): { src: string; real: boolean } {
-    const url = portraitOf(p.id);
-    return url ? { src: url, real: true } : { src: silhouette(factionById(p.factionId)?.color ?? "#888888"), real: false };
-  }
-
   private renderList(): void {
     const campaign = this.actions.campaign();
     const list = this.filtered();
@@ -90,7 +76,7 @@ export class PersonScreen {
         row.dataset.id = p.id;
         row.setAttribute("aria-pressed", String(p.id === this.selectedId));
         const img = document.createElement("img");
-        img.src = this.portrait(p).src;
+        fillPortrait(img, p);
         img.alt = "";
         const name = document.createElement("span");
         name.className = "person-row-name";
@@ -121,9 +107,8 @@ export class PersonScreen {
     detail.hidden = !p;
     if (!p) return;
     const faction = factionById(p.factionId);
-    const portrait = this.portrait(p);
-    this.q<HTMLImageElement>(".person-portrait").src = portrait.src;
-    this.q(".person-portrait-note").textContent = portrait.real ? "創作肖像(同時代の肖像は残っていない)" : "肖像は未登録(仮のシルエット)";
+    const real = fillPortrait(this.q<HTMLImageElement>(".person-portrait"), p);
+    this.q(".person-portrait-note").textContent = real ? "創作肖像(同時代の肖像は残っていない)" : "肖像は未登録(仮のシルエット)";
     this.q(".person-name").textContent = p.name;
     this.q(".person-reading").textContent = p.reading;
     const year = campaign.calendar().year;

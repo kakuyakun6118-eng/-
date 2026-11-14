@@ -21,6 +21,18 @@ export class ScenarioScreen {
         title.textContent = e.title;
         const summary = document.createElement("p");
         summary.textContent = e.summary;
+        const seal = document.createElement("span");
+        seal.className = "seal";
+        seal.textContent = e.id === scenario.id ? "今" : e.status === "ready" ? "可" : "未";
+        const facts = document.createElement("dl");
+        for (const [label, list] of [["主な勢力", e.powers], ["主な人物", e.figures]] as const) {
+          if (!list || list.length === 0) continue;
+          const dt = document.createElement("dt");
+          dt.textContent = label;
+          const dd = document.createElement("dd");
+          dd.textContent = list.join("・");
+          facts.append(dt, dd);
+        }
         const action = document.createElement("button");
         action.type = "button";
         if (e.id === scenario.id) {
@@ -33,7 +45,7 @@ export class ScenarioScreen {
           action.textContent = "準備中(未実装)";
           action.disabled = true;
         }
-        card.append(year, title, summary, action);
+        card.append(seal, year, title, summary, facts, action);
         return card;
       }),
     );

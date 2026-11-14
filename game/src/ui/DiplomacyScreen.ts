@@ -1,4 +1,5 @@
-import { scenario } from "../data";
+import { persons, scenario } from "../data";
+import { fillPortrait } from "./portrait";
 import type { Campaign } from "../sim/Campaign";
 
 const RELATION_LABEL = { war: "戦争", peace: "和平", alliance: "同盟" } as const;
@@ -51,6 +52,11 @@ export class DiplomacyScreen {
       const relation = me && me !== f.id ? c.relationOf(me, f.id) : null;
       const chip = document.createElement("i");
       chip.style.background = f.color;
+      // 君主の肖像(人物画面と同じ処理)
+      const face = document.createElement("img");
+      face.className = "diplomacy-face";
+      face.alt = "";
+      fillPortrait(face, persons.find((x) => x.factionId === f.id && x.role === "ruler"));
       const name = document.createElement("span");
       name.className = "diplomacy-name";
       name.textContent = f.name;
@@ -73,7 +79,7 @@ export class DiplomacyScreen {
         if (relation === "war") acts.append(this.button("和睦", act("peace")));
         if (relation === "peace") acts.append(this.button("同盟", act("alliance")));
       }
-      row.append(chip, name, info, state, acts);
+      row.append(chip, face, name, info, state, acts);
       return row;
     });
     this.q(".diplomacy-factions").replaceChildren(...rows);

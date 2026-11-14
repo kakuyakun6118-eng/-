@@ -1,4 +1,5 @@
 // メニュー画面。セーブとロード(オートセーブ + 手動3つ)、書き出しと読み込み、ゲームの設定をまとめる。
+import { strategyRules } from "../sim/strategy";
 import { scenario } from "../data";
 import type { SaveRecord, SaveStore } from "../core/saveStore";
 import type { GameSettings, SaveData } from "../sim/save";
@@ -20,6 +21,14 @@ export interface SaveMenuActions {
   changeSettings(change: Partial<GameSettings>): void;
 }
 
+/** 難易度の札(画面に出す4段階)。効果の数字は strategyAi.json にあり、ここには名前と一言だけを書く */
+const DIFFICULTY_CARDS: { id: "easy" | "normal" | "hard" | "veryHard"; name: string; seal: string; lead: string }[] = [
+  { id: "easy", name: "易しい", seal: "易", lead: "初心者向け。敵は慎重で、攻めてくることが少ない。" },
+  { id: "normal", name: "普通", seal: "中", lead: "標準。敵は、優位なときに攻めてくる。" },
+  { id: "hard", name: "難しい", seal: "難", lead: "敵は積極的に兵を集め、領土を広げ、補給に戻る。" },
+  { id: "veryHard", name: "最高難度", seal: "極", lead: "敵は最も速く判断し、わずかな優位でも攻め、迎撃と外交も最も積極的。" },
+];
+
 export class SaveMenu {
   private readonly q: <T extends HTMLElement = HTMLElement>(sel: string) => T;
 
@@ -31,8 +40,35 @@ export class SaveMenu {
     const faction = this.q<HTMLSelectElement>("#menu-faction");
     faction.replaceChildren(new Option("すべての勢力(制限なし)", ""), ...scenario.factions.map((f) => new Option(f.name, f.id)));
     faction.addEventListener("change", () => actions.changeSettings({ playerFactionId: faction.value || null }));
-    const difficulty = this.q<HTMLSelectElement>("#menu-difficulty");
-    difficulty.addEventListener("change", () => actions.changeSettings({ difficulty: difficulty.value as GameSettings["difficulty"] }));
+    // 難易度:4枚の札から選ぶ。説明の数字は、実際に使っている設定(strategyAi.json)から作る
+    const difficulty = this.q("#menu-difficulty");
+    difficulty.replaceChildren(
+      ...DIFFICULTY_CARDS.map((d) => {
+        const p = strategyRules.profiles[d.id];
+        const card = document.createElement("button");
+        card.type = "button";
+        card.className = "difficulty-card";
+        card.dataset.value = d.id;
+        card.setAttribute("role", "radio");
+        const seal = document.createElement("span");
+        seal.className = "seal";
+        seal.textContent = d.seal;
+        const name = document.createElement("strong");
+        name.textContent = d.name;
+        const lead = document.createElement("span");
+        lead.className = "difficulty-lead";
+        lead.textContent = d.lead;
+        const detail = document.createElement("span");
+        detail.className = "difficulty-detail";
+        detail.textContent = `敵は${p.interval}日ごとに判断し、兵力が相手の約${p.attackRatio}倍あれば攻める。徴兵は1回${p.recruitPerTurn}人${p.extraArmies ? "、軍団が1つ多い" : ""}。`;
+        card.append(seal, name, lead, detail);
+        card.addEventListener("click", () => {
+          actions.changeSettings({ difficulty: d.id });
+          this.syncDifficulty(d.id);
+        });
+        return card;
+      }),
+    );
     const opacity = this.q<HTMLInputElement>("#menu-opacity");
     opacity.addEventListener("input", () => actions.changeSettings({ territoryOpacity: Number(opacity.value) }));
 
@@ -83,11 +119,19 @@ export class SaveMenu {
   async open(): Promise<void> {
     const s = this.actions.settings();
     this.q<HTMLSelectElement>("#menu-faction").value = s.playerFactionId ?? "";
-    this.q<HTMLSelectElement>("#menu-difficulty").value = s.difficulty;
+    this.syncDifficulty(s.difficulty);
     this.q<HTMLInputElement>("#menu-opacity").value = String(s.territoryOpacity);
     this.say("");
     this.root.hidden = false;
     await this.refresh();
+  }
+
+  /** 選んでいる難易度の札に、朱印と金の枠を付ける(古いセーブの「非常に易しい」は「易しい」として示す) */
+  private syncDifficulty(value: GameSettings["difficulty"]): void {
+    const shown = value === "veryEasy" ? "easy" : value;
+    for (const card of this.root.querySelectorAll<HTMLElement>(".difficulty-card")) {
+      card.setAttribute("aria-checked", String(card.dataset.value === shown));
+    }
   }
 
   close(): void {
