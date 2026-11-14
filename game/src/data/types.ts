@@ -196,6 +196,8 @@ export interface Person {
   favoredUnit: UnitTypeId | null;
   /** 人物の説明・経歴 */
   bio: string;
+  /** 所属・生存・活動が確かでないときの注記(画面に出す) */
+  note?: string;
   /** 生没年に異説があるとき true */
   datesUncertain?: boolean;
 }

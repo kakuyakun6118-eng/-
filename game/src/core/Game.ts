@@ -521,7 +521,7 @@ export class Game {
       // 守備兵を残して、出せるだけ出す。指揮官は、役目のない健在の人物のうち、統率と武力の高い者
       const troops = Math.min(this.campaign.cityState(city).garrison - strategyRules.costs.minGarrison, strategyRules.costs.maxArmy);
       const free = persons
-        .filter((p) => p.factionId === owner && p.role !== "strategist" && this.campaign.personStatus(p.id) === "active" && !this.campaign.postOf(p.id))
+        .filter((p) => p.factionId === owner && p.role !== "strategist" && p.role !== "minister" && this.campaign.personStatus(p.id) === "active" && !this.campaign.postOf(p.id))
         .sort((a, b) => b.leadership + b.war - (a.leadership + a.war))[0];
       const result = this.campaign.raiseArmy(city.id, troops, free?.id);
       this.showNotice(typeof result === "string" ? result : `${result.army.name}(${troops.toLocaleString("ja-JP")}人)が${city.name}から出陣しました`);

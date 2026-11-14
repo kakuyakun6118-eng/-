@@ -144,6 +144,9 @@ export class PersonScreen {
     );
     this.q(".person-traits").textContent = [...p.traits, p.favoredUnit ? `得意:${{ infantry: "歩兵", cavalry: "騎兵", archer: "弓兵" }[p.favoredUnit]}` : ""].filter(Boolean).join("・");
     this.q(".person-bio").textContent = p.bio;
+    const uncertain = this.q(".person-uncertain");
+    uncertain.textContent = p.note ? `注記:${p.note}` : "";
+    uncertain.hidden = !p.note;
 
     // 任命:操作している勢力の、健在の人物だけ
     const player = this.actions.playerFactionId();

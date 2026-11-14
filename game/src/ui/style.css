@@ -2500,3 +2500,8 @@ body {
     flex-basis: 55%;
   }
 }
+
+.person-uncertain {
+  color: var(--warn);
+  font-size: 11px;
+}

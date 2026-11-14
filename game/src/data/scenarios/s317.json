@@ -283,7 +283,7 @@
   "governors": {
     "pingyang": "liu_cong",
     "changan": "liu_ya",
-    "luoyang": "huyan_yan",
+    "luoyang": "zhao_gu",
     "tongguan": "liu_yue",
     "xiangguo": "shi_le",
     "ye": "tao_bao",
@@ -296,7 +296,6 @@
     "xingyang": "li_ju",
     "yanci": "shao_xu",
     "hefei": "dai_yuan",
-    "jiangling": "gan_zhuo",
     "lingzhi": "duan_jilujuan",
     "ji": "duan_pidi",
     "pingcheng": "tuoba_hena",
@@ -321,7 +320,16 @@
     "shuofang": "liu_hu",
     "panyu": "tao_kan",
     "yewang": "guo_mo",
-    "donglai": "su_jun"
+    "donglai": "ju_peng",
+    "junyi": "chen_chuan",
+    "wan": "xun_song",
+    "xuchang": "xun_zu",
+    "jianning": "wang_xun",
+    "longbian": "liang_shuo",
+    "qiao": "fan_ya",
+    "tuhe": "murong_han",
+    "changsha": "gan_zhuo",
+    "runan": "zhang_ping"
   },
   "governorNote": "governors は、317年の開始時に各都市・関所を守る人物。君主は居城に置いた。それ以外の配置の多くは、史料で確かめたものではなく、ゲーム上の設定。",
   "relations": {
