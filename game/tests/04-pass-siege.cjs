@@ -15,7 +15,7 @@ const { chromium } = require('playwright');
     const r = c.planRoute(armyId, { lon: ps.lon, lat: ps.lat }); if (!r) return 'no route to pass';
     c.orderMove(armyId, r); const info = { relation: c.relationOf(a.army.factionId, window.__goko.territory.factionAt(ps.lon, ps.lat)), beyondKmWhileClosed: far ? Math.round(far.km) : null, toPassKm: Math.round(r.km), target: a.targetCityId };
     c.speed = 8; let n = 0; while (!c.events.some(e => e.status === 'pending') && n++ < 4000) c.update(0.25); c.speed = 0;
-    const ev = c.events.find(e => e.status === 'pending'); return JSON.stringify({ ...info, steps: n, event: ev ? ev.battleType + ':' + ev.defenderCityId : null, armyAt: [a.army.lon.toFixed(2), a.army.lat.toFixed(2)], status: a.status }); }, [armyId, passId, beyond]));
+    const ev = c.events.find(e => e.status === 'pending'); if (!ev || ev.defenderCityId !== passId) throw new Error('関所の攻城戦にならなかった: ' + (ev ? ev.defenderCityId : 'イベントなし')); return JSON.stringify({ ...info, steps: n, event: ev ? ev.battleType + ':' + ev.defenderCityId : null, armyAt: [a.army.lon.toFixed(2), a.army.lat.toFixed(2)], status: a.status }); }, [armyId, passId, beyond]));
   await p.waitForTimeout(1200);
   await p.screenshot({ path: `${S}/p5-prep.png` });
   console.log('prep:', await p.evaluate(() => { const el = document.querySelector('#battle-prep'); return el ? el.innerText.replace(/\s+/g, ' ').slice(0, 300) : 'no prep element'; }));

@@ -11,6 +11,8 @@ export interface RoutePoint {
 /** 経路。points を順にたどって進む */
 export interface Route {
   points: RoutePoint[];
+  /** もともと指定された目的地(空いている場所へずらす前の地点)。攻める拠点を決めるのに使う */
+  intent?: RoutePoint;
   /** 道のりの長さ(km) */
   km: number;
   /** 各点までの「手間」の累計(km × 通りにくさ)。行軍の進み具合はこれで測る */

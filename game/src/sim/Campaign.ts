@@ -574,7 +574,10 @@ export class Campaign {
     const closed = this.closedFor(s.army);
     for (const spot of this.freeSpots(target, s).slice(0, maxSpots)) {
       const route = findRoute(this.grid, { lon: s.army.lon, lat: s.army.lat }, spot, closed);
-      if (route && route.points.length >= 2) return route;
+      if (route && route.points.length >= 2) {
+        route.intent = { lon: target.lon, lat: target.lat };
+        return route;
+      }
     }
     return null;
   }
@@ -589,11 +592,11 @@ export class Campaign {
     // 目的地が敵の都市のそばなら、その都市を攻める意思があるとみなす。
     // (通りかかっただけの都市とは、攻城戦にならない)
     const end = route.points[route.points.length - 1];
-    const target = this.cities.find(
-      (c) =>
-        this.hostile(s.army, scenario.cityOwners[c.id]) &&
-        Math.hypot(c.lon - end.lon, c.lat - end.lat) < this.cityReach(c) + 0.3,
-    );
+    // 都市と関所が近くに並んでいるときは、指定された地点にいちばん近いほうを選ぶ
+    const aim = route.intent ?? end;
+    const target = this.cities
+      .filter((c) => this.hostile(s.army, scenario.cityOwners[c.id]) && Math.hypot(c.lon - end.lon, c.lat - end.lat) < this.cityReach(c) + 0.3)
+      .sort((x, y) => Math.hypot(x.lon - aim.lon, x.lat - aim.lat) - Math.hypot(y.lon - aim.lon, y.lat - aim.lat))[0];
     s.targetCityId = target ? target.id : null;
     // いま近くにいる敵とは、離れるまで接触判定をしない(その場から動けなくなるのを防ぐ)
     s.ignore.clear();
