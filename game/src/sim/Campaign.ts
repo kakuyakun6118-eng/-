@@ -662,11 +662,22 @@ export class Campaign {
     for (let d = before; d < Math.floor(this.day); d++) {
       for (const s of this.armies) this.dailyUpkeep(s);
       this.repairCities();
-      if ((d + 1) % 30 === 0) this.collectIncome();
+      if ((d + 1) % 30 === 0) {
+        this.collectIncome();
+        this.trimEvents();
+      }
       if (this.playerFactionId !== null) this.strategy.daily(d + 1);
       this.listener.onDayChanged(d + 1);
     }
     this.resolveAutoBattles();
+  }
+
+  /** 古い戦闘の記録を捨てる(長く遊ぶと、記録が増え続けてセーブが大きくなるため)。新しい60件と、決着していないものは残す */
+  private trimEvents(): void {
+    const closed = this.events.filter((e) => e.status === "completed" || e.status === "cancelled");
+    if (closed.length <= 60) return;
+    const drop = new Set(closed.slice(0, closed.length - 60));
+    for (let i = this.events.length - 1; i >= 0; i--) if (drop.has(this.events[i])) this.events.splice(i, 1);
   }
 
   /** AIどうしの戦いを、計算で決着させて地図に反映する */
@@ -914,6 +925,11 @@ export class Campaign {
     a.morale = Math.max(0, Math.min(100, a.morale));
 
     let statusChanged = false;
+    // 対峙の相手がもういないのに「戦闘中」のまま残った軍団は、野営に戻す(動けなくなるのを防ぐ安全策)
+    if (s.status === "fighting" && !this.openEventOfArmy(a.id)) {
+      s.status = "camping";
+      statusChanged = true;
+    }
     if (s.status === "camping" || s.status === "resupplying" || s.status === "idle") {
       const next: ArmyStatus = s.supplied && a.food < FOOD_CAP ? "resupplying" : "camping";
       statusChanged = next !== s.status;

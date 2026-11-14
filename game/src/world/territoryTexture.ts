@@ -26,7 +26,17 @@ export class TerritoryTexture {
   }
 
   /** 領土の計算結果から、絵を描き直す。colors は勢力の色(territory.factionIds と同じ順) */
+  /** 一度に最後まで描く(起動時とロード時) */
   update(territory: Territory, colors: THREE.Color[]): void {
+    const job = this.steps(territory, colors);
+    while (!job.next().done);
+  }
+
+  /**
+   * 少しずつ描く。重い計算を数回に分け、1回ごとに呼び出し側へ戻る(ゲーム中に都市が落ちたとき、画面が止まらないように)。
+   * 最後まで進めると、絵が入れ替わる。結果は update と同じ。
+   */
+  *steps(territory: Territory, colors: THREE.Color[]): Generator<void> {
     const { cols, rows } = this.grid;
     const W = this.width;
     const H = this.height;
@@ -58,11 +68,33 @@ export class TerritoryTexture {
         m.set(tmp);
       }
       masks.push(m);
+      if (f % 3 === 0) yield;
     }
 
+    yield;
     // 2. 細かい点ごとに、いちばん強い勢力を選ぶ(なめらかな輪郭になる)
+    // まわり(3マス以内)がすべて同じ勢力のマスは、計算するまでもなくその勢力なので、先に印を付けておく
+    const uniform = new Uint8Array(cols * rows);
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        const o = territory.owners[y * cols + x];
+        let same = o !== 0;
+        for (let dy = -3; dy <= 3 && same; dy++) {
+          const ny = Math.max(0, Math.min(rows - 1, y + dy));
+          for (let dx = -3; dx <= 3; dx++) {
+            const nx = Math.max(0, Math.min(cols - 1, x + dx));
+            if (territory.owners[ny * cols + nx] !== o) {
+              same = false;
+              break;
+            }
+          }
+        }
+        uniform[y * cols + x] = same ? o : 0;
+      }
+    }
     const owner = new Uint8Array(W * H);
     for (let y = 0; y < H; y++) {
+      if (y % 300 === 299) yield;
       const gy = Math.max(0, Math.min(rows - 1.001, (y + 0.5) / SCALE - 0.5));
       const j = Math.floor(gy);
       const ty = gy - j;
@@ -70,6 +102,11 @@ export class TerritoryTexture {
         const gx = Math.max(0, Math.min(cols - 1.001, (x + 0.5) / SCALE - 0.5));
         const i = Math.floor(gx);
         const tx = gx - i;
+        const u = uniform[j * cols + i];
+        if (u !== 0) {
+          owner[y * W + x] = u;
+          continue;
+        }
         let best = 0;
         let bestV = 0.5; // これより弱ければ空白地
         for (let f = 0; f < factions; f++) {
@@ -86,6 +123,7 @@ export class TerritoryTexture {
       }
     }
 
+    yield;
     // 3. 隣と勢力が違う点を「境界」として、すべての点から境界までの距離を求める
     const dist = new Float32Array(W * H).fill(1e6);
     for (let y = 0; y < H; y++) {
@@ -98,6 +136,7 @@ export class TerritoryTexture {
         }
       }
     }
+    yield;
     const relax = (k: number, n: number, step: number): void => {
       if (dist[n] + step < dist[k]) dist[k] = dist[n] + step;
     };
@@ -110,6 +149,7 @@ export class TerritoryTexture {
         if (x + 1 < W && y > 0) relax(k, k - W + 1, 1.414);
       }
     }
+    yield;
     for (let y = H - 1; y >= 0; y--) {
       for (let x = W - 1; x >= 0; x--) {
         const k = y * W + x;
@@ -120,6 +160,7 @@ export class TerritoryTexture {
       }
     }
 
+    yield;
     // 距離をならして、境界線が階段状にならないようにする
     const smooth = new Float32Array(W * H);
     for (let pass = 0; pass < 2; pass++) {
@@ -141,8 +182,10 @@ export class TerritoryTexture {
         }
       }
       dist.set(smooth);
+      if (pass === 0) yield;
     }
 
+    yield;
     // 4. 絵に書き込む
     for (let k = 0; k < W * H; k++) {
       const o = owner[k];

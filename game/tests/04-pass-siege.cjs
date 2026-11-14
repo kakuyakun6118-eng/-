@@ -1,0 +1,40 @@
+// 関所の攻城戦:軍団を敵の関所へ進ませ、攻城戦→占領→通れるようになる、を確かめる
+const { chromium } = require('playwright');
+(async () => {
+  const S = __dirname + '/out';
+  const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+  const errs = [];
+  const p = await (await b.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 1.5 })).newPage();
+  p.on('console', m => { if (m.type() === 'error') errs.push(m.text().slice(0, 300)); });
+  p.on('pageerror', e => errs.push(String(e).slice(0, 300)));
+  await p.goto('file://' + process.argv[2]);
+  await p.waitForFunction(() => window.__goko, null, { timeout: 90000 });
+  const armyId = process.argv[3] || 'army_liu_yao', passId = process.argv[4] || 'sanguan', beyond = (process.argv[5] || '107.1,33.75').split(',').map(Number);
+  console.log('march:', await p.evaluate(([armyId, passId, beyond]) => { const g = window.__goko, c = g.campaign; c.speed = 0; const ps = g.allCities.find(k => k.id === passId); const a = c.stateOf(armyId);
+    const far = c.planRoute(armyId, { lon: beyond[0], lat: beyond[1] });
+    const r = c.planRoute(armyId, { lon: ps.lon, lat: ps.lat }); if (!r) return 'no route to pass';
+    c.orderMove(armyId, r); const info = { relation: c.relationOf(a.army.factionId, window.__goko.territory.factionAt(ps.lon, ps.lat)), beyondKmWhileClosed: far ? Math.round(far.km) : null, toPassKm: Math.round(r.km), target: a.targetCityId };
+    c.speed = 8; let n = 0; while (!c.events.some(e => e.status === 'pending') && n++ < 4000) c.update(0.25); c.speed = 0;
+    const ev = c.events.find(e => e.status === 'pending'); return JSON.stringify({ ...info, steps: n, event: ev ? ev.battleType + ':' + ev.defenderCityId : null, armyAt: [a.army.lon.toFixed(2), a.army.lat.toFixed(2)], status: a.status }); }, [armyId, passId, beyond]));
+  await p.waitForTimeout(1200);
+  await p.screenshot({ path: `${S}/p5-prep.png` });
+  console.log('prep:', await p.evaluate(() => { const el = document.querySelector('#battle-prep'); return el ? el.innerText.replace(/\s+/g, ' ').slice(0, 300) : 'no prep element'; }));
+  await p.evaluate(() => { const g = window.__goko; const ev = g.campaign.events.find(e => e.status === 'pending'); g.openBattleId = ev.battleId; g.startBattle('attacker'); });
+  await p.waitForFunction(() => window.__goko.battle, null, { timeout: 60000 });
+  await p.waitForTimeout(2500);
+  await p.screenshot({ path: `${S}/p6-siege.png` });
+  console.log('siege:', await p.evaluate(([armyId, passId, beyond]) => { const g = window.__goko, s = g.battle.sim, sg = s.siege, c = g.campaign; const lay = sg.layout;
+    const info = { fort: `${Math.round(lay.w)}x${Math.round(lay.d)} 門${lay.segments.filter(k => k.kind === 'gate').length}`, units: s.units.map(u => `${u.side[0]}:${u.name}:${Math.round(u.men)}`).join(' ') };
+    const auto = new (s.ai.constructor)(s.playerSide, sg);
+    for (let i = 0; i < 60000 && !s.result; i++) { auto.update(s, 0.1); s.update(0.1); }
+    const res = s.result; if (!res) return JSON.stringify({ ...info, result: 'none' });
+    g.finishBattle(res);
+    const ps = g.allCities.find(k => k.id === passId); const far = c.planRoute(armyId, { lon: beyond[0], lat: beyond[1] });
+    return JSON.stringify({ ...info, winner: res.winner, reason: res.reason, days: res.siege.days, owner: g.territory.factionAt(ps.lon, ps.lat), cityState: c.cityStates[passId], beyondKmAfter: far ? Math.round(far.km) : null }); }, [armyId, passId, beyond]));
+  await p.waitForTimeout(1500);
+  await p.evaluate(([id]) => { const g = window.__goko; const ps = g.allCities.find(k => k.id === id); g.focus(ps.lon, ps.lat, 12); }, [passId]);
+  await p.waitForTimeout(1200);
+  await p.screenshot({ path: `${S}/p7-after.png` });
+  console.log('errors:', errs.slice(0, 3));
+  await b.close();
+})();

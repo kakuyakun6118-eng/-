@@ -60,6 +60,11 @@ function sideResult(side: BattleSide, lossRate: number, won: boolean, draw: bool
   };
 }
 
+/** 城壁による守りやすさ(防御力40で2.2倍、80で3.2倍)。戦略AIが攻めるかどうかを見積もるときも、同じ式を使う */
+export function wallBonus(defense: number): number {
+  return 1.2 + defense / 40;
+}
+
 const clamp = (v: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, v));
 
 export function autoResolve(setup: BattleSetup): BattleResult {
@@ -69,8 +74,7 @@ export function autoResolve(setup: BattleSetup): BattleResult {
   let a = sideStrength(setup.attacker, setup.terrain, siege) * (0.85 + rand() * 0.3);
   let d = sideStrength(setup.defender, setup.terrain, siege);
   if (siege && fort) {
-    // 城壁:防御力が高いほど守りやすい。壊れていれば、その分だけ弱まる
-    d *= 1.5 + fort.defense / 25;
+    d *= wallBonus(fort.defense);
   } else {
     d *= setup.terrain === "mountain" || setup.terrain === "highMountain" ? 1.25 : setup.terrain === "hill" || setup.terrain === "forest" ? 1.1 : setup.terrain === "river" || setup.terrain === "crossing" ? 1.2 : 1;
   }

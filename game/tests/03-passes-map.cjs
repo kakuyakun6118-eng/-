@@ -1,0 +1,32 @@
+const { chromium } = require('playwright');
+(async () => {
+  const S = __dirname + '/out';
+  const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+  const errs = [];
+  const p = await (await b.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 1.5, hasTouch: true, isMobile: true })).newPage();
+  p.on('console', m => { if (m.type() === 'error') errs.push(m.text().slice(0, 300)); });
+  p.on('pageerror', e => errs.push(String(e).slice(0, 300)));
+  const t0 = Date.now();
+  await p.goto('file://' + process.argv[2]);
+  await p.waitForFunction(() => window.__goko, null, { timeout: 90000 });
+  console.log('load ms', Date.now() - t0);
+  await p.evaluate(() => { window.__goko.campaign.speed = 0; });
+  console.log(await p.evaluate(() => { const g = window.__goko; return JSON.stringify({ strongholds: g.allCities.length, passes: g.allCities.filter(c => c.kind === 'pass').length, markers: g.cities.markers.length, roads: g.roadCount, gates: g.grid.gates.size, armies: g.campaign.armies.map(s => s.army.id + ':' + s.army.factionId + '@' + s.army.lon.toFixed(1) + ',' + s.army.lat.toFixed(1)) }); }));
+  // 通行制限:各軍団から、いくつかの目的地へ。関所の持ち主を変えて、道のりが変わるか
+  console.log('routes:', await p.evaluate(() => { const g = window.__goko, c = g.campaign; const out = {}; const km = (id, lon, lat) => { const r = c.planRoute(id, { lon, lat }); return r ? Math.round(r.km) : null; };
+    const ids = c.armies.map(s => s.army.id);
+    for (const id of ids) out[id] = { toLuoyang: km(id, 112.45, 34.55), toChangan: km(id, 108.9, 34.4), toChengdu: km(id, 104.1, 30.55), toJinyang: km(id, 112.5, 37.8) };
+    return JSON.stringify(out); }));
+  console.log('tongguan toggle:', await p.evaluate(() => { const g = window.__goko, c = g.campaign; const a = c.armies.find(s => s.army.factionId === 'han_zhao'); const id = a.army.id; const km = () => { const r = c.planRoute(id, { lon: 111.6, lat: 34.6 }); return r ? Math.round(r.km) : null; }; const before = km(); g.setCityOwner('tongguan', 'jin'); const closed = km(); const toPass = c.planRoute(id, { lon: 110.28, lat: 34.55 }); g.setCityOwner('tongguan', 'han_zhao'); return JSON.stringify({ from: [a.army.lon, a.army.lat], open: before, closedByEnemy: closed, routeToEnemyPass: toPass ? Math.round(toPass.km) : null, reopened: km() }); }));
+  const shot = async (n, lon, lat, d) => { await p.evaluate(([a, b2, c]) => window.__goko.focus(a, b2, c), [lon, lat, d]); await p.waitForTimeout(900); await p.screenshot({ path: `${S}/${n}.png` }); };
+  await shot('p1-tongguan', 110.28, 34.55, 9);
+  await shot('p2-guanzhong', 110.5, 34.6, 45);
+  await shot('p3-wide', 112, 35.5, 125);
+  await p.evaluate(() => { const g = window.__goko; g.selectCity(g.cities.markers.find(m => m.city.id === 'hangu')); });
+  await p.waitForTimeout(800);
+  console.log('panel:', await p.evaluate(() => document.querySelector('#info').innerText.replace(/\s+/g, ' ').slice(0, 330)));
+  await p.screenshot({ path: `${S}/p4-panel.png` });
+  console.log('save/load:', await p.evaluate(() => { const g = window.__goko; g.setCityOwner('tongguan', 'jin'); const s = JSON.parse(JSON.stringify(g.buildSave())); g.setCityOwner('tongguan', 'han_zhao'); g.applySave(s); const r = g.territory.factionAt(110.28, 34.55); g.setCityOwner('tongguan', 'han_zhao'); return JSON.stringify({ saved: Object.keys(s.cities).length, tongguanAfterLoad: r }); }));
+  console.log('errors:', errs.slice(0, 3));
+  await b.close();
+})();

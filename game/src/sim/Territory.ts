@@ -4,6 +4,7 @@
 // 軍団の位置は関係しない。都市の所属が変わったときにだけ計算し直す。
 import { cityLevelOf } from "../data";
 import type { City } from "../data/types";
+import { MinHeap } from "./pathfinding";
 import type { TerrainGrid } from "./TerrainGrid";
 
 const KM_PER_DEGREE = 111.19;
@@ -28,17 +29,9 @@ export class Territory {
     this.owners.fill(0);
 
     // すべての都市から同時に広げていく(近い順に確定させる)
-    const queue: { id: number; d: number }[] = [];
-    const push = (id: number, d: number): void => {
-      // 件数が少ないので、単純に並べ替えた列で足りる
-      let i = queue.length;
-      queue.push({ id, d });
-      while (i > 0 && queue[i - 1].d < d) {
-        queue[i] = queue[i - 1];
-        i--;
-      }
-      queue[i] = { id, d };
-    };
+    const heap = new MinHeap();
+    const done = new Uint8Array(n);
+    const push = (id: number, d: number): void => heap.push(id, d);
     for (const city of cities) {
       const faction = this.factionIds.indexOf(cityOwners[city.id]) + 1;
       if (faction === 0) continue;
@@ -53,9 +46,11 @@ export class Territory {
     }
 
     const kmY = this.grid.step * KM_PER_DEGREE;
-    while (queue.length > 0) {
-      const { id, d } = queue.pop()!;
-      if (d > best[id]) continue;
+    while (heap.size > 0) {
+      const id = heap.pop();
+      if (done[id]) continue; // 同じマスが、遠い値で重ねて入っていることがある
+      done[id] = 1;
+      const d = best[id];
       const x = id % cols;
       const y = Math.floor(id / cols);
       const kmX = kmY * Math.cos((this.grid.centerOf(x, y).lat * Math.PI) / 180);

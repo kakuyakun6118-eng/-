@@ -4,6 +4,7 @@ import { cityLevelOf, persons, scenario, totalTroops } from "../data";
 import rules from "../data/rules/strategyAi.json";
 import type { City } from "../data/types";
 import type { ArmyState, Campaign } from "./Campaign";
+import { wallBonus } from "./autoBattle";
 import { distanceKm } from "./pathfinding";
 
 export type StrategyProfile = (typeof rules.profiles)["normal"];
@@ -110,7 +111,10 @@ export class StrategyAi {
       return;
     }
     // 兵が減っていれば、そばの味方の都市から補充する
-    if (s.supplied && totalTroops(a) < rules.costs.minArmy && distanceKm(home, a) < 60) this.c.reinforce(a.id, home.id, 1000);
+    // そばの味方の都市に兵の余裕があれば、軍団を大きくする(上限あり。都市の守備兵は、金を払って徴兵した分)
+    if (s.supplied && distanceKm(home, a) < 60 && totalTroops(a) < rules.costs.maxArmy * rules.costs.armyGrowth && this.c.cityState(home).garrison > garrisonCap(home) * 0.45) {
+      this.c.reinforce(a.id, home.id, 1500);
+    }
 
     // 迎撃:味方の都市に近づいた敵の軍団へ向かう(勝てそうなときだけ)
     const threats = this.c.armies
@@ -131,7 +135,8 @@ export class StrategyAi {
         const st = this.c.cityState(city);
         const owner = scenario.cityOwners[city.id];
         const guards = this.c.armies.filter((o) => o.army.factionId === owner && distanceKm(o.army, city) < 60).reduce((sum, o) => sum + this.armyPower(o), 0);
-        const defense = st.garrison * (1 + (city.defense ?? 40) / 50) + guards;
+        // 守りの強さは、自動戦闘と同じ式で見積もる(見積もりと結果が食い違って、無駄な攻めを繰り返さないように)
+        const defense = st.garrison * (0.55 + st.morale / 220) * wallBonus(city.defense ?? 40) + guards;
         const ratio = power / Math.max(1, defense);
         if (ratio < p.attackRatio) continue;
         const value = 40 + (city.economy ?? 0) + (city.food ?? 0) * 0.5 + (city.kind === "pass" ? 60 : cityLevelOf(city) * 40);

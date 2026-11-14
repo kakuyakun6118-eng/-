@@ -29,7 +29,7 @@ export class TerrainGrid {
   /** 関所のあるマス → 関所ID。敵の関所のマスには入れない(判定は、経路を探す側が行う) */
   readonly gates = new Map<number, string>();
 
-  constructor(field: HeightField, crossings: Crossing[], passes: Pass[] = [], extraBarriers: LonLatPair[][] = []) {
+  constructor(field: HeightField, crossings: Crossing[], passes: Pass[] = [], extraBarriers: LonLatPair[][] = [], places: { lon: number; lat: number }[] = []) {
     const b = field.region.info.bounds;
     this.west = b.west;
     this.north = b.north;
@@ -100,6 +100,15 @@ export class TerrainGrid {
 
     for (let k = 0; k < this.kinds.length; k++) {
       this.costs[k] = terrainRules[KINDS[this.kinds[k]]].cost ?? Infinity;
+    }
+
+    // 都市のあるマスは、陸地として扱う(川べりの都市が、大河のマスに重なって孤立しないように)
+    for (const c of places) {
+      const [i, j] = this.cellOf(c.lon, c.lat);
+      const k = j * this.cols + i;
+      if (isFinite(this.costs[k])) continue;
+      this.costs[k] = terrainRules.plain.cost ?? 1;
+      this.kinds[k] = KINDS.indexOf("plain");
     }
 
     // 関所:塞ぐ線の上のマスを通れなくし、関所のマスだけを「門」として通れるようにする

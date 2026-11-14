@@ -7,6 +7,6 @@
     "hard":     { "interval": 4,  "attackRatio": 1.4, "interceptRatio": 0.9, "recruitPerTurn": 600, "extraArmies": 1, "reachKm": 420, "defendKm": 160, "aggression": 0.28, "warRatio": 1.4 },
     "veryHard": { "interval": 3,  "attackRatio": 1.2, "interceptRatio": 0.8, "recruitPerTurn": 700, "extraArmies": 1, "reachKm": 500, "defendKm": 200, "aggression": 0.4, "warRatio": 1.25 }
   },
-  "costs": { "goldPer100Troops": 20, "grainPer100TroopsToRaise": 1, "minGarrison": 800, "minArmy": 3000, "maxArmy": 12000 },
+  "costs": { "goldPer100Troops": 20, "grainPer100TroopsToRaise": 1, "minGarrison": 800, "minArmy": 3000, "maxArmy": 12000, "armyGrowth": 2.5 },
   "garrisonCap": { "pass": 5000, "levels": [3000, 3000, 6000, 12000, 20000] }
 }

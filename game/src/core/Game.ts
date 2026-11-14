@@ -55,6 +55,7 @@ export class Game {
   private readonly territoryTexture: TerritoryTexture;
   /** 引けた街道の数(動作確認用) */
   roadCount = 0;
+  roadsFailed: string[] = [];
   private territoryVisible = true;
   private territoryButton!: HTMLButtonElement;
   private readonly allCities: City[] = [];
@@ -152,12 +153,13 @@ export class Game {
     this.scene.add(this.cities.group);
 
     // 進軍の計算用の地形のマス(いまは地域が1つなので、その地域の分だけ作る)
-    this.grid = new TerrainGrid(terrains[0].field, terrains[0].region.crossings, passes, extraBarriers);
+    this.grid = new TerrainGrid(terrains[0].field, terrains[0].region.crossings, passes, extraBarriers, terrains[0].region.cities.filter((c) => c.kind !== "pass"));
 
     // 街道:都市をつなぐ道を引く。道の上は進軍が速くなる
     const roads = new Roads(terrains[0].region.roads, this.allCities, this.grid, (lon, lat) => terrains[0].heightAt(lon, lat));
     this.scene.add(roads.group);
     this.roadCount = roads.count;
+    this.roadsFailed = roads.failed;
 
     // 領土:都市の所属から計算し、地形に重ねて表示する
     this.territory = new Territory(this.grid, scenario.factions.map((f) => f.id));
@@ -334,11 +336,19 @@ export class Game {
   // ===== 領土 =====
 
   /** いまの都市の所属から、領土を計算し直して表示に反映する */
-  private refreshTerritory(): void {
+  /** 領土を計算し直して、色を塗り直す。gradual なら、塗り直しを数フレームに分ける(ゲーム中に画面が止まらないように) */
+  private refreshTerritory(gradual = false): void {
     this.territory.compute(this.allCities, scenario.cityOwners);
-    this.territoryTexture.update(this.territory, scenario.factions.map((f) => new THREE.Color(f.color)));
+    const colors = scenario.factions.map((f) => new THREE.Color(f.color));
+    if (gradual) {
+      this.territoryJob = this.territoryTexture.steps(this.territory, colors);
+    } else {
+      this.territoryJob = null;
+      this.territoryTexture.update(this.territory, colors);
+    }
     this.dirty = true;
   }
+  private territoryJob: Generator<void> | null = null;
 
   /**
    * 都市の所属勢力を変える(将来の都市占領で使う)。
@@ -348,7 +358,7 @@ export class Game {
     scenario.cityOwners[cityId] = factionId;
     const marker = this.cities.setFaction(cityId, factionById(factionId));
     if (marker) this.labels.refresh(marker);
-    this.refreshTerritory();
+    this.refreshTerritory(true);
   }
 
   // ===== 軍団の操作 =====
@@ -904,6 +914,11 @@ export class Game {
   }
 
   private frame(): void {
+    // 領土の塗り直しの続き(1フレームに1区切り)
+    if (this.territoryJob) {
+      if (this.territoryJob.next().done) this.territoryJob = null;
+      this.dirty = true;
+    }
     const now = performance.now();
     const dt = (now - this.lastFrame) / 1000;
     this.lastFrame = now;

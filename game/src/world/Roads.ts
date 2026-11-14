@@ -14,6 +14,8 @@ export class Roads {
   readonly group = new THREE.Group();
   /** 引けた道の数(動作確認用) */
   count = 0;
+  /** 引けなかった道(都市ID-都市ID)。点検用 */
+  readonly failed: string[] = [];
 
   constructor(links: string[][], places: City[], grid: TerrainGrid, heightAt: (lon: number, lat: number) => number) {
     const lines: RoutePoint[][] = [];
@@ -24,6 +26,7 @@ export class Roads {
       if (!from || !to) continue;
       const route = findRoute(grid, from, to);
       if (route) lines.push(route.points);
+      else this.failed.push(`${a}-${b}`);
     }
     this.count = lines.length;
     for (const line of lines) for (const p of line) grid.markRoad(p.lon, p.lat, ROAD_FACTOR);

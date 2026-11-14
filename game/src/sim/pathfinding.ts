@@ -24,7 +24,7 @@ export function distanceKm(a: RoutePoint, b: RoutePoint): number {
 }
 
 /** いちばん小さい値をすばやく取り出せる入れ物 */
-class MinHeap {
+export class MinHeap {
   private readonly ids: number[] = [];
   private readonly keys: number[] = [];
 
