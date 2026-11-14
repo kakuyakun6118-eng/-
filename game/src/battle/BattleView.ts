@@ -29,6 +29,8 @@ interface Arrow {
   toX: number; toY: number; toZ: number;
   start: number;
   flight: number;
+  /** 投石機の石(大きく描く) */
+  big: boolean;
 }
 
 export class BattleView {
@@ -163,7 +165,8 @@ export class BattleView {
     for (const u of sim.units) {
       const cls = unitClasses[u.classId];
       const color = this.colors.get(u.id)!;
-      const want = u.state === "gone" || u.escaped ? 0 : Math.max(1, Math.ceil(u.men / sim.menPerFigure));
+      // 攻城兵器は、1台を1つの形で描く
+      const want = u.state === "gone" || u.escaped ? 0 : cls.engine ? 1 : Math.max(1, Math.ceil(u.men / sim.menPerFigure));
       let list = this.figures.get(u.id);
       if (!list) {
         list = [];
@@ -204,7 +207,8 @@ export class BattleView {
         if (thin && want > 12 && k % 2 === 1) continue;
 
         const bob = moving ? Math.abs(Math.sin(t * (u.running ? 11 : 7) + f.phase)) * stride : 0;
-        dummy.position.set(f.x, field.heightAt(f.x, f.z) + bob, f.z);
+        // 城壁の上の部隊は、その高さに立たせる
+        dummy.position.set(f.x, field.heightAt(f.x, f.z) + bob + u.elevation, f.z);
         // 走るときは前のめりに、戦うときは小刻みに体を振る
         dummy.rotation.set(
           moving ? (u.running ? -0.16 : -0.05) : lunge > 0.3 ? -0.2 : 0,
@@ -229,7 +233,7 @@ export class BattleView {
         const size = u.isCommand ? 1.9 : 1;
         const fx = u.x + (u.depth / 2) * sin * 0.4;
         const fz = u.z - (u.depth / 2) * cos * 0.4;
-        const y = field.heightAt(fx, fz);
+        const y = field.heightAt(fx, fz) + u.elevation;
         dummy.position.set(fx, y, fz);
         dummy.rotation.set(0, 0, 0);
         dummy.scale.set(size, 5.2 * size, size);
@@ -283,6 +287,8 @@ export class BattleView {
       // 砂煙:騎兵の土煙は少し、部隊がぶつかった瞬間は大きく立つ
       if (fx.kind === "dust") this.dust.spawn(fx.x, field.heightAt(fx.x, fx.z), fx.z, 2, 5);
       if (fx.kind === "impact") this.dust.spawn(fx.x, field.heightAt(fx.x, fx.z), fx.z, 12, 12);
+      // 城壁や城門が崩れると、大きな土煙が上がる
+      if (fx.kind === "breach") this.dust.spawn(fx.x, field.heightAt(fx.x, fx.z) + 3, fx.z, 40, 20);
       if (fx.kind !== "volley") continue;
       for (let i = 0; i < fx.count && this.flying.length < MAX_ARROWS; i++) {
         const sx = fx.fromX + (Math.random() - 0.5) * 12;
@@ -290,9 +296,9 @@ export class BattleView {
         const ex = fx.toX + (Math.random() - 0.5) * 14;
         const ez = fx.toZ + (Math.random() - 0.5) * 8;
         this.flying.push({
-          fromX: sx, fromY: field.heightAt(sx, sz) + 1.6, fromZ: sz,
-          toX: ex, toY: field.heightAt(ex, ez) + 0.4, toZ: ez,
-          start: this.sim.time + Math.random() * 0.35, flight: fx.flight,
+          fromX: sx, fromY: field.heightAt(sx, sz) + 1.6 + (fx.fromY ?? 0), fromZ: sz,
+          toX: ex, toY: field.heightAt(ex, ez) + 0.4 + (fx.toY ?? 0), toZ: ez,
+          start: this.sim.time + Math.random() * 0.35, flight: fx.flight, big: !!fx.stone,
         });
       }
     }
@@ -319,7 +325,7 @@ export class BattleView {
         a.fromZ + (a.toZ - a.fromZ) * q,
       ];
       d.position.set(...at(k));
-      d.scale.setScalar(1);
+      d.scale.set(a.big ? 9 : 1, a.big ? 9 : 1, a.big ? 0.6 : 1);
       d.lookAt(...at(Math.min(1, k + 0.03)));
       d.updateMatrix();
       this.arrows.setMatrixAt(n++, d.matrix);

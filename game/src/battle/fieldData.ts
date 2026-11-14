@@ -227,6 +227,35 @@ export class FieldMap {
     return j * N + i;
   }
 
+  /** 城壁など、地形以外の通れないもの(攻城戦で使う) */
+  obstacle: ((x: number, z: number) => boolean) | null = null;
+
+  /**
+   * 城を建てる敷地を、平らにならす(整地)。
+   * 実標高を、敷地の中心の高さにそろえる。縁はなだらかに元の地形へ戻す。
+   */
+  levelArea(cx: number, cz: number, width: number, depth: number): void {
+    const base = this.heightAt(cx, cz);
+    const margin = 26;
+    for (let j = 0; j < N; j++) {
+      for (let i = 0; i < N; i++) {
+        const x = i * CELL - VIEW_HALF;
+        const z = j * CELL - VIEW_HALF;
+        const out = Math.max(Math.abs(x - cx) - width / 2, Math.abs(z - cz) - depth / 2, 0);
+        if (out >= margin) continue;
+        const t = out / margin;
+        const k = j * N + i;
+        const w = 1 - t * t * (3 - 2 * t);
+        this.heights[k] = this.heights[k] * (1 - w) + base * w;
+        this.slopes[k] *= 1 - w;
+        if (out === 0) {
+          this.water[k] = 0;
+          if (this.cover[k] === COVER.water || this.cover[k] === COVER.tree) this.cover[k] = COVER.bare;
+        }
+      }
+    }
+  }
+
   /** 地形データの格子の、1辺の点の数と間隔(描画用の絵を作るのに使う) */
   static readonly GRID = N;
   static readonly CELL = CELL;
@@ -279,6 +308,7 @@ export class FieldMap {
 
   /** その場所へ進めないか。深い水と、急すぎる斜面(騎兵は歩兵より緩い斜面で止まる)は通れない */
   blocked(x: number, z: number, cavalry: boolean): boolean {
+    if (this.obstacle?.(x, z)) return true;
     if (Math.abs(x) > FIELD.width / 2 + 40) return false;
     const n = this.index(x, z);
     return this.water[n] === 2 || this.slopes[n] > (cavalry ? 0.45 : 0.8);

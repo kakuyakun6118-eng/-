@@ -1,0 +1,7 @@
+{
+  "note": "攻城兵器を使える勢力と年代は、ゲーム上の設定。遊牧系の勢力は大型の兵器を持たないものとした。史料で確かめた区分ではない。",
+  "ram": { "name": "衝車", "count": [1, 2], "fromYear": -400, "excludeFactions": [] },
+  "catapult": { "name": "投石機", "count": [1, 3], "fromYear": -400, "excludeFactions": ["dai", "duan", "murong"] },
+  "siegeTower": { "name": "櫓(攻城塔)", "count": [0, 1], "fromYear": -400, "excludeFactions": ["dai", "duan", "murong"] },
+  "ladder": { "name": "雲梯", "count": [2, 3], "fromYear": -500, "excludeFactions": [] }
+}

@@ -104,6 +104,7 @@ function makeUnits(side: BattleSide, sideId: SideId): BattleUnit[] {
       x: 0,
       z: 0,
       facing: sideId === "attacker" ? 0 : Math.PI,
+      elevation: 0,
       formation: "line",
       faceTo: null,
       columns: 0,

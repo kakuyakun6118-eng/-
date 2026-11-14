@@ -40,6 +40,7 @@ const FATE_TEXT: Record<CommanderFate, string> = { healthy: "健在", wounded: "
 /** 決着の理由(敗れた側がどうなったか) */
 const REASON_TEXT: Record<BattleResult["reason"], string> = {
   annihilated: "壊滅した", routed: "主力が崩れて敗走した", retreated: "全軍を撤退させた", timeout: "",
+  captured: "都市の中心部を奪われ、落城した", surrendered: "降伏して開城した",
 };
 
 const fmt = (n: number): string => Math.round(n).toLocaleString("ja-JP");
@@ -138,6 +139,11 @@ export class BattleHud {
     }, 3500);
   }
 
+  /** 上部の戦闘名(攻城戦では、日数と段階を添える) */
+  setTitle(text: string): void {
+    this.q(".hud-name").textContent = text;
+  }
+
   setPaused(paused: boolean): void {
     this.q(".hud-pause").textContent = paused ? "▶ 再開" : "Ⅱ 停止";
   }
@@ -234,7 +240,9 @@ export class BattleHud {
       table.appendChild(r);
     };
     row("", sim.setup.attacker.name, sim.setup.defender.name);
-    row("結果", OUTCOME_TEXT[a.outcome], OUTCOME_TEXT[d.outcome]);
+    // 降伏して開城した守備隊は、「壊滅」ではなく「降伏」と表示する
+    const outcome = (r: SideResult): string => (result.reason === "surrendered" && r.outcome !== "victory" ? "降伏" : OUTCOME_TEXT[r.outcome]);
+    row("結果", outcome(a), outcome(d));
     row("戦闘前", fmt(total(a.before)), fmt(total(d.before)));
     row("残存兵力", fmt(total(a.after)), fmt(total(d.after)));
     // 兵種別の損害(戦闘前 → 戦闘後)
@@ -248,6 +256,12 @@ export class BattleHud {
     row("逃散", fmt(a.scattered), fmt(d.scattered));
     row("士気", String(a.morale), String(d.morale));
     row("指揮官", sim.setup.attacker.commander ? FATE_TEXT[a.commander] : "—", sim.setup.defender.commander ? FATE_TEXT[d.commander] : "—");
+    // 攻城戦:日数と、城の損傷
+    if (result.siege) {
+      const pct = (v: number): string => `${Math.round(v * 100)}%`;
+      row("攻城", `${result.siege.days}日`, result.siege.captured ? "落城" : "守り抜いた");
+      row("城の損傷", "", `城門 ${pct(result.siege.gateDamage)}・城壁 ${pct(result.siege.wallDamage)}`);
+    }
     // 戦果:相手に与えた損害(戦死・負傷・捕虜・逃散の合計)
     row("戦果", `敵 ${fmt(result.defenderLosses)}人`, `敵 ${fmt(result.attackerLosses)}人`);
     this.q(".hud-result").hidden = false;

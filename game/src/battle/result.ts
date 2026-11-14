@@ -1,6 +1,7 @@
 // 戦闘結果の集計。戦場での損害を、戦死・負傷・捕虜・逃散に分け、
 // 戦略マップへ戻す兵力と指揮官の状態を決める。
-import type { BattleSetup, UnitTypeId } from "../data/types";
+import type { BattleSetup, SiegeOutcome, UnitTypeId } from "../data/types";
+import { unitClasses } from "./deploy";
 import type { BattleResult, BattleUnit, CommanderFate, SideId, SideResult } from "./types";
 
 const TYPES: UnitTypeId[] = ["infantry", "cavalry", "archer"];
@@ -20,12 +21,13 @@ function seeded(text: string): () => number {
 
 export function buildResult(
   setup: BattleSetup, units: BattleUnit[], seconds: number,
-  winner: BattleResult["winner"], reason: BattleResult["reason"],
+  winner: BattleResult["winner"], reason: BattleResult["reason"], siege?: SiegeOutcome,
 ): BattleResult {
   const rand = seeded(setup.battleId);
   const side = (id: SideId): SideResult => {
     const src = id === "attacker" ? setup.attacker : setup.defender;
-    const mine = units.filter((u) => u.side === id);
+    // 攻城兵器は兵力に数えない
+    const mine = units.filter((u) => u.side === id && !unitClasses[u.classId].engine);
     const won = winner === id;
     const lost = winner !== "draw" && !won;
     const before = { ...src.troops };
@@ -48,6 +50,8 @@ export function buildResult(
       const recovered = Math.round(hurt * (won ? 0.7 : lost ? 0.15 : 0.5));
       // 敗れた側は、置き去りにした負傷兵と、逃げた兵の一部が捕虜になる。逃げた兵の一部は戻らない
       // 自分から整然と撤退した場合は、崩れて逃げた場合より、捕まる兵も散る兵もずっと少ない
+      // 降伏した守備隊は、残った兵の大半が捕虜になる
+      const surrendered = reason === "surrendered" && lost;
       const orderly = reason === "retreated";
       const takenRate = lost ? (orderly ? 0.04 : 0.25) : 0;
       const taken = lost ? Math.round((hurt - recovered) * 0.6 + fled * takenRate) : 0;
@@ -57,6 +61,12 @@ export function buildResult(
       captured += taken;
       scattered += gone;
       after[type] = Math.max(0, standing + recovered + fled - Math.round(fled * takenRate) - gone);
+      if (surrendered || (siege?.captured && lost)) {
+        // 落城:城内に残っていた兵は、逃げ場がなく捕虜になる
+        const held = Math.round(after[type] * (surrendered ? 0.9 : 0.6));
+        captured += held;
+        after[type] -= held;
+      }
     }
 
     // 指揮官:本陣が受けた損害が大きいほど危険になる。本陣が壊滅すれば、戦死・捕虜・負傷のいずれかになる
@@ -116,5 +126,6 @@ export function buildResult(
     attackerLosses: losses(attacker),
     defenderLosses: losses(defender),
     sides: { attacker, defender },
+    siege,
   };
 }

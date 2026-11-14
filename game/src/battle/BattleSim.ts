@@ -4,6 +4,8 @@ import type { BattleSetup } from "../data/types";
 import { BattleAi, type Difficulty } from "./ai";
 import { FIELD, formations, setFormation, shapeUnit, unitClasses, type Deployment } from "./deploy";
 import type { FieldMap } from "./fieldData";
+import type { Siege } from "./siege";
+import { SiegeAi } from "./siegeAi";
 import { buildResult } from "./result";
 import type { BattleFx, BattleResult, BattleUnit, FormationId, SideId, UnitOrder } from "./types";
 
@@ -47,7 +49,7 @@ export class BattleSim {
   private readonly volleys: PendingVolley[] = [];
   private pursueTimer = 0;
   /** 自動で動く側の判断 */
-  readonly ai: BattleAi;
+  readonly ai: BattleAi | SiegeAi;
   private checkTimer = 0;
   /** 突撃の衝撃を最後に与えた時刻(同じ相手に、触れるたびに何度も衝撃が入らないようにする) */
   private readonly lastImpact = new Map<string, number>();
@@ -57,8 +59,10 @@ export class BattleSim {
     /** プレイヤーが指揮する側。もう一方は自動で動く */
     readonly playerSide: SideId,
     difficulty: Difficulty = "normal",
+    /** 攻城戦の決まり(野戦では null) */
+    readonly siege: Siege | null = null,
   ) {
-    this.ai = new BattleAi(other(playerSide), difficulty);
+    this.ai = siege ? new SiegeAi(other(playerSide), siege) : new BattleAi(other(playerSide), difficulty);
     this.units = deployment.units;
     this.menPerFigure = deployment.menPerFigure;
     const commander = (id: SideId): Commander => {
@@ -69,6 +73,7 @@ export class BattleSim {
     this.initialMen = { attacker: this.menOf("attacker", false), defender: this.menOf("defender", false) };
     // 最初の配置が水や急斜面にかかった部隊は、近くの乾いた通れる場所へずらす(自軍の後方を優先して探す)
     for (const u of this.units) {
+      if (u.elevation > 0) continue; // 城壁の上の部隊は動かさない
       const cavalry = unitClasses[u.classId].category === "cavalry";
       const bad = (x: number, z: number): boolean => field.blocked(x, z, cavalry) || field.waterAt(x, z) > 0;
       if (!bad(u.x, u.z)) continue;
@@ -84,6 +89,18 @@ export class BattleSim {
         }
       }
     }
+    this.installWalls();
+  }
+
+  /** 城壁と城門を、通れない障害物として地形に登録する */
+  private installWalls(): void {
+    const siege = this.siege;
+    if (siege) this.field.obstacle = (x, z) => siege.blockedAt(x, z);
+  }
+
+  /** 外から決着を付ける(攻城戦の陥落・降伏で使う) */
+  finishWith(winner: BattleResult["winner"], reason: BattleResult["reason"]): void {
+    if (!this.result) this.finish(winner, reason);
   }
 
   unit(id: string): BattleUnit | undefined {
@@ -98,7 +115,7 @@ export class BattleSim {
   /** 陣営の兵力。activeOnly なら、敗走中や退場した部隊を除く */
   menOf(side: SideId, activeOnly: boolean): number {
     return this.units
-      .filter((u) => u.side === side && (activeOnly ? this.isActive(u) : !u.escaped))
+      .filter((u) => u.side === side && !unitClasses[u.classId].engine && (activeOnly ? this.isActive(u) : !u.escaped))
       .reduce((s, u) => s + u.men, 0);
   }
 
@@ -252,8 +269,9 @@ export class BattleSim {
       this.updateMorale(u, dt);
       shapeUnit(u, this.menPerFigure);
     }
+    this.siege?.update(this, dt);
     this.checkTimer -= dt;
-    if (this.checkTimer <= 0) {
+    if (this.checkTimer <= 0 && !this.result) {
       this.checkTimer = 0.5;
       this.checkCommanders();
       this.checkEnd();
@@ -283,6 +301,15 @@ export class BattleSim {
   private move(u: BattleUnit, dt: number): void {
     const cls = unitClasses[u.classId];
     const fleeing = u.state === "routing" || u.state === "retreating";
+    // 城壁の上の部隊は、持ち場を動かない。崩れたら城壁を捨てて城内へ逃げる
+    if (u.elevation > 0) {
+      if (!fleeing) {
+        if (u.state === "moving") u.state = "idle";
+        return;
+      }
+      u.elevation = 0;
+      u.z -= 9;
+    }
     const homeZ = (u.side === "attacker" ? 1 : -1) * (FIELD.depth / 2 + 12);
     let tx = u.x;
     let tz = u.z;
@@ -299,6 +326,15 @@ export class BattleSim {
       tz = u.order.z;
       moving = Math.hypot(tx - u.x, tz - u.z) > 1.5;
       if (!moving) u.order = { kind: "hold" };
+    } else if (u.order.kind === "assault" && this.siege) {
+      // 城壁・城門を攻める:その区画の正面へ取り付く。投石機は、届く距離で止まって撃つ
+      const seg = this.siege.segment(u.order.segmentId);
+      if (seg && seg.hp > 0) {
+        const p = this.siege.assaultPoint(u, seg);
+        tx = p.x;
+        tz = p.z;
+        moving = cls.siegeRange ? Math.hypot(seg.x - u.x, seg.z - u.z) > cls.siegeRange * 0.9 : Math.hypot(tx - u.x, tz - u.z) > 1.5;
+      }
     } else if (target) {
       const d = Math.hypot(target.x - u.x, target.z - u.z);
       if (cls.range && u.engaged.length === 0) {
@@ -310,6 +346,14 @@ export class BattleSim {
       }
       tx = target.x;
       tz = target.z;
+    }
+    // 攻城戦:城の内と外をまたぐときは、突破口を経由する
+    if (this.siege && moving && !fleeing) {
+      const via = this.siege.route(u.x, u.z, tx, tz);
+      if (via) {
+        tx = via.x;
+        tz = via.z;
+      }
     }
     // 接近戦の最中は、離れる命令(移動・撤退)のとき以外は動かない
     if (u.engaged.length > 0 && !fleeing && u.order.kind !== "move") moving = false;
@@ -401,10 +445,10 @@ export class BattleSim {
   private separate(): void {
     for (let i = 0; i < this.units.length; i++) {
       const a = this.units[i];
-      if (a.state === "gone" || a.escaped || a.state === "routing") continue;
+      if (a.state === "gone" || a.escaped || a.state === "routing" || a.elevation > 0) continue;
       for (let j = i + 1; j < this.units.length; j++) {
         const b = this.units[j];
-        if (b.side !== a.side || b.state === "gone" || b.escaped || b.state === "routing") continue;
+        if (b.side !== a.side || b.state === "gone" || b.escaped || b.state === "routing" || b.elevation > 0) continue;
         const dx = b.x - a.x;
         const dz = b.z - a.z;
         const d = Math.hypot(dx, dz) || 0.01;
@@ -435,7 +479,12 @@ export class BattleSim {
         const b = this.units[j];
         if (b.side === a.side || b.state === "gone" || b.escaped || b.men <= 0) continue;
         if (Math.abs(a.x - b.x) > 90 || Math.abs(a.z - b.z) > 90) continue;
-        if (this.gap(a, b) > 1.6) continue;
+        if (a.elevation > 0 || b.elevation > 0) {
+          // 城壁の上の部隊とは、雲梯や櫓が取り付いている所でだけ戦える
+          const wall = a.elevation > 0 ? a : b;
+          if (a.elevation > 0 && b.elevation > 0) continue;
+          if (!this.siege || this.siege.escalade(wall) <= 0 || this.gap(a, b) > 5.5) continue;
+        } else if (this.gap(a, b) > 1.6) continue;
         a.engaged.push(b.id);
         b.engaged.push(a.id);
         if (!previous.get(a.id)!.includes(b.id)) {
@@ -476,6 +525,7 @@ export class BattleSim {
     u.calm = 0;
     if (u.men < 1) {
       u.men = 0;
+      if (this.siege && unitClasses[u.classId].engine) this.siege.enginesLost++;
       u.state = "gone";
       u.engaged = [];
     }
@@ -508,6 +558,10 @@ export class BattleSim {
         const smart = this.commanders[e.side];
         if (smart.active && this.flankFactor(u, e) > 1) mult *= 1 - smart.intelligence / 400;
         mult *= formations[u.formation].attack / formations[e.formation].defense;
+        // 城壁をよじ登って戦う側は不利(櫓からなら、ほぼ対等)。城壁の上から迎え撃つ側は有利
+        if (e.elevation > 0 && u.elevation === 0) mult *= this.siege ? this.siege.escalade(e) : 0.5;
+        if (u.elevation > 0 && e.elevation === 0) mult *= 1.3;
+        if (cls.engine) mult *= 0.15; // 攻城兵器は、接近戦ではほとんど戦えない
         if (ecls.category === "cavalry") mult *= cls.antiCavalry * formations[u.formation].antiCavalry;
         // 斬り合いの場所に、ときどき砂ぼこりが立つ
         if (Math.random() < dt * 0.6) this.fx.push({ kind: "dust", x: (u.x + e.x) / 2, z: (u.z + e.z) / 2 });
@@ -530,9 +584,14 @@ export class BattleSim {
     u.reloadLeft -= dt;
     if (u.reloadLeft > 0) return;
     const ordered = this.targetOf(u);
-    const inRange = (e: BattleUnit): boolean => Math.hypot(e.x - u.x, e.z - u.z) <= cls.range!;
+    // 城壁の上からは、遠くまで矢が届く
+    const reach = cls.range * (u.elevation > 0 ? 1.25 : 1);
+    const inRange = (e: BattleUnit): boolean => Math.hypot(e.x - u.x, e.z - u.z) <= reach;
     // 味方と斬り合っている敵は避ける(味方に当たるため)。ほかに的がなければ撃つ
+    // 城壁の上の射手は、近づく攻城兵器を真っ先に狙う
+    const engine = u.elevation > 0 ? this.nearestEnemy(u, (e) => inRange(e) && !!unitClasses[e.classId].engine) : null;
     const target =
+      engine ??
       (ordered && inRange(ordered) ? ordered : null) ??
       this.nearestEnemy(u, (e) => inRange(e) && e.engaged.length === 0 && e.state !== "routing") ??
       this.nearestEnemy(u, (e) => inRange(e) && e.state !== "routing");
@@ -553,12 +612,23 @@ export class BattleSim {
     if (this.field.inForest(target.x, target.z)) hit *= 0.55; // 森は矢を防ぐ
     if (target.engaged.length > 0) hit *= 0.5;
     hit *= formations[target.formation].missile; // 密集した陣形ほど、矢を受けやすい
+    if (target.elevation > 0) hit *= 0.4; // 胸壁に守られた敵には、当たりにくい
+    // 城壁をはさんで地上どうしで撃ち合っても、壁にさえぎられてほとんど当たらない
+    if (this.siege && u.elevation === 0 && target.elevation === 0 && this.siege.inside(u.x, u.z) !== this.siege.inside(target.x, target.z)) hit *= 0.1;
+    if (u.elevation > 0) hit *= 1.15;
+    if (unitClasses[target.classId].engine) {
+      // 攻城兵器は大きな的。護衛の部隊がそばにいなければ、さらに狙われやすい
+      const escorted = this.units.some(
+        (f) => f.side === target.side && f !== target && this.isActive(f) && !unitClasses[f.classId].engine && Math.hypot(f.x - target.x, f.z - target.z) < 32,
+      );
+      hit *= escorted ? 1.6 : 5;
+    }
     if (c.active) hit *= 1 + c.intelligence / 400; // 知略:射撃の統制
     if (this.field.heightAt(u.x, u.z) > this.field.heightAt(target.x, target.z) + 1.5) hit *= 1.15;
     const flight = 0.6 + d / 45;
     this.volleys.push({ at: this.time + flight, targetId: target.id, casualties: u.men * hit });
     this.fx.push({
-      kind: "volley", fromX: u.x, fromZ: u.z, toX: target.x, toZ: target.z, flight,
+      kind: "volley", fromX: u.x, fromZ: u.z, toX: target.x, toZ: target.z, flight, fromY: u.elevation, toY: target.elevation,
       count: Math.max(3, Math.min(14, Math.round(u.men / this.menPerFigure / 4))),
     });
     this.turnToward(u, Math.atan2(target.x - u.x, -(target.z - u.z)), 1);
@@ -573,7 +643,8 @@ export class BattleSim {
       const t = this.unit(v.targetId);
       if (t && t.state !== "gone" && !t.escaped) {
         this.hurt(t, v.casualties);
-        t.morale -= 0.6; // 矢を浴びると、じわじわ士気が削られる
+        // 矢を浴びると士気が削られる。ただし、ほとんど損害の出ない射撃では動じない
+        t.morale -= Math.min(0.6, (v.casualties / Math.max(1, t.maxMen)) * 120);
       }
     }
   }
@@ -614,6 +685,7 @@ export class BattleSim {
     u.state = "routing";
     u.order = { kind: "hold" };
     this.fx.push({ kind: "rout", unitId: u.id });
+    if (unitClasses[u.classId].engine) return; // 攻城兵器の持ち場が崩れても、周りの部隊は動揺しない
     for (const f of this.units) {
       if (f === u || f.state === "gone" || f.escaped) continue;
       const d = Math.hypot(f.x - u.x, f.z - u.z);
@@ -648,7 +720,9 @@ export class BattleSim {
         this.finish(other(side), survivors < this.initialMen[side] * 0.1 ? "annihilated" : "routed");
         return;
       }
-      if (active < this.initialMen[side] * BREAK_RATIO) {
+      // 攻城戦の守備隊は、城が破られるまでは、兵が減っても城にこもって持ちこたえる
+      const holding = this.siege !== null && side === "defender" && this.siege.passages().length === 0;
+      if (!holding && active < this.initialMen[side] * BREAK_RATIO) {
         // 主力が崩れた:残った部隊も戦意を失って逃げる
         for (const u of this.units) {
           if (u.side === side && this.isActive(u)) this.rout(u);
@@ -683,6 +757,8 @@ export class BattleSim {
   }
 
   private finish(winner: BattleResult["winner"], reason: BattleResult["reason"]): void {
-    this.result = buildResult(this.setup, this.units, this.time, winner, reason);
+    // 攻城戦:攻撃側が勝てば都市は落ちる(中心部の占領・降伏・守備隊の壊滅や敗走のいずれでも)
+    const siege = this.siege ? this.siege.outcome(winner === "attacker") : undefined;
+    this.result = buildResult(this.setup, this.units, this.time, winner, reason, siege);
   }
 }

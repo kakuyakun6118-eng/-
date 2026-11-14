@@ -103,6 +103,10 @@ export interface City {
   defense?: number;
   /** 守備兵力(ゲーム上の数値)。省略すると都市の規模から決める */
   garrison?: number;
+  /** 守将の名前(省略すると、守将なし) */
+  governor?: string;
+  /** 城郭の数値を、その都市だけ変えたいときに書く(城壁・城門の耐久、食糧、士気など) */
+  fort?: Partial<Pick<Fortification, "wallHp" | "gateHp" | "food" | "morale">>;
   /** その都市だけの個性。規模ごとの標準の形に上書きする */
   layout?: Partial<CityLayout>;
 }
@@ -217,10 +221,26 @@ export interface BattleEvent {
 export interface BattleRecord {
   winner: "attacker" | "defender" | "draw";
   /** 決着の理由:全滅 / 主力の敗走 / 撤退 / 時間切れ */
-  reason: "annihilated" | "routed" | "retreated" | "timeout";
+  reason: "annihilated" | "routed" | "retreated" | "timeout" | "captured" | "surrendered";
   durationSeconds: number;
   attackerLosses: number;
   defenderLosses: number;
+  /** 攻城戦のときだけ入る */
+  siege?: SiegeOutcome;
+}
+
+/** 攻城戦の結末 */
+export interface SiegeOutcome {
+  cityId: string;
+  /** 都市が落ちたか */
+  captured: boolean;
+  /** 攻城にかかった日数 */
+  days: number;
+  /** 攻めた面の城壁・城門のうち、壊れた割合(0〜1) */
+  wallDamage: number;
+  gateDamage: number;
+  /** 残った食糧(日数) */
+  foodLeft: number;
 }
 
 /** 都市の守り(攻城戦の防御側の情報) */
@@ -231,6 +251,30 @@ export interface Fortification {
   defense: number;
   /** 防御施設の一覧(角楼、望楼、水濠など) */
   facilities: string[];
+  /** 城壁の高さ・厚さ(都市の設計図の値)と、攻める面の城門の数 */
+  wallHeight: number;
+  wallThickness: number;
+  gates: number;
+  /** 城壁1区画・城門1つの耐久力(損傷のない状態での値) */
+  wallHp: number;
+  gateHp: number;
+  /** 食糧の備蓄(日数)と、守備隊の士気 */
+  food: number;
+  morale: number;
+  /** これまでの戦いで受けた損傷(0 = 無傷、1 = 全壊)。直るには日数がかかる */
+  wallDamage: number;
+  gateDamage: number;
+}
+
+/** 都市の、いまの状態。攻城戦の結果で変わり、次の戦いに引き継がれる */
+export interface CityState {
+  garrison: number;
+  food: number;
+  morale: number;
+  wallDamage: number;
+  gateDamage: number;
+  /** 守将の状態(戦死・捕虜なら、守将はいなくなる) */
+  governorFate?: "healthy" | "wounded" | "captured" | "killed";
 }
 
 /** 会戦の片方の陣営。軍団でも都市でも同じ形で扱う */

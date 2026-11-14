@@ -159,6 +159,42 @@ const SHAPES: Record<UnitClassId | "general" | "fallen", () => Box[]> = {
     { size: [0.6, 0.8, 0.08], at: [0, 1.75, 0.3], color: TINT },
     { size: [0.1, 0.3, 0.1], at: [0, 2.56, 0.05], color: TINT },
   ],
+  // ----- 攻城兵器(1台を1つの形として描く) -----
+  // 衝車:屋根の付いた車に、先のとがった丸太を吊るす
+  ram: () => [
+    { size: [3.2, 0.5, 6.5], at: [0, 0.9, 0], color: WOOD },
+    { size: [3.6, 0.3, 7.0], at: [0, 3.3, 0], color: LEATHER },
+    { size: [0.3, 2.3, 0.3], at: [-1.4, 2.1, -2.8], color: WOOD }, { size: [0.3, 2.3, 0.3], at: [1.4, 2.1, -2.8], color: WOOD },
+    { size: [0.3, 2.3, 0.3], at: [-1.4, 2.1, 2.8], color: WOOD }, { size: [0.3, 2.3, 0.3], at: [1.4, 2.1, 2.8], color: WOOD },
+    { size: [0.7, 0.7, 8.5], at: [0, 2.0, -1.0], color: "#4d3a28" },
+    { size: [0.9, 0.9, 0.9], at: [0, 2.0, -5.5], color: IRON },
+    { size: [0.4, 1.4, 1.4], at: [-1.8, 0.7, -2], color: CLOTH_DARK }, { size: [0.4, 1.4, 1.4], at: [1.8, 0.7, -2], color: CLOTH_DARK },
+    { size: [0.4, 1.4, 1.4], at: [-1.8, 0.7, 2], color: CLOTH_DARK }, { size: [0.4, 1.4, 1.4], at: [1.8, 0.7, 2], color: CLOTH_DARK },
+  ],
+  // 投石機:台の上の支柱と、長い腕
+  catapult: () => [
+    { size: [3.4, 0.5, 5.0], at: [0, 0.6, 0], color: WOOD },
+    { size: [0.4, 4.2, 0.4], at: [-1.2, 2.9, 0], color: WOOD }, { size: [0.4, 4.2, 0.4], at: [1.2, 2.9, 0], color: WOOD },
+    { size: [2.8, 0.35, 0.35], at: [0, 5.0, 0], color: WOOD },
+    { size: [0.3, 0.3, 8.0], at: [0, 5.2, 1.2], color: "#4d3a28" },
+    { size: [1.1, 1.1, 1.1], at: [0, 5.0, -2.6], color: IRON },
+    { size: [0.9, 0.5, 0.9], at: [0, 5.3, 5.0], color: LEATHER },
+  ],
+  // 櫓(攻城塔):城壁と同じ高さの、板で覆った塔
+  siegeTower: () => [
+    { size: [4.2, 0.6, 4.2], at: [0, 0.7, 0], color: WOOD },
+    { size: [3.6, 9.0, 3.6], at: [0, 5.4, 0], color: "#5e4a35" },
+    { size: [4.2, 0.4, 4.2], at: [0, 10.0, 0], color: WOOD },
+    { size: [4.2, 1.0, 0.3], at: [0, 10.6, -2.0], color: LEATHER },
+    { size: [0.2, 2.4, 0.2], at: [1.7, 11.4, 1.7], color: CLOTH_DARK },
+    { size: [1.6, 1.0, 0.1], at: [2.5, 12.0, 1.7], color: TINT },
+  ],
+  // 雲梯:車に載せた、斜めの長い梯子
+  ladder: () => [
+    { size: [2.4, 0.4, 4.0], at: [0, 0.6, 0], color: WOOD },
+    { size: [0.2, 9.5, 0.2], at: [-0.7, 5.0, -1.2], color: WOOD }, { size: [0.2, 9.5, 0.2], at: [0.7, 5.0, -1.2], color: WOOD },
+    ...[1.5, 3, 4.5, 6, 7.5, 9].map((y) => ({ size: [1.4, 0.15, 0.15] as [number, number, number], at: [0, y, -1.2] as [number, number, number], color: WOOD })),
+  ],
   // 倒れた兵
   fallen: () => [{ size: [0.5, 0.18, 1.5], at: [0, 0.09, 0], color: "#4a3f36" }],
 };
@@ -227,7 +263,8 @@ export function getSoldiers(): SoldierLibrary {
         if (!g) {
           // 歩兵の武器は肩の高さ、騎兵の武器は乗り手の肩の高さを中心に振る
           const mounted = shape === "lightCavalry" || shape === "heavyCavalry" || shape === "guard" || shape === "general";
-          g = build(armed(SHAPES[shape](), mounted ? 1.95 : 1.5));
+          const engine = shape === "ram" || shape === "catapult" || shape === "siegeTower" || shape === "ladder";
+          g = build(engine ? SHAPES[shape]() : armed(SHAPES[shape](), mounted ? 1.95 : 1.5));
           cache.set(shape, g);
         }
         return g;

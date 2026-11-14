@@ -1,7 +1,7 @@
 // 会戦に関する計算。戦闘イベントから、会戦準備画面や3D戦闘に渡す「会戦の設定」を組み立てる。
 // ここは計算だけで、画面のことは知らない。
 import { cityLevelOf, cityLevels, officerById, resolveCityLayout, terrainRules } from "../data";
-import type { Army, BattleEvent, BattleSetup, BattleSide, City, Fortification, TerrainKind } from "../data/types";
+import type { Army, BattleEvent, BattleSetup, BattleSide, City, CityState, Fortification, Officer, TerrainKind } from "../data/types";
 
 const KM_PER_DEGREE = 111.19;
 const DIRECTIONS = ["北", "北東", "東", "南東", "南", "南西", "西", "北西"];
@@ -46,8 +46,20 @@ function battleName(event: BattleEvent, cities: City[]): string {
   return n.km < 25 ? `${n.city.name}の戦い` : `${n.city.name}${n.direction}の戦い`;
 }
 
-/** 都市の守り:城壁の規模と防御施設を、都市の設計図から読み取る */
-export function fortificationOf(city: City): Fortification {
+/** 都市の、戦いを受ける前の状態(守備兵・食糧・士気は、データか規模から決める) */
+export function initialCityState(city: City): CityState {
+  return {
+    garrison: city.garrison ?? DEFAULT_GARRISON[cityLevelOf(city)],
+    food: city.fort?.food ?? 30 + cityLevelOf(city) * 15,
+    morale: city.fort?.morale ?? 70,
+    wallDamage: 0,
+    gateDamage: 0,
+    governorFate: "healthy",
+  };
+}
+
+/** 都市の守り:城壁の規模・耐久・防御施設を、都市の設計図と、いまの状態(損傷)から読み取る */
+export function fortificationOf(city: City, state: CityState = initialCityState(city)): Fortification {
   const layout = resolveCityLayout(city);
   const level = cityLevelOf(city);
   const facilities: string[] = [];
@@ -59,7 +71,22 @@ export function fortificationOf(city: City): Fortification {
   if (layout.palaces?.some((p) => p.fortified)) facilities.push(level >= 4 ? "宮城" : "内城");
   if (layout.citadel) facilities.push("小城");
   if (layout.terraces) facilities.push("高台");
-  return { scale: `${cityLevels[String(level)].label}(レベル${level})`, defense: city.defense ?? 50, facilities };
+  const defense = city.defense ?? 50;
+  return {
+    scale: `${cityLevels[String(level)].label}(レベル${level})`,
+    defense,
+    facilities,
+    wallHeight: layout.wallHeight,
+    wallThickness: layout.wallThickness,
+    gates: Math.max(1, layout.gates.s),
+    // 耐久力:城防御力と、城壁の厚さから決める(都市ごとに fort で上書きできる)
+    wallHp: city.fort?.wallHp ?? Math.round((1700 + defense * 42) * (layout.wallThickness / 0.1)),
+    gateHp: city.fort?.gateHp ?? Math.round(1100 + defense * 24),
+    food: state.food,
+    morale: state.morale,
+    wallDamage: state.wallDamage,
+    gateDamage: state.gateDamage,
+  };
 }
 
 function armySide(role: BattleSide["role"], army: Army): BattleSide {
@@ -79,9 +106,15 @@ function armySide(role: BattleSide["role"], army: Army): BattleSide {
   };
 }
 
-function citySide(city: City, factionId: string): BattleSide {
+function citySide(city: City, factionId: string, state: CityState): BattleSide {
   // 守備兵は歩兵と弓兵で構成する(城を守るのに騎兵は使わない)
-  const garrison = city.garrison ?? DEFAULT_GARRISON[cityLevelOf(city)];
+  const garrison = state.garrison;
+  // 守将:都市データに名前があれば、能力値は仮の値で指揮官とする(戦死・捕虜になっていれば不在)
+  const lost = state.governorFate === "killed" || state.governorFate === "captured";
+  const governor: Officer | null =
+    city.governor && !lost
+      ? { id: `gov_${city.id}`, name: city.governor, reading: "", factionId, leadership: 65, valor: 60, intelligence: 60 }
+      : null;
   return {
     role: "defender",
     kind: "city",
@@ -89,12 +122,12 @@ function citySide(city: City, factionId: string): BattleSide {
     armyId: null,
     cityId: city.id,
     name: `${city.name}守備隊`,
-    commander: null,
+    commander: governor,
     troops: { infantry: Math.round(garrison * 0.7), cavalry: 0, archer: Math.round(garrison * 0.3) },
-    morale: 70,
+    morale: state.morale,
     fatigue: 0,
-    food: 90,
-    fortification: fortificationOf(city),
+    food: state.food,
+    fortification: fortificationOf(city, state),
   };
 }
 
@@ -104,6 +137,7 @@ function citySide(city: City, factionId: string): BattleSide {
  */
 export function createBattleSetup(
   event: BattleEvent, armyOf: (id: string) => Army | undefined, cities: City[],
+  cityStateOf: (city: City) => CityState = initialCityState,
 ): BattleSetup | null {
   const attacker = armyOf(event.attackerArmyId);
   if (!attacker) return null;
@@ -113,7 +147,7 @@ export function createBattleSetup(
     if (army) defender = armySide("defender", army);
   } else if (event.defenderCityId) {
     const city = cities.find((c) => c.id === event.defenderCityId);
-    if (city) defender = citySide(city, event.defenderFactionId);
+    if (city) defender = citySide(city, event.defenderFactionId, cityStateOf(city));
   }
   if (!defender) return null;
   return {

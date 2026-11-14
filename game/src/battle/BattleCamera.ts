@@ -26,11 +26,14 @@ export class BattleCamera {
     this.camera.updateProjectionMatrix();
   }
 
+  /** 全景のときの向き(防御側を指揮するときは、反対側から見る) */
+  homeYaw = 0;
+
   /** 戦場全体が見える位置に戻す */
   overview(): void {
     this.target.set(0, 0, 8);
     this.distance = 215;
-    this.yaw = 0;
+    this.yaw = this.homeYaw;
     this.pitch = 0.78;
     this.update();
   }

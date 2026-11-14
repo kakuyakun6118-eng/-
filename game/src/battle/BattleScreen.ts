@@ -8,7 +8,11 @@ import { BattleCamera } from "./BattleCamera";
 import { Battlefield, type TimeOfDay } from "./Battlefield";
 import { BattleSim } from "./BattleSim";
 import { BattleView } from "./BattleView";
-import { deploy, FIELD, formations } from "./deploy";
+import { deploy, FIELD, formations, unitClasses } from "./deploy";
+import { createSiegeLayout, deploySiege, Siege } from "./siege";
+import { SiegeModel } from "./siegeView";
+import { factionById, resolveCityLayout, scenario } from "../data";
+import type { City } from "../data/types";
 import { FieldMap } from "./fieldData";
 import type { BattleResult, BattleUnit, FormationId, SideId, UnitOrder } from "./types";
 
@@ -22,6 +26,8 @@ export interface BattleOptions {
   difficulty: Difficulty;
   /** 光の雰囲気(朝・昼・夕方) */
   timeOfDay: TimeOfDay;
+  /** 攻城戦で攻められる都市(野戦では省く) */
+  city?: City;
 }
 
 export class BattleScreen {
@@ -34,6 +40,8 @@ export class BattleScreen {
   private readonly hud: BattleHud;
   /** 選択中の部隊。最後の1つが、下のパネルに表示される */
   private selectedIds: string[] = [];
+  private readonly siege: Siege | null;
+  private siegeModel: SiegeModel | null = null;
   /** 複数選択の最中か(タップするたびに、選択に足したり外したりする) */
   private multi = false;
   private following = false;
@@ -64,12 +72,30 @@ export class BattleScreen {
   ) {
     const playerSide = options.playerSide;
     this.field = field;
-    this.sim = new BattleSim(setup, deploy(setup), this.field, playerSide, options.difficulty);
+    // 攻城戦:都市の設計図から城の配置を決め、敷地を整地してから、守備隊と攻城兵器を並べる
+    let siege: Siege | null = null;
+    if (options.city && setup.defender.fortification) {
+      const layout = createSiegeLayout(resolveCityLayout(options.city), setup.defender.fortification);
+      this.field.levelArea(layout.cx, layout.cz, layout.w + 30, layout.d + 30);
+      siege = new Siege(layout, setup);
+    }
+    this.siege = siege;
+    const deployment = siege ? deploySiege(setup, siege.layout, scenario.year) : deploy(setup);
+    this.sim = new BattleSim(setup, deployment, this.field, playerSide, options.difficulty, siege);
     this.battlefield = new Battlefield(this.field, options.timeOfDay);
     this.battlefield.applyTo(this.scene);
     this.view = new BattleView(this.sim);
     this.scene.add(this.view.group);
+    if (siege) {
+      this.siegeModel = new SiegeModel(siege, this.field, factionById(setup.defender.factionId)?.color ?? "#d8d2c4");
+      this.scene.add(this.siegeModel.group);
+    }
     this.camera = new BattleCamera(this.field);
+    // 防御側を指揮するときは、自軍の後ろ(反対側)から見る
+    if (playerSide === "defender") {
+      this.camera.homeYaw = Math.PI;
+      this.camera.overview();
+    }
 
     this.hud = new BattleHud(hudRoot, this.sim, {
       onSelect: (id) => this.tapOwnUnit(id, true),
@@ -160,6 +186,7 @@ export class BattleScreen {
   }
 
   private refreshHud(): void {
+    if (this.siege) this.hud.setTitle(`${this.sim.setup.name} ${this.siege.statusText()}`);
     this.hud.update(this.selected(), this.selectedIds);
   }
 
@@ -229,6 +256,14 @@ export class BattleScreen {
       }
     }
     const mine = this.selectedUnits();
+    // 攻城戦:攻撃側が城壁や城門をタップしたら、そこを攻める(兵器は城門・城壁へ、歩兵は取り付く)
+    const seg = this.siege && this.sim.playerSide === "attacker" && mine.length > 0 && (!hit || hit.elevation > 0 && !mine.some((u) => unitClasses[u.classId].range))
+      ? this.siege.segmentAt(point.x, point.z) : null;
+    if (seg) {
+      this.orderSelected(() => ({ kind: "assault", segmentId: seg.id }));
+      this.hud.toast(seg.kind === "gate" ? "城門を攻める" : "城壁を攻める");
+      return;
+    }
     if (hit && hit.side === this.sim.playerSide) {
       this.tapOwnUnit(hit.id);
       return;
@@ -281,6 +316,7 @@ export class BattleScreen {
     this.view.setSelection(this.selectedUnits().length > 0 || u ? this.selectedIds.map((id) => this.sim.unit(id)!).filter(Boolean) : []);
     this.view.update(step, this.camera.distance);
     this.battlefield.update(step, this.camera.distance);
+    this.siegeModel?.update();
 
     this.hudTimer -= dt;
     if (this.hudTimer <= 0) {
@@ -302,5 +338,7 @@ export class BattleScreen {
     this.hud.hide();
     this.view.dispose();
     this.battlefield.dispose();
+    this.siegeModel?.dispose();
+    this.field.obstacle = null;
   }
 }

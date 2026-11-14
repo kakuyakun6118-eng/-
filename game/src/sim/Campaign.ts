@@ -1,9 +1,9 @@
 // ゲームの進行を計算する。日付を進め、軍団の行軍・食糧・疲労・士気・敵との接触を扱う。
 // ここは計算だけで、3D表示のことは知らない。変化があったら、登録された関数で知らせる。
 import { resolveCityLayout, scenario, totalTroops } from "../data";
-import { placeName } from "./battle";
+import { initialCityState, placeName } from "./battle";
 import type { BattleResult, CommanderFate, SideResult } from "../battle/types";
-import type { Army, ArmyStatus, BattleEvent, City, UnitTypeId } from "../data/types";
+import type { Army, ArmyStatus, BattleEvent, City, CityState, UnitTypeId } from "../data/types";
 import { distanceKm, findRoute, type Route, type RoutePoint } from "./pathfinding";
 import type { TerrainGrid } from "./TerrainGrid";
 
@@ -49,6 +49,8 @@ export interface CampaignListener {
   onDayChanged(day: number): void;
   /** 軍団が壊滅して、地図から消えた */
   onArmyRemoved(state: ArmyState): void;
+  /** 都市が陥落して、支配する勢力が変わった */
+  onCityCaptured(cityId: string, factionId: string): void;
 }
 
 export class Campaign {
@@ -58,6 +60,8 @@ export class Campaign {
   speed = 1;
   readonly armies: ArmyState[];
   readonly events: BattleEvent[] = [];
+  /** 都市の、いまの状態(守備兵・食糧・士気・損傷)。攻城戦を受けた都市だけが入る */
+  readonly cityStates: Record<string, CityState> = {};
   private nextEventId = 1;
 
   constructor(
@@ -77,6 +81,20 @@ export class Campaign {
       targetCityId: null,
     }));
     for (const s of this.armies) s.supplied = this.nearFriendlyCity(s);
+  }
+
+  /** 都市の、いまの状態(まだ戦いを受けていなければ、最初の状態) */
+  cityState(city: City): CityState {
+    return this.cityStates[city.id] ?? initialCityState(city);
+  }
+
+  /** 城壁と城門の損傷は、日数をかけて少しずつ直る(修復に資金がかかる仕組みは、まだ無い) */
+  private repairCities(): void {
+    for (const state of Object.values(this.cityStates)) {
+      state.wallDamage = Math.max(0, state.wallDamage - 0.004);
+      state.gateDamage = Math.max(0, state.gateDamage - 0.01);
+      state.morale = Math.min(70, state.morale + 0.5);
+    }
   }
 
   stateOf(armyId: string): ArmyState | undefined {
@@ -234,6 +252,7 @@ export class Campaign {
     }
     for (let d = before; d < Math.floor(this.day); d++) {
       for (const s of this.armies) this.dailyUpkeep(s);
+      this.repairCities();
       this.listener.onDayChanged(d + 1);
     }
   }
@@ -371,6 +390,37 @@ export class Campaign {
     };
     const attacker = apply(event.attackerArmyId, result.sides.attacker);
     const defender = apply(event.defenderArmyId, result.sides.defender);
+
+    // 攻城戦:都市の守備兵・食糧・損傷・守将の状態を書き換え、落城していれば支配する勢力を変える
+    const city = result.siege ? this.cities.find((c) => c.id === result.siege!.cityId) : undefined;
+    if (result.siege && city) {
+      const d = result.sides.defender;
+      const prev = this.cityState(city);
+      const state: CityState = {
+        garrison: d.after.infantry + d.after.cavalry + d.after.archer,
+        food: result.siege.foodLeft,
+        morale: d.morale,
+        // 損傷は、前からの分と今回の分の大きいほうを残す。占領しても、すぐには直らない
+        wallDamage: Math.max(prev.wallDamage, result.siege.wallDamage),
+        gateDamage: Math.max(prev.gateDamage, result.siege.gateDamage),
+        governorFate: d.commander,
+      };
+      if (result.siege.captured) {
+        // 落城:攻撃側の勢力のものになる。守備隊は、仮に攻撃側の兵から1,000人を置いたものとする(軍団の兵力は減らさない)
+        state.garrison = 1000;
+        state.morale = 60;
+        state.governorFate = "captured";
+        this.listener.onCityCaptured(city.id, event.attackerFactionId);
+      } else if (attacker) {
+        // 攻め落とせなかった軍団は、都市から離れる方向へ退く
+        const dx = attacker.army.lon - city.lon;
+        const dy = attacker.army.lat - city.lat;
+        const len = Math.hypot(dx, dy) || 1;
+        const route = this.planRoute(attacker.army.id, { lon: attacker.army.lon + (dx / len) * 0.9, lat: attacker.army.lat + (dy / len) * 0.9 });
+        if (route) this.orderMove(attacker.army.id, route);
+      }
+      this.cityStates[city.id] = state;
+    }
 
     // 敗れた軍団は、勝者から離れる方向へ後退する
     const loser = result.winner === "attacker" ? defender : result.winner === "defender" ? attacker : null;

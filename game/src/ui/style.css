@@ -1776,3 +1776,23 @@ body {
 #battle-hud .hud-leave {
   min-height: 38px;
 }
+
+/* 会戦準備:プレイヤーが指揮する側のカードに印を付ける */
+.battle-side.commanded {
+  outline: 2px solid var(--bronze);
+  outline-offset: -2px;
+}
+
+.battle-side.commanded .battle-role::after {
+  content: "(あなたが指揮)";
+  margin-left: 6px;
+  letter-spacing: 0;
+  color: var(--text);
+}
+
+/* 結果画面:行が多いときも「戻る」ボタンが必ず見えるよう、下端に固定する */
+#battle-hud .hud-leave {
+  position: sticky;
+  bottom: 0;
+  flex: none;
+}

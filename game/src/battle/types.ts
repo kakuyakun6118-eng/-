@@ -5,7 +5,8 @@ export type SideId = "attacker" | "defender";
 
 /** 部隊の兵科(槍兵・剣盾兵・重装歩兵・軽騎兵・重騎兵・弓兵・弩兵・本陣) */
 export type UnitClassId =
-  | "spearmen" | "swordsmen" | "heavyInfantry" | "lightCavalry" | "heavyCavalry" | "archers" | "crossbowmen" | "guard";
+  | "spearmen" | "swordsmen" | "heavyInfantry" | "lightCavalry" | "heavyCavalry" | "archers" | "crossbowmen" | "guard"
+  | "ram" | "catapult" | "siegeTower" | "ladder";
 
 /** 兵科ごとの決まり(data/rules/battleUnits.json) */
 export interface UnitClass {
@@ -31,6 +32,15 @@ export interface UnitClass {
   reload?: number;
   /** 防具を貫きやすい(弩) */
   piercing?: boolean;
+  /** 攻城兵器か。兵力には数えず、men は耐久力として扱う */
+  engine?: boolean;
+  durability?: number;
+  /** 城門・城壁に与える損傷(1秒あたり)と、投石の届く距離 */
+  gateDamage?: number;
+  wallDamage?: number;
+  siegeRange?: number;
+  /** 城壁に取り付いたとき、兵がどれだけ戦えるか(雲梯 0.5、櫓 0.85) */
+  escalade?: number;
 }
 
 /** 陣形:横陣・縦陣・方陣・楔形陣 */
@@ -62,6 +72,7 @@ export type UnitOrder =
   | { kind: "move"; x: number; z: number; keepFacing?: boolean } // keepFacing = 敵に向いたまま下がる(後退)
   | { kind: "attack"; targetId: string }
   | { kind: "pursue"; targetId?: string } // 近くの敵を自分で探して攻める(targetId は、いま狙っている相手)
+  | { kind: "assault"; segmentId: string } // 城壁・城門を攻める(攻城戦)
   | { kind: "retreat" };
 
 /** 戦闘中の部隊 */
@@ -80,6 +91,8 @@ export interface BattleUnit {
   z: number;
   /** 向き(ラジアン)。0 で -z 方向、時計回り */
   facing: number;
+  /** 地面からの高さ(城壁の上にいる部隊だけ 0 より大きい) */
+  elevation: number;
   formation: FormationId;
   /** 待機中に向いていたい方角(「向きを変える」命令で入る) */
   faceTo: number | null;
@@ -108,7 +121,8 @@ export interface BattleUnit {
 
 /** 見た目のための出来事(矢の斉射、突撃の衝突、敗走など) */
 export type BattleFx =
-  | { kind: "volley"; fromX: number; fromZ: number; toX: number; toZ: number; flight: number; count: number }
+  | { kind: "volley"; fromX: number; fromZ: number; toX: number; toZ: number; flight: number; count: number; fromY?: number; toY?: number; stone?: boolean }
+  | { kind: "breach"; x: number; z: number }
   | { kind: "impact"; x: number; z: number }
   | { kind: "dust"; x: number; z: number }
   | { kind: "rout"; unitId: string }

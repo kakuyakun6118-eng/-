@@ -5,8 +5,8 @@ import type { BattleSetup, BattleSide } from "../data/types";
 import type { ComparisonRow } from "../sim/battle";
 
 export interface BattlePrepActions {
-  /** 「戦闘開始」が押された */
-  onStart(): void;
+  /** 「戦闘開始」が押された。side は、プレイヤーが指揮する側 */
+  onStart(side: "attacker" | "defender"): void;
   /** 「戦略マップに戻る」が押された(戦闘は保留) */
   onBack(): void;
 }
@@ -26,10 +26,20 @@ const total = (s: BattleSide): number => s.troops.infantry + s.troops.cavalry + 
 export class BattlePrep {
   private readonly q: (sel: string) => HTMLElement;
   private detailOpen = false;
+  /** プレイヤーが指揮する側(もう一方は自動で動く) */
+  private playerSide: "attacker" | "defender" = "attacker";
+
+  private setPlayerSide(side: "attacker" | "defender"): void {
+    this.playerSide = side;
+    this.q(".battle-command").textContent = side === "attacker" ? "指揮:攻撃側" : "指揮:防御側";
+    this.q(".battle-side.attacker").classList.toggle("commanded", side === "attacker");
+    this.q(".battle-side.defender").classList.toggle("commanded", side === "defender");
+  }
 
   constructor(private readonly root: HTMLElement, actions: BattlePrepActions) {
     this.q = (sel) => root.querySelector(sel) as HTMLElement;
-    this.q(".battle-start").addEventListener("click", actions.onStart);
+    this.q(".battle-start").addEventListener("click", () => actions.onStart(this.playerSide));
+    this.q(".battle-command").addEventListener("click", () => this.setPlayerSide(this.playerSide === "attacker" ? "defender" : "attacker"));
     this.q(".battle-back").addEventListener("click", actions.onBack);
     this.q(".battle-handoff-back").addEventListener("click", actions.onBack);
     this.q(".battle-info").addEventListener("click", () => this.setDetail(!this.detailOpen));
@@ -72,6 +82,7 @@ export class BattlePrep {
     noteList.replaceChildren(...notes.map((n) => el("li", "", n)));
 
     this.q(".battle-handoff").hidden = true;
+    this.setPlayerSide("attacker");
     this.setDetail(false);
     this.root.hidden = false;
   }

@@ -172,6 +172,7 @@ export class Game {
       onArmyChanged: (state, statusChanged) => this.onArmyChanged(state, statusChanged),
       onBattleEvent: (event) => this.showBattleEvent(event),
       onDayChanged: () => this.onDayChanged(),
+      onCityCaptured: (cityId, factionId) => this.setCityOwner(cityId, factionId),
       onArmyRemoved: (state) => {
         const marker = this.armies.markerOf(state.army.id);
         if (!marker) return;
@@ -219,7 +220,7 @@ export class Game {
       },
     });
     this.battlePrep = new BattlePrep(root.querySelector("#battle") as HTMLElement, {
-      onStart: () => this.startBattle(),
+      onStart: (side) => this.startBattle(side),
       onBack: () => this.closeBattlePrep(),
     });
     (root.querySelector("#event-open") as HTMLElement).addEventListener("click", () => {
@@ -395,7 +396,7 @@ export class Game {
 
   /** 敵と接触して戦闘イベントが発生したことを知らせる。時間は自動で止まる */
   private showBattleEvent(event: BattleEvent): void {
-    const setup = createBattleSetup(event, (id) => this.campaign.stateOf(id)?.army, this.allCities);
+    const setup = createBattleSetup(event, (id) => this.campaign.stateOf(id)?.army, this.allCities, (c) => this.campaign.cityState(c));
     if (!setup) return;
     this.noticeBattleId = event.battleId;
     (this.root.querySelector("#event-open") as HTMLElement).hidden = false;
@@ -418,7 +419,7 @@ export class Game {
   openBattlePrep(battleId: string): void {
     const event = this.campaign.eventOf(battleId);
     if (!event || event.status === "completed" || event.status === "cancelled") return;
-    const setup = createBattleSetup(event, (id) => this.campaign.stateOf(id)?.army, this.allCities);
+    const setup = createBattleSetup(event, (id) => this.campaign.stateOf(id)?.army, this.allCities, (c) => this.campaign.cityState(c));
     if (!setup) return;
     this.clearSelection();
     this.campaign.setEventStatus(battleId, "preparing");
@@ -452,22 +453,22 @@ export class Game {
    * 「戦闘開始」。会戦の設定を確定し、野戦なら3D戦場へ移る。
    * 攻城戦の3D戦闘はまだ無いので、引き継ぐ内容を表示するところまで行う。
    */
-  private startBattle(): void {
+  private startBattle(playerSide: "attacker" | "defender" = "attacker"): void {
     const event = this.openBattleId ? this.campaign.eventOf(this.openBattleId) : undefined;
     if (!event) return;
-    const setup = createBattleSetup(event, (id) => this.campaign.stateOf(id)?.army, this.allCities);
+    const setup = createBattleSetup(event, (id) => this.campaign.stateOf(id)?.army, this.allCities, (c) => this.campaign.cityState(c));
     if (!setup) return;
     this.campaign.setEventStatus(event.battleId, "in_progress");
     this.battleSetup = setup;
-    if (setup.battleType !== "field_battle") {
-      this.battlePrep.showHandOff(setup);
-      return;
-    }
-
     // 攻撃側から見た防御側の、実際の方角。戦場の「奥」をこの方角に合わせる
     const a = this.campaign.stateOf(event.attackerArmyId)?.army;
     const d = event.defenderArmyId ? this.campaign.stateOf(event.defenderArmyId)?.army : undefined;
-    const bearing = a && d ? Math.atan2((d.lon - a.lon) * Math.cos((a.lat * Math.PI) / 180), d.lat - a.lat) : 0;
+    // 攻城戦では、軍団から見た都市の方角にする
+    const city = event.defenderCityId ? this.allCities.find((c) => c.id === event.defenderCityId) : undefined;
+    const to = d ?? city;
+    const bearing = a && to ? Math.atan2((to.lon - a.lon) * Math.cos((a.lat * Math.PI) / 180), to.lat - a.lat) : 0;
+    // 攻城戦の戦場は、都市のある場所の地形にする
+    if (city) setup.location = { ...setup.location, lon: city.lon, lat: city.lat };
 
     // 光の雰囲気:会戦が起きた時刻(1日のうちのいつか)から決める
     const hour = (this.campaign.day % 1) * 24;
@@ -480,7 +481,7 @@ export class Game {
     // 会戦地点の実地形を読み込んでから、戦場へ移る。プレイヤーは、自分が動かした軍団(攻撃側)を指揮する
     BattleScreen.create(
       this.renderer, this.root.querySelector("#battle-hud") as HTMLElement, setup, this.terrains[0].field, bearing,
-      { playerSide: "attacker", difficulty: this.difficulty, timeOfDay }, (result) => this.finishBattle(result),
+      { playerSide, difficulty: this.difficulty, timeOfDay, city }, (result) => this.finishBattle(result),
     )
       .then((battle) => {
         this.root.classList.add("in-battle");
@@ -516,7 +517,9 @@ export class Game {
     this.campaign.applyBattleResult(result);
     // 結果を知らせに出す
     if (setup) {
-      const winner = result.winner === "draw" ? "引き分け" : `${(result.winner === "attacker" ? setup.attacker : setup.defender).name}の勝利`;
+      const winner = result.siege?.captured
+        ? `${setup.location.name}が陥落し、${factionById(setup.attacker.factionId)?.name ?? "攻撃側"}のものになった`
+        : result.winner === "draw" ? "引き分け" : `${(result.winner === "attacker" ? setup.attacker : setup.defender).name}の勝利`;
       this.noticeBattleId = null;
       (this.root.querySelector("#event-open") as HTMLElement).hidden = true;
       (this.root.querySelector("#event-text") as HTMLElement).textContent =
