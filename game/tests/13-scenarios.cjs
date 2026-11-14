@@ -31,7 +31,8 @@ const read = (f) => JSON.parse(fs.readFileSync(path.join(root, f), 'utf8'));
       if (!p.known) { problems.push(tag + '台帳に無い人物: ' + p.id); continue; }
       if (!factions.has(p.factionId)) problems.push(tag + '人物の勢力が無い: ' + p.id);
       if (p.died !== null && p.died < s.year) problems.push(`${tag}開始より前に死亡: ${p.name} ${p.died}`);
-      if (p.born !== null && p.born > s.year - 12) problems.push(`${tag}12歳未満: ${p.name} ${p.born}`);
+      // 12歳未満は登場させない。ただし君主は、幼くても勢力が成り立つように例外とする(注記を付ける)
+      if (p.born !== null && p.born > s.year - 12 && !(p.role === 'ruler' && (s.roster?.[p.id]?.note || p.note))) problems.push(`${tag}12歳未満: ${p.name} ${p.born}`);
     }
     for (const f of s.factions) { const n = roster.filter(p => p.factionId === f.id && p.role === 'ruler').length; if (n !== (f.passive ? 0 : 1)) problems.push(`${tag}君主が${n}人: ${f.name}`); }
     const byId = new Map(roster.map(p => [p.id, p])); const used = new Set();
@@ -79,11 +80,14 @@ const read = (f) => JSON.parse(fs.readFileSync(path.join(root, f), 'utf8'));
   }
   // 別のシナリオのセーブは読み込めない / 準備中のシナリオは始まらない
   const page = await (await b.newContext({ viewport: { width: 844, height: 390 } })).newPage();
-  await page.goto('file://' + process.argv[2] + '#s=s383');
+  // 目録に無いシナリオや、準備中のシナリオをアドレスで指定しても、317年が始まること
+  const planned = catalog.find(x => x.status === 'planned');
+  await page.goto('file://' + process.argv[2] + '#s=' + (planned ? planned.id : 's999'));
   await page.waitForFunction(() => window.__goko, null, { timeout: 120000 });
   const guard = await page.evaluate((other) => { const g = window.__goko; let msg = ''; try { g.applySave(JSON.parse(other)); } catch (x) { msg = String(x.message); } return { title: document.querySelector('.scenario').textContent, crossLoad: msg.slice(0, 60) }; }, saves[ready[0].id]);
   console.log('ガード:', JSON.stringify(guard));
-  if (!guard.title.includes('317')) problems.push('準備中のシナリオ(383年)が始まってしまった');
+  if (!guard.title.includes('317')) problems.push('存在しない・準備中のシナリオが始まってしまった');
+  if (ready.length !== 8) problems.push('遊べるシナリオが8本でない: ' + ready.length);
   if (!guard.crossLoad.includes('別のシナリオ')) problems.push('別のシナリオのセーブを断らなかった');
   await b.close();
   if (problems.length) { console.log('問題:', problems); process.exit(1); }

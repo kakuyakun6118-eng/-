@@ -1,0 +1,543 @@
+{
+ "id": "s383",
+ "year": 383,
+ "startMonth": 8,
+ "name": "淝水の戦い",
+ "summary": "前秦の苻堅は、前燕・前涼・代を滅ぼして華北を統一し、いま大軍を起こして東晋へ向かう。東晋では謝安が政治を執り、謝玄の北府の兵が淮水で待ち受ける。",
+ "scenarioNote": "383年8月(苻堅が南征の軍を起こしたころ)を開始とした。王猛は375年に没しているので登場しない。慕容垂・姚萇・呂光・乞伏国仁・翟斌・劉庫仁・劉衛辰など、のちに自立する人物は、この時点では前秦の臣として収録した(史実では、淝水の敗戦ののちに次々と背く)。軍団の兵力はゲーム上の設定で、史書にある数十万という数は反映していない。",
+ "factions": [
+  {
+   "id": "qianqin",
+   "name": "前秦",
+   "people": "氐",
+   "ruler": "苻堅",
+   "color": "#2f6b4f"
+  },
+  {
+   "id": "jin",
+   "name": "東晋",
+   "people": "漢",
+   "ruler": "司馬曜(孝武帝)",
+   "color": "#3c86c9"
+  },
+  {
+   "id": "tuyuhun",
+   "name": "吐谷渾",
+   "people": "鮮卑",
+   "ruler": "視連",
+   "color": "#8a8a4a"
+  },
+  {
+   "id": "goguryeo",
+   "name": "高句麗",
+   "people": "高句麗(貊)",
+   "ruler": "小獣林王",
+   "color": "#a04060"
+  },
+  {
+   "id": "baekje",
+   "name": "百済",
+   "people": "百済(韓・扶余系)",
+   "ruler": "近仇首王",
+   "color": "#3d8f7a"
+  },
+  {
+   "id": "silla",
+   "name": "新羅",
+   "people": "新羅(韓)",
+   "ruler": "奈勿尼師今",
+   "color": "#e6d36a"
+  }
+ ],
+ "uncertainOwners": [
+  "huaiyin",
+  "yongan",
+  "jianning",
+  "xiapi",
+  "pengcheng",
+  "shangyong",
+  "tuyuhunting",
+  "gaochang",
+  "jiangzhou"
+ ],
+ "ownerNote": "寿春は、この年の10月に前秦の先鋒に落とされるが、開始の時点では晋のもの。淮水の北の彭城・下邳は、379年の戦いのあと前秦のものとした(推定)。",
+ "cityNames": {
+  "jicheng": {
+   "name": "龍城",
+   "reading": "りゅうじょう"
+  }
+ },
+ "relations": {
+  "jin|qianqin": "war"
+ },
+ "relationNote": "吐谷渾と高句麗・新羅は、このころ前秦に使いを送っているが、同盟とまではせず、和平とした。",
+ "governors": {
+  "changan": "fu_hong2",
+  "ye": "fu_pi",
+  "luoyang": "fu_hui",
+  "guanggu": "fu_lang",
+  "pingyang": "murong_chong",
+  "guzang": "liang_xi",
+  "shuofang": "liu_weichen",
+  "pingcheng": "liu_kuren",
+  "chouchi": "yang_ding",
+  "jiankang": "sima_yao",
+  "jiangling": "huan_chong",
+  "shouchun": "hu_bin",
+  "xunyang": "huan_yi2",
+  "wuchang": "huan_shimin",
+  "tuyuhunting": "shilian",
+  "wandu": "sosurim",
+  "hanseong": "geungusu",
+  "geumseong": "naemul"
+ },
+ "governorNote": "劉庫仁と劉衛辰は、もとの代の国を東西に分けて治めていたので、平城と朔方に置いた(ゲーム上の配置)。胡彬は寿春の救援に向かった将で、寿春の守将とするのは設定。",
+ "armies": [
+  {
+   "id": "army_fu_jian",
+   "name": "苻堅の本軍",
+   "factionId": "qianqin",
+   "commanderId": "fu_jian",
+   "lon": 114.9,
+   "lat": 33.55,
+   "facing": 0,
+   "troops": {
+    "infantry": 22000,
+    "cavalry": 12000,
+    "archer": 6000
+   },
+   "morale": 78,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_fu_rong",
+   "name": "苻融の先鋒軍",
+   "factionId": "qianqin",
+   "commanderId": "fu_rong",
+   "lon": 116.3,
+   "lat": 33.3,
+   "facing": 0,
+   "troops": {
+    "infantry": 18000,
+    "cavalry": 12000,
+    "archer": 5000
+   },
+   "morale": 82,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_chui",
+   "name": "慕容垂軍",
+   "factionId": "qianqin",
+   "commanderId": "murong_chui",
+   "lon": 112.9,
+   "lat": 32.45,
+   "facing": 0,
+   "troops": {
+    "infantry": 9000,
+    "cavalry": 9000,
+    "archer": 3000
+   },
+   "morale": 90,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_yao_chang",
+   "name": "姚萇軍",
+   "factionId": "qianqin",
+   "commanderId": "yao_chang",
+   "lon": 107.4,
+   "lat": 31.9,
+   "facing": 0,
+   "troops": {
+    "infantry": 9000,
+    "cavalry": 4000,
+    "archer": 2500
+   },
+   "morale": 82,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_lv_guang",
+   "name": "呂光の西域遠征軍",
+   "factionId": "qianqin",
+   "commanderId": "lv_guang",
+   "lon": 89.7,
+   "lat": 42.55,
+   "facing": 0,
+   "troops": {
+    "infantry": 10000,
+    "cavalry": 5000,
+    "archer": 2500
+   },
+   "morale": 88,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_xie_xuan",
+   "name": "謝玄の北府軍",
+   "factionId": "jin",
+   "commanderId": "xie_xuan",
+   "lon": 117.9,
+   "lat": 32.5,
+   "facing": 0,
+   "troops": {
+    "infantry": 18000,
+    "cavalry": 2500,
+    "archer": 7000
+   },
+   "morale": 92,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_laozhi",
+   "name": "劉牢之の精兵",
+   "factionId": "jin",
+   "commanderId": "liu_laozhi",
+   "lon": 118.2,
+   "lat": 32.25,
+   "facing": 0,
+   "troops": {
+    "infantry": 4000,
+    "cavalry": 500,
+    "archer": 1000
+   },
+   "morale": 97,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_xie_shi",
+   "name": "謝石軍",
+   "factionId": "jin",
+   "commanderId": "xie_shi",
+   "lon": 118.3,
+   "lat": 31.8,
+   "facing": 0,
+   "troops": {
+    "infantry": 12000,
+    "cavalry": 1000,
+    "archer": 4000
+   },
+   "morale": 80,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_huan",
+   "name": "桓石虔軍",
+   "factionId": "jin",
+   "commanderId": "huan_shiqian",
+   "lon": 112.4,
+   "lat": 30.7,
+   "facing": 0,
+   "troops": {
+    "infantry": 13000,
+    "cavalry": 2000,
+    "archer": 5000
+   },
+   "morale": 85,
+   "fatigue": 10,
+   "food": 45
+  }
+ ],
+ "roster": {
+  "fu_jian": {
+   "factionId": "qianqin",
+   "role": "ruler",
+   "title": "前秦の天王"
+  },
+  "fu_rong": {
+   "factionId": "qianqin",
+   "title": "陽平公・征南大将軍"
+  },
+  "fu_hong2": {
+   "factionId": "qianqin"
+  },
+  "fu_pi": {
+   "factionId": "qianqin"
+  },
+  "fu_hui": {
+   "factionId": "qianqin"
+  },
+  "fu_rui": {
+   "factionId": "qianqin"
+  },
+  "fu_lang": {
+   "factionId": "qianqin"
+  },
+  "murong_chui": {
+   "factionId": "qianqin",
+   "title": "冠軍将軍(もと燕の王族)",
+   "note": "この時点では前秦の臣。のちに背いて後燕を建てる"
+  },
+  "murong_de": {
+   "factionId": "qianqin",
+   "title": "もと燕の王族",
+   "note": "この時点では前秦の臣"
+  },
+  "murong_wei": {
+   "factionId": "qianqin"
+  },
+  "murong_chong": {
+   "factionId": "qianqin",
+   "note": "この時点では前秦の臣。のちに背く"
+  },
+  "murong_hong": {
+   "factionId": "qianqin",
+   "note": "この時点では前秦の臣。のちに背く"
+  },
+  "murong_nong": {
+   "factionId": "qianqin",
+   "note": "この時点では前秦の臣"
+  },
+  "murong_bao": {
+   "factionId": "qianqin",
+   "note": "この時点では前秦の臣"
+  },
+  "murong_kai": {
+   "factionId": "qianqin",
+   "note": "この時点では前秦の臣"
+  },
+  "yao_chang": {
+   "factionId": "qianqin",
+   "title": "龍驤将軍",
+   "note": "この時点では前秦の臣。のちに背いて後秦を建てる"
+  },
+  "lv_guang": {
+   "factionId": "qianqin",
+   "title": "驍騎将軍(西域へ遠征中)",
+   "note": "この時点では前秦の臣。のちに後涼を建てる"
+  },
+  "qifu_guoren": {
+   "factionId": "qianqin",
+   "note": "この時点では前秦の臣。のちに西秦を建てる"
+  },
+  "zhai_bin": {
+   "factionId": "qianqin",
+   "note": "この時点では前秦の臣。のちに背く"
+  },
+  "liu_kuren": {
+   "factionId": "qianqin",
+   "title": "もとの代の東部を治める"
+  },
+  "liu_weichen": {
+   "factionId": "qianqin",
+   "title": "もとの代の西部を治める"
+  },
+  "tuoba_gui": {
+   "factionId": "qianqin",
+   "note": "劉庫仁に守られている少年。前秦の所属とするのは、その保護者による"
+  },
+  "yang_ding": {
+   "factionId": "qianqin"
+  },
+  "zhang_hao": {
+   "factionId": "qianqin",
+   "title": "并州刺史"
+  },
+  "liang_cheng": {
+   "factionId": "qianqin"
+  },
+  "mao_dang": {
+   "factionId": "qianqin"
+  },
+  "shi_yue_qin": {
+   "factionId": "qianqin"
+  },
+  "dou_chong": {
+   "factionId": "qianqin"
+  },
+  "quan_yi": {
+   "factionId": "qianqin",
+   "title": "前秦の尚書左僕射"
+  },
+  "zhu_xu": {
+   "factionId": "qianqin"
+  },
+  "wang_yong": {
+   "factionId": "qianqin"
+  },
+  "zhang_tianxi": {
+   "factionId": "qianqin"
+  },
+  "liang_xi": {
+   "factionId": "qianqin"
+  },
+  "xu_cheng": {
+   "factionId": "qianqin",
+   "title": "前秦の将"
+  },
+  "sima_yao": {
+   "factionId": "jin",
+   "role": "ruler"
+  },
+  "xie_an": {
+   "factionId": "jin",
+   "title": "宰相(録尚書事)"
+  },
+  "xie_shi": {
+   "factionId": "jin",
+   "title": "征討大都督"
+  },
+  "xie_xuan": {
+   "factionId": "jin",
+   "title": "前鋒都督・兗州刺史"
+  },
+  "xie_yan": {
+   "factionId": "jin"
+  },
+  "huan_yi2": {
+   "factionId": "jin"
+  },
+  "liu_laozhi": {
+   "factionId": "jin"
+  },
+  "huan_chong": {
+   "factionId": "jin",
+   "title": "車騎将軍・荊州刺史"
+  },
+  "huan_shiqian": {
+   "factionId": "jin"
+  },
+  "huan_shimin": {
+   "factionId": "jin"
+  },
+  "hu_bin": {
+   "factionId": "jin"
+  },
+  "he_qian": {
+   "factionId": "jin"
+  },
+  "zhuge_kan": {
+   "factionId": "jin"
+  },
+  "sima_daozi": {
+   "factionId": "jin"
+  },
+  "wang_guobao": {
+   "factionId": "jin"
+  },
+  "wang_xianzhi": {
+   "factionId": "jin"
+  },
+  "wang_xun2": {
+   "factionId": "jin"
+  },
+  "yin_zhongkan": {
+   "factionId": "jin"
+  },
+  "yang_liang": {
+   "factionId": "jin"
+  },
+  "guo_quan": {
+   "factionId": "jin"
+  },
+  "huan_xuan2": {
+   "factionId": "jin"
+  },
+  "shilian": {
+   "factionId": "tuyuhun",
+   "role": "ruler"
+  },
+  "sosurim": {
+   "factionId": "goguryeo",
+   "role": "ruler"
+  },
+  "geungusu": {
+   "factionId": "baekje",
+   "role": "ruler",
+   "title": "百済王(近仇首王)"
+  },
+  "naemul": {
+   "factionId": "silla",
+   "role": "ruler"
+  }
+ },
+ "cityOwners": {
+  "luoyang": "qianqin",
+  "changan": "qianqin",
+  "pingyang": "qianqin",
+  "xiangguo": "qianqin",
+  "ye": "qianqin",
+  "jinyang": "qianqin",
+  "ji": "qianqin",
+  "shengle": "qianqin",
+  "guzang": "qianqin",
+  "shanggui": "qianqin",
+  "jiankang": "jin",
+  "xiangyang": "qianqin",
+  "shouchun": "jin",
+  "chengdu": "qianqin",
+  "jicheng": "qianqin",
+  "fengyi": "qianqin",
+  "chencang": "qianqin",
+  "anding": "qianqin",
+  "gaonu": "qianqin",
+  "puban": "qianqin",
+  "longxi": "qianqin",
+  "chouchi": "qianqin",
+  "hanzhong": "qianqin",
+  "jincheng": "qianqin",
+  "zhangye": "qianqin",
+  "shangdang": "qianqin",
+  "lishi": "qianqin",
+  "yanmen": "qianqin",
+  "pingcheng": "qianqin",
+  "zhongshan": "qianqin",
+  "xindu": "qianqin",
+  "yanci": "qianqin",
+  "lingzhi": "qianqin",
+  "xiangping": "qianqin",
+  "xingyang": "qianqin",
+  "xuchang": "qianqin",
+  "qiao": "qianqin",
+  "guanggu": "qianqin",
+  "xiapi": "qianqin",
+  "pengcheng": "qianqin",
+  "wan": "qianqin",
+  "jiangling": "jin",
+  "wuchang": "jin",
+  "hefei": "jin",
+  "jiangzhou": "qianqin",
+  "kuaiji": "jin",
+  "wu": "jin",
+  "jingkou": "jin",
+  "yuzhang": "jin",
+  "xunyang": "jin",
+  "changsha": "jin",
+  "panyu": "jin",
+  "shian": "jin",
+  "longbian": "jin",
+  "jianning": "jin",
+  "shangyong": "qianqin",
+  "yongan": "jin",
+  "runan": "qianqin",
+  "huaiyin": "jin",
+  "junyi": "qianqin",
+  "donglai": "qianqin",
+  "yewang": "qianqin",
+  "hongnong": "qianqin",
+  "daijun": "qianqin",
+  "dunhuang": "qianqin",
+  "jiuquan": "qianqin",
+  "gaochang": "qianqin",
+  "xiping": "qianqin",
+  "baxi": "qianqin",
+  "wandu": "goguryeo",
+  "pyongyang": "goguryeo",
+  "hanseong": "baekje",
+  "geumseong": "silla",
+  "zimeng": "qianqin",
+  "tuyuhunting": "tuyuhun",
+  "shuofang": "qianqin",
+  "xuantu": "qianqin",
+  "tuhe": "qianqin"
+ }
+}

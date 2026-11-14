@@ -1,0 +1,698 @@
+{
+ "id": "s357",
+ "year": 357,
+ "startMonth": 4,
+ "name": "前秦の台頭",
+ "summary": "関中の前秦では、暴君と記される苻生が位にあり、従弟の苻堅が人望を集めている。東には慕容氏の前燕、南には桓温が実権を握る東晋があり、羌の姚襄が関中をうかがう。",
+ "scenarioNote": "357年4月を開始とした。史実では、5月に姚襄が前秦に敗れて戦死し、6月に苻堅が苻生を廃して位につく。この時点の前秦の君主は苻生で、苻堅は東海王、王猛はまだ官についていない。并州の張平、羌の姚襄を独立の勢力とした。河南・淮北の都市の所属は、燕・晋・土地の有力者の間で揺れており、推定が多い。",
+ "factions": [
+  {
+   "id": "qianqin",
+   "name": "前秦",
+   "people": "氐",
+   "ruler": "苻生",
+   "color": "#2f6b4f"
+  },
+  {
+   "id": "qianyan",
+   "name": "前燕",
+   "people": "鮮卑",
+   "ruler": "慕容儁",
+   "color": "#cf62a4"
+  },
+  {
+   "id": "jin",
+   "name": "東晋",
+   "people": "漢",
+   "ruler": "司馬聃(穆帝)",
+   "color": "#3c86c9"
+  },
+  {
+   "id": "qianliang",
+   "name": "前涼",
+   "people": "漢",
+   "ruler": "張玄靚",
+   "color": "#c9a046"
+  },
+  {
+   "id": "dai",
+   "name": "代(拓跋部)",
+   "people": "鮮卑",
+   "ruler": "拓跋什翼犍",
+   "color": "#3fa595"
+  },
+  {
+   "id": "zhangping",
+   "name": "張平(并州)",
+   "people": "漢",
+   "ruler": "張平",
+   "color": "#c9d27a"
+  },
+  {
+   "id": "yaoxiang",
+   "name": "姚襄(羌)",
+   "people": "羌",
+   "ruler": "姚襄",
+   "color": "#b46ac0"
+  },
+  {
+   "id": "tiefu",
+   "name": "鉄弗部",
+   "people": "匈奴",
+   "ruler": "劉閼陋頭",
+   "color": "#6b7684"
+  },
+  {
+   "id": "tuyuhun",
+   "name": "吐谷渾",
+   "people": "鮮卑",
+   "ruler": "碎奚",
+   "color": "#8a8a4a"
+  },
+  {
+   "id": "chouchi",
+   "name": "仇池",
+   "people": "氐",
+   "ruler": "楊俊",
+   "color": "#9c5a2e"
+  },
+  {
+   "id": "goguryeo",
+   "name": "高句麗",
+   "people": "高句麗(貊)",
+   "ruler": "故国原王",
+   "color": "#a04060"
+  },
+  {
+   "id": "baekje",
+   "name": "百済",
+   "people": "百済(韓・扶余系)",
+   "ruler": "近肖古王",
+   "color": "#3d8f7a"
+  },
+  {
+   "id": "silla",
+   "name": "新羅",
+   "people": "新羅(韓)",
+   "ruler": "奈勿尼師今",
+   "color": "#e6d36a"
+  }
+ ],
+ "uncertainOwners": [
+  "hongnong",
+  "longxi",
+  "gaonu",
+  "pingyang",
+  "lishi",
+  "yanmen",
+  "shangdang",
+  "yewang",
+  "daijun",
+  "zimeng",
+  "xuchang",
+  "runan",
+  "qiao",
+  "xingyang",
+  "junyi",
+  "pengcheng",
+  "luoyang",
+  "gaochang",
+  "tuyuhunting",
+  "shuofang",
+  "donglai",
+  "yanci"
+ ],
+ "ownerNote": "洛陽は、前年に桓温が姚襄を破って取り戻した。姚襄はそのあと北へ移り、関中の北の杏城のあたりにいたので、近くの高奴をその拠点とした(推定)。",
+ "cityNames": {
+  "jicheng": {
+   "name": "龍城",
+   "reading": "りゅうじょう"
+  }
+ },
+ "relations": {
+  "qianqin|yaoxiang": "war",
+  "jin|qianqin": "war",
+  "jin|qianyan": "war",
+  "qianqin|zhangping": "war",
+  "dai|tiefu": "war",
+  "baekje|goguryeo": "war",
+  "jin|qianliang": "alliance",
+  "chouchi|jin": "alliance",
+  "goguryeo|qianyan": "alliance"
+ },
+ "relationNote": "前秦と前燕は、このころは直接には戦っていないので和平とした。高句麗は355年に前燕から王に封じられているので、前燕との同盟とした。",
+ "governors": {
+  "puban": "fu_liu",
+  "hongnong": "fu_sou",
+  "shanggui": "fu_shuang",
+  "ji": "murong_jun",
+  "jicheng": "murong_de",
+  "ye": "murong_ping",
+  "yewang": "lv_hu",
+  "jiankang": "sima_dan",
+  "luoyang": "dai_shi",
+  "hanzhong": "sima_xun",
+  "chengdu": "zhou_fu",
+  "shouchun": "xie_shang",
+  "kuaiji": "sima_yu",
+  "xiangyang": "huan_huo",
+  "guzang": "zhang_xuanjing",
+  "shengle": "shiyijian",
+  "jinyang": "zhang_ping_bing",
+  "shuofang": "liu_eloutou",
+  "tuyuhunting": "suixi",
+  "chouchi": "yang_jun",
+  "wandu": "sayu",
+  "hanseong": "geunchogo",
+  "geumseong": "naemul"
+ },
+ "governorNote": "苻生は長安にいるが、軍団の指揮官とは別に置くため、太守には入れていない。司馬昱を会稽に置いたのは、会稽王という封号によるゲーム上の設定(実際は建康で政治を補佐していた)。",
+ "armies": [
+  {
+   "id": "army_fu_sheng",
+   "name": "苻生の親衛軍",
+   "factionId": "qianqin",
+   "commanderId": "fu_sheng",
+   "lon": 108.7,
+   "lat": 34.45,
+   "facing": 0,
+   "troops": {
+    "infantry": 9000,
+    "cavalry": 4000,
+    "archer": 2000
+   },
+   "morale": 60,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_huangmei",
+   "name": "苻黄眉軍",
+   "factionId": "qianqin",
+   "commanderId": "fu_huangmei",
+   "lon": 109.0,
+   "lat": 34.95,
+   "facing": 0,
+   "troops": {
+    "infantry": 12000,
+    "cavalry": 8000,
+    "archer": 4000
+   },
+   "morale": 82,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_fu_jian",
+   "name": "苻堅軍",
+   "factionId": "qianqin",
+   "commanderId": "fu_jian",
+   "lon": 109.4,
+   "lat": 34.4,
+   "facing": 0,
+   "troops": {
+    "infantry": 7000,
+    "cavalry": 4000,
+    "archer": 2000
+   },
+   "morale": 90,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_yao_xiang",
+   "name": "姚襄軍",
+   "factionId": "yaoxiang",
+   "commanderId": "yao_xiang",
+   "lon": 109.4,
+   "lat": 36.05,
+   "facing": 0,
+   "troops": {
+    "infantry": 10000,
+    "cavalry": 9000,
+    "archer": 3000
+   },
+   "morale": 90,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_ke",
+   "name": "慕容恪軍",
+   "factionId": "qianyan",
+   "commanderId": "murong_ke",
+   "lon": 115.0,
+   "lat": 37.7,
+   "facing": 0,
+   "troops": {
+    "infantry": 16000,
+    "cavalry": 16000,
+    "archer": 5000
+   },
+   "morale": 95,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_chui",
+   "name": "慕容垂軍",
+   "factionId": "qianyan",
+   "commanderId": "murong_chui",
+   "lon": 118.0,
+   "lat": 39.7,
+   "facing": 0,
+   "troops": {
+    "infantry": 5000,
+    "cavalry": 8000,
+    "archer": 2000
+   },
+   "morale": 90,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_huan_wen",
+   "name": "桓温軍",
+   "factionId": "jin",
+   "commanderId": "huan_wen",
+   "lon": 112.45,
+   "lat": 30.75,
+   "facing": 0,
+   "troops": {
+    "infantry": 22000,
+    "cavalry": 3000,
+    "archer": 7000
+   },
+   "morale": 90,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_xun_xian",
+   "name": "荀羨軍",
+   "factionId": "jin",
+   "commanderId": "xun_xian",
+   "lon": 117.7,
+   "lat": 34.0,
+   "facing": 0,
+   "troops": {
+    "infantry": 8000,
+    "cavalry": 1500,
+    "archer": 3000
+   },
+   "morale": 82,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_zhang_hao",
+   "name": "張蚝軍",
+   "factionId": "zhangping",
+   "commanderId": "zhang_hao",
+   "lon": 112.7,
+   "lat": 37.5,
+   "facing": 0,
+   "troops": {
+    "infantry": 5000,
+    "cavalry": 3500,
+    "archer": 1500
+   },
+   "morale": 85,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_kuren",
+   "name": "劉庫仁軍",
+   "factionId": "dai",
+   "commanderId": "liu_kuren",
+   "lon": 112.4,
+   "lat": 40.3,
+   "facing": 0,
+   "troops": {
+    "infantry": 0,
+    "cavalry": 7000,
+    "archer": 1000
+   },
+   "morale": 82,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_song_hun",
+   "name": "宋混軍",
+   "factionId": "qianliang",
+   "commanderId": "song_hun",
+   "lon": 102.9,
+   "lat": 37.6,
+   "facing": 0,
+   "troops": {
+    "infantry": 6000,
+    "cavalry": 4500,
+    "archer": 2000
+   },
+   "morale": 78,
+   "fatigue": 10,
+   "food": 45
+  }
+ ],
+ "roster": {
+  "fu_sheng": {
+   "factionId": "qianqin",
+   "role": "ruler"
+  },
+  "fu_jian": {
+   "factionId": "qianqin"
+  },
+  "fu_fa": {
+   "factionId": "qianqin"
+  },
+  "fu_rong": {
+   "factionId": "qianqin",
+   "title": "苻堅の弟(若年)"
+  },
+  "fu_huangmei": {
+   "factionId": "qianqin"
+  },
+  "fu_liu": {
+   "factionId": "qianqin"
+  },
+  "fu_sou": {
+   "factionId": "qianqin"
+  },
+  "fu_shuang": {
+   "factionId": "qianqin"
+  },
+  "deng_qiang": {
+   "factionId": "qianqin"
+  },
+  "lv_polou": {
+   "factionId": "qianqin"
+  },
+  "qiang_wang": {
+   "factionId": "qianqin"
+  },
+  "liang_pinglao": {
+   "factionId": "qianqin"
+  },
+  "wang_meng": {
+   "factionId": "qianqin"
+  },
+  "li_wei": {
+   "factionId": "qianqin"
+  },
+  "dong_rong": {
+   "factionId": "qianqin"
+  },
+  "lv_guang": {
+   "factionId": "qianqin"
+  },
+  "xu_cheng": {
+   "factionId": "qianqin"
+  },
+  "murong_jun": {
+   "factionId": "qianyan",
+   "role": "ruler"
+  },
+  "murong_ke": {
+   "factionId": "qianyan"
+  },
+  "murong_chui": {
+   "factionId": "qianyan"
+  },
+  "murong_ping": {
+   "factionId": "qianyan"
+  },
+  "murong_de": {
+   "factionId": "qianyan"
+  },
+  "yang_wu": {
+   "factionId": "qianyan"
+  },
+  "huangfu_zhen": {
+   "factionId": "qianyan"
+  },
+  "feng_yi": {
+   "factionId": "qianyan",
+   "title": "太尉"
+  },
+  "muyu_gen": {
+   "factionId": "qianyan"
+  },
+  "yue_wan": {
+   "factionId": "qianyan"
+  },
+  "li_ji": {
+   "factionId": "qianyan"
+  },
+  "fu_yan": {
+   "factionId": "qianyan"
+  },
+  "lv_hu": {
+   "factionId": "qianyan"
+  },
+  "sima_dan": {
+   "factionId": "jin",
+   "role": "ruler"
+  },
+  "huan_wen": {
+   "factionId": "jin"
+  },
+  "huan_chong": {
+   "factionId": "jin"
+  },
+  "huan_huo": {
+   "factionId": "jin"
+  },
+  "xi_chao": {
+   "factionId": "jin"
+  },
+  "xie_an": {
+   "factionId": "jin"
+  },
+  "xie_shang": {
+   "factionId": "jin"
+  },
+  "xie_yi": {
+   "factionId": "jin"
+  },
+  "xie_wan": {
+   "factionId": "jin"
+  },
+  "xie_xuan": {
+   "factionId": "jin",
+   "title": "謝奕の子(14歳)"
+  },
+  "xie_shi": {
+   "factionId": "jin",
+   "title": "謝安の弟"
+  },
+  "wang_xizhi": {
+   "factionId": "jin"
+  },
+  "wang_tanzhi": {
+   "factionId": "jin"
+  },
+  "wang_biaozhi": {
+   "factionId": "jin"
+  },
+  "sima_yu": {
+   "factionId": "jin"
+  },
+  "xun_xian": {
+   "factionId": "jin"
+  },
+  "xi_tan": {
+   "factionId": "jin"
+  },
+  "sima_xun": {
+   "factionId": "jin"
+  },
+  "zhou_fu": {
+   "factionId": "jin",
+   "title": "益州刺史"
+  },
+  "yuan_zhen": {
+   "factionId": "jin"
+  },
+  "dai_shi": {
+   "factionId": "jin"
+  },
+  "mao_muzhi": {
+   "factionId": "jin"
+  },
+  "zhuge_you": {
+   "factionId": "jin"
+  },
+  "zhang_xuanjing": {
+   "factionId": "qianliang",
+   "role": "ruler"
+  },
+  "zhang_guan": {
+   "factionId": "qianliang"
+  },
+  "song_hun": {
+   "factionId": "qianliang"
+  },
+  "song_cheng": {
+   "factionId": "qianliang"
+  },
+  "shiyijian": {
+   "factionId": "dai",
+   "role": "ruler"
+  },
+  "yan_feng": {
+   "factionId": "dai"
+  },
+  "xu_qian": {
+   "factionId": "dai"
+  },
+  "tuoba_shi": {
+   "factionId": "dai"
+  },
+  "liu_kuren": {
+   "factionId": "dai"
+  },
+  "zhang_ping_bing": {
+   "factionId": "zhangping",
+   "role": "ruler"
+  },
+  "zhang_hao": {
+   "factionId": "zhangping"
+  },
+  "yao_xiang": {
+   "factionId": "yaoxiang",
+   "role": "ruler"
+  },
+  "yao_chang": {
+   "factionId": "yaoxiang"
+  },
+  "quan_yi": {
+   "factionId": "yaoxiang"
+  },
+  "yin_chi": {
+   "factionId": "yaoxiang"
+  },
+  "xue_zan": {
+   "factionId": "yaoxiang"
+  },
+  "liu_eloutou": {
+   "factionId": "tiefu",
+   "role": "ruler",
+   "title": "鉄弗部の主"
+  },
+  "liu_xiwuqi": {
+   "factionId": "tiefu"
+  },
+  "liu_weichen": {
+   "factionId": "tiefu"
+  },
+  "suixi": {
+   "factionId": "tuyuhun",
+   "role": "ruler"
+  },
+  "yang_jun": {
+   "factionId": "chouchi",
+   "role": "ruler"
+  },
+  "yang_shi": {
+   "factionId": "chouchi"
+  },
+  "sayu": {
+   "factionId": "goguryeo",
+   "role": "ruler",
+   "title": "高句麗王(故国原王)"
+  },
+  "geunchogo": {
+   "factionId": "baekje",
+   "role": "ruler"
+  },
+  "geungusu": {
+   "factionId": "baekje"
+  },
+  "naemul": {
+   "factionId": "silla",
+   "role": "ruler"
+  }
+ },
+ "cityOwners": {
+  "luoyang": "jin",
+  "changan": "qianqin",
+  "pingyang": "zhangping",
+  "xiangguo": "qianyan",
+  "ye": "qianyan",
+  "jinyang": "zhangping",
+  "ji": "qianyan",
+  "shengle": "dai",
+  "guzang": "qianliang",
+  "shanggui": "qianqin",
+  "jiankang": "jin",
+  "xiangyang": "jin",
+  "shouchun": "jin",
+  "chengdu": "jin",
+  "jicheng": "qianyan",
+  "fengyi": "qianqin",
+  "chencang": "qianqin",
+  "anding": "qianqin",
+  "gaonu": "yaoxiang",
+  "puban": "qianqin",
+  "longxi": "qianqin",
+  "chouchi": "chouchi",
+  "hanzhong": "jin",
+  "jincheng": "qianliang",
+  "zhangye": "qianliang",
+  "shangdang": "qianyan",
+  "lishi": "zhangping",
+  "yanmen": "zhangping",
+  "pingcheng": "dai",
+  "zhongshan": "qianyan",
+  "xindu": "qianyan",
+  "yanci": "qianyan",
+  "lingzhi": "qianyan",
+  "xiangping": "qianyan",
+  "xingyang": "jin",
+  "xuchang": "jin",
+  "qiao": "jin",
+  "guanggu": "qianyan",
+  "xiapi": "jin",
+  "pengcheng": "jin",
+  "wan": "jin",
+  "jiangling": "jin",
+  "wuchang": "jin",
+  "hefei": "jin",
+  "jiangzhou": "jin",
+  "kuaiji": "jin",
+  "wu": "jin",
+  "jingkou": "jin",
+  "yuzhang": "jin",
+  "xunyang": "jin",
+  "changsha": "jin",
+  "panyu": "jin",
+  "shian": "jin",
+  "longbian": "jin",
+  "jianning": "jin",
+  "shangyong": "jin",
+  "yongan": "jin",
+  "runan": "jin",
+  "huaiyin": "jin",
+  "junyi": "jin",
+  "donglai": "qianyan",
+  "yewang": "qianyan",
+  "hongnong": "qianqin",
+  "daijun": "qianyan",
+  "dunhuang": "qianliang",
+  "jiuquan": "qianliang",
+  "gaochang": "qianliang",
+  "xiping": "qianliang",
+  "baxi": "jin",
+  "wandu": "goguryeo",
+  "pyongyang": "goguryeo",
+  "hanseong": "baekje",
+  "geumseong": "silla",
+  "zimeng": "qianyan",
+  "tuyuhunting": "tuyuhun",
+  "shuofang": "tiefu",
+  "xuantu": "qianyan",
+  "tuhe": "qianyan"
+ }
+}

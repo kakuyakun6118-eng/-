@@ -421,6 +421,9 @@ export interface ScenarioEntry {
   year: number;
   title: string;
   summary: string;
+  /** 選択画面に出す、おもな勢力とおもな人物 */
+  powers?: string[];
+  figures?: string[];
   /** ready = 遊べる / planned = 準備中(未実装) */
   status: "ready" | "planned";
 }
