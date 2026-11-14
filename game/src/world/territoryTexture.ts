@@ -6,9 +6,9 @@ import type { TerrainGrid } from "../sim/TerrainGrid";
 import type { Territory } from "../sim/Territory";
 
 /** 計算用のマス1つを、縦横この数の点に細かくする(境界をなめらかにするため) */
-const SCALE = 6;
+const SCALE = 4; // 地図を広げたので、絵の大きさが増えすぎないよう細かさを下げた(以前は6)
 /** 境界からこの点数ぶん離れると、距離の値が上限になる */
-export const TERRITORY_EDGE_RANGE = 12;
+export const TERRITORY_EDGE_RANGE = 8;
 
 export class TerritoryTexture {
   readonly texture: THREE.DataTexture;

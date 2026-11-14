@@ -101,7 +101,7 @@ def main():
     region_dir = os.path.join(HERE, "..", "src", "data", "regions", region_id)
     region = json.load(open(os.path.join(region_dir, "region.json"), encoding="utf-8"))
     b = region["bounds"]
-    W = OUT_WIDTH
+    W = int(region.get("textureWidth", OUT_WIDTH))
     H = round(W * (b["north"] - b["south"]) / (b["east"] - b["west"]))
 
     def to_px(lon, lat):
@@ -115,7 +115,9 @@ def main():
     labels, n = ndimage.label(sea)
     if n:
         sizes = ndimage.sum(sea, labels, range(1, n + 1))
-        sea = np.isin(labels, [i + 1 for i, s in enumerate(sizes) if s > 400])
+        # 海は、大きくて、地図の端に接しているものだけ(トルファン盆地のような、海面より低い内陸の盆地を海にしない)
+        edge = set(np.unique(np.concatenate([labels[0], labels[-1], labels[:, 0], labels[:, -1]])))
+        sea = np.isin(labels, [i + 1 for i, s in enumerate(sizes) if s > 400 and (i + 1) in edge])
 
     # --- 湖 ---
     lakes = json.load(open(fetch(NE_BASE + LAKES_FILE, os.path.join(CACHE, LAKES_FILE)), encoding="utf-8"))

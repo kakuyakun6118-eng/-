@@ -87,6 +87,48 @@
       "people": "漢人",
       "ruler": "崔毖",
       "color": "#9fcf6a"
+    },
+    {
+      "id": "goguryeo",
+      "name": "高句麗",
+      "people": "高句麗(貊)",
+      "ruler": "美川王",
+      "color": "#a04060"
+    },
+    {
+      "id": "baekje",
+      "name": "百済",
+      "people": "百済(韓・扶余系)",
+      "ruler": "比流王",
+      "color": "#3d8f7a"
+    },
+    {
+      "id": "silla",
+      "name": "新羅",
+      "people": "新羅(韓)",
+      "ruler": "訖解尼師今",
+      "color": "#e6d36a"
+    },
+    {
+      "id": "yuwen",
+      "name": "宇文部",
+      "people": "鮮卑(匈奴系とも)",
+      "ruler": "宇文遜昵延",
+      "color": "#5d6fc4"
+    },
+    {
+      "id": "tuyuhun",
+      "name": "吐谷渾",
+      "people": "鮮卑",
+      "ruler": "吐延",
+      "color": "#8a8a4a"
+    },
+    {
+      "id": "tiefu",
+      "name": "鉄弗部",
+      "people": "匈奴",
+      "ruler": "劉虎",
+      "color": "#6b7684"
     }
   ],
   "cityOwners": {
@@ -134,7 +176,40 @@
     "jiangling": "jin",
     "wuchang": "jin",
     "hefei": "jin",
-    "jiangzhou": "chenghan"
+    "jiangzhou": "chenghan",
+    "kuaiji": "jin",
+    "wu": "jin",
+    "jingkou": "jin",
+    "yuzhang": "jin",
+    "xunyang": "jin",
+    "changsha": "jin",
+    "panyu": "jin",
+    "shian": "jin",
+    "longbian": "jin",
+    "jianning": "jin",
+    "shangyong": "jin",
+    "yongan": "jin",
+    "runan": "jin",
+    "huaiyin": "jin",
+    "junyi": "jin",
+    "donglai": "jin",
+    "yewang": "jin",
+    "hongnong": "han_zhao",
+    "daijun": "dai",
+    "dunhuang": "qianliang",
+    "jiuquan": "qianliang",
+    "gaochang": "qianliang",
+    "xiping": "qianliang",
+    "baxi": "chenghan",
+    "wandu": "goguryeo",
+    "pyongyang": "goguryeo",
+    "hanseong": "baekje",
+    "geumseong": "silla",
+    "zimeng": "yuwen",
+    "tuyuhunting": "tuyuhun",
+    "shuofang": "tiefu",
+    "xuantu": "cui_bi",
+    "tuhe": "murong"
   },
   "uncertainOwners": [
     "chencang",
@@ -160,7 +235,25 @@
     "gouzhu",
     "juyong",
     "lulong",
-    "chenggao"
+    "chenggao",
+    "longbian",
+    "shangyong",
+    "yongan",
+    "runan",
+    "junyi",
+    "donglai",
+    "yewang",
+    "daijun",
+    "gaochang",
+    "zimeng",
+    "tuyuhunting",
+    "shuofang",
+    "xuantu",
+    "ziwu",
+    "zhiguan",
+    "wuruan",
+    "huanyuan",
+    "yumen"
   ],
   "ownerNote": "317年の所属は史料でも入り組んでおり、uncertainOwners に挙げた都市は推定。晋の所属とした中原の都市には、晋に従う土地の有力者(塢主)が治めていたものを含む。",
   "passOwners": {
@@ -177,7 +270,15 @@
     "gouzhu": "dai",
     "juyong": "duan",
     "lulong": "duan",
-    "chenggao": "jin"
+    "chenggao": "jin",
+    "longguan": "sima_bao",
+    "ziwu": "han_zhao",
+    "zhiguan": "han_zhao",
+    "wuruan": "dai",
+    "huanyuan": "han_zhao",
+    "minge": "jin",
+    "hengpu": "jin",
+    "yumen": "qianliang"
   },
   "governors": {
     "pingyang": "liu_cong",
@@ -211,7 +312,16 @@
     "chencang": "zhang_chun",
     "chouchi": "yang_nandi",
     "guanggu": "cao_yi",
-    "xiangping": "cui_bi"
+    "xiangping": "cui_bi",
+    "wandu": "eulbul",
+    "hanseong": "biryu",
+    "geumseong": "heulhae",
+    "zimeng": "yuwen_xunniyan",
+    "tuyuhunting": "tuyan",
+    "shuofang": "liu_hu",
+    "panyu": "tao_kan",
+    "yewang": "guo_mo",
+    "donglai": "su_jun"
   },
   "governorNote": "governors は、317年の開始時に各都市・関所を守る人物。君主は居城に置いた。それ以外の配置の多くは、史料で確かめたものではなく、ゲーム上の設定。",
   "relations": {
@@ -229,7 +339,11 @@
     "jin|qianliang": "alliance",
     "dai|jin": "alliance",
     "jin|murong": "alliance",
-    "cui_bi|jin": "alliance"
+    "cui_bi|jin": "alliance",
+    "dai|tiefu": "war",
+    "han_zhao|tiefu": "alliance",
+    "murong|yuwen": "war",
+    "baekje|goguryeo": "war"
   },
-  "relationNote": "317年ごろの大まかな状況をもとにした、ゲーム上の設定。書かれていない組は「和平」(互いに攻めない)。石勒は名目上は漢の将軍なので同盟とした(史実では319年に決裂)。晋から官位を受けていた勢力は、晋との同盟とした。"
+  "relationNote": "317年ごろの大まかな状況をもとにした、ゲーム上の設定。書かれていない組は「和平」(互いに攻めない)。石勒は名目上は漢の将軍なので同盟とした(史実では319年に決裂)。晋から官位を受けていた勢力は、晋との同盟とした。 鉄弗部は漢から爵位を受けていたので漢との同盟とし、拓跋部とは戦争とした。宇文部と慕容部、高句麗と百済は、対立していたことをもとに戦争とした(このころに実際に戦っていたかは確かめていない)。"
 }

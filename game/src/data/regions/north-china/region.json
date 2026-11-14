@@ -1,6 +1,12 @@
 {
   "id": "north-china",
-  "name": "華北・中原",
-  "bounds": { "west": 99, "east": 125, "south": 28.5, "north": 43.5 },
-  "gridStep": 0.05
+  "name": "東アジア(華北・中原・江南・河西・遼東・朝鮮半島)",
+  "bounds": {
+    "west": 88,
+    "east": 131,
+    "south": 20.5,
+    "north": 46
+  },
+  "gridStep": 0.08,
+  "textureWidth": 3072
 }

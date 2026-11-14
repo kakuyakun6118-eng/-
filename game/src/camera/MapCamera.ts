@@ -9,7 +9,7 @@ export interface WorldRect {
 }
 
 const MIN_DISTANCE = 5;
-const MAX_DISTANCE = 125;
+const MAX_DISTANCE = 190; // 地図を広げたので、より遠くまで引けるようにした(以前は125)
 /** 近づくほど低い角度から、遠ざかるほど真上に近い角度から見る */
 const PITCH_NEAR = THREE.MathUtils.degToRad(43);
 const PITCH_FAR = THREE.MathUtils.degToRad(60);

@@ -111,6 +111,8 @@ export class TerrainGrid {
       this.kinds[k] = KINDS.indexOf("plain");
     }
 
+    this.connectIsolated(places);
+
     // 関所:塞ぐ線の上のマスを通れなくし、関所のマスだけを「門」として通れるようにする
     for (const barrier of [...passes.map((p) => p.barrier), ...extraBarriers]) {
       for (let s = 0; s < barrier.length - 1; s++) {
@@ -137,6 +139,66 @@ export class TerrainGrid {
       this.costs[k] = terrainRules.hill.cost ?? 2;
       this.kinds[k] = KINDS.indexOf("hill");
       this.gates.set(k, p.id);
+    }
+  }
+
+  /**
+   * 川や湖に囲まれて陸の孤島になった都市に、いちばん近い「広い陸地」までの渡し場を付ける。
+   * (地形の細かさの都合で、川べりの都市がまわりを水のマスに囲まれてしまうことがある)
+   */
+  private connectIsolated(places: { lon: number; lat: number }[]): void {
+    const { cols, rows, costs } = this;
+    const n = cols * rows;
+    // 陸続きの範囲ごとに番号を付け、広さを数える(上下左右のつながりで見る)
+    const comp = new Int32Array(n).fill(-1);
+    const sizes: number[] = [];
+    const stack: number[] = [];
+    for (let k = 0; k < n; k++) {
+      if (comp[k] !== -1 || !isFinite(costs[k])) continue;
+      const id = sizes.length;
+      let size = 0;
+      comp[k] = id;
+      stack.push(k);
+      while (stack.length > 0) {
+        const c = stack.pop()!;
+        size++;
+        const x = c % cols;
+        for (const m of [c - cols, c + cols, x > 0 ? c - 1 : -1, x < cols - 1 ? c + 1 : -1]) {
+          if (m < 0 || m >= n || comp[m] !== -1 || !isFinite(costs[m])) continue;
+          comp[m] = id;
+          stack.push(m);
+        }
+      }
+      sizes.push(size);
+    }
+    const crossing = KINDS.indexOf("crossing");
+    for (const p of places) {
+      const [i, j] = this.cellOf(p.lon, p.lat);
+      const start = j * cols + i;
+      if (sizes[comp[start]] >= 300) continue;
+      // 水のマスを越えて、いちばん近い広い陸地を探す
+      const prev = new Int32Array(n).fill(-2);
+      const queue = [start];
+      prev[start] = -1;
+      let found = -1;
+      for (let h = 0; h < queue.length && found < 0 && h < 4000; h++) {
+        const c = queue[h];
+        const x = c % cols;
+        for (const m of [c - cols, c + cols, x > 0 ? c - 1 : -1, x < cols - 1 ? c + 1 : -1]) {
+          if (m < 0 || m >= n || prev[m] !== -2) continue;
+          prev[m] = c;
+          if (isFinite(costs[m]) && sizes[comp[m]] >= 300) {
+            found = m;
+            break;
+          }
+          queue.push(m);
+        }
+      }
+      for (let c = found; c >= 0 && c !== start; c = prev[c]) {
+        if (isFinite(costs[c])) continue;
+        costs[c] = terrainRules.crossing.cost ?? 5;
+        this.kinds[c] = crossing;
+      }
     }
   }
 
