@@ -1,7 +1,7 @@
 // 進軍の計算用に、地形を約11km四方のマスに分けて種類を決める。
 // 3D表示とは別物で、ここは「どこが通りやすいか」だけを扱う。
 import { terrainRules } from "../data";
-import type { Crossing, TerrainKind } from "../data/types";
+import type { Crossing, LonLatPair, Pass, TerrainKind } from "../data/types";
 import type { HeightField } from "../world/heightField";
 
 /** マス1つの大きさ(度) */
@@ -26,7 +26,10 @@ export class TerrainGrid {
   private readonly west: number;
   private readonly north: number;
 
-  constructor(field: HeightField, crossings: Crossing[]) {
+  /** 関所のあるマス → 関所ID。敵の関所のマスには入れない(判定は、経路を探す側が行う) */
+  readonly gates = new Map<number, string>();
+
+  constructor(field: HeightField, crossings: Crossing[], passes: Pass[] = [], extraBarriers: LonLatPair[][] = []) {
     const b = field.region.info.bounds;
     this.west = b.west;
     this.north = b.north;
@@ -97,6 +100,34 @@ export class TerrainGrid {
 
     for (let k = 0; k < this.kinds.length; k++) {
       this.costs[k] = terrainRules[KINDS[this.kinds[k]]].cost ?? Infinity;
+    }
+
+    // 関所:塞ぐ線の上のマスを通れなくし、関所のマスだけを「門」として通れるようにする
+    for (const barrier of [...passes.map((p) => p.barrier), ...extraBarriers]) {
+      for (let s = 0; s < barrier.length - 1; s++) {
+        // 細い線(ななめにもつながる1マス幅)で塗る。太く塗ると、関所のマスの両側がふさがってしまう
+        let [i, j] = this.cellOf(barrier[s][0], barrier[s][1]);
+        const [i1, j1] = this.cellOf(barrier[s + 1][0], barrier[s + 1][1]);
+        const di = Math.abs(i1 - i);
+        const dj = Math.abs(j1 - j);
+        const si = i < i1 ? 1 : -1;
+        const sj = j < j1 ? 1 : -1;
+        let err = di - dj;
+        for (;;) {
+          this.costs[j * this.cols + i] = Infinity;
+          if (i === i1 && j === j1) break;
+          const e2 = err * 2;
+          if (e2 > -dj) { err -= dj; i += si; }
+          if (e2 < di) { err += di; j += sj; }
+        }
+      }
+    }
+    for (const p of passes) {
+      const [i, j] = this.cellOf(p.lon, p.lat);
+      const k = j * this.cols + i;
+      this.costs[k] = terrainRules.hill.cost ?? 2;
+      this.kinds[k] = KINDS.indexOf("hill");
+      this.gates.set(k, p.id);
     }
   }
 

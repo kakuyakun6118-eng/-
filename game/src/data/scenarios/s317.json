@@ -149,7 +149,34 @@
     "pengcheng",
     "wan",
     "xiangping",
-    "luoyang"
+    "luoyang",
+    "wuguan",
+    "sanguan",
+    "xiaoguan",
+    "yangping",
+    "huguan",
+    "tianjing",
+    "jingxing",
+    "gouzhu",
+    "juyong",
+    "lulong",
+    "chenggao"
   ],
-  "ownerNote": "317年の所属は史料でも入り組んでおり、uncertainOwners に挙げた都市は推定。晋の所属とした中原の都市には、晋に従う土地の有力者(塢主)が治めていたものを含む。"
+  "ownerNote": "317年の所属は史料でも入り組んでおり、uncertainOwners に挙げた都市は推定。晋の所属とした中原の都市には、晋に従う土地の有力者(塢主)が治めていたものを含む。",
+  "passOwners": {
+    "tongguan": "han_zhao",
+    "hangu": "han_zhao",
+    "wuguan": "han_zhao",
+    "sanguan": "sima_bao",
+    "xiaoguan": "sima_bao",
+    "yangping": "chenghan",
+    "jiange": "chenghan",
+    "huguan": "han_zhao",
+    "tianjing": "han_zhao",
+    "jingxing": "shile",
+    "gouzhu": "dai",
+    "juyong": "duan",
+    "lulong": "duan",
+    "chenggao": "jin"
+  }
 }

@@ -91,7 +91,8 @@ function nearestPassable(grid: TerrainGrid, i: number, j: number): [number, numb
 }
 
 /** from から to への経路を探す。行けないときは null */
-export function findRoute(grid: TerrainGrid, from: RoutePoint, to: RoutePoint): Route | null {
+/** closed は、そのマスに入れないかを返す関数(敵の関所など)。省くと、地形だけで判断する */
+export function findRoute(grid: TerrainGrid, from: RoutePoint, to: RoutePoint, closed?: (cell: number) => boolean): Route | null {
   const start = nearestPassable(grid, ...grid.cellOf(from.lon, from.lat));
   const goal = nearestPassable(grid, ...grid.cellOf(to.lon, to.lat));
   if (!start || !goal) return null;
@@ -128,8 +129,10 @@ export function findRoute(grid: TerrainGrid, from: RoutePoint, to: RoutePoint): 
         const ny = y + dy;
         if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) continue;
         const nid = ny * cols + nx;
-        if (!isFinite(costs[nid])) continue;
+        if (!isFinite(costs[nid]) || closed?.(nid)) continue;
         if (dx !== 0 && dy !== 0) {
+          // 斜めに進むとき、通れないマスの角をすり抜けない(関所の塞ぐ線を越えないように)
+          if (!isFinite(costs[y * cols + nx]) || !isFinite(costs[ny * cols + x])) continue;
           // 斜めに進むとき、川や海の角をすり抜けないようにする
           const a = y * cols + nx;
           const b = ny * cols + x;

@@ -10,7 +10,7 @@ export class CityLabels {
   constructor(layer: HTMLElement, markers: CityMarker[]) {
     for (const marker of markers) {
       const el = document.createElement("div");
-      el.className = `city-label rank-${marker.city.rank}`;
+      el.className = `city-label rank-${marker.city.rank}${marker.city.kind === "pass" ? " pass" : ""}`;
       const dot = document.createElement("span");
       dot.className = "dot";
       dot.style.background = marker.faction ? marker.faction.color : "#9a9a9a";
@@ -34,7 +34,8 @@ export class CityLabels {
     for (const { marker, el } of this.items) {
       this.v.copy(marker.labelAnchor).project(camera);
       // 広域では、小さい都市の名前を隠して、文字が重ならないようにする(選択中の都市は出す)
-      const minor = cityLevelOf(marker.city) <= 2 && cameraDistance > 78 && marker !== selected;
+      // 広域では、小さい都市と関所の名前を出さない(関所は都市のすぐそばにあり、重なりやすいので早めに消す)
+      const minor = marker !== selected && (marker.city.kind === "pass" ? cameraDistance > 42 : cityLevelOf(marker.city) <= 2 && cameraDistance > 78);
       const visible = !minor && this.v.z < 1 && Math.abs(this.v.x) < 1.1 && Math.abs(this.v.y) < 1.1;
       el.hidden = !visible;
       if (!visible) continue;

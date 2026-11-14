@@ -1,7 +1,7 @@
 // ゲーム全体のまとめ役。地形・都市・軍団・カメラ・入力・画面表示と、進行の計算(sim)をつなぐ。
 import * as THREE from "three";
 import { MapCamera, type WorldRect } from "../camera/MapCamera";
-import { armies as armyData, factionById, factionOfCity, initialCityOwners, officerById, regions, resolveCityLayout, scenario } from "../data";
+import { passes, extraBarriers, armies as armyData, factionById, factionOfCity, initialCityOwners, officerById, regions, resolveCityLayout, scenario } from "../data";
 import type { Difficulty } from "../battle/ai";
 import { BattleScreen } from "../battle/BattleScreen";
 import type { BattleResult } from "../battle/types";
@@ -148,7 +148,7 @@ export class Game {
     this.scene.add(this.cities.group);
 
     // 進軍の計算用の地形のマス(いまは地域が1つなので、その地域の分だけ作る)
-    this.grid = new TerrainGrid(terrains[0].field, terrains[0].region.crossings);
+    this.grid = new TerrainGrid(terrains[0].field, terrains[0].region.crossings, passes, extraBarriers);
 
     // 街道:都市をつなぐ道を引く。道の上は進軍が速くなる
     const roads = new Roads(terrains[0].region.roads, this.allCities, this.grid, (lon, lat) => terrains[0].heightAt(lon, lat));

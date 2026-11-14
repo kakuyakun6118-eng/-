@@ -274,31 +274,93 @@ export class Campaign {
   }
 
   /** 行きたい場所の近くで、ほかの軍団や都市と重ならず、通れる場所を探す */
-  private freeSpot(target: RoutePoint, self: ArmyState): RoutePoint | null {
+  private freeSpots(target: RoutePoint, self: ArmyState): RoutePoint[] {
     const ok = (p: RoutePoint): boolean =>
       isFinite(this.grid.costAt(p.lon, p.lat)) &&
       this.armies.every((o) => o === self || Math.hypot(o.army.lon - p.lon, o.army.lat - p.lat) >= MIN_SEPARATION) &&
       this.cities.every((c) => Math.hypot(c.lon - p.lon, c.lat - p.lat) >= this.cityReach(c) + 0.1);
-    if (ok(target)) return target;
-    for (let ring = 1; ring <= 6; ring++) {
+    if (ok(target)) return [target];
+    // 空いている場所を、軍団のいまの位置に近い順に並べる(関所の向こう側など、行けない場所を後回しにする)
+    // 目的地に近い輪から順に。同じ輪の中では、軍団のいまの位置に近い側を先に(関所の手前側から着けるように)
+    const d = (p: RoutePoint): number => Math.hypot(p.lon - self.army.lon, p.lat - self.army.lat);
+    const spots: RoutePoint[] = [];
+    for (let ring = 1; ring <= 5; ring++) {
       const r = ring * 0.18;
+      const found: RoutePoint[] = [];
       for (let k = 0; k < ring * 8; k++) {
         const a = (k / (ring * 8)) * Math.PI * 2;
         const p = { lon: target.lon + Math.cos(a) * r, lat: target.lat + Math.sin(a) * r };
-        if (ok(p)) return p;
+        if (ok(p)) found.push(p);
       }
+      spots.push(...found.sort((a, b) => d(a) - d(b)).slice(0, 4));
     }
-    return null;
+    return spots.slice(0, 12);
+  }
+
+  /**
+   * 点検用:関所の両側(塞ぐ線に直角に、35kmほど離れた2点)の間の手間を測る。
+   * open は、この関所だけを開けたとき。sealed は、すべての関所を閉じたとき(行けなければ null)。
+   */
+  passCheck(passId: string): { open: number | null; sealed: number | null } {
+    const pass = this.cities.find((c) => c.id === passId)?.pass;
+    if (!pass) return { open: null, sealed: null };
+    const k = pass.barrier.reduce((best, v, i) => (Math.hypot(v[0] - pass.lon, v[1] - pass.lat) < Math.hypot(pass.barrier[best][0] - pass.lon, pass.barrier[best][1] - pass.lat) ? i : best), 0);
+    const p0 = pass.barrier[Math.max(0, k - 1)];
+    const p1 = pass.barrier[Math.min(pass.barrier.length - 1, k + 1)];
+    const len = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]) || 1;
+    const nx = -(p1[1] - p0[1]) / len;
+    const ny = (p1[0] - p0[0]) / len;
+    const side = (sign: number): RoutePoint | null => {
+      for (const d of [0.35, 0.25, 0.45, 0.55]) {
+        const p = { lon: pass.lon + nx * d * sign, lat: pass.lat + ny * d * sign };
+        if (isFinite(this.grid.costAt(p.lon, p.lat))) return p;
+      }
+      return null;
+    };
+    const a = side(1);
+    const b = side(-1);
+    if (!a || !b) return { open: null, sealed: null };
+    const effort = (closed: (cell: number) => boolean): number | null => {
+      const r = findRoute(this.grid, a, b, closed);
+      return r ? Math.round(r.effort[r.effort.length - 1]) : null;
+    };
+    return {
+      open: effort((cell) => this.grid.gates.has(cell) && this.grid.gates.get(cell) !== passId),
+      sealed: effort((cell) => this.grid.gates.has(cell)),
+    };
+  }
+
+  /** 関所を閉じたとき、結ぶ2都市の間の道のりがどれだけ遠回りになるか(点検用)。行けないときは null */
+  passDetour(passId: string): { open: number | null; closed: number | null } {
+    const pass = this.cities.find((c) => c.id === passId)?.pass;
+    const a = this.cities.find((c) => c.id === pass?.between[0]);
+    const b = this.cities.find((c) => c.id === pass?.between[1]);
+    if (!pass || !a || !b) return { open: null, closed: null };
+    const effort = (closed?: (cell: number) => boolean): number | null => {
+      const r = findRoute(this.grid, a, b, closed);
+      return r ? Math.round(r.effort[r.effort.length - 1]) : null;
+    };
+    return { open: effort(), closed: effort((cell) => this.grid.gates.get(cell) === passId) };
+  }
+
+  /** その軍団が、入れないマスか(敵の勢力が守る関所) */
+  private closedFor(army: Army): (cell: number) => boolean {
+    return (cell) => {
+      const passId = this.grid.gates.get(cell);
+      return passId !== undefined && this.hostile(army, scenario.cityOwners[passId]);
+    };
   }
 
   /** 移動先までの経路を調べる(まだ動かさない)。行けないときは null */
   planRoute(armyId: string, target: RoutePoint): Route | null {
     const s = this.stateOf(armyId);
     if (!s) return null;
-    const spot = this.freeSpot(target, s);
-    if (!spot) return null;
-    const route = findRoute(this.grid, { lon: s.army.lon, lat: s.army.lat }, spot);
-    return route && route.points.length >= 2 ? route : null;
+    const closed = this.closedFor(s.army);
+    for (const spot of this.freeSpots(target, s)) {
+      const route = findRoute(this.grid, { lon: s.army.lon, lat: s.army.lat }, spot, closed);
+      if (route && route.points.length >= 2) return route;
+    }
+    return null;
   }
 
   /** 経路に沿って行軍を始める */

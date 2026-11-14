@@ -1,6 +1,6 @@
 // データの入口。地域やシナリオを増やすときは、ここに登録する。
 import type {
-  Army, City, CityLayout, Crossing, TerrainKind, TerrainRule, CityLevelRule, Faction, Officer, Person, RegionData, RegionInfo, River, Scenario, UnitType,
+  Army, City, CityLayout, Crossing, TerrainKind, TerrainRule, CityLevelRule, Faction, LonLatPair, Officer, Pass, Person, RegionData, RegionInfo, River, Scenario, UnitType,
 } from "./types";
 
 import ncRegion from "./regions/north-china/region.json";
@@ -9,6 +9,7 @@ import ncRivers from "./regions/north-china/rivers.json";
 import ncCities from "./regions/north-china/cities.json";
 import ncCrossings from "./regions/north-china/crossings.json";
 import ncRoads from "./regions/north-china/roads.json";
+import ncPasses from "./regions/north-china/passes.json";
 import terrainCostRules from "./rules/terrainCosts.json";
 import s317 from "./scenarios/s317.json";
 import s317Armies from "./scenarios/s317.armies.json";
@@ -26,11 +27,36 @@ const northChina: RegionData = {
   roads: ncRoads.links,
 };
 
+/** 関所・要衝の一覧(都市とは別のデータ) */
+export const passes = ncPasses.passes as unknown as Pass[];
+/** 関所に属さない塞ぐ線(川岸など) */
+export const extraBarriers = ncPasses.extraBarriers as unknown as LonLatPair[][];
+
+/**
+ * 関所を、都市と同じ形の「拠点」に直す。
+ * 地図の表示・攻城戦・占領・セーブを、都市と同じ仕組みで扱えるようにするため。
+ */
+function passAsStronghold(p: Pass): City {
+  return {
+    id: p.id, name: p.name, reading: p.reading, lon: p.lon, lat: p.lat, rank: "town",
+    description: `${p.connects}を押さえる関所。${p.note}`,
+    kind: "pass", pass: p, level: 1, defense: p.defense, garrison: p.garrison, governorId: p.governorId,
+    // 小さな関城:南北に門、四隅に角楼、中に兵舎と望楼
+    layout: {
+      size: [0.72, 0.5], wallHeight: 0.13, wallThickness: 0.1, gates: { n: 1, s: 1, e: 0, w: 0 }, gateStoreys: 2,
+      cornerTowers: true, wallTowers: 1, density: 0.3, wardSize: 0.3, landmarks: 0, markets: 0, offices: 0, centerpiece: "tower", barracks: 4,
+    },
+  };
+}
+northChina.cities.push(...passes.map(passAsStronghold));
+
 /** 読み込む地域の一覧。将来は central-asia, europe などをここに足す */
 export const regions: RegionData[] = [northChina];
 
 /** 現在のシナリオ */
 export const scenario: Scenario = s317 as Scenario;
+// 関所の所属も、都市と同じ表で引けるようにする
+Object.assign(scenario.cityOwners, scenario.passOwners ?? {});
 
 /** 都市IDから所属勢力を調べる */
 export function factionOfCity(cityId: string): Faction | undefined {

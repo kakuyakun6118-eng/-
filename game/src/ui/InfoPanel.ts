@@ -41,7 +41,7 @@ export class InfoPanel {
     const governor = personById(state?.governorId ?? city.governorId);
     const extra = [
       `守備兵 ${(state?.garrison ?? city.garrison ?? 0).toLocaleString("ja-JP")}`,
-      governor ? `太守 ${governor.name}` : "太守なし",
+      governor ? `${city.kind === "pass" ? "守将" : "太守"} ${governor.name}` : city.kind === "pass" ? "守将なし" : "太守なし",
       city.economy !== undefined ? `経済 ${city.economy}` : "",
       city.food !== undefined ? `食糧生産 ${city.food}` : "",
       city.transport !== undefined ? `交通 ${"★".repeat(city.transport)}` : "",
@@ -49,8 +49,8 @@ export class InfoPanel {
     ].filter(Boolean).join("・");
     this.description.textContent = `${extra}。${city.description}`;
     const level = cityLevelOf(city);
-    this.level.textContent = `${cityLevels[String(level)].label}(レベル${level})`;
-    this.population.textContent = city.population ? `${city.population.toLocaleString("ja-JP")}人` : "不明";
+    this.level.textContent = city.kind === "pass" ? "関所・要衝" : `${cityLevels[String(level)].label}(レベル${level})`;
+    this.population.textContent = city.kind === "pass" ? "—" : city.population ? `${city.population.toLocaleString("ja-JP")}人` : "不明";
     this.defense.textContent = city.defense !== undefined ? String(city.defense) : "不明";
     this.root.hidden = false;
   }

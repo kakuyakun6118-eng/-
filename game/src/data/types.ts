@@ -86,6 +86,28 @@ export interface CityLevelRule {
   layout: CityLayout;
 }
 
+/** 関所・要衝(都市とは別のデータ。passes.json) */
+export interface Pass {
+  id: string;
+  name: string;
+  reading: string;
+  lon: number;
+  lat: number;
+  /** 防御力(0〜100)と、最初の守備兵 */
+  defense: number;
+  garrison: number;
+  /** 守将(人物ID) */
+  governorId?: string;
+  /** この関所が結ぶ2つの都市のID */
+  between: [string, string];
+  /** どことどこを結ぶ道を押さえるか */
+  connects: string;
+  /** 名称や位置についての注記(時代による違いなど) */
+  note: string;
+  /** 塞ぐ線。この線の上の山は越えられず、関所の地点だけが通れる(ゲーム上の設定) */
+  barrier: LonLatPair[];
+}
+
 /** 都市。「どの勢力のものか」はここには書かず、シナリオ側で決める */
 export interface City {
   id: string;
@@ -103,6 +125,10 @@ export interface City {
   defense?: number;
   /** 守備兵力(ゲーム上の数値)。省略すると都市の規模から決める */
   garrison?: number;
+  /** 都市か関所か。関所は、地図の表示・攻城戦・占領を都市と同じ仕組みで扱うために、都市の形に直して持つ */
+  kind?: "city" | "pass";
+  /** 関所のときの、元のデータ */
+  pass?: Pass;
   /** 経済力(1か月の金の収入)と、食糧生産(1か月の糧の収入)。ゲーム上の数値 */
   economy?: number;
   food?: number;
@@ -355,6 +381,8 @@ export interface Scenario {
   cityOwners: Record<string, string>;
   /** 所属が史料で確かめにくく、推定で置いた都市 */
   uncertainOwners?: string[];
+  /** 関所ID → 勢力ID */
+  passOwners?: Record<string, string>;
   ownerNote?: string;
 }
 
