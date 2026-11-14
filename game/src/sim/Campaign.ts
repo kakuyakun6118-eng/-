@@ -84,6 +84,32 @@ export class Campaign {
       targetCityId: null,
     }));
     for (const s of this.armies) s.supplied = this.nearFriendlyCity(s);
+    // 勢力の蓄え:最初は、支配する都市の3か月分の収入を持っている
+    for (const f of scenario.factions) this.factionStates[f.id] = { gold: 0, grain: 0 };
+    for (let i = 0; i < 3; i++) this.collectIncome();
+  }
+
+  /** 勢力の、1か月の収入(支配する都市の経済力と食糧生産の合計) */
+  incomeOf(factionId: string): { gold: number; grain: number } {
+    let gold = 0;
+    let grain = 0;
+    for (const c of this.cities) {
+      if (scenario.cityOwners[c.id] !== factionId) continue;
+      gold += c.economy ?? 0;
+      grain += c.food ?? 0;
+    }
+    return { gold, grain };
+  }
+
+  /** 月に1度、各勢力に収入を入れる。軍団の兵は糧を食べる(1,000人で月に2) */
+  private collectIncome(): void {
+    for (const f of scenario.factions) {
+      const state = (this.factionStates[f.id] ??= { gold: 0, grain: 0 });
+      const income = this.incomeOf(f.id);
+      const upkeep = this.armies.filter((s) => s.army.factionId === f.id).reduce((sum, s) => sum + totalTroops(s.army), 0) / 500;
+      state.gold += income.gold;
+      state.grain = Math.max(0, state.grain + income.grain - upkeep);
+    }
   }
 
   /** 人物の状態(負傷・捕虜・死亡)。健在の人物は入れない */
@@ -156,8 +182,8 @@ export class Campaign {
     Object.assign(this.relations, data.relations);
     for (const k of Object.keys(this.personStates)) delete this.personStates[k];
     Object.assign(this.personStates, data.personStates);
-    for (const k of Object.keys(this.factionStates)) delete this.factionStates[k];
-    Object.assign(this.factionStates, data.factionStates);
+    // 勢力の蓄えは、セーブにある勢力の分だけ上書きする(古いセーブに無い勢力は、いまの値のまま)
+    for (const [id, st] of Object.entries(data.factionStates)) this.factionStates[id] = st;
 
     const saved = new Set(data.armies.map((a) => a.army.id));
     for (const s of [...this.armies]) {
@@ -358,6 +384,7 @@ export class Campaign {
     for (let d = before; d < Math.floor(this.day); d++) {
       for (const s of this.armies) this.dailyUpkeep(s);
       this.repairCities();
+      if ((d + 1) % 30 === 0) this.collectIncome();
       this.listener.onDayChanged(d + 1);
     }
   }

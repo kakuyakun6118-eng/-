@@ -2039,3 +2039,8 @@ body {
     height: 40px;
   }
 }
+
+#clock-treasury {
+  font-size: 11px;
+  color: var(--bronze);
+}

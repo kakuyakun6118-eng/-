@@ -103,6 +103,12 @@ export interface City {
   defense?: number;
   /** 守備兵力(ゲーム上の数値)。省略すると都市の規模から決める */
   garrison?: number;
+  /** 経済力(1か月の金の収入)と、食糧生産(1か月の糧の収入)。ゲーム上の数値 */
+  economy?: number;
+  food?: number;
+  /** 交通の重要度・軍事の重要度(1〜5)。ゲーム上の数値 */
+  transport?: number;
+  military?: number;
   /** 太守・守将(人物ID。省略すると、守将なし) */
   governorId?: string;
   /** 城郭の数値を、その都市だけ変えたいときに書く(城壁・城門の耐久、食糧、士気など) */
@@ -347,6 +353,9 @@ export interface Scenario {
   factions: Faction[];
   /** 都市ID → 勢力ID */
   cityOwners: Record<string, string>;
+  /** 所属が史料で確かめにくく、推定で置いた都市 */
+  uncertainOwners?: string[];
+  ownerNote?: string;
 }
 
 /** 1つの地域にまとめたデータ一式 */
@@ -358,4 +367,6 @@ export interface RegionData {
   cities: City[];
   /** 大河の渡河地点 */
   crossings: Crossing[];
+  /** 街道のつながり(都市ID・関所IDの組) */
+  roads: string[][];
 }

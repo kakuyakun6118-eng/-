@@ -1,5 +1,6 @@
 // 都市名のラベル。3Dではなく普通の文字(HTML)を地図の上に重ねるので、くっきり読める。
 import * as THREE from "three";
+import { cityLevelOf } from "../data";
 import type { CityMarker } from "../world/Cities";
 
 export class CityLabels {
@@ -29,10 +30,12 @@ export class CityLabels {
   }
 
   /** カメラが動くたびに、ラベルを都市の真上に置き直す */
-  update(camera: THREE.Camera, width: number, height: number, selected: CityMarker | null): void {
+  update(camera: THREE.Camera, width: number, height: number, selected: CityMarker | null, cameraDistance = 0): void {
     for (const { marker, el } of this.items) {
       this.v.copy(marker.labelAnchor).project(camera);
-      const visible = this.v.z < 1 && Math.abs(this.v.x) < 1.1 && Math.abs(this.v.y) < 1.1;
+      // 広域では、小さい都市の名前を隠して、文字が重ならないようにする(選択中の都市は出す)
+      const minor = cityLevelOf(marker.city) <= 2 && cameraDistance > 78 && marker !== selected;
+      const visible = !minor && this.v.z < 1 && Math.abs(this.v.x) < 1.1 && Math.abs(this.v.y) < 1.1;
       el.hidden = !visible;
       if (!visible) continue;
       const x = (this.v.x * 0.5 + 0.5) * width;

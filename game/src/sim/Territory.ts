@@ -24,7 +24,7 @@ export class Territory {
   compute(cities: City[], cityOwners: Record<string, string>): void {
     const { cols, rows, costs } = this.grid;
     const n = cols * rows;
-    const best = new Float32Array(n).fill(Infinity);
+    const best = new Float64Array(n).fill(Infinity);
     this.owners.fill(0);
 
     // すべての都市から同時に広げていく(近い順に確定させる)

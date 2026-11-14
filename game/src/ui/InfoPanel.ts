@@ -1,6 +1,6 @@
 // 都市をタップしたときに、画面の下に出る情報パネル。
-import { cityLevelOf, cityLevels } from "../data";
-import type { City, Faction } from "../data/types";
+import { cityLevelOf, cityLevels, personById } from "../data";
+import type { City, CityState, Faction } from "../data/types";
 
 export class InfoPanel {
   private readonly name: HTMLElement;
@@ -31,13 +31,23 @@ export class InfoPanel {
     });
   }
 
-  show(city: City, faction: Faction | undefined): void {
+  /** state は、いまの都市の状態(守備兵・守将)。uncertain は、所属が推定かどうか */
+  show(city: City, faction: Faction | undefined, state?: CityState, uncertain = false): void {
     this.name.textContent = city.name;
     this.reading.textContent = city.reading;
     this.chip.style.background = faction ? faction.color : "#9a9a9a";
-    this.faction.textContent = faction ? faction.name : "所属なし";
+    this.faction.textContent = (faction ? faction.name : "所属なし") + (uncertain ? "(推定)" : "");
     this.detail.textContent = faction ? `${faction.people} ・ 君主 ${faction.ruler}` : "";
-    this.description.textContent = city.description;
+    const governor = personById(state?.governorId ?? city.governorId);
+    const extra = [
+      `守備兵 ${(state?.garrison ?? city.garrison ?? 0).toLocaleString("ja-JP")}`,
+      governor ? `太守 ${governor.name}` : "太守なし",
+      city.economy !== undefined ? `経済 ${city.economy}` : "",
+      city.food !== undefined ? `食糧生産 ${city.food}` : "",
+      city.transport !== undefined ? `交通 ${"★".repeat(city.transport)}` : "",
+      city.military !== undefined ? `軍事 ${"★".repeat(city.military)}` : "",
+    ].filter(Boolean).join("・");
+    this.description.textContent = `${extra}。${city.description}`;
     const level = cityLevelOf(city);
     this.level.textContent = `${cityLevels[String(level)].label}(レベル${level})`;
     this.population.textContent = city.population ? `${city.population.toLocaleString("ja-JP")}人` : "不明";

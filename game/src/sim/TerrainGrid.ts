@@ -22,6 +22,7 @@ export class TerrainGrid {
   private readonly kinds: Uint8Array;
   /** 各マスの通りにくさ(通れないマスは Infinity) */
   readonly costs: Float32Array;
+  private road!: Uint8Array;
   private readonly west: number;
   private readonly north: number;
 
@@ -33,6 +34,7 @@ export class TerrainGrid {
     this.rows = Math.round((b.north - b.south) / STEP);
     this.kinds = new Uint8Array(this.cols * this.rows);
     this.costs = new Float32Array(this.cols * this.rows);
+    this.road = new Uint8Array(this.cols * this.rows);
 
     const pxPerCellX = field.width / this.cols;
     const pxPerCellY = field.height / this.rows;
@@ -96,6 +98,21 @@ export class TerrainGrid {
     for (let k = 0; k < this.kinds.length; k++) {
       this.costs[k] = terrainRules[KINDS[this.kinds[k]]].cost ?? Infinity;
     }
+  }
+
+  /** 街道の通るマスを、通りやすくする(通れないマスは変えない) */
+  markRoad(lon: number, lat: number, factor: number): void {
+    const [i, j] = this.cellOf(lon, lat);
+    const k = j * this.cols + i;
+    if (this.road[k] || !isFinite(this.costs[k])) return;
+    this.road[k] = 1;
+    this.costs[k] = Math.max(0.55, this.costs[k] * factor);
+  }
+
+  /** その場所に街道が通っているか */
+  onRoad(lon: number, lat: number): boolean {
+    const [i, j] = this.cellOf(lon, lat);
+    return this.road[j * this.cols + i] === 1;
   }
 
   /** 緯度経度が、どのマス(列, 行)にあたるか */

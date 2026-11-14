@@ -1,13 +1,15 @@
 // 都市を3D空間に置く。すべての都市を、城壁と建物のある城郭都市として表示する。
 import * as THREE from "three";
 import { toWorld } from "../core/geo";
-import { resolveCityLayout } from "../data";
+import { cityLevelOf, resolveCityLayout } from "../data";
 import type { City, Faction } from "../data/types";
 import { buildCity } from "./city/CityBuilder";
 import { CityModel } from "./city/CityModel";
 
 /** 広域表示で、どの都市も最低これくらいの大きさ(3D空間での長さ)に見えるようにする */
 const FAR_MIN_SIZE = 3.6;
+/** 規模ごとの、広域表示での拡大率の上限(都市が増えたので、小さい都市は控えめにして重なりを減らす) */
+const LEVEL_MAX_SCALE = [1.5, 1.5, 1.6, 1.8, 1.9];
 
 export interface CityMarker {
   city: City;
@@ -43,7 +45,7 @@ export class Cities {
       model,
       radius: model.radius,
       height: model.height,
-      maxScale: Math.min(3, Math.max(1.9, FAR_MIN_SIZE / Math.max(model.footprint[0], model.footprint[1]))),
+      maxScale: Math.min(LEVEL_MAX_SCALE[cityLevelOf(city)], FAR_MIN_SIZE / Math.max(model.footprint[0], model.footprint[1])),
       labelAnchor: new THREE.Vector3(x, 0, z),
     });
   }

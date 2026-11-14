@@ -110,7 +110,7 @@ export function findRoute(grid: TerrainGrid, from: RoutePoint, to: RoutePoint): 
     return Math.hypot(dx, dy) * minCost;
   };
 
-  const best = new Float32Array(cols * rows).fill(Infinity);
+  const best = new Float64Array(cols * rows).fill(Infinity); // 丸めの誤差で同じマスを調べ直さないよう、倍精度で持つ
   const prev = new Int32Array(cols * rows).fill(-1);
   const heap = new MinHeap();
   best[startId] = 0;

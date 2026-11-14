@@ -8,6 +8,7 @@ import ncTerrainUrl from "./regions/north-china/terrain.png";
 import ncRivers from "./regions/north-china/rivers.json";
 import ncCities from "./regions/north-china/cities.json";
 import ncCrossings from "./regions/north-china/crossings.json";
+import ncRoads from "./regions/north-china/roads.json";
 import terrainCostRules from "./rules/terrainCosts.json";
 import s317 from "./scenarios/s317.json";
 import s317Armies from "./scenarios/s317.armies.json";
@@ -22,6 +23,7 @@ const northChina: RegionData = {
   rivers: ncRivers as unknown as River[],
   cities: ncCities as unknown as City[],
   crossings: ncCrossings as Crossing[],
+  roads: ncRoads.links,
 };
 
 /** 読み込む地域の一覧。将来は central-asia, europe などをここに足す */

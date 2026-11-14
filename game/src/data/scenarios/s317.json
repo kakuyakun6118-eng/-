@@ -43,7 +43,7 @@
       "id": "duan",
       "name": "段部",
       "people": "鮮卑",
-      "ruler": "段匹磾",
+      "ruler": "段疾陸眷",
       "color": "#a3a044"
     },
     {
@@ -59,6 +59,34 @@
       "people": "巴氐",
       "ruler": "李雄",
       "color": "#55a556"
+    },
+    {
+      "id": "sima_bao",
+      "name": "司馬保(秦州)",
+      "people": "漢人",
+      "ruler": "司馬保",
+      "color": "#86b8e6"
+    },
+    {
+      "id": "chouchi",
+      "name": "仇池",
+      "people": "氐",
+      "ruler": "楊難敵",
+      "color": "#9c5a2e"
+    },
+    {
+      "id": "cao_yi",
+      "name": "曹嶷(青州)",
+      "people": "漢人",
+      "ruler": "曹嶷",
+      "color": "#e07a3f"
+    },
+    {
+      "id": "cui_bi",
+      "name": "崔毖(遼東)",
+      "people": "漢人",
+      "ruler": "崔毖",
+      "color": "#9fcf6a"
     }
   ],
   "cityOwners": {
@@ -71,11 +99,57 @@
     "ji": "duan",
     "shengle": "dai",
     "guzang": "qianliang",
-    "shanggui": "jin",
+    "shanggui": "sima_bao",
     "jiankang": "jin",
     "xiangyang": "jin",
     "shouchun": "jin",
     "chengdu": "chenghan",
-    "jicheng": "murong"
-  }
+    "jicheng": "murong",
+    "fengyi": "han_zhao",
+    "chencang": "sima_bao",
+    "anding": "sima_bao",
+    "gaonu": "han_zhao",
+    "puban": "han_zhao",
+    "longxi": "sima_bao",
+    "chouchi": "chouchi",
+    "hanzhong": "chenghan",
+    "jincheng": "qianliang",
+    "zhangye": "qianliang",
+    "shangdang": "han_zhao",
+    "lishi": "han_zhao",
+    "yanmen": "dai",
+    "pingcheng": "dai",
+    "zhongshan": "shile",
+    "xindu": "shile",
+    "yanci": "jin",
+    "lingzhi": "duan",
+    "xiangping": "cui_bi",
+    "xingyang": "jin",
+    "xuchang": "jin",
+    "qiao": "jin",
+    "guanggu": "cao_yi",
+    "xiapi": "jin",
+    "pengcheng": "jin",
+    "wan": "jin",
+    "jiangling": "jin",
+    "wuchang": "jin",
+    "hefei": "jin",
+    "jiangzhou": "chenghan"
+  },
+  "uncertainOwners": [
+    "chencang",
+    "anding",
+    "gaonu",
+    "longxi",
+    "hanzhong",
+    "shangdang",
+    "yanmen",
+    "xuchang",
+    "qiao",
+    "pengcheng",
+    "wan",
+    "xiangping",
+    "luoyang"
+  ],
+  "ownerNote": "317年の所属は史料でも入り組んでおり、uncertainOwners に挙げた都市は推定。晋の所属とした中原の都市には、晋に従う土地の有力者(塢主)が治めていたものを含む。"
 }

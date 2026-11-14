@@ -22,6 +22,7 @@ import { AUTO_SLOT, SaveMenu } from "../ui/SaveMenu";
 import { SaveStore } from "./saveStore";
 import { Armies, type ArmyMarker } from "../world/Armies";
 import { Cities, type CityMarker } from "../world/Cities";
+import { Roads } from "../world/Roads";
 import { RouteLine } from "../world/RouteLine";
 import { Terrain, type TerrainPad } from "../world/Terrain";
 import { HAZE_COLOR } from "../world/terrainMaterial";
@@ -49,6 +50,8 @@ export class Game {
   private readonly grid: TerrainGrid;
   private readonly territory: Territory;
   private readonly territoryTexture: TerritoryTexture;
+  /** 引けた街道の数(動作確認用) */
+  roadCount = 0;
   private territoryVisible = true;
   private territoryButton!: HTMLButtonElement;
   private readonly allCities: City[] = [];
@@ -146,6 +149,11 @@ export class Game {
 
     // 進軍の計算用の地形のマス(いまは地域が1つなので、その地域の分だけ作る)
     this.grid = new TerrainGrid(terrains[0].field, terrains[0].region.crossings);
+
+    // 街道:都市をつなぐ道を引く。道の上は進軍が速くなる
+    const roads = new Roads(terrains[0].region.roads, this.allCities, this.grid, (lon, lat) => terrains[0].heightAt(lon, lat));
+    this.scene.add(roads.group);
+    this.roadCount = roads.count;
 
     // 領土:都市の所属から計算し、地形に重ねて表示する
     this.territory = new Territory(this.grid, scenario.factions.map((f) => f.id));
@@ -423,6 +431,7 @@ export class Game {
 
   private onDayChanged(): void {
     (this.root.querySelector("#clock-date") as HTMLElement).textContent = `${this.campaign.dateText()} ${this.campaign.calendar().season}`;
+    this.showTreasury();
     // 一定の日数ごとに、オートセーブする
     if (this.campaign.day - this.lastAutosaveDay >= AUTOSAVE_DAYS) this.autosave();
     // 行軍中の軍団を選んでいるときは、進んだ分だけ経路の点線を短くする
@@ -454,6 +463,16 @@ export class Game {
 
   // ===== セーブとロード =====
 
+  /** 操作する勢力を決めているときは、その勢力の蓄え(金・糧)と月の収入を、日付の横に出す */
+  private showTreasury(): void {
+    const el = this.root.querySelector("#clock-treasury") as HTMLElement;
+    const st = this.playerFactionId ? this.campaign.factionStates[this.playerFactionId] : undefined;
+    el.hidden = !st;
+    if (!st || !this.playerFactionId) return;
+    const income = this.campaign.incomeOf(this.playerFactionId);
+    el.textContent = `金 ${Math.round(st.gold).toLocaleString("ja-JP")}(+${income.gold}) 糧 ${Math.round(st.grain).toLocaleString("ja-JP")}(+${income.grain})`;
+  }
+
   private settings(): GameSettings {
     return {
       playerFactionId: this.playerFactionId,
@@ -478,6 +497,7 @@ export class Game {
       this.terrains[0].setTerritoryVisible(this.territoryVisible);
     }
     this.syncSpeedButton();
+    this.showTreasury();
     this.dirty = true;
   }
 
@@ -776,7 +796,7 @@ export class Game {
     this.clearSelection();
     this.selected = marker;
     this.cities.select(marker);
-    this.panel.show(marker.city, marker.faction);
+    this.panel.show(marker.city, marker.faction, this.campaign.cityState(marker.city), scenario.uncertainOwners?.includes(marker.city.id) && scenario.cityOwners[marker.city.id] === initialCityOwners[marker.city.id]);
     // 選んだ都市が画面の中ほど(情報パネルに隠れない位置)に来るよう、カメラを静かに寄せる
     this.glideTo(marker.group.position, this.mapCamera.distance);
     this.dirty = true;
@@ -850,7 +870,7 @@ export class Game {
     this.route.update(this.mapCamera.distance);
     for (const terrain of this.terrains) terrain.setCameraDistance(this.mapCamera.distance);
     this.renderer.render(this.scene, this.mapCamera.camera);
-    this.labels.update(this.mapCamera.camera, this.width, this.height, this.selected);
+    this.labels.update(this.mapCamera.camera, this.width, this.height, this.selected, this.mapCamera.distance);
     this.armyLabels.update(this.mapCamera.camera, this.width, this.height);
   }
 }
