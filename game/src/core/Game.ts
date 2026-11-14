@@ -10,6 +10,7 @@ import { InputController } from "../input/InputController";
 import { compareSides, createBattleSetup, placeName } from "../sim/battle";
 import { Campaign, type ArmyState } from "../sim/Campaign";
 import type { Route } from "../sim/pathfinding";
+import { migrateSave, SAVE_VERSION, type CitySave, type GameSettings, type SaveData } from "../sim/save";
 import { TerrainGrid } from "../sim/TerrainGrid";
 import { Territory } from "../sim/Territory";
 import { ArmyLabels } from "../ui/ArmyLabels";
@@ -17,6 +18,8 @@ import { ArmyPanel, type ArmyPanelMode } from "../ui/ArmyPanel";
 import { BattlePrep } from "../ui/BattlePrep";
 import { CityLabels } from "../ui/CityLabels";
 import { InfoPanel } from "../ui/InfoPanel";
+import { AUTO_SLOT, SaveMenu } from "../ui/SaveMenu";
+import { SaveStore } from "./saveStore";
 import { Armies, type ArmyMarker } from "../world/Armies";
 import { Cities, type CityMarker } from "../world/Cities";
 import { RouteLine } from "../world/RouteLine";
@@ -29,12 +32,10 @@ import { toLonLat, toWorld } from "./geo";
 const PICK_RADIUS = 34;
 /** 選んだ都市や軍団へカメラを寄せるのにかける時間(ミリ秒) */
 const GLIDE_MS = 600;
-/** 時間の進む速さの切り替え(0 = 一時停止) */
-const SPEEDS = [
-  { speed: 1, label: "▶ 通常" },
-  { speed: 4, label: "▶▶ 早送り" },
-  { speed: 0, label: "Ⅱ 停止中" },
-];
+/** 時間の進む速さ(倍率)。停止は、別のボタンで切り替える */
+const RATES = [1, 2, 4, 8];
+/** 何日ごとにオートセーブするか */
+const AUTOSAVE_DAYS = 10;
 
 export class Game {
   private readonly renderer: THREE.WebGLRenderer;
@@ -49,6 +50,7 @@ export class Game {
   private readonly territory: Territory;
   private readonly territoryTexture: TerritoryTexture;
   private territoryVisible = true;
+  private territoryButton!: HTMLButtonElement;
   private readonly allCities: City[] = [];
   private readonly labels: CityLabels;
   private readonly armyLabels: ArmyLabels;
@@ -74,8 +76,15 @@ export class Game {
   private mode: ArmyPanelMode = "info";
   /** 確認中の経路(「確定」を押すと、この経路で行軍を始める) */
   private pendingRoute: Route | null = null;
-  private speedIndex = 0;
-  private speedButton!: HTMLButtonElement;
+  /** 時間の進む倍率(停止していないときの値) */
+  private rate = 1;
+  /** 操作する勢力(null なら制限なし) */
+  private playerFactionId: string | null = null;
+  private territoryOpacity = 1;
+  /** セーブデータの保存先(動作確認のために外からも見られるようにしてある) */
+  readonly saves = new SaveStore();
+  private menu!: SaveMenu;
+  private lastAutosaveDay = 0;
   private lastFrame = performance.now();
   private width = 1;
   private height = 1;
@@ -151,6 +160,7 @@ export class Game {
       this.dirty = true;
     });
     terrains[0].setTerritoryVisible(true);
+    this.territoryButton = territoryButton;
 
     // 軍団と経路の表示
     const heightAt = (lon: number, lat: number): number => {
@@ -173,6 +183,10 @@ export class Game {
       onBattleEvent: (event) => this.showBattleEvent(event),
       onDayChanged: () => this.onDayChanged(),
       onCityCaptured: (cityId, factionId) => this.setCityOwner(cityId, factionId),
+      onArmyAdded: (state) => {
+        const marker = this.armies.add(state, factionById(state.army.factionId), officerById(state.army.commanderId));
+        this.armyLabels.add(marker);
+      },
       onArmyRemoved: (state) => {
         const marker = this.armies.markerOf(state.army.id);
         if (!marker) return;
@@ -210,7 +224,15 @@ export class Game {
     );
     this.armyPanel = new ArmyPanel(root.querySelector("#army") as HTMLElement, {
       onClose: () => this.clearSelection(),
-      onMove: () => this.setMode("pick", "移動先を地図の上でタップしてください"),
+      onMove: () => {
+        // 操作する勢力を決めているときは、ほかの勢力の軍団には命令できない
+        const owner = this.selectedArmy?.state.army.factionId;
+        if (this.playerFactionId && owner !== this.playerFactionId) {
+          this.showNotice(`${factionById(owner ?? "")?.name ?? "この勢力"}の軍団には命令できません(操作勢力:${factionById(this.playerFactionId)?.name})`);
+          return;
+        }
+        this.setMode("pick", "移動先を地図の上でタップしてください");
+      },
       onConfirm: () => this.confirmMove(),
       onCancel: () => this.cancelMove(),
       onHalt: () => this.selectedArmy && this.campaign.halt(this.selectedArmy.state.army.id),
@@ -227,15 +249,28 @@ export class Game {
       if (this.noticeBattleId) this.openBattlePrep(this.noticeBattleId);
     });
 
-    // 日付と、時間の進む速さの切り替え
-    const speedButton = root.querySelector("#clock-speed") as HTMLButtonElement;
-    speedButton.addEventListener("click", () => {
-      this.speedIndex = (this.speedIndex + 1) % SPEEDS.length;
-      this.campaign.speed = SPEEDS[this.speedIndex].speed;
-      speedButton.textContent = SPEEDS[this.speedIndex].label;
+    // 日付と、時間の進め方(停止・再開と、速さの倍率)
+    (root.querySelector("#clock-pause") as HTMLElement).addEventListener("click", () => {
+      this.campaign.speed = this.campaign.speed === 0 ? this.rate : 0;
+      this.syncSpeedButton();
     });
-    speedButton.textContent = SPEEDS[0].label;
-    this.speedButton = speedButton;
+    (root.querySelector("#clock-speed") as HTMLElement).addEventListener("click", () => {
+      this.rate = RATES[(RATES.indexOf(this.rate) + 1) % RATES.length];
+      if (this.campaign.speed !== 0) this.campaign.speed = this.rate;
+      this.syncSpeedButton();
+    });
+    this.syncSpeedButton();
+
+    // メニュー(セーブ・ロード・設定)
+    this.menu = new SaveMenu(root.querySelector("#menu") as HTMLElement, this.saves, {
+      buildSave: () => this.buildSave(),
+      applySave: (data) => this.applySave(data),
+      settings: () => this.settings(),
+      changeSettings: (change) => this.changeSettings(change),
+    });
+    for (const b of root.querySelectorAll<HTMLElement>(".menu-open")) {
+      b.addEventListener("click", () => void this.menu.open());
+    }
     this.onDayChanged();
     (root.querySelector("#event-close") as HTMLElement).addEventListener("click", () => {
       (root.querySelector("#event") as HTMLElement).hidden = true;
@@ -387,7 +422,9 @@ export class Game {
   }
 
   private onDayChanged(): void {
-    (this.root.querySelector("#clock-date") as HTMLElement).textContent = this.campaign.dateText();
+    (this.root.querySelector("#clock-date") as HTMLElement).textContent = `${this.campaign.dateText()} ${this.campaign.calendar().season}`;
+    // 一定の日数ごとに、オートセーブする
+    if (this.campaign.day - this.lastAutosaveDay >= AUTOSAVE_DAYS) this.autosave();
     // 行軍中の軍団を選んでいるときは、進んだ分だけ経路の点線を短くする
     if (this.mode === "info" && this.selectedArmy?.state.status === "marching") this.showRouteOfSelected();
   }
@@ -408,11 +445,116 @@ export class Game {
     this.dirty = true;
   }
 
-  /** 時間の進む速さのボタンを、いまの速さ(進行側が止めた場合を含む)に合わせる */
+  /** 時間のボタンを、いまの状態(進行側が止めた場合を含む)に合わせる */
   private syncSpeedButton(): void {
-    const i = SPEEDS.findIndex((s) => s.speed === this.campaign.speed);
-    if (i >= 0) this.speedIndex = i;
-    this.speedButton.textContent = SPEEDS[this.speedIndex].label;
+    if (this.campaign.speed !== 0) this.rate = this.campaign.speed;
+    (this.root.querySelector("#clock-pause") as HTMLElement).textContent = this.campaign.speed === 0 ? "▶ 再開" : "Ⅱ 停止";
+    (this.root.querySelector("#clock-speed") as HTMLElement).textContent = `速度 ×${this.rate}`;
+  }
+
+  // ===== セーブとロード =====
+
+  private settings(): GameSettings {
+    return {
+      playerFactionId: this.playerFactionId,
+      difficulty: this.difficulty,
+      territoryVisible: this.territoryVisible,
+      territoryOpacity: this.territoryOpacity,
+      speed: this.rate,
+    };
+  }
+
+  private changeSettings(change: Partial<GameSettings>): void {
+    if (change.playerFactionId !== undefined) this.playerFactionId = change.playerFactionId;
+    if (change.difficulty) this.difficulty = change.difficulty;
+    if (change.speed && RATES.includes(change.speed)) this.rate = change.speed;
+    if (change.territoryOpacity !== undefined) {
+      this.territoryOpacity = change.territoryOpacity;
+      this.terrains[0].setTerritoryOpacity(this.territoryOpacity);
+    }
+    if (change.territoryVisible !== undefined) {
+      this.territoryVisible = change.territoryVisible;
+      this.territoryButton.setAttribute("aria-pressed", String(this.territoryVisible));
+      this.terrains[0].setTerritoryVisible(this.territoryVisible);
+    }
+    this.syncSpeedButton();
+    this.dirty = true;
+  }
+
+  /** いまのゲームの状態を、セーブデータにまとめる */
+  buildSave(): SaveData {
+    const cal = this.campaign.calendar();
+    const cities: Record<string, CitySave> = {};
+    for (const c of this.allCities) {
+      cities[c.id] = { ...this.campaign.cityState(c), ownerId: scenario.cityOwners[c.id] ?? null, population: c.population ?? null };
+    }
+    // 会戦の最中や準備中に保存したときは、どの会戦を開いていたかを残す(読み込むと、準備画面に戻る)
+    const battleId = this.battle ? this.battleSetup?.battleId : this.openBattleId;
+    return {
+      version: SAVE_VERSION,
+      savedAt: new Date().toISOString(),
+      scenarioId: scenario.id,
+      summary: {
+        date: this.campaign.dateText(),
+        year: cal.year,
+        season: cal.season,
+        playerFaction: this.playerFactionId ? factionById(this.playerFactionId)?.name ?? "不明" : "全勢力",
+      },
+      settings: this.settings(),
+      factions: scenario.factions.map((f) => ({ id: f.id, name: f.name, color: f.color })),
+      cities,
+      campaign: this.campaign.serialize(),
+      activeBattle: battleId ? { battleId, stage: this.battle ? "fighting" : "preparing" } : null,
+    };
+  }
+
+  /** セーブデータを読み込んで、ゲームの状態を戻す。読めないデータなら例外を投げる(状態は変えない) */
+  applySave(raw: unknown): void {
+    const data = migrateSave(raw);
+    if (data.scenarioId !== scenario.id) throw new Error("別のシナリオのセーブデータです");
+
+    // 開いている会戦や画面を閉じる(会戦の結果は反映しない)
+    this.battle?.dispose();
+    this.battle = null;
+    this.battleSetup = null;
+    this.openBattleId = null;
+    this.noticeBattleId = null;
+    this.battlePrep.hide();
+    this.root.classList.remove("in-battle", "battle-open");
+    (this.root.querySelector("#event") as HTMLElement).hidden = true;
+    this.clearSelection();
+
+    // 都市の所属を戻す。変わった都市は、旗とラベルの色を付け替える
+    for (const c of this.allCities) {
+      const owner = data.cities[c.id]?.ownerId ?? undefined;
+      if (owner === scenario.cityOwners[c.id]) continue;
+      if (owner) scenario.cityOwners[c.id] = owner;
+      else delete scenario.cityOwners[c.id];
+      const marker = this.cities.setFaction(c.id, owner ? factionById(owner) : undefined);
+      if (marker) this.labels.refresh(marker);
+    }
+    this.campaign.restore(data.campaign);
+    this.refreshTerritory();
+    this.changeSettings(data.settings);
+    this.lastAutosaveDay = this.campaign.day;
+    this.lastFrame = performance.now();
+    this.onDayChanged();
+    this.syncSpeedButton();
+
+    // 会戦の最中や準備中に保存したデータなら、その会戦の準備画面に戻る
+    if (data.activeBattle && this.campaign.eventOf(data.activeBattle.battleId)) {
+      this.openBattlePrep(data.activeBattle.battleId);
+      if (data.activeBattle.stage === "fighting") this.showNotice("会戦の途中経過は保存されません。会戦の準備からやり直します");
+    } else {
+      this.showNotice(`${data.summary.date} のセーブデータを読み込みました。時間は止まっています`);
+    }
+    this.dirty = true;
+  }
+
+  /** オートセーブ(失敗しても、ゲームは止めない) */
+  private autosave(): void {
+    this.lastAutosaveDay = this.campaign.day;
+    this.saves.put(AUTO_SLOT, this.buildSave()).catch((err) => console.warn("オートセーブに失敗しました", err));
   }
 
   /** 会戦準備画面を開く。カメラを戦場へ寄せ、両軍の情報を表示する */
@@ -515,6 +657,7 @@ export class Game {
     this.openBattleId = null;
     this.battleSetup = null;
     this.campaign.applyBattleResult(result);
+    this.autosave(); // 会戦の結果が出たら、すぐに保存しておく
     // 結果を知らせに出す
     if (setup) {
       const winner = result.siege?.captured

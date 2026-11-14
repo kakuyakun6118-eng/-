@@ -2,6 +2,7 @@
 // ここは計算だけで、3D表示のことは知らない。変化があったら、登録された関数で知らせる。
 import { resolveCityLayout, scenario, totalTroops } from "../data";
 import { initialCityState, placeName } from "./battle";
+import { seasonOf, type CampaignSave, type Relation } from "./save";
 import type { BattleResult, CommanderFate, SideResult } from "../battle/types";
 import type { Army, ArmyStatus, BattleEvent, City, CityState, UnitTypeId } from "../data/types";
 import { distanceKm, findRoute, type Route, type RoutePoint } from "./pathfinding";
@@ -49,6 +50,8 @@ export interface CampaignListener {
   onDayChanged(day: number): void;
   /** 軍団が壊滅して、地図から消えた */
   onArmyRemoved(state: ArmyState): void;
+  /** 軍団が加わった(セーブデータの読み込みで、消えていた軍団が戻ったとき) */
+  onArmyAdded(state: ArmyState): void;
   /** 都市が陥落して、支配する勢力が変わった */
   onCityCaptured(cityId: string, factionId: string): void;
 }
@@ -81,6 +84,85 @@ export class Campaign {
       targetCityId: null,
     }));
     for (const s of this.armies) s.supplied = this.nearFriendlyCity(s);
+  }
+
+  /** 勢力の組ごとの関係。書かれていない組は戦争(いまは切り替える手段がない) */
+  readonly relations: Record<string, Relation> = {};
+
+  relationOf(a: string, b: string): Relation {
+    return this.relations[[a, b].sort().join("|")] ?? "war";
+  }
+
+  /** いまの年・月・季節 */
+  calendar(): { year: number; month: number; season: string } {
+    const d = Math.floor(this.day);
+    const month = (Math.floor((60 + d) / 30) % 12) + 1;
+    return { year: scenario.year + Math.floor((60 + d) / 360), month, season: seasonOf(month) };
+  }
+
+  /** 進行の状態を、保存できる形に書き出す */
+  serialize(): CampaignSave {
+    const copy = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
+    return copy({
+      day: this.day,
+      nextEventId: this.nextEventId,
+      armies: this.armies.map((s) => ({
+        army: s.army, status: s.status, route: s.route, progress: s.progress, supplied: s.supplied,
+        ignore: [...s.ignore], targetCityId: s.targetCityId, commanderFate: s.commanderFate,
+      })),
+      events: this.events,
+      cityStates: this.cityStates,
+      relations: this.relations,
+    });
+  }
+
+  /**
+   * 保存した状態に戻す。軍団は、いまの入れ物を使い回して中身を書き換える(表示側とのつながりを保つため)。
+   * 消えていた軍団が戻るとき・いる軍団が消えるときは、表示側に知らせる。時間は止めた状態で戻る。
+   */
+  restore(save: CampaignSave): void {
+    const data = JSON.parse(JSON.stringify(save)) as CampaignSave;
+    this.day = data.day;
+    this.nextEventId = data.nextEventId;
+    this.speed = 0;
+    this.events.length = 0;
+    this.events.push(...data.events);
+    // 開いていた会戦は、開始前(保留)に戻す。決着済みのものは、そのまま決着済みとして残る
+    for (const e of this.events) {
+      if (e.status === "preparing" || e.status === "in_progress") e.status = "pending";
+    }
+    for (const k of Object.keys(this.cityStates)) delete this.cityStates[k];
+    Object.assign(this.cityStates, data.cityStates);
+    for (const k of Object.keys(this.relations)) delete this.relations[k];
+    Object.assign(this.relations, data.relations);
+
+    const saved = new Set(data.armies.map((a) => a.army.id));
+    for (const s of [...this.armies]) {
+      if (saved.has(s.army.id)) continue;
+      this.armies.splice(this.armies.indexOf(s), 1);
+      this.listener.onArmyRemoved(s);
+    }
+    for (const a of data.armies) {
+      let s = this.stateOf(a.army.id);
+      const added = !s;
+      if (!s) {
+        s = { army: a.army, status: a.status, route: null, progress: 0, supplied: false, ignore: new Set<string>(), targetCityId: null };
+        this.armies.push(s);
+      }
+      Object.assign(s.army, a.army);
+      s.status = a.status;
+      s.route = a.route;
+      s.progress = a.progress;
+      s.supplied = a.supplied;
+      s.ignore = new Set(a.ignore);
+      s.targetCityId = a.targetCityId;
+      s.commanderFate = a.commanderFate;
+      if (added) this.listener.onArmyAdded(s);
+      else {
+        this.listener.onArmyMoved(s);
+        this.listener.onArmyChanged(s, true);
+      }
+    }
   }
 
   /** 都市の、いまの状態(まだ戦いを受けていなければ、最初の状態) */
@@ -127,7 +209,7 @@ export class Campaign {
   }
 
   private hostile(a: Army, factionId: string | undefined): boolean {
-    return factionId !== undefined && a.factionId !== factionId;
+    return factionId !== undefined && a.factionId !== factionId && this.relationOf(a.factionId, factionId) === "war";
   }
 
   /** 都市の大きさ(度)。軍団が都市の中に入り込まないために使う */

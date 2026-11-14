@@ -17,6 +17,7 @@ npm run build    # dist/index.html に1ファイルで出力
 - `src/world/` … 地形と都市の3D表示(`city/` は城壁や建物のある3D都市の組み立て)
 - `src/data/rules/` … 都市の規模ごとの決まりなど、ゲームのルール
 - `src/battle/` … 3D会戦(部隊の配置、戦闘の計算、戦場と兵士の表示、結果の集計)
+- `src/core/saveStore.ts`・`src/sim/save.ts` … セーブデータの保存先(IndexedDB)と、形・バージョンの管理
 - `src/sim/` … ゲームの進行の計算(日付、行軍、経路探索、食糧・疲労・士気、敵との接触)。3D表示とは分けてある
 - `src/camera/`・`src/input/` … カメラと、マウス・タッチ操作
 - `src/ui/` … 文字やパネルなどの画面表示

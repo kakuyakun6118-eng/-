@@ -24,6 +24,8 @@ export class Terrain {
   readonly mesh: THREE.Mesh;
   private readonly material: THREE.ShaderMaterial;
   private readonly pads: PadWorld[];
+  private territoryVisible = false;
+  private territoryOpacity = 1;
 
   private constructor(readonly region: RegionData, readonly field: HeightField, pads: TerrainPad[]) {
     this.pads = pads.map((p) => ({
@@ -92,7 +94,14 @@ export class Terrain {
 
   /** 領土表示のON/OFF */
   setTerritoryVisible(visible: boolean): void {
-    this.material.uniforms.uTerritory.value = visible ? 1 : 0;
+    this.territoryVisible = visible;
+    this.material.uniforms.uTerritory.value = visible ? this.territoryOpacity : 0;
+  }
+
+  /** 領土の色の濃さ(1 が標準) */
+  setTerritoryOpacity(opacity: number): void {
+    this.territoryOpacity = opacity;
+    this.setTerritoryVisible(this.territoryVisible);
   }
 
   /** カメラが遠いほど、かすみ始める距離も遠くする */

@@ -18,6 +18,7 @@
       </header>
       <div id="clock">
         <span id="clock-date"></span>
+        <button id="clock-pause" type="button" aria-label="時間を止める・進める"></button>
         <button id="clock-speed" type="button" aria-label="時間の進む速さ"></button>
       </div>
       <div id="event" hidden>
@@ -28,6 +29,7 @@
       <p id="hint"></p>
       <button id="credits-open" type="button">出典</button>
       <button id="territory-toggle" type="button" aria-pressed="true">領土</button>
+      <button id="menu-open" class="menu-open" type="button">メニュー</button>
       <section id="info" hidden>
         <div class="info-inner">
           <div class="info-head">
@@ -113,6 +115,7 @@
           <button class="battle-back" type="button">戦略マップに戻る</button>
           <button class="battle-info" type="button" aria-pressed="false">両軍情報</button>
           <button class="battle-command" type="button">指揮:攻撃側</button>
+          <button class="menu-open" type="button">メニュー</button>
           <button class="battle-start" type="button">戦闘開始</button>
         </footer>
         <div class="battle-handoff" hidden>
@@ -182,6 +185,7 @@
             <button class="hud-overview" type="button">全景</button>
             <button class="hud-closeup" type="button">近景</button>
             <button class="hud-follow" type="button" aria-pressed="false">追従</button>
+            <button class="menu-open" type="button">メニュー</button>
           </div>
         </footer>
         <p class="hud-toast" hidden></p>
@@ -196,6 +200,42 @@
             <p class="hud-result-summary"></p>
             <div class="hud-result-table"></div>
             <button class="hud-leave" type="button">戦略マップへ戻る</button>
+          </div>
+        </div>
+      </section>
+      <section id="menu" hidden>
+        <div class="menu-inner">
+          <div class="menu-head">
+            <h2>メニュー</h2>
+            <button id="menu-close" type="button">閉じる</button>
+          </div>
+          <p id="menu-message" role="status"></p>
+          <div class="menu-columns">
+            <div class="menu-block">
+              <h3>セーブとロード</h3>
+              <div id="menu-slots"></div>
+              <p id="menu-storage"></p>
+            </div>
+            <div class="menu-block">
+              <h3>設定</h3>
+              <label for="menu-faction">操作する勢力</label>
+              <select id="menu-faction"></select>
+              <label for="menu-difficulty">敵の強さ</label>
+              <select id="menu-difficulty">
+                <option value="easy">易しい</option>
+                <option value="normal">普通</option>
+                <option value="hard">難しい</option>
+              </select>
+              <label for="menu-opacity">領土の色の濃さ</label>
+              <input id="menu-opacity" type="range" min="0.3" max="1.6" step="0.1" />
+              <h3>書き出しと読み込み</h3>
+              <textarea id="menu-json" rows="3" spellcheck="false" aria-label="セーブデータ(JSON)" placeholder="「書き出す」を押すと、ここにセーブデータが出ます。読み込むときは、保管しておいたデータを貼り付けます"></textarea>
+              <div class="menu-row">
+                <button id="menu-export" type="button">書き出す</button>
+                <button id="menu-import" type="button">読み込む</button>
+                <label class="menu-file">ファイルから<input id="menu-file" type="file" accept=".json,application/json,text/plain" /></label>
+              </div>
+            </div>
           </div>
         </div>
       </section>
