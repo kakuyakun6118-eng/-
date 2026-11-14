@@ -1,5 +1,52 @@
 {
-  "easy": { "name": "易しい", "thinkSeconds": 2.0, "aggression": 1.35, "retreatBelow": 0.0, "flanking": false, "kiting": false, "formations": false, "holdSeconds": 45 },
-  "normal": { "name": "普通", "thinkSeconds": 1.0, "aggression": 1.0, "retreatBelow": 0.3, "flanking": true, "kiting": true, "formations": true, "holdSeconds": 25 },
-  "hard": { "name": "難しい", "thinkSeconds": 0.5, "aggression": 0.85, "retreatBelow": 0.38, "flanking": true, "kiting": true, "formations": true, "holdSeconds": 12 }
+  "veryEasy": {
+    "name": "非常に易しい",
+    "thinkSeconds": 3.0,
+    "aggression": 1.7,
+    "retreatBelow": 0.0,
+    "flanking": false,
+    "kiting": false,
+    "formations": false,
+    "holdSeconds": 70
+  },
+  "easy": {
+    "name": "易しい",
+    "thinkSeconds": 2.0,
+    "aggression": 1.35,
+    "retreatBelow": 0.0,
+    "flanking": false,
+    "kiting": false,
+    "formations": false,
+    "holdSeconds": 45
+  },
+  "normal": {
+    "name": "普通",
+    "thinkSeconds": 1.0,
+    "aggression": 1.0,
+    "retreatBelow": 0.3,
+    "flanking": true,
+    "kiting": true,
+    "formations": true,
+    "holdSeconds": 25
+  },
+  "hard": {
+    "name": "難しい",
+    "thinkSeconds": 0.5,
+    "aggression": 0.85,
+    "retreatBelow": 0.38,
+    "flanking": true,
+    "kiting": true,
+    "formations": true,
+    "holdSeconds": 12
+  },
+  "veryHard": {
+    "name": "非常に難しい",
+    "thinkSeconds": 0.3,
+    "aggression": 0.75,
+    "retreatBelow": 0.42,
+    "flanking": true,
+    "kiting": true,
+    "formations": true,
+    "holdSeconds": 6
+  }
 }

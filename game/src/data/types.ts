@@ -103,8 +103,8 @@ export interface City {
   defense?: number;
   /** 守備兵力(ゲーム上の数値)。省略すると都市の規模から決める */
   garrison?: number;
-  /** 守将の名前(省略すると、守将なし) */
-  governor?: string;
+  /** 太守・守将(人物ID。省略すると、守将なし) */
+  governorId?: string;
   /** 城郭の数値を、その都市だけ変えたいときに書く(城壁・城門の耐久、食糧、士気など) */
   fort?: Partial<Pick<Fortification, "wallHp" | "gateHp" | "food" | "morale">>;
   /** その都市だけの個性。規模ごとの標準の形に上書きする */
@@ -130,19 +130,44 @@ export interface UnitType {
   description: string;
 }
 
-/** 武将 */
-export interface Officer {
+/** 人物の役割(人物画面の分類に使う) */
+export type PersonRole = "ruler" | "general" | "strategist" | "minister";
+
+/** 人物の状態:健在・負傷・捕虜・死亡 */
+export type PersonStatus = "active" | "wounded" | "captured" | "dead";
+
+/**
+ * 人物(君主・武将・軍師)。軍団の指揮官、都市の太守、関所の守将として、IDで参照する。
+ * 能力値・特性・得意兵科は、ゲーム上の設定(史実の評価そのものではない)。
+ */
+export interface Person {
   id: string;
   name: string;
   reading: string;
+  /** 生年・没年(西暦)。分からなければ null */
+  born: number | null;
+  died: number | null;
   factionId: string;
-  /** 統率(0〜100)。部隊の士気と戦闘能力に効く */
+  role: PersonRole;
+  /** 官職・称号(317年ごろ。分からなければ空) */
+  title: string;
+  /** 統率:部隊の士気と戦闘能力に効く */
   leadership: number;
-  /** 武勇(0〜100)。本人と本陣の戦闘能力に効く */
-  valor: number;
-  /** 知略(0〜100)。側面を突かれたときの粘りや、射撃の精度などの戦術補正に効く */
+  /** 武力:本人と本陣の戦闘能力に効く */
+  war: number;
+  /** 知力:側面を突かれたときの粘りや、射撃の精度などの戦術補正に効く */
   intelligence: number;
+  /** 政治・魅力(内政・外交・登用で使う予定) */
+  politics: number;
+  charisma: number;
+  traits: string[];
+  favoredUnit: UnitTypeId | null;
+  /** 人物の説明・経歴 */
+  bio: string;
 }
+
+/** 以前の名前(武将)。同じものを指す */
+export type Officer = Person;
 
 /** 軍団。地図の上を動き、会戦の結果もここに書き戻す */
 export interface Army {
@@ -273,6 +298,8 @@ export interface CityState {
   morale: number;
   wallDamage: number;
   gateDamage: number;
+  /** いまの太守・守将(人物ID。任命で変わる) */
+  governorId?: string;
   /** 守将の状態(戦死・捕虜なら、守将はいなくなる) */
   governorFate?: "healthy" | "wounded" | "captured" | "killed";
 }

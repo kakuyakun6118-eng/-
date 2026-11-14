@@ -1,10 +1,10 @@
 // セーブデータの形と、バージョンの管理。
 // 形を変えたら SAVE_VERSION を上げ、migrateSave に古い版からの変換を書き足す。
 import type { CommanderFate } from "../battle/types";
-import type { Army, ArmyStatus, BattleEvent, CityState } from "../data/types";
+import type { Army, ArmyStatus, BattleEvent, CityState, PersonStatus } from "../data/types";
 import type { Route } from "./pathfinding";
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 /** 勢力どうしの関係。いまは切り替える手段がなく、すべて戦争として扱う(将来の外交のための入れ物) */
 export type Relation = "war" | "peace" | "alliance";
@@ -31,12 +31,16 @@ export interface CampaignSave {
   cityStates: Record<string, CityState>;
   /** 勢力の組("a|b")ごとの関係。書かれていない組は戦争 */
   relations: Record<string, Relation>;
+  /** 人物の状態(負傷・捕虜・死亡)。健在の人物は入れない */
+  personStates: Record<string, PersonStatus>;
+  /** 勢力の蓄え(金・糧) */
+  factionStates: Record<string, { gold: number; grain: number }>;
 }
 
 export interface GameSettings {
   /** 操作する勢力(null なら、どの勢力の軍団にも命令できる) */
   playerFactionId: string | null;
-  difficulty: "easy" | "normal" | "hard";
+  difficulty: "veryEasy" | "easy" | "normal" | "hard" | "veryHard";
   territoryVisible: boolean;
   /** 領土の色の濃さ(0.3〜1.6) */
   territoryOpacity: number;
@@ -79,12 +83,18 @@ export function migrateSave(raw: unknown): SaveData {
   const data = raw as Partial<SaveData>;
   if (typeof data.version !== "number") throw new Error("セーブデータのバージョンが分かりません");
   if (data.version > SAVE_VERSION) throw new Error(`このセーブデータは新しい版(v${data.version})のものです。ゲームを更新してください`);
-  // (ここに、古い版からの変換を書き足していく。例: if (data.version < 2) { ... })
+  // v1 → v2:人物の状態と勢力の蓄えが加わった。都市・関所・人物が増えた分は、読み込む側が初期状態で補う
+  if (data.version < 2 && data.campaign) {
+    data.campaign.personStates = {};
+    data.campaign.factionStates = {};
+  }
   if (!data.campaign || !Array.isArray(data.campaign.armies) || !data.cities || !data.settings) {
     throw new Error("セーブデータの中身が欠けています");
   }
   data.campaign.relations ??= {};
   data.campaign.cityStates ??= {};
+  data.campaign.personStates ??= {};
+  data.campaign.factionStates ??= {};
   data.version = SAVE_VERSION;
   return data as SaveData;
 }

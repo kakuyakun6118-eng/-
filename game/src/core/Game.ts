@@ -1,7 +1,7 @@
 // ゲーム全体のまとめ役。地形・都市・軍団・カメラ・入力・画面表示と、進行の計算(sim)をつなぐ。
 import * as THREE from "three";
 import { MapCamera, type WorldRect } from "../camera/MapCamera";
-import { armies as armyData, factionById, factionOfCity, officerById, regions, resolveCityLayout, scenario } from "../data";
+import { armies as armyData, factionById, factionOfCity, initialCityOwners, officerById, regions, resolveCityLayout, scenario } from "../data";
 import type { Difficulty } from "../battle/ai";
 import { BattleScreen } from "../battle/BattleScreen";
 import type { BattleResult } from "../battle/types";
@@ -526,7 +526,8 @@ export class Game {
 
     // 都市の所属を戻す。変わった都市は、旗とラベルの色を付け替える
     for (const c of this.allCities) {
-      const owner = data.cities[c.id]?.ownerId ?? undefined;
+      // セーブに無い都市(あとから追加された都市)は、シナリオ開始時の所属にする
+      const owner = (c.id in data.cities ? data.cities[c.id].ownerId : initialCityOwners[c.id]) ?? undefined;
       if (owner === scenario.cityOwners[c.id]) continue;
       if (owner) scenario.cityOwners[c.id] = owner;
       else delete scenario.cityOwners[c.id];

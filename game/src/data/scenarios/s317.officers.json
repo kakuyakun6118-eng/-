@@ -1,7 +1,0 @@
-[
-  {"id": "liu_yao", "name": "劉曜", "reading": "りゅうよう", "factionId": "han_zhao", "leadership": 84, "valor": 88, "intelligence": 72},
-  {"id": "shi_hu", "name": "石虎", "reading": "せきこ", "factionId": "shile", "leadership": 80, "valor": 94, "intelligence": 58},
-  {"id": "zu_ti", "name": "祖逖", "reading": "そてき", "factionId": "jin", "leadership": 90, "valor": 80, "intelligence": 86},
-  {"id": "duan_wenyang", "name": "段文鴦", "reading": "だんぶんおう", "factionId": "duan", "leadership": 70, "valor": 90, "intelligence": 60},
-  {"id": "tuoba_yulv", "name": "拓跋鬱律", "reading": "たくばつうつりつ", "factionId": "dai", "leadership": 82, "valor": 84, "intelligence": 70}
-]

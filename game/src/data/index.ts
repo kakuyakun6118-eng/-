@@ -1,6 +1,6 @@
 // データの入口。地域やシナリオを増やすときは、ここに登録する。
 import type {
-  Army, City, CityLayout, Crossing, TerrainKind, TerrainRule, CityLevelRule, Faction, Officer, RegionData, RegionInfo, River, Scenario, UnitType,
+  Army, City, CityLayout, Crossing, TerrainKind, TerrainRule, CityLevelRule, Faction, Officer, Person, RegionData, RegionInfo, River, Scenario, UnitType,
 } from "./types";
 
 import ncRegion from "./regions/north-china/region.json";
@@ -11,7 +11,7 @@ import ncCrossings from "./regions/north-china/crossings.json";
 import terrainCostRules from "./rules/terrainCosts.json";
 import s317 from "./scenarios/s317.json";
 import s317Armies from "./scenarios/s317.armies.json";
-import s317Officers from "./scenarios/s317.officers.json";
+import s317Persons from "./scenarios/s317.persons.json";
 import unitTypeList from "./rules/unitTypes.json";
 import creditList from "./credits.json";
 import cityLevelRules from "./rules/cityLevels.json";
@@ -57,7 +57,16 @@ export function resolveCityLayout(city: City): CityLayout {
 export const unitTypes = unitTypeList as UnitType[];
 
 /** 現在のシナリオの武将と軍団 */
-export const officers = s317Officers as Officer[];
+/** 人物(君主・武将・軍師)の一覧 */
+export const persons = s317Persons.persons as Person[];
+export const officers = persons;
+
+export function personById(id: string | undefined): Person | undefined {
+  return id ? persons.find((o) => o.id === id) : undefined;
+}
+
+/** シナリオ開始時の、都市の所属(読み込んだセーブに無い都市を補うのに使う) */
+export const initialCityOwners: Record<string, string> = { ...scenario.cityOwners };
 export const armies = s317Armies as Army[];
 
 export function factionById(id: string): Faction | undefined {
@@ -65,7 +74,7 @@ export function factionById(id: string): Faction | undefined {
 }
 
 export function officerById(id: string): Officer | undefined {
-  return officers.find((o) => o.id === id);
+  return personById(id);
 }
 
 /** 軍団の総兵力 */

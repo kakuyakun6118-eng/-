@@ -1,0 +1,125 @@
+{
+ "note": "能力値・特性・得意兵科は、すべてゲーム上の設定。生没年は確認できた範囲で入れ、分からないものは null(不明)としている。",
+ "persons": [
+  {
+   "id": "liu_yao",
+   "name": "劉曜",
+   "reading": "りゅうよう",
+   "born": null,
+   "died": 329,
+   "factionId": "han_zhao",
+   "role": "general",
+   "title": "相国・中山王",
+   "leadership": 84,
+   "war": 88,
+   "intelligence": 72,
+   "politics": 58,
+   "charisma": 70,
+   "traits": [
+    "勇将"
+   ],
+   "favoredUnit": "cavalry",
+   "bio": "匈奴の劉氏の一族。漢(前趙)の軍を率いて洛陽・長安を落とした。"
+  },
+  {
+   "id": "shi_hu",
+   "name": "石虎",
+   "reading": "せきこ",
+   "born": 295,
+   "died": 349,
+   "factionId": "shile",
+   "role": "general",
+   "title": "征虜将軍",
+   "leadership": 80,
+   "war": 94,
+   "intelligence": 58,
+   "politics": 30,
+   "charisma": 40,
+   "traits": [
+    "猛将",
+    "苛烈"
+   ],
+   "favoredUnit": "cavalry",
+   "bio": "石勒の甥。勇猛だが残忍さでも知られる。"
+  },
+  {
+   "id": "zu_ti",
+   "name": "祖逖",
+   "reading": "そてき",
+   "born": 266,
+   "died": 321,
+   "factionId": "jin",
+   "role": "general",
+   "title": "豫州刺史",
+   "leadership": 90,
+   "war": 80,
+   "intelligence": 86,
+   "politics": 78,
+   "charisma": 88,
+   "traits": [
+    "北伐",
+    "人望"
+   ],
+   "favoredUnit": "infantry",
+   "bio": "晋の将。長江を渡って北伐を進め、黄河以南の回復をめざした。"
+  },
+  {
+   "id": "duan_wenyang",
+   "name": "段文鴦",
+   "reading": "だんぶんおう",
+   "born": null,
+   "died": 321,
+   "factionId": "duan",
+   "role": "general",
+   "title": "",
+   "leadership": 70,
+   "war": 90,
+   "intelligence": 60,
+   "politics": 35,
+   "charisma": 62,
+   "traits": [
+    "勇将"
+   ],
+   "favoredUnit": "cavalry",
+   "bio": "段部鮮卑の将。段匹磾の弟。"
+  },
+  {
+   "id": "tuoba_yulv",
+   "name": "拓跋鬱律",
+   "reading": "たくばつうつりつ",
+   "born": null,
+   "died": 321,
+   "factionId": "dai",
+   "role": "ruler",
+   "title": "代王",
+   "leadership": 82,
+   "war": 84,
+   "intelligence": 70,
+   "politics": 60,
+   "charisma": 72,
+   "traits": [
+    "騎射"
+   ],
+   "favoredUnit": "cavalry",
+   "bio": "拓跋部の首長。代王として北方に勢力を広げた。"
+  },
+  {
+   "id": "tao_bao",
+   "name": "桃豹",
+   "reading": "とうひょう",
+   "born": null,
+   "died": null,
+   "factionId": "shile",
+   "role": "general",
+   "title": "",
+   "leadership": 65,
+   "war": 72,
+   "intelligence": 55,
+   "politics": 40,
+   "charisma": 50,
+   "traits": [],
+   "favoredUnit": "infantry",
+   "bio": "石勒の配下の将。十八騎の一人とされる。"
+  }
+ ]
+}

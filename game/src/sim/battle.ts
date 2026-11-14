@@ -1,6 +1,6 @@
 // 会戦に関する計算。戦闘イベントから、会戦準備画面や3D戦闘に渡す「会戦の設定」を組み立てる。
 // ここは計算だけで、画面のことは知らない。
-import { cityLevelOf, cityLevels, officerById, resolveCityLayout, terrainRules } from "../data";
+import { cityLevelOf, cityLevels, officerById, personById, resolveCityLayout, terrainRules } from "../data";
 import type { Army, BattleEvent, BattleSetup, BattleSide, City, CityState, Fortification, Officer, TerrainKind } from "../data/types";
 
 const KM_PER_DEGREE = 111.19;
@@ -55,6 +55,7 @@ export function initialCityState(city: City): CityState {
     wallDamage: 0,
     gateDamage: 0,
     governorFate: "healthy",
+    governorId: city.governorId,
   };
 }
 
@@ -111,10 +112,7 @@ function citySide(city: City, factionId: string, state: CityState): BattleSide {
   const garrison = state.garrison;
   // 守将:都市データに名前があれば、能力値は仮の値で指揮官とする(戦死・捕虜になっていれば不在)
   const lost = state.governorFate === "killed" || state.governorFate === "captured";
-  const governor: Officer | null =
-    city.governor && !lost
-      ? { id: `gov_${city.id}`, name: city.governor, reading: "", factionId, leadership: 65, valor: 60, intelligence: 60 }
-      : null;
+  const governor: Officer | null = (!lost && personById(state.governorId ?? city.governorId)) || null;
   return {
     role: "defender",
     kind: "city",

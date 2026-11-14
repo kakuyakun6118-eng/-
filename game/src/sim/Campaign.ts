@@ -4,7 +4,7 @@ import { resolveCityLayout, scenario, totalTroops } from "../data";
 import { initialCityState, placeName } from "./battle";
 import { seasonOf, type CampaignSave, type Relation } from "./save";
 import type { BattleResult, CommanderFate, SideResult } from "../battle/types";
-import type { Army, ArmyStatus, BattleEvent, City, CityState, UnitTypeId } from "../data/types";
+import type { Army, ArmyStatus, BattleEvent, City, CityState, PersonStatus, UnitTypeId } from "../data/types";
 import { distanceKm, findRoute, type Route, type RoutePoint } from "./pathfinding";
 import type { TerrainGrid } from "./TerrainGrid";
 
@@ -86,6 +86,23 @@ export class Campaign {
     for (const s of this.armies) s.supplied = this.nearFriendlyCity(s);
   }
 
+  /** 人物の状態(負傷・捕虜・死亡)。健在の人物は入れない */
+  readonly personStates: Record<string, PersonStatus> = {};
+  /** 勢力の蓄え(金・糧) */
+  readonly factionStates: Record<string, { gold: number; grain: number }> = {};
+
+  personStatus(id: string): PersonStatus {
+    return this.personStates[id] ?? "active";
+  }
+
+  /** 会戦の結果(戦死・捕虜・負傷)を、人物の状態に記録する */
+  private recordFate(personId: string | undefined, fate: string | undefined): void {
+    if (!personId) return;
+    if (fate === "killed") this.personStates[personId] = "dead";
+    else if (fate === "captured") this.personStates[personId] = "captured";
+    else if (fate === "wounded") this.personStates[personId] = "wounded";
+  }
+
   /** 勢力の組ごとの関係。書かれていない組は戦争(いまは切り替える手段がない) */
   readonly relations: Record<string, Relation> = {};
 
@@ -113,6 +130,8 @@ export class Campaign {
       events: this.events,
       cityStates: this.cityStates,
       relations: this.relations,
+      personStates: this.personStates,
+      factionStates: this.factionStates,
     });
   }
 
@@ -135,6 +154,10 @@ export class Campaign {
     Object.assign(this.cityStates, data.cityStates);
     for (const k of Object.keys(this.relations)) delete this.relations[k];
     Object.assign(this.relations, data.relations);
+    for (const k of Object.keys(this.personStates)) delete this.personStates[k];
+    Object.assign(this.personStates, data.personStates);
+    for (const k of Object.keys(this.factionStates)) delete this.factionStates[k];
+    Object.assign(this.factionStates, data.factionStates);
 
     const saved = new Set(data.armies.map((a) => a.army.id));
     for (const s of [...this.armies]) {
@@ -459,6 +482,7 @@ export class Campaign {
       a.fatigue = r.fatigue;
       a.food = Math.max(0, a.food - 1);
       s.commanderFate = r.commander;
+      this.recordFate(a.commanderId, r.commander);
       if (r.commander === "killed" || r.commander === "captured") a.commanderId = ""; // 指揮官を失った
       s.route = null;
       if (r.outcome === "annihilated" || totalTroops(a) <= 0) {
@@ -486,12 +510,17 @@ export class Campaign {
         wallDamage: Math.max(prev.wallDamage, result.siege.wallDamage),
         gateDamage: Math.max(prev.gateDamage, result.siege.gateDamage),
         governorFate: d.commander,
+        governorId: prev.governorId,
       };
+      this.recordFate(prev.governorId, d.commander);
+      if (d.commander === "killed" || d.commander === "captured") state.governorId = undefined;
       if (result.siege.captured) {
         // 落城:攻撃側の勢力のものになる。守備隊は、仮に攻撃側の兵から1,000人を置いたものとする(軍団の兵力は減らさない)
         state.garrison = 1000;
         state.morale = 60;
+        this.recordFate(prev.governorId, d.commander === "killed" ? "killed" : "captured");
         state.governorFate = "captured";
+        state.governorId = undefined;
         this.listener.onCityCaptured(city.id, event.attackerFactionId);
       } else if (attacker) {
         // 攻め落とせなかった軍団は、都市から離れる方向へ退く

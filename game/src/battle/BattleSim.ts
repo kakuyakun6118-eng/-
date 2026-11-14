@@ -67,7 +67,7 @@ export class BattleSim {
     this.menPerFigure = deployment.menPerFigure;
     const commander = (id: SideId): Commander => {
       const c = (id === "attacker" ? setup.attacker : setup.defender).commander;
-      return { leadership: c?.leadership ?? 45, valor: c?.valor ?? 45, intelligence: c?.intelligence ?? 45, active: true };
+      return { leadership: c?.leadership ?? 45, valor: c?.war ?? 45, intelligence: c?.intelligence ?? 45, active: true };
     };
     this.commanders = { attacker: commander("attacker"), defender: commander("defender") };
     this.initialMen = { attacker: this.menOf("attacker", false), defender: this.menOf("defender", false) };

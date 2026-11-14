@@ -5,7 +5,7 @@ import type { BattleSim } from "./BattleSim";
 import { unitClasses } from "./deploy";
 import type { BattleUnit, SideId } from "./types";
 
-export type Difficulty = "easy" | "normal" | "hard";
+export type Difficulty = "veryEasy" | "easy" | "normal" | "hard" | "veryHard";
 
 interface AiProfile {
   name: string;
