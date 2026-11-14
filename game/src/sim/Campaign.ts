@@ -1,7 +1,9 @@
 // ゲームの進行を計算する。日付を進め、軍団の行軍・食糧・疲労・士気・敵との接触を扱う。
 // ここは計算だけで、3D表示のことは知らない。変化があったら、登録された関数で知らせる。
 import { personById, resolveCityLayout, scenario, totalTroops } from "../data";
-import { governorIdOf, initialCityState, placeName } from "./battle";
+import { autoResolve } from "./autoBattle";
+import { createBattleSetup, governorIdOf, initialCityState, placeName } from "./battle";
+import { garrisonCap, StrategyAi, strategyRules } from "./strategy";
 import { seasonOf, type CampaignSave, type Relation } from "./save";
 import type { BattleResult, CommanderFate, SideResult } from "../battle/types";
 import type { Army, ArmyStatus, BattleEvent, City, CityState, PersonStatus, UnitTypeId } from "../data/types";
@@ -54,6 +56,8 @@ export interface CampaignListener {
   onArmyAdded(state: ArmyState): void;
   /** 都市が陥落して、支配する勢力が変わった */
   onCityCaptured(cityId: string, factionId: string): void;
+  /** 出来事の知らせ(AIの行動や、自動で決着した戦い) */
+  onNews?(text: string): void;
 }
 
 export class Campaign {
@@ -162,11 +166,176 @@ export class Campaign {
     return null;
   }
 
-  /** 勢力の組ごとの関係。書かれていない組は戦争(いまは切り替える手段がない) */
-  readonly relations: Record<string, Relation> = {};
+  /** 勢力の組ごとの関係。書かれていない組は和平 */
+  readonly relations: Record<string, Relation> = { ...(scenario.relations as Record<string, Relation> | undefined) };
+  private relationSince: Record<string, number> = {};
+  /** 操作している勢力。null のあいだは、敵の自動行動(戦略AI)は動かない */
+  playerFactionId: string | null = null;
+  difficulty: keyof typeof strategyRules.profiles = "normal";
+  /** 最近の出来事(新しいものが後ろ) */
+  readonly news: { day: number; text: string }[] = [];
+  /** プレイヤーへの外交の申し入れ(返事待ち) */
+  readonly proposals: { from: string; kind: "peace" | "alliance"; day: number }[] = [];
+  private nextArmyId = 1;
+  private readonly pendingAuto: BattleEvent[] = [];
+  private readonly strategy = new StrategyAi(this);
 
   relationOf(a: string, b: string): Relation {
-    return this.relations[[a, b].sort().join("|")] ?? "war";
+    return this.relations[[a, b].sort().join("|")] ?? "peace";
+  }
+
+  atWar(a: string, b: string | undefined): boolean {
+    return b !== undefined && a !== b && this.relationOf(a, b) === "war";
+  }
+
+  setRelation(a: string, b: string, relation: Relation): void {
+    const key = [a, b].sort().join("|");
+    this.relations[key] = relation;
+    this.relationSince[key] = Math.floor(this.day);
+  }
+
+  /** 関係が最後に変わってからの日数(開始時からの関係は、十分に長いものとして扱う) */
+  relationAge(a: string, b: string): number {
+    const since = this.relationSince[[a, b].sort().join("|")];
+    return since === undefined ? 9999 : Math.floor(this.day) - since;
+  }
+
+  strengthOf(factionId: string): number {
+    return this.strategy.strengthOf(factionId);
+  }
+
+  addNews(text: string): void {
+    this.news.push({ day: Math.floor(this.day), text: `${this.dateText()} ${text}` });
+    if (this.news.length > 40) this.news.shift();
+    this.listener.onNews?.(text);
+  }
+
+  /** AIからプレイヤーへの申し入れ(同じものは重ねない) */
+  propose(from: string, kind: "peace" | "alliance"): void {
+    if (this.proposals.some((x) => x.from === from && x.kind === kind)) return;
+    this.proposals.push({ from, kind, day: Math.floor(this.day) });
+    this.addNews(`${factionName(from)}が${kind === "peace" ? "和睦" : "同盟"}を求めています(外交の画面で返事ができます)`);
+  }
+
+  /** プレイヤーが、申し入れに返事をする */
+  answerProposal(from: string, accept: boolean): void {
+    const i = this.proposals.findIndex((x) => x.from === from);
+    if (i < 0 || !this.playerFactionId) return;
+    const [x] = this.proposals.splice(i, 1);
+    if (accept) {
+      this.setRelation(from, this.playerFactionId, x.kind === "peace" ? "peace" : "alliance");
+      this.addNews(`${factionName(from)}と${x.kind === "peace" ? "和睦" : "同盟"}しました`);
+    }
+  }
+
+  /**
+   * プレイヤーからの外交。宣戦はすぐに成り立つ。和睦と同盟は、相手が受けるかどうかを兵力と状況で決める。
+   * 結果を、画面に出す文で返す。
+   */
+  diplomacy(target: string, action: "war" | "peace" | "alliance"): string {
+    const me = this.playerFactionId;
+    if (!me || me === target) return "操作する勢力を選んでください";
+    const now = this.relationOf(me, target);
+    const name = factionName(target);
+    if (this.relationAge(me, target) < 90) return `${name}との関係は変わったばかりです(90日たつまで変えられません)`;
+    const others = scenario.factions.filter((f) => f.id !== me && f.id !== target);
+    if (action === "war") {
+      if (now === "war") return "すでに戦争中です";
+      this.setRelation(me, target, "war");
+      this.addNews(`${factionName(me)}が${name}に宣戦しました`);
+      return `${name}に宣戦しました`;
+    }
+    if (action === "peace") {
+      if (now !== "war") return "戦争中ではありません";
+      const theirWars = others.filter((f) => this.relationOf(target, f.id) === "war").length;
+      if (this.strengthOf(me) >= this.strengthOf(target) * 0.8 || theirWars >= 1) {
+        this.setRelation(me, target, "peace");
+        this.addNews(`${factionName(me)}と${name}が和睦しました`);
+        return `${name}は和睦を受け入れました`;
+      }
+      return `${name}は和睦を断りました(相手のほうが優勢で、ほかに敵もいません)`;
+    }
+    if (now !== "peace") return now === "alliance" ? "すでに同盟しています" : "戦争中の相手とは、先に和睦が必要です";
+    const common = others.some((f) => this.relationOf(me, f.id) === "war" && this.relationOf(target, f.id) === "war");
+    if (!common) return `${name}は同盟を断りました(共通の敵がいません)`;
+    this.setRelation(me, target, "alliance");
+    this.addNews(`${factionName(me)}と${name}が同盟しました`);
+    return `${name}と同盟しました`;
+  }
+
+  /** 徴兵:金を払って、都市の守備兵を増やす。できないときは理由を返す */
+  recruit(cityId: string, troops: number): string | null {
+    const city = this.cities.find((c) => c.id === cityId);
+    const owner = city ? scenario.cityOwners[city.id] : undefined;
+    const st = owner ? this.factionStates[owner] : undefined;
+    if (!city || !st) return "都市が見つかりません";
+    const state = this.cityState(city);
+    const n = Math.floor(Math.min(troops, garrisonCap(city) - state.garrison));
+    if (n < 100) return "守備兵は、これ以上置けません";
+    const cost = (n / 100) * strategyRules.costs.goldPer100Troops;
+    if (st.gold < cost) return `金が足りません(必要 ${Math.ceil(cost)})`;
+    st.gold -= cost;
+    this.cityStates[city.id] = { ...state, garrison: state.garrison + n };
+    return null;
+  }
+
+  /** 出陣:都市の守備兵から、新しい軍団を作る。できないときは理由を返す */
+  raiseArmy(cityId: string, troops: number, commanderId?: string): ArmyState | string {
+    const city = this.cities.find((c) => c.id === cityId);
+    const owner = city ? scenario.cityOwners[city.id] : undefined;
+    const st = owner ? this.factionStates[owner] : undefined;
+    if (!city || !owner || !st) return "都市が見つかりません";
+    const state = this.cityState(city);
+    const n = Math.floor(troops);
+    if (n < strategyRules.costs.minArmy) return `軍団は ${strategyRules.costs.minArmy.toLocaleString("ja-JP")}人以上で編成します`;
+    if (state.garrison - n < strategyRules.costs.minGarrison) return `守備兵を ${strategyRules.costs.minGarrison}人は残す必要があります`;
+    const grain = (n / 100) * strategyRules.costs.grainPer100TroopsToRaise;
+    if (st.grain < grain) return `糧が足りません(必要 ${Math.ceil(grain)})`;
+    // 置き場所:都市のまわりで、通れて、ほかの軍団と重ならない所
+    let spot: RoutePoint | null = null;
+    for (let ring = 1; ring <= 4 && !spot; ring++) {
+      for (let k = 0; k < 8 && !spot; k++) {
+        const ang = (k / 8) * Math.PI * 2 + ring;
+        const p = { lon: city.lon + Math.cos(ang) * (this.cityReach(city) + 0.12 * ring), lat: city.lat + Math.sin(ang) * (this.cityReach(city) + 0.12 * ring) };
+        if (!isFinite(this.grid.costAt(p.lon, p.lat))) continue;
+        if (this.armies.some((o) => Math.hypot(o.army.lon - p.lon, o.army.lat - p.lat) < 0.3)) continue;
+        spot = p;
+      }
+    }
+    if (!spot) return "軍団を置ける場所がありません";
+    st.grain -= grain;
+    this.cityStates[city.id] = { ...state, garrison: state.garrison - n };
+    // 兵種の割合:遊牧の勢力は騎兵が多い(ゲーム上の設定)
+    const people = scenario.factions.find((f) => f.id === owner)?.people ?? "";
+    const nomad = /匈奴|鮮卑|羯/.test(people);
+    const cavalry = Math.round(n * (nomad ? 0.5 : 0.15));
+    const archer = Math.round(n * (nomad ? 0.15 : 0.25));
+    const commander = personById(commanderId);
+    const id = `army_n${this.nextArmyId++}`;
+    const army: Army = {
+      id, name: commander ? `${commander.name}軍` : `${city.name}の軍`, factionId: owner, commanderId: commander?.id ?? "",
+      lon: spot.lon, lat: spot.lat, facing: 0,
+      troops: { infantry: n - cavalry - archer, cavalry, archer }, morale: 70, fatigue: 0, food: 45,
+    };
+    const s: ArmyState = { army, status: "camping", route: null, progress: 0, supplied: true, ignore: new Set<string>(), targetCityId: null };
+    this.armies.push(s);
+    this.listener.onArmyAdded(s);
+    return s;
+  }
+
+  /** 補充:軍団が、そばの味方の都市の守備兵を受け取る */
+  reinforce(armyId: string, cityId: string, troops: number): string | null {
+    const s = this.stateOf(armyId);
+    const city = this.cities.find((c) => c.id === cityId);
+    if (!s || !city || scenario.cityOwners[city.id] !== s.army.factionId) return "補充できません";
+    if (distanceKm(city, s.army) > SUPPLY_RANGE_KM) return "都市から離れすぎています";
+    const state = this.cityState(city);
+    const n = Math.floor(Math.min(troops, state.garrison - strategyRules.costs.minGarrison));
+    if (n < 100) return "都市に、出せる兵がいません";
+    this.cityStates[city.id] = { ...state, garrison: state.garrison - n };
+    s.army.troops.infantry += n;
+    this.listener.onArmyChanged(s, false);
+    return null;
   }
 
   /** いまの年・月・季節 */
@@ -191,6 +360,10 @@ export class Campaign {
       relations: this.relations,
       personStates: this.personStates,
       factionStates: this.factionStates,
+      relationSince: this.relationSince,
+      news: this.news,
+      proposals: this.proposals,
+      nextArmyId: this.nextArmyId,
     });
   }
 
@@ -211,8 +384,16 @@ export class Campaign {
     }
     for (const k of Object.keys(this.cityStates)) delete this.cityStates[k];
     Object.assign(this.cityStates, data.cityStates);
+    // 関係は、シナリオの最初の関係に、セーブにある分を重ねる(古いセーブには関係が入っていない)
     for (const k of Object.keys(this.relations)) delete this.relations[k];
-    Object.assign(this.relations, data.relations);
+    Object.assign(this.relations, scenario.relations, data.relations);
+    this.relationSince = { ...data.relationSince };
+    this.news.length = 0;
+    this.news.push(...(data.news ?? []));
+    this.proposals.length = 0;
+    this.proposals.push(...(data.proposals ?? []));
+    this.nextArmyId = data.nextArmyId ?? 1;
+    this.pendingAuto.length = 0;
     for (const k of Object.keys(this.personStates)) delete this.personStates[k];
     Object.assign(this.personStates, data.personStates);
     // 勢力の蓄えは、セーブにある勢力の分だけ上書きする(古いセーブに無い勢力は、いまの値のまま)
@@ -291,7 +472,7 @@ export class Campaign {
   }
 
   private hostile(a: Army, factionId: string | undefined): boolean {
-    return factionId !== undefined && a.factionId !== factionId && this.relationOf(a.factionId, factionId) === "war";
+    return this.atWar(a.factionId, factionId);
   }
 
   /** 都市の大きさ(度)。軍団が都市の中に入り込まないために使う */
@@ -380,16 +561,18 @@ export class Campaign {
   private closedFor(army: Army): (cell: number) => boolean {
     return (cell) => {
       const passId = this.grid.gates.get(cell);
-      return passId !== undefined && this.hostile(army, scenario.cityOwners[passId]);
+      // 関所は、持ち主と同盟の勢力だけが通れる(和平の相手でも、通してはもらえない)
+      const owner = passId === undefined ? undefined : scenario.cityOwners[passId];
+      return owner !== undefined && owner !== army.factionId && this.relationOf(army.factionId, owner) !== "alliance";
     };
   }
 
   /** 移動先までの経路を調べる(まだ動かさない)。行けないときは null */
-  planRoute(armyId: string, target: RoutePoint): Route | null {
+  planRoute(armyId: string, target: RoutePoint, maxSpots = 12): Route | null {
     const s = this.stateOf(armyId);
     if (!s) return null;
     const closed = this.closedFor(s.army);
-    for (const spot of this.freeSpots(target, s)) {
+    for (const spot of this.freeSpots(target, s).slice(0, maxSpots)) {
       const route = findRoute(this.grid, { lon: s.army.lon, lat: s.army.lat }, spot, closed);
       if (route && route.points.length >= 2) return route;
     }
@@ -480,8 +663,36 @@ export class Campaign {
       for (const s of this.armies) this.dailyUpkeep(s);
       this.repairCities();
       if ((d + 1) % 30 === 0) this.collectIncome();
+      if (this.playerFactionId !== null) this.strategy.daily(d + 1);
       this.listener.onDayChanged(d + 1);
     }
+    this.resolveAutoBattles();
+  }
+
+  /** AIどうしの戦いを、計算で決着させて地図に反映する */
+  private resolveAutoBattles(): void {
+    while (this.pendingAuto.length > 0) {
+      const event = this.pendingAuto.shift()!;
+      if (event.status !== "pending") continue;
+      const setup = createBattleSetup(event, (id) => this.stateOf(id)?.army, this.cities, (c) => this.cityState(c));
+      if (!setup) {
+        event.status = "cancelled";
+        continue;
+      }
+      const result = autoResolve(setup);
+      const attackerName = setup.attacker.name;
+      const defenderName = setup.defender.name;
+      this.applyBattleResult(result);
+      if (result.siege) {
+        // 囲んでいた日数ぶん、攻撃側の食糧が減る
+        const s = this.stateOf(event.attackerArmyId);
+        if (s) s.army.food = Math.max(0, s.army.food - result.siege.days * 0.5);
+        this.addNews(result.siege.captured ? `${attackerName}が${event.location.name}を攻め落としました` : `${attackerName}は${event.location.name}を落とせず、退きました`);
+      } else {
+        this.addNews(`${event.location.name}の戦い:${result.winner === "draw" ? `${attackerName}と${defenderName}は引き分けました` : `${result.winner === "attacker" ? attackerName : defenderName}が${result.winner === "attacker" ? defenderName : attackerName}を破りました`}`);
+      }
+    }
+
   }
 
   /** 行軍中の軍団を、経路に沿って進める */
@@ -573,6 +784,11 @@ export class Campaign {
     if (defender) {
       defender.route = null;
       this.setStatus(defender, "fighting");
+    }
+    // プレイヤーが関わらない戦い(AIどうし)は、時間を止めずに、計算で決着させる
+    if (this.playerFactionId !== null && event.attackerFactionId !== this.playerFactionId && event.defenderFactionId !== this.playerFactionId) {
+      this.pendingAuto.push(event);
+      return;
     }
     this.speed = 0;
     this.listener.onBattleEvent(event);
@@ -706,4 +922,8 @@ export class Campaign {
     if (totalTroops(a) <= 0) a.morale = 0;
     this.listener.onArmyChanged(s, statusChanged);
   }
+}
+
+function factionName(id: string): string {
+  return scenario.factions.find((f) => f.id === id)?.name ?? "不明の勢力";
 }

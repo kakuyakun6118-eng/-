@@ -32,6 +32,7 @@
       <button id="territory-toggle" type="button" aria-pressed="true">領土</button>
       <button id="menu-open" class="menu-open" type="button">メニュー</button>
       <button id="persons-open" type="button">人物</button>
+      <button id="diplomacy-open" type="button">外交</button>
       <section id="info" hidden>
         <div class="info-inner">
           <div class="info-head">
@@ -50,6 +51,10 @@
             <div><dt>城防御</dt><dd class="info-defense"></dd></div>
           </dl>
           <p class="info-description"></p>
+          <div class="info-actions" hidden>
+            <button class="info-recruit" type="button">徴兵 +500</button>
+            <button class="info-raise" type="button">出陣</button>
+          </div>
           <div class="info-zoom" role="group" aria-label="表示する距離">
             <button type="button" data-distance="95">広域</button>
             <button type="button" data-distance="30">中距離</button>
@@ -255,6 +260,24 @@
           </div>
         </div>
       </section>
+      <section id="diplomacy" hidden>
+        <div class="persons-inner">
+          <div class="persons-head">
+            <h2>外交と情勢</h2>
+            <span class="diplomacy-message" role="status"></span>
+            <button class="persons-close diplomacy-close" type="button">閉じる</button>
+          </div>
+          <p class="diplomacy-hint"></p>
+          <div class="persons-body">
+            <div class="diplomacy-factions"></div>
+            <div class="diplomacy-side">
+              <div class="diplomacy-proposals"></div>
+              <h3>最近の出来事</h3>
+              <ul class="diplomacy-news"></ul>
+            </div>
+          </div>
+        </div>
+      </section>
       <section id="menu" hidden>
         <div class="menu-inner">
           <div class="menu-head">
@@ -270,7 +293,7 @@
             </div>
             <div class="menu-block">
               <h3>設定</h3>
-              <label for="menu-faction">操作する勢力</label>
+              <label for="menu-faction">操作する勢力(選ぶと、ほかの勢力が自動で動きます)</label>
               <select id="menu-faction"></select>
               <label for="menu-difficulty">敵の強さ</label>
               <select id="menu-difficulty">

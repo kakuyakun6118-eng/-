@@ -213,5 +213,23 @@
     "guanggu": "cao_yi",
     "xiangping": "cui_bi"
   },
-  "governorNote": "governors は、317年の開始時に各都市・関所を守る人物。君主は居城に置いた。それ以外の配置の多くは、史料で確かめたものではなく、ゲーム上の設定。"
+  "governorNote": "governors は、317年の開始時に各都市・関所を守る人物。君主は居城に置いた。それ以外の配置の多くは、史料で確かめたものではなく、ゲーム上の設定。",
+  "relations": {
+    "han_zhao|jin": "war",
+    "han_zhao|sima_bao": "war",
+    "han_zhao|qianliang": "war",
+    "dai|han_zhao": "war",
+    "duan|han_zhao": "war",
+    "jin|shile": "war",
+    "duan|shile": "war",
+    "chenghan|jin": "war",
+    "chenghan|sima_bao": "war",
+    "han_zhao|shile": "alliance",
+    "duan|jin": "alliance",
+    "jin|qianliang": "alliance",
+    "dai|jin": "alliance",
+    "jin|murong": "alliance",
+    "cui_bi|jin": "alliance"
+  },
+  "relationNote": "317年ごろの大まかな状況をもとにした、ゲーム上の設定。書かれていない組は「和平」(互いに攻めない)。石勒は名目上は漢の将軍なので同盟とした(史実では319年に決裂)。晋から官位を受けていた勢力は、晋との同盟とした。"
 }

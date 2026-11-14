@@ -383,6 +383,8 @@ export interface Scenario {
   cityOwners: Record<string, string>;
   /** 所属が史料で確かめにくく、推定で置いた都市 */
   uncertainOwners?: string[];
+  /** 開始時の勢力どうしの関係("a|b" → war / peace / alliance)。書かれていない組は和平 */
+  relations?: Record<string, string>;
   /** 開始時に都市・関所を守る人物(都市ID・関所ID → 人物ID) */
   governors?: Record<string, string>;
   /** 関所ID → 勢力ID */

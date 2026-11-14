@@ -2334,3 +2334,169 @@ body {
     flex-basis: 38%;
   }
 }
+
+/* ===== 外交と情勢 ===== */
+#diplomacy-open {
+  position: absolute;
+  top: calc(172px + env(safe-area-inset-top, 0px));
+  right: max(16px, env(safe-area-inset-right, 0px));
+  min-height: 32px;
+  padding: 4px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--label-bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+#app.in-battle #diplomacy-open,
+#app.battle-open #diplomacy-open {
+  display: none;
+}
+
+#diplomacy {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding-block: 8px;
+  padding-left: max(12px, env(safe-area-inset-left, 0px));
+  padding-right: max(12px, env(safe-area-inset-right, 0px));
+  background: var(--shade);
+}
+
+#diplomacy[hidden] {
+  display: none;
+}
+
+.diplomacy-message {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--bronze);
+}
+
+.diplomacy-hint {
+  margin: 0;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.diplomacy-factions {
+  flex: 0 0 58%;
+  min-width: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.diplomacy-row {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1.3fr) minmax(0, 1fr) 40px auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 12px;
+}
+
+.diplomacy-row i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.diplomacy-name,
+.diplomacy-info {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.diplomacy-info {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.diplomacy-state[data-relation="war"] {
+  color: var(--bad);
+}
+
+.diplomacy-state[data-relation="alliance"] {
+  color: var(--good);
+}
+
+.diplomacy-acts {
+  display: flex;
+  gap: 4px;
+}
+
+.diplomacy-acts button,
+.diplomacy-proposal button,
+.info-actions button {
+  min-height: 28px;
+  padding: 1px 8px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: none;
+  color: var(--bronze);
+  font-family: var(--font-body);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.diplomacy-side {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.diplomacy-side h3 {
+  margin: 0 0 2px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--bronze);
+}
+
+.diplomacy-proposal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+}
+
+.diplomacy-news {
+  margin: 0;
+  padding-left: 1.1em;
+}
+
+.info-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.info-actions[hidden] {
+  display: none;
+}
+
+@media (max-width: 520px) {
+  #diplomacy .persons-body {
+    flex-direction: column;
+  }
+  .diplomacy-factions {
+    flex-basis: 55%;
+  }
+}

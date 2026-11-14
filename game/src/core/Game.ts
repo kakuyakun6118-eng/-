@@ -1,7 +1,7 @@
 // ゲーム全体のまとめ役。地形・都市・軍団・カメラ・入力・画面表示と、進行の計算(sim)をつなぐ。
 import * as THREE from "three";
 import { MapCamera, type WorldRect } from "../camera/MapCamera";
-import { passes, extraBarriers, armies as armyData, factionById, factionOfCity, initialCityOwners, officerById, regions, resolveCityLayout, scenario } from "../data";
+import { passes, extraBarriers, armies as armyData, factionById, factionOfCity, initialCityOwners, officerById, persons, regions, resolveCityLayout, scenario } from "../data";
 import type { Difficulty } from "../battle/ai";
 import { BattleScreen } from "../battle/BattleScreen";
 import type { BattleResult } from "../battle/types";
@@ -18,7 +18,9 @@ import { ArmyPanel, type ArmyPanelMode } from "../ui/ArmyPanel";
 import { BattlePrep } from "../ui/BattlePrep";
 import { CityLabels } from "../ui/CityLabels";
 import { InfoPanel } from "../ui/InfoPanel";
+import { DiplomacyScreen } from "../ui/DiplomacyScreen";
 import { PersonScreen } from "../ui/PersonScreen";
+import { strategyRules } from "../sim/strategy";
 import { AUTO_SLOT, SaveMenu } from "../ui/SaveMenu";
 import { SaveStore } from "./saveStore";
 import { Armies, type ArmyMarker } from "../world/Armies";
@@ -193,6 +195,10 @@ export class Game {
       onBattleEvent: (event) => this.showBattleEvent(event),
       onDayChanged: () => this.onDayChanged(),
       onCityCaptured: (cityId, factionId) => this.setCityOwner(cityId, factionId),
+      onNews: (text) => {
+        // 会戦の知らせ(「会戦準備へ」のボタンつき)を出している間は、上書きしない
+        if ((this.root.querySelector("#event-open") as HTMLElement).hidden) this.showNotice(text);
+      },
       onArmyAdded: (state) => {
         const marker = this.armies.add(state, factionById(state.army.factionId), officerById(state.army.commanderId));
         this.armyLabels.add(marker);
@@ -288,6 +294,16 @@ export class Game {
       onAppointed: () => this.refreshPosts(),
     });
     (root.querySelector("#persons-open") as HTMLElement).addEventListener("click", () => this.personScreen.open());
+    // 外交と情勢
+    const diplomacy = new DiplomacyScreen(root.querySelector("#diplomacy") as HTMLElement, {
+      campaign: () => this.campaign,
+      playerFactionId: () => this.playerFactionId,
+      onChanged: () => (this.dirty = true),
+    });
+    (root.querySelector("#diplomacy-open") as HTMLElement).addEventListener("click", () => diplomacy.open());
+    // 都市での徴兵と出陣
+    (root.querySelector(".info-recruit") as HTMLElement).addEventListener("click", () => this.cityAction("recruit"));
+    (root.querySelector(".info-raise") as HTMLElement).addEventListener("click", () => this.cityAction("raise"));
     this.onDayChanged();
     (root.querySelector("#event-close") as HTMLElement).addEventListener("click", () => {
       (root.querySelector("#event") as HTMLElement).hidden = true;
@@ -482,6 +498,28 @@ export class Game {
     el.textContent = `金 ${Math.round(st.gold).toLocaleString("ja-JP")}(+${income.gold}) 糧 ${Math.round(st.grain).toLocaleString("ja-JP")}(+${income.grain})`;
   }
 
+  /** 都市での徴兵(金を払って守備兵を増やす)と、出陣(守備兵から軍団を作る) */
+  private cityAction(kind: "recruit" | "raise"): void {
+    const marker = this.selected;
+    if (!marker) return;
+    const city = marker.city;
+    const owner = scenario.cityOwners[city.id];
+    if (kind === "recruit") {
+      const error = this.campaign.recruit(city.id, 500);
+      this.showNotice(error ?? `${city.name}で徴兵しました(金 ${(500 / 100) * strategyRules.costs.goldPer100Troops} を使いました)`);
+    } else {
+      // 守備兵を残して、出せるだけ出す。指揮官は、役目のない健在の人物のうち、統率と武力の高い者
+      const troops = Math.min(this.campaign.cityState(city).garrison - strategyRules.costs.minGarrison, strategyRules.costs.maxArmy);
+      const free = persons
+        .filter((p) => p.factionId === owner && p.role !== "strategist" && this.campaign.personStatus(p.id) === "active" && !this.campaign.postOf(p.id))
+        .sort((a, b) => b.leadership + b.war - (a.leadership + a.war))[0];
+      const result = this.campaign.raiseArmy(city.id, troops, free?.id);
+      this.showNotice(typeof result === "string" ? result : `${result.army.name}(${troops.toLocaleString("ja-JP")}人)が${city.name}から出陣しました`);
+    }
+    this.selectCity(marker);
+    this.showTreasury();
+  }
+
   /** 任命のあと、軍団の旗印(指揮官の名前)と、開いているパネルを合わせる */
   private refreshPosts(): void {
     for (const s of this.campaign.armies) {
@@ -505,6 +543,9 @@ export class Game {
   private changeSettings(change: Partial<GameSettings>): void {
     if (change.playerFactionId !== undefined) this.playerFactionId = change.playerFactionId;
     if (change.difficulty) this.difficulty = change.difficulty;
+    // 戦略AIは、操作勢力を選んでいるあいだだけ動く(選んだ勢力以外が自動で動く)
+    this.campaign.playerFactionId = this.playerFactionId;
+    this.campaign.difficulty = this.difficulty;
     if (change.speed && RATES.includes(change.speed)) this.rate = change.speed;
     if (change.territoryOpacity !== undefined) {
       this.territoryOpacity = change.territoryOpacity;
@@ -816,6 +857,10 @@ export class Game {
     this.selected = marker;
     this.cities.select(marker);
     this.panel.show(marker.city, marker.faction, this.campaign.cityState(marker.city), scenario.uncertainOwners?.includes(marker.city.id) && scenario.cityOwners[marker.city.id] === initialCityOwners[marker.city.id]);
+    // 徴兵と出陣は、その都市の勢力を操作できるときだけ
+    const owner = scenario.cityOwners[marker.city.id];
+    (this.root.querySelector(".info-actions") as HTMLElement).hidden = !owner || (this.playerFactionId !== null && this.playerFactionId !== owner);
+    (this.root.querySelector(".info-raise") as HTMLElement).hidden = marker.city.kind === "pass";
     // 選んだ都市が画面の中ほど(情報パネルに隠れない位置)に来るよう、カメラを静かに寄せる
     this.glideTo(marker.group.position, this.mapCamera.distance);
     this.dirty = true;

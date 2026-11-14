@@ -29,12 +29,20 @@ export interface CampaignSave {
   events: BattleEvent[];
   /** 攻城戦を受けた都市の状態(守備兵・食糧・士気・損傷・守将) */
   cityStates: Record<string, CityState>;
-  /** 勢力の組("a|b")ごとの関係。書かれていない組は戦争 */
+  /** 勢力の組("a|b")ごとの関係。書かれていない組は、シナリオの最初の関係(無ければ和平) */
   relations: Record<string, Relation>;
   /** 人物の状態(負傷・捕虜・死亡)。健在の人物は入れない */
   personStates: Record<string, PersonStatus>;
   /** 勢力の蓄え(金・糧) */
   factionStates: Record<string, { gold: number; grain: number }>;
+  /** 関係が最後に変わった日("a|b" → 日数)。古いセーブには無い */
+  relationSince?: Record<string, number>;
+  /** 最近の出来事(AIの行動・戦いの結果) */
+  news?: { day: number; text: string }[];
+  /** プレイヤーへの外交の申し入れ(返事待ち) */
+  proposals?: { from: string; kind: "peace" | "alliance"; day: number }[];
+  /** 次に作る軍団の番号 */
+  nextArmyId?: number;
 }
 
 export interface GameSettings {
