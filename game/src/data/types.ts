@@ -149,6 +149,8 @@ export interface Faction {
   people: string;
   ruler: string;
   color: string;
+  /** 自分からは動かない勢力(まとまった国を持たない人々など)。戦略AIは動かさない */
+  passive?: boolean;
 }
 
 export type UnitTypeId = "infantry" | "cavalry" | "archer";
@@ -378,8 +380,14 @@ export interface BattleSetup {
 export interface Scenario {
   id: string;
   year: number;
+  /** 開始する月(1〜12)。省くと3月 */
+  startMonth?: number;
   name: string;
   summary: string;
+  /** 年代によって違う都市名(都市ID → その年代の名前と読み) */
+  cityNames?: Record<string, { name: string; reading: string }>;
+  /** このシナリオの説明(簡略化した点、推定で置いた点) */
+  scenarioNote?: string;
   factions: Faction[];
   /** 都市ID → 勢力ID */
   cityOwners: Record<string, string>;
@@ -405,4 +413,32 @@ export interface RegionData {
   crossings: Crossing[];
   /** 街道のつながり(都市ID・関所IDの組) */
   roads: string[][];
+}
+
+/** シナリオの目録の1件 */
+export interface ScenarioEntry {
+  id: string;
+  year: number;
+  title: string;
+  summary: string;
+  /** ready = 遊べる / planned = 準備中(未実装) */
+  status: "ready" | "planned";
+}
+
+/** シナリオごとの名簿の1人分。人物の台帳(生没年・能力・経歴)に、その年代の所属と官職を重ねる */
+export interface RosterEntry {
+  factionId: string;
+  role?: PersonRole;
+  title?: string;
+  note?: string;
+}
+
+/** シナリオのファイル(1つの年代のデータ一式)。読み込むときに Scenario・人物・軍団に分ける */
+export interface ScenarioFile extends Omit<Scenario, "cityOwners"> {
+  /** 都市ID → 勢力ID。defaultOwner があれば、書かれていない都市はその勢力のもの */
+  cityOwners: Record<string, string>;
+  defaultOwner?: string;
+  /** 名簿(人物ID → その年代の所属)。省くと、台帳に書かれた所属をそのまま使う */
+  roster?: Record<string, RosterEntry>;
+  armies?: Army[];
 }

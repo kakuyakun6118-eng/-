@@ -341,8 +341,8 @@ export class Campaign {
   /** いまの年・月・季節 */
   calendar(): { year: number; month: number; season: string } {
     const d = Math.floor(this.day);
-    const month = (Math.floor((60 + d) / 30) % 12) + 1;
-    return { year: scenario.year + Math.floor((60 + d) / 360), month, season: seasonOf(month) };
+    const month = (Math.floor((START_OFFSET + d) / 30) % 12) + 1;
+    return { year: scenario.year + Math.floor((START_OFFSET + d) / 360), month, season: seasonOf(month) };
   }
 
   /** 進行の状態を、保存できる形に書き出す */
@@ -449,8 +449,8 @@ export class Campaign {
   /** いまの日付(1か月を30日として数える) */
   dateText(): string {
     const d = Math.floor(this.day);
-    const year = scenario.year + Math.floor((60 + d) / 360);
-    const month = (Math.floor((60 + d) / 30) % 12) + 1;
+    const year = scenario.year + Math.floor((START_OFFSET + d) / 360);
+    const month = (Math.floor((START_OFFSET + d) / 30) % 12) + 1;
     return `${year}年${month}月${(d % 30) + 1}日`;
   }
 
@@ -942,6 +942,9 @@ export class Campaign {
     this.listener.onArmyChanged(s, statusChanged);
   }
 }
+
+/** 開始の月から決まる、年初からの日数(3月開始なら60) */
+const START_OFFSET = ((scenario.startMonth ?? 3) - 1) * 30;
 
 function factionName(id: string): string {
   return scenario.factions.find((f) => f.id === id)?.name ?? "不明の勢力";

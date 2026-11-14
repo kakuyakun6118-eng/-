@@ -1,6 +1,6 @@
 // データの入口。地域やシナリオを増やすときは、ここに登録する。
 import type {
-  Army, City, CityLayout, Crossing, TerrainKind, TerrainRule, CityLevelRule, Faction, LonLatPair, Officer, Pass, Person, RegionData, RegionInfo, River, Scenario, UnitType,
+  Army, City, CityLayout, Crossing, TerrainKind, TerrainRule, CityLevelRule, Faction, LonLatPair, Officer, Pass, Person, RegionData, RegionInfo, River, Scenario, ScenarioEntry, ScenarioFile, UnitType,
 } from "./types";
 
 import ncRegion from "./regions/north-china/region.json";
@@ -11,6 +11,11 @@ import ncCrossings from "./regions/north-china/crossings.json";
 import ncRoads from "./regions/north-china/roads.json";
 import ncPasses from "./regions/north-china/passes.json";
 import terrainCostRules from "./rules/terrainCosts.json";
+import catalog from "./scenarios/catalog.json";
+import extraPersons from "./scenarios/persons.extra.json";
+import s300 from "./scenarios/s300.json";
+import s304 from "./scenarios/s304.json";
+import s311 from "./scenarios/s311.json";
 import s317 from "./scenarios/s317.json";
 import s317Armies from "./scenarios/s317.armies.json";
 import s317Persons from "./scenarios/s317.persons.json";
@@ -54,9 +59,62 @@ northChina.cities.push(...passes.map(passAsStronghold));
 export const regions: RegionData[] = [northChina];
 
 /** 現在のシナリオ */
-export const scenario: Scenario = s317 as Scenario;
+/** シナリオの目録(選択画面に出す8本) */
+export const scenarioCatalog = catalog.scenarios as ScenarioEntry[];
+
+/** 収録済みのシナリオ。新しいシナリオを足すときは、ここに登録して、目録の status を ready にする */
+const scenarioFiles: Record<string, ScenarioFile> = {
+  s300: s300 as unknown as ScenarioFile,
+  s304: s304 as unknown as ScenarioFile,
+  s311: s311 as unknown as ScenarioFile,
+  s317: { ...(s317 as unknown as ScenarioFile), armies: s317Armies as Army[] },
+};
+/** 人物の台帳:317年の人物と、ほかの年代だけに出る人物 */
+const personLedger = new Map<string, Person>();
+for (const p of [...(s317Persons.persons as Person[]), ...(extraPersons.persons as unknown as Person[])]) personLedger.set(p.id, p);
+
+/** いま選ばれているシナリオのID。ページのアドレスの「#s=s311」から読む(無ければ317年) */
+function chosenScenarioId(): string {
+  const m = typeof location === "undefined" ? null : /[#&]s=(s\d+)/.exec(location.hash);
+  const id = m ? m[1] : "s317";
+  const entry = scenarioCatalog.find((e) => e.id === id);
+  return entry && entry.status === "ready" && scenarioFiles[id] ? id : "s317";
+}
+
+/** シナリオのファイルから、ゲームが使う形(シナリオ・人物・軍団)を作る */
+function buildScenario(file: ScenarioFile): { scenario: Scenario; persons: Person[]; armies: Army[] } {
+  const cityOwners: Record<string, string> = {};
+  if (file.defaultOwner) for (const c of northChina.cities) cityOwners[c.id] = file.defaultOwner;
+  Object.assign(cityOwners, file.cityOwners);
+  // 関所の所属:書かれていなければ、その関所が結ぶ1つ目の都市と同じ勢力
+  const passOwners: Record<string, string> = {};
+  for (const p of passes) passOwners[p.id] = file.passOwners?.[p.id] ?? cityOwners[p.between[0]];
+  const list: Person[] = file.roster
+    ? Object.entries(file.roster).flatMap(([id, r]) => {
+        const base = personLedger.get(id);
+        return base ? [{ ...base, factionId: r.factionId, role: r.role ?? base.role, title: r.title ?? base.title, note: r.note ?? base.note }] : [];
+      })
+    : (s317Persons.persons as Person[]);
+  const { roster: _roster, armies: fileArmies, defaultOwner: _default, ...rest } = file;
+  return { scenario: { ...rest, cityOwners, passOwners }, persons: list, armies: fileArmies ?? [] };
+}
+
+const built = buildScenario(scenarioFiles[chosenScenarioId()]);
+export const scenario: Scenario = built.scenario;
+// 年代によって違う都市名に直す
+for (const c of northChina.cities) {
+  const alt = scenario.cityNames?.[c.id];
+  if (alt) Object.assign(c, alt);
+}
+
+/** 別のシナリオに切り替える(ページを読み込み直して、その年代で始める) */
+export function switchScenario(id: string): void {
+  location.hash = `s=${id}`;
+  location.reload();
+}
 // 開始時の太守・守将を、都市と関所に書き込む
-for (const c of northChina.cities) c.governorId = scenario.governors?.[c.id] ?? c.governorId;
+// (都市データに書かれた太守は317年のもの。ほかの年代では使わない)
+for (const c of northChina.cities) c.governorId = scenario.governors?.[c.id] ?? (scenario.id === "s317" ? c.governorId : undefined);
 
 // 肖像画像:portraits/{人物ID}.webp(png・jpg も可)があれば使う。無い人物は、画面側で仮のシルエットを出す
 const portraitFiles = import.meta.glob("./portraits/*.{webp,png,jpg,jpeg}", { eager: true, query: "?url", import: "default" }) as Record<string, string>;
@@ -100,7 +158,7 @@ export const unitTypes = unitTypeList as UnitType[];
 
 /** 現在のシナリオの武将と軍団 */
 /** 人物(君主・武将・軍師)の一覧 */
-export const persons = s317Persons.persons as Person[];
+export const persons: Person[] = built.persons;
 export const officers = persons;
 
 export function personById(id: string | undefined): Person | undefined {
@@ -109,7 +167,7 @@ export function personById(id: string | undefined): Person | undefined {
 
 /** シナリオ開始時の、都市の所属(読み込んだセーブに無い都市を補うのに使う) */
 export const initialCityOwners: Record<string, string> = { ...scenario.cityOwners };
-export const armies = s317Armies as Army[];
+export const armies: Army[] = built.armies;
 
 export function factionById(id: string): Faction | undefined {
   return scenario.factions.find((f) => f.id === id);

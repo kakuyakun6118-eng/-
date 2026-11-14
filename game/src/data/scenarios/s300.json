@@ -1,0 +1,530 @@
+{
+ "id": "s300",
+ "year": 300,
+ "startMonth": 9,
+ "name": "八王の乱",
+ "summary": "西晋はまだ天下を保っている。趙王 司馬倫が賈后を廃して朝廷を握り、成都王・河間王・斉王が、それぞれ鄴・長安・許昌に兵を持っている。",
+ "scenarioNote": "300年9月(淮南王 司馬允が敗れ、斉王 司馬冏が許昌へ出たあと)を開始とした。諸王を別々の勢力として扱うのはゲーム上の区分で、このときはまだ全員が晋の臣下である。諸王の支配する都市の範囲は推定。北方の部族の長の名には、確かでないものがある。",
+ "factions": [
+  {
+   "id": "jin",
+   "name": "西晋(朝廷・趙王 司馬倫)",
+   "people": "漢",
+   "ruler": "司馬衷(恵帝)",
+   "color": "#3c86c9"
+  },
+  {
+   "id": "ying",
+   "name": "成都王 司馬穎",
+   "people": "漢",
+   "ruler": "司馬穎",
+   "color": "#6c42ad"
+  },
+  {
+   "id": "yong",
+   "name": "河間王 司馬顒",
+   "people": "漢",
+   "ruler": "司馬顒",
+   "color": "#b3362f"
+  },
+  {
+   "id": "jiong",
+   "name": "斉王 司馬冏",
+   "people": "漢",
+   "ruler": "司馬冏",
+   "color": "#e07a3f"
+  },
+  {
+   "id": "dai",
+   "name": "拓跋部",
+   "people": "鮮卑",
+   "ruler": "拓跋禄官",
+   "color": "#3fa595"
+  },
+  {
+   "id": "murong",
+   "name": "慕容部",
+   "people": "鮮卑",
+   "ruler": "慕容廆",
+   "color": "#cf62a4"
+  },
+  {
+   "id": "duan",
+   "name": "段部",
+   "people": "鮮卑",
+   "ruler": "段務勿塵",
+   "color": "#a3a044"
+  },
+  {
+   "id": "yuwen",
+   "name": "宇文部",
+   "people": "鮮卑(匈奴系とも)",
+   "ruler": "宇文莫圭",
+   "color": "#5d6fc4"
+  },
+  {
+   "id": "goguryeo",
+   "name": "高句麗",
+   "people": "高句麗(貊)",
+   "ruler": "美川王",
+   "color": "#a04060"
+  },
+  {
+   "id": "baekje",
+   "name": "百済",
+   "people": "百済(韓・扶余系)",
+   "ruler": "責稽王",
+   "color": "#3d8f7a"
+  },
+  {
+   "id": "silla",
+   "name": "新羅",
+   "people": "新羅(韓)",
+   "ruler": "基臨尼師今",
+   "color": "#e6d36a"
+  },
+  {
+   "id": "chouchi",
+   "name": "仇池",
+   "people": "氐",
+   "ruler": "楊茂搜",
+   "color": "#9c5a2e"
+  },
+  {
+   "id": "tribes",
+   "name": "諸部族(氐・羌・匈奴など)",
+   "people": "さまざまな部族",
+   "ruler": "(まとまった君主はいない)",
+   "color": "#7d7d7d",
+   "passive": true
+  }
+ ],
+ "defaultOwner": "jin",
+ "cityOwners": {
+  "ye": "ying",
+  "xiangguo": "ying",
+  "changan": "yong",
+  "fengyi": "yong",
+  "chencang": "yong",
+  "anding": "yong",
+  "xuchang": "jiong",
+  "runan": "jiong",
+  "qiao": "jiong",
+  "shengle": "dai",
+  "pingcheng": "dai",
+  "jicheng": "murong",
+  "tuhe": "murong",
+  "lingzhi": "duan",
+  "zimeng": "yuwen",
+  "wandu": "goguryeo",
+  "hanseong": "baekje",
+  "geumseong": "silla",
+  "chouchi": "chouchi",
+  "tuyuhunting": "tribes",
+  "shuofang": "tribes"
+ },
+ "uncertainOwners": [
+  "xiangguo",
+  "anding",
+  "runan",
+  "qiao",
+  "pingcheng",
+  "gaochang",
+  "zimeng",
+  "tuyuhunting",
+  "shuofang"
+ ],
+ "ownerNote": "諸王の支配の範囲、北方の部族の本拠は推定。吐谷渾はまだ青海へ移っておらず、その地とオルドスは、まとまった勢力のない土地として扱った。",
+ "cityNames": {
+  "jiankang": {
+   "name": "建鄴",
+   "reading": "けんぎょう"
+  },
+  "pyongyang": {
+   "name": "楽浪",
+   "reading": "らくろう"
+  },
+  "guanggu": {
+   "name": "臨淄",
+   "reading": "りんし"
+  }
+ },
+ "relations": {
+  "murong|yuwen": "war",
+  "goguryeo|jin": "war"
+ },
+ "relationNote": "諸王はこの時点ではまだ兵を挙げていないので、和平とした(史実では301年に三王が司馬倫を攻める)。慕容部と宇文部、高句麗と晋(玄菟・楽浪)は、このあと数年のうちに戦っていることをもとに戦争とした。",
+ "governors": {
+  "luoyang": "sima_zhong",
+  "ye": "sima_ying",
+  "changan": "sima_yong",
+  "xuchang": "sima_jiong",
+  "jicheng": "murong_hui",
+  "shengle": "tuoba_luguan",
+  "pingcheng": "tuoba_yilu",
+  "lingzhi": "wuwuchen",
+  "zimeng": "yuwen_mogui",
+  "wandu": "eulbul",
+  "hanseong": "chaekgye",
+  "geumseong": "girim",
+  "chouchi": "yang_maosou",
+  "chengdu": "zhao_xin",
+  "ji": "wang_jun",
+  "jinyang": "sima_teng",
+  "shanggui": "huangfu_zhong"
+ },
+ "governorNote": "君主は居城に置いた。王浚が幽州にいたとするのは推定。",
+ "armies": [
+  {
+   "id": "army_lun",
+   "name": "朝廷軍",
+   "factionId": "jin",
+   "commanderId": "zhang_hong",
+   "lon": 112.95,
+   "lat": 34.55,
+   "facing": 0,
+   "troops": {
+    "infantry": 26000,
+    "cavalry": 6000,
+    "archer": 8000
+   },
+   "morale": 70,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_ying",
+   "name": "成都王軍",
+   "factionId": "ying",
+   "commanderId": "shi_chao",
+   "lon": 114.75,
+   "lat": 36.2,
+   "facing": 0,
+   "troops": {
+    "infantry": 16000,
+    "cavalry": 5000,
+    "archer": 4000
+   },
+   "morale": 80,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_yong",
+   "name": "河間王軍",
+   "factionId": "yong",
+   "commanderId": "zhang_fang",
+   "lon": 109.3,
+   "lat": 34.55,
+   "facing": 0,
+   "troops": {
+    "infantry": 15000,
+    "cavalry": 6000,
+    "archer": 4000
+   },
+   "morale": 80,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_jiong",
+   "name": "斉王軍",
+   "factionId": "jiong",
+   "commanderId": "dong_ai",
+   "lon": 114.15,
+   "lat": 34.2,
+   "facing": 0,
+   "troops": {
+    "infantry": 13000,
+    "cavalry": 3000,
+    "archer": 4000
+   },
+   "morale": 75,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_tuoba",
+   "name": "猗㐌軍",
+   "factionId": "dai",
+   "commanderId": "tuoba_yituo",
+   "lon": 113.0,
+   "lat": 40.35,
+   "facing": 0,
+   "troops": {
+    "infantry": 0,
+    "cavalry": 7000,
+    "archer": 1000
+   },
+   "morale": 82,
+   "fatigue": 10,
+   "food": 45
+  }
+ ],
+ "roster": {
+  "sima_zhong": {
+   "factionId": "jin",
+   "role": "ruler"
+  },
+  "sima_lun": {
+   "factionId": "jin"
+  },
+  "sun_xiu": {
+   "factionId": "jin"
+  },
+  "zhang_hong": {
+   "factionId": "jin"
+  },
+  "shi_yi": {
+   "factionId": "jin"
+  },
+  "xu_chao": {
+   "factionId": "jin"
+  },
+  "sun_hui": {
+   "factionId": "jin"
+  },
+  "meng_guan": {
+   "factionId": "jin"
+  },
+  "sima_yue": {
+   "factionId": "jin",
+   "title": "中書令"
+  },
+  "sima_ai": {
+   "factionId": "jin",
+   "title": "常山王"
+  },
+  "sima_rui": {
+   "factionId": "jin",
+   "role": "general",
+   "title": "琅邪王"
+  },
+  "wang_dao": {
+   "factionId": "jin",
+   "title": "東海王の参軍"
+  },
+  "wang_dun": {
+   "factionId": "jin",
+   "title": "駙馬都尉"
+  },
+  "wang_rong": {
+   "factionId": "jin"
+  },
+  "wang_yan": {
+   "factionId": "jin"
+  },
+  "yue_guang": {
+   "factionId": "jin"
+  },
+  "lu_ji": {
+   "factionId": "jin",
+   "title": "相国参軍"
+  },
+  "lu_yun": {
+   "factionId": "jin"
+  },
+  "liu_kun": {
+   "factionId": "jin",
+   "title": "記室督",
+   "note": "司馬倫の姻戚として用いられた"
+  },
+  "zu_ti": {
+   "factionId": "jin",
+   "title": "司州の主簿"
+  },
+  "liu_hong": {
+   "factionId": "jin"
+  },
+  "zhang_gui": {
+   "factionId": "jin"
+  },
+  "wang_jun": {
+   "factionId": "jin"
+  },
+  "sima_teng": {
+   "factionId": "jin"
+  },
+  "sima_mo": {
+   "factionId": "jin"
+  },
+  "gou_xi": {
+   "factionId": "jin",
+   "title": "晋の官人"
+  },
+  "ji_shao": {
+   "factionId": "jin"
+  },
+  "xun_fan": {
+   "factionId": "jin"
+  },
+  "xun_zu": {
+   "factionId": "jin",
+   "title": "晋の官人"
+  },
+  "huangfu_zhong": {
+   "factionId": "jin"
+  },
+  "zhao_xin": {
+   "factionId": "jin"
+  },
+  "luo_shang": {
+   "factionId": "jin"
+  },
+  "li_te": {
+   "factionId": "jin",
+   "note": "蜀に流れてきた人々の長。晋の所属とするのは推定"
+  },
+  "li_liu": {
+   "factionId": "jin",
+   "note": "蜀に流れてきた人々の長。晋の所属とするのは推定"
+  },
+  "li_xiong": {
+   "factionId": "jin",
+   "role": "general",
+   "title": "李特の子",
+   "note": "晋の所属とするのは推定"
+  },
+  "li_xiang": {
+   "factionId": "jin",
+   "title": "李特の弟",
+   "note": "晋の所属とするのは推定"
+  },
+  "tao_kan": {
+   "factionId": "jin",
+   "title": "郎中"
+  },
+  "zhou_qi": {
+   "factionId": "jin"
+  },
+  "gu_rong": {
+   "factionId": "jin"
+  },
+  "he_xun": {
+   "factionId": "jin",
+   "title": "呉の名族"
+  },
+  "ji_zhan": {
+   "factionId": "jin",
+   "title": "呉の名族"
+  },
+  "sima_ying": {
+   "factionId": "ying",
+   "role": "ruler"
+  },
+  "lu_zhi": {
+   "factionId": "ying"
+  },
+  "shi_chao": {
+   "factionId": "ying"
+  },
+  "qian_xiu": {
+   "factionId": "ying"
+  },
+  "gongshi_fan": {
+   "factionId": "ying"
+  },
+  "liu_yuan": {
+   "factionId": "ying",
+   "note": "このころは鄴にいて、成都王に用いられていた"
+  },
+  "liu_xuan": {
+   "factionId": "ying",
+   "note": "匈奴の地にいた。成都王の所属とするのは推定"
+  },
+  "liu_cong": {
+   "factionId": "ying",
+   "role": "general",
+   "title": "劉淵の子",
+   "note": "成都王に仕えた"
+  },
+  "sima_yong": {
+   "factionId": "yong",
+   "role": "ruler"
+  },
+  "zhang_fang": {
+   "factionId": "yong"
+  },
+  "li_han": {
+   "factionId": "yong"
+  },
+  "liu_chen": {
+   "factionId": "yong"
+  },
+  "sima_jiong": {
+   "factionId": "jiong",
+   "role": "ruler"
+  },
+  "dong_ai": {
+   "factionId": "jiong"
+  },
+  "ge_yu": {
+   "factionId": "jiong"
+  },
+  "sun_hui2": {
+   "factionId": "jiong"
+  },
+  "cao_shu": {
+   "factionId": "jiong"
+  },
+  "tuoba_luguan": {
+   "factionId": "dai",
+   "role": "ruler"
+  },
+  "tuoba_yituo": {
+   "factionId": "dai"
+  },
+  "tuoba_yilu": {
+   "factionId": "dai"
+  },
+  "wei_cao": {
+   "factionId": "dai"
+  },
+  "murong_hui": {
+   "factionId": "murong",
+   "role": "ruler",
+   "title": "鮮卑都督"
+  },
+  "murong_han": {
+   "factionId": "murong",
+   "title": "慕容廆の庶長子"
+  },
+  "wuwuchen": {
+   "factionId": "duan",
+   "role": "ruler"
+  },
+  "yuwen_mogui": {
+   "factionId": "yuwen",
+   "role": "ruler"
+  },
+  "eulbul": {
+   "factionId": "goguryeo",
+   "role": "ruler",
+   "title": "高句麗王(300年の秋に即位)"
+  },
+  "chang_jori": {
+   "factionId": "goguryeo"
+  },
+  "go_noja": {
+   "factionId": "goguryeo",
+   "note": "300年の生存は確かめられていない(推定)"
+  },
+  "chaekgye": {
+   "factionId": "baekje",
+   "role": "ruler"
+  },
+  "girim": {
+   "factionId": "silla",
+   "role": "ruler"
+  },
+  "yang_maosou": {
+   "factionId": "chouchi",
+   "role": "ruler"
+  },
+  "yang_nandi": {
+   "factionId": "chouchi",
+   "role": "general",
+   "title": "楊茂搜の子"
+  }
+ }
+}

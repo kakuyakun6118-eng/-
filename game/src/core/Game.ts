@@ -1,7 +1,7 @@
 // ゲーム全体のまとめ役。地形・都市・軍団・カメラ・入力・画面表示と、進行の計算(sim)をつなぐ。
 import * as THREE from "three";
 import { MapCamera, type WorldRect } from "../camera/MapCamera";
-import { passes, extraBarriers, armies as armyData, factionById, factionOfCity, initialCityOwners, officerById, persons, regions, resolveCityLayout, scenario } from "../data";
+import { passes, extraBarriers, armies as armyData, factionById, factionOfCity, initialCityOwners, officerById, persons, regions, resolveCityLayout, scenario, scenarioCatalog } from "../data";
 import type { Difficulty } from "../battle/ai";
 import { BattleScreen } from "../battle/BattleScreen";
 import type { BattleResult } from "../battle/types";
@@ -20,6 +20,7 @@ import { CityLabels } from "../ui/CityLabels";
 import { InfoPanel } from "../ui/InfoPanel";
 import { DiplomacyScreen } from "../ui/DiplomacyScreen";
 import { PersonScreen } from "../ui/PersonScreen";
+import { ScenarioScreen } from "../ui/ScenarioScreen";
 import { strategyRules } from "../sim/strategy";
 import { AUTO_SLOT, SaveMenu } from "../ui/SaveMenu";
 import { SaveStore } from "./saveStore";
@@ -296,6 +297,14 @@ export class Game {
       onAppointed: () => this.refreshPosts(),
     });
     (root.querySelector("#persons-open") as HTMLElement).addEventListener("click", () => this.personScreen.open());
+    // シナリオの選択(メニューから開く。はじめて開いたときは、起動時にも出す)
+    const scenarios = new ScenarioScreen(root.querySelector("#scenarios") as HTMLElement);
+    (root.querySelector("#scenarios-open") as HTMLElement).addEventListener("click", () => {
+      this.menu.close();
+      scenarios.open();
+    });
+    // 自動テスト(navigator.webdriver)のときは、起動時には出さない
+    if (!/[#&]s=/.test(location.hash) && !navigator.webdriver) scenarios.open();
     // 外交と情勢
     const diplomacy = new DiplomacyScreen(root.querySelector("#diplomacy") as HTMLElement, {
       campaign: () => this.campaign,
@@ -601,7 +610,10 @@ export class Game {
   /** セーブデータを読み込んで、ゲームの状態を戻す。読めないデータなら例外を投げる(状態は変えない) */
   applySave(raw: unknown): void {
     const data = migrateSave(raw);
-    if (data.scenarioId !== scenario.id) throw new Error("別のシナリオのセーブデータです");
+    if (data.scenarioId !== scenario.id) {
+      const other = scenarioCatalog.find((e) => e.id === data.scenarioId);
+      throw new Error(`別のシナリオ(${other ? `${other.year}年 ${other.title}` : data.scenarioId})のセーブデータです。先に、メニューの「シナリオを選ぶ」でそのシナリオに切り替えてください`);
+    }
 
     // 開いている会戦や画面を閉じる(会戦の結果は反映しない)
     this.battle?.dispose();

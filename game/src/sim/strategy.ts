@@ -48,7 +48,7 @@ export class StrategyAi {
   daily(day: number): void {
     const p = this.profile();
     scenario.factions.forEach((f, i) => {
-      if (f.id === this.c.playerFactionId) return;
+      if (f.id === this.c.playerFactionId || f.passive) return;
       if ((day + i) % p.interval !== 0) return;
       this.act(f.id, p);
     });
@@ -154,7 +154,7 @@ export class StrategyAi {
   private diplomacy(p: StrategyProfile, day: number): void {
     const alive = scenario.factions.filter((f) => this.citiesOf(f.id).length > 0);
     for (const f of alive) {
-      if (f.id === this.c.playerFactionId) continue;
+      if (f.id === this.c.playerFactionId || f.passive) continue;
       const mine = this.strengthOf(f.id);
       const wars = alive.filter((g) => g.id !== f.id && this.c.relationOf(f.id, g.id) === "war");
       const strongest = [...wars].sort((x, y) => this.strengthOf(y.id) - this.strengthOf(x.id))[0];
@@ -176,7 +176,7 @@ export class StrategyAi {
       // 宣戦:都市が近く、兵力で上回る相手に(同盟の相手には宣戦しない)
       const myCities = this.citiesOf(f.id);
       for (const g of alive) {
-        if (g.id === f.id || this.c.relationOf(f.id, g.id) !== "peace" || this.c.relationAge(f.id, g.id) < 720) continue;
+        if (g.id === f.id || g.passive || this.c.relationOf(f.id, g.id) !== "peace" || this.c.relationAge(f.id, g.id) < 720) continue;
         const close = this.citiesOf(g.id).some((gc) => myCities.some((mc) => distanceKm(gc, mc) < 300));
         if (!close || mine < this.strengthOf(g.id) * p.warRatio) continue;
         if (chance(`${day}${f.id}${g.id}war`) >= p.aggression) continue;

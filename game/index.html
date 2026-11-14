@@ -280,10 +280,21 @@
           </div>
         </div>
       </section>
+      <section id="scenarios" hidden>
+        <div class="persons-inner">
+          <div class="persons-head">
+            <h2>シナリオを選ぶ</h2>
+            <span class="scenarios-hint">切り替えると最初から始まります(いまの進行は、先にセーブしてください)</span>
+            <button class="persons-close scenarios-close" type="button">閉じる</button>
+          </div>
+          <div class="scenarios-list"></div>
+        </div>
+      </section>
       <section id="menu" hidden>
         <div class="menu-inner">
           <div class="menu-head">
             <h2>メニュー</h2>
+            <button id="scenarios-open" type="button">シナリオを選ぶ</button>
             <button id="menu-close" type="button">閉じる</button>
           </div>
           <p id="menu-message" role="status"></p>

@@ -1,0 +1,989 @@
+{
+ "id": "s311",
+ "year": 311,
+ "startMonth": 7,
+ "name": "永嘉の乱",
+ "summary": "漢の軍が洛陽を落とし、晋の懐帝が捕らえられた。皇帝を失った晋の勢力は、江東の司馬睿、幽州の王浚、并州の劉琨、関中の南陽王、涼州の張軌などに分かれている。",
+ "scenarioNote": "311年7月(洛陽陥落の翌月)を開始とした。皇帝のいない晋の諸州を、「晋の諸州」という1つの勢力にまとめたのはゲーム上の簡略化で、実際には互いに独立して動いていた。石勒と王弥は漢の将だが、独自に動いていたので別の勢力とした。秦王 司馬鄴(のちの愍帝)は、このとき12歳に満たないため登場しない。",
+ "factions": [
+  {
+   "id": "han_zhao",
+   "name": "漢(劉聡)",
+   "people": "匈奴",
+   "ruler": "劉聡",
+   "color": "#b3362f"
+  },
+  {
+   "id": "shile",
+   "name": "石勒軍(漢の将)",
+   "people": "羯",
+   "ruler": "石勒",
+   "color": "#6c42ad"
+  },
+  {
+   "id": "wangmi",
+   "name": "王弥軍(漢の将)",
+   "people": "漢",
+   "ruler": "王弥",
+   "color": "#e07a3f"
+  },
+  {
+   "id": "jin_rui",
+   "name": "琅邪王 司馬睿(江東)",
+   "people": "漢",
+   "ruler": "司馬睿",
+   "color": "#3c86c9"
+  },
+  {
+   "id": "jin",
+   "name": "晋の諸州(皇帝不在)",
+   "people": "漢",
+   "ruler": "荀藩",
+   "color": "#9bbfe8"
+  },
+  {
+   "id": "wang_jun",
+   "name": "王浚(幽州)",
+   "people": "漢",
+   "ruler": "王浚",
+   "color": "#9fcf6a"
+  },
+  {
+   "id": "liu_kun",
+   "name": "劉琨(并州)",
+   "people": "漢",
+   "ruler": "劉琨",
+   "color": "#c9d27a"
+  },
+  {
+   "id": "sima_bao",
+   "name": "南陽王 司馬模(関中)",
+   "people": "漢",
+   "ruler": "司馬模",
+   "color": "#86b8e6"
+  },
+  {
+   "id": "qianliang",
+   "name": "涼州(張軌)",
+   "people": "漢",
+   "ruler": "張軌",
+   "color": "#c9a046"
+  },
+  {
+   "id": "chenghan",
+   "name": "成(李雄)",
+   "people": "巴氐",
+   "ruler": "李雄",
+   "color": "#55a556"
+  },
+  {
+   "id": "du_tao",
+   "name": "杜弢(湘州の流民)",
+   "people": "漢(蜀からの流民)",
+   "ruler": "杜弢",
+   "color": "#b46ac0"
+  },
+  {
+   "id": "dai",
+   "name": "拓跋部(代公 猗盧)",
+   "people": "鮮卑",
+   "ruler": "拓跋猗盧",
+   "color": "#3fa595"
+  },
+  {
+   "id": "duan",
+   "name": "段部",
+   "people": "鮮卑",
+   "ruler": "段疾陸眷",
+   "color": "#a3a044"
+  },
+  {
+   "id": "murong",
+   "name": "慕容部",
+   "people": "鮮卑",
+   "ruler": "慕容廆",
+   "color": "#cf62a4"
+  },
+  {
+   "id": "yuwen",
+   "name": "宇文部",
+   "people": "鮮卑(匈奴系とも)",
+   "ruler": "宇文莫圭",
+   "color": "#5d6fc4"
+  },
+  {
+   "id": "goguryeo",
+   "name": "高句麗",
+   "people": "高句麗(貊)",
+   "ruler": "美川王",
+   "color": "#a04060"
+  },
+  {
+   "id": "baekje",
+   "name": "百済",
+   "people": "百済(韓・扶余系)",
+   "ruler": "比流王",
+   "color": "#3d8f7a"
+  },
+  {
+   "id": "silla",
+   "name": "新羅",
+   "people": "新羅(韓)",
+   "ruler": "訖解尼師今",
+   "color": "#e6d36a"
+  },
+  {
+   "id": "tiefu",
+   "name": "鉄弗部",
+   "people": "匈奴",
+   "ruler": "劉虎",
+   "color": "#6b7684"
+  },
+  {
+   "id": "tuyuhun",
+   "name": "吐谷渾",
+   "people": "鮮卑",
+   "ruler": "吐谷渾",
+   "color": "#8a8a4a"
+  },
+  {
+   "id": "chouchi",
+   "name": "仇池",
+   "people": "氐",
+   "ruler": "楊茂搜",
+   "color": "#9c5a2e"
+  }
+ ],
+ "defaultOwner": "jin",
+ "cityOwners": {
+  "pingyang": "han_zhao",
+  "lishi": "han_zhao",
+  "puban": "han_zhao",
+  "shangdang": "han_zhao",
+  "luoyang": "han_zhao",
+  "hongnong": "han_zhao",
+  "gaonu": "han_zhao",
+  "yewang": "han_zhao",
+  "xuchang": "shile",
+  "runan": "shile",
+  "guanggu": "wangmi",
+  "junyi": "wangmi",
+  "jiankang": "jin_rui",
+  "jingkou": "jin_rui",
+  "wu": "jin_rui",
+  "kuaiji": "jin_rui",
+  "hefei": "jin_rui",
+  "shouchun": "jin_rui",
+  "ji": "wang_jun",
+  "zhongshan": "wang_jun",
+  "xindu": "wang_jun",
+  "daijun": "wang_jun",
+  "yanci": "wang_jun",
+  "jinyang": "liu_kun",
+  "ye": "liu_kun",
+  "changan": "sima_bao",
+  "fengyi": "sima_bao",
+  "chencang": "sima_bao",
+  "anding": "sima_bao",
+  "shanggui": "sima_bao",
+  "longxi": "sima_bao",
+  "guzang": "qianliang",
+  "zhangye": "qianliang",
+  "jiuquan": "qianliang",
+  "dunhuang": "qianliang",
+  "jincheng": "qianliang",
+  "xiping": "qianliang",
+  "gaochang": "qianliang",
+  "chengdu": "chenghan",
+  "baxi": "chenghan",
+  "changsha": "du_tao",
+  "shengle": "dai",
+  "pingcheng": "dai",
+  "yanmen": "dai",
+  "lingzhi": "duan",
+  "jicheng": "murong",
+  "tuhe": "murong",
+  "zimeng": "yuwen",
+  "wandu": "goguryeo",
+  "hanseong": "baekje",
+  "geumseong": "silla",
+  "shuofang": "tiefu",
+  "tuyuhunting": "tuyuhun",
+  "chouchi": "chouchi"
+ },
+ "uncertainOwners": [
+  "hongnong",
+  "gaonu",
+  "runan",
+  "junyi",
+  "ye",
+  "xiangguo",
+  "zhongshan",
+  "xindu",
+  "yanci",
+  "gaochang",
+  "zimeng",
+  "tuyuhunting",
+  "shuofang",
+  "jiangzhou",
+  "qiao",
+  "pengcheng",
+  "xiapi",
+  "huaiyin",
+  "xiangping",
+  "xuantu"
+ ],
+ "ownerNote": "洛陽が落ちた直後で、華北の多くの都市は、だれのものともはっきりしない。漢・石勒・王弥の範囲、王浚と劉琨の範囲、淮北と遼東の晋の都市は推定。",
+ "cityNames": {
+  "jiankang": {
+   "name": "建鄴",
+   "reading": "けんぎょう"
+  },
+  "pyongyang": {
+   "name": "楽浪",
+   "reading": "らくろう"
+  },
+  "guanggu": {
+   "name": "臨淄",
+   "reading": "りんし"
+  }
+ },
+ "relations": {
+  "han_zhao|jin": "war",
+  "han_zhao|jin_rui": "war",
+  "han_zhao|liu_kun": "war",
+  "han_zhao|wang_jun": "war",
+  "han_zhao|sima_bao": "war",
+  "han_zhao|qianliang": "war",
+  "dai|han_zhao": "war",
+  "jin|shile": "war",
+  "jin_rui|shile": "war",
+  "shile|wang_jun": "war",
+  "liu_kun|shile": "war",
+  "jin|wangmi": "war",
+  "chenghan|jin": "war",
+  "du_tao|jin": "war",
+  "du_tao|jin_rui": "war",
+  "dai|tiefu": "war",
+  "liu_kun|tiefu": "war",
+  "murong|yuwen": "war",
+  "goguryeo|jin": "war",
+  "han_zhao|shile": "alliance",
+  "han_zhao|wangmi": "alliance",
+  "han_zhao|tiefu": "alliance",
+  "dai|liu_kun": "alliance",
+  "duan|wang_jun": "alliance",
+  "jin|jin_rui": "alliance",
+  "jin|liu_kun": "alliance",
+  "jin|sima_bao": "alliance",
+  "jin|qianliang": "alliance",
+  "jin|wang_jun": "alliance"
+ },
+ "relationNote": "石勒と王弥は、どちらも漢の将だが、互いに相手を除こうとしていた。ここでは和平とした(史実では、この年の10月に石勒が王弥を殺す)。",
+ "governors": {
+  "pingyang": "liu_cong",
+  "guanggu": "cao_yi",
+  "jiankang": "sima_rui",
+  "jingkou": "zu_ti",
+  "ji": "wang_jun",
+  "jinyang": "liu_kun",
+  "ye": "liu_yan",
+  "changan": "sima_mo",
+  "shanggui": "sima_bao",
+  "anding": "jia_pi",
+  "fengyi": "suo_chen",
+  "guzang": "zhang_gui",
+  "chengdu": "li_xiong",
+  "changsha": "du_tao",
+  "shengle": "tuoba_yilu",
+  "lingzhi": "duan_jilujuan",
+  "jicheng": "murong_hui",
+  "zimeng": "yuwen_mogui",
+  "wandu": "eulbul",
+  "hanseong": "biryu",
+  "geumseong": "heulhae",
+  "shuofang": "liu_hu",
+  "tuyuhunting": "tuyuhun_khan",
+  "chouchi": "yang_maosou",
+  "xingyang": "li_ju",
+  "xiangyang": "shan_jian",
+  "jiangling": "wang_cheng",
+  "hanzhong": "zhang_guang",
+  "jianning": "wang_xun",
+  "yuzhang": "hua_yi",
+  "pyongyang": "zhang_tong",
+  "donglai": "ju_peng",
+  "yewang": "zhao_gu",
+  "yanci": "shao_xu",
+  "wan": "xun_song"
+ },
+ "governorNote": "荀藩は、決まった城を持たない仮の朝廷(行台)にいたので、太守には置いていない。劉演が鄴に入るのは翌年で、ここでは先に置いた(推定)。",
+ "armies": [
+  {
+   "id": "army_liu_yao",
+   "name": "劉曜軍",
+   "factionId": "han_zhao",
+   "commanderId": "liu_yao",
+   "lon": 112.3,
+   "lat": 34.55,
+   "facing": 0,
+   "troops": {
+    "infantry": 16000,
+    "cavalry": 10000,
+    "archer": 4000
+   },
+   "morale": 88,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_liu_can",
+   "name": "劉粲軍",
+   "factionId": "han_zhao",
+   "commanderId": "liu_can",
+   "lon": 111.7,
+   "lat": 35.85,
+   "facing": 0,
+   "troops": {
+    "infantry": 10000,
+    "cavalry": 6000,
+    "archer": 3000
+   },
+   "morale": 80,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_shile",
+   "name": "石勒軍",
+   "factionId": "shile",
+   "commanderId": "shi_le",
+   "lon": 113.95,
+   "lat": 34.2,
+   "facing": 0,
+   "troops": {
+    "infantry": 9000,
+    "cavalry": 12000,
+    "archer": 3000
+   },
+   "morale": 88,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_wangmi",
+   "name": "王弥軍",
+   "factionId": "wangmi",
+   "commanderId": "wang_mi",
+   "lon": 114.6,
+   "lat": 34.55,
+   "facing": 0,
+   "troops": {
+    "infantry": 9000,
+    "cavalry": 3000,
+    "archer": 3000
+   },
+   "morale": 78,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_wangjun",
+   "name": "王浚軍",
+   "factionId": "wang_jun",
+   "commanderId": "qi_hong",
+   "lon": 116.1,
+   "lat": 39.55,
+   "facing": 0,
+   "troops": {
+    "infantry": 6000,
+    "cavalry": 8000,
+    "archer": 2000
+   },
+   "morale": 80,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_tuoba",
+   "name": "六脩軍",
+   "factionId": "dai",
+   "commanderId": "tuoba_liuxiu",
+   "lon": 113.0,
+   "lat": 40.3,
+   "facing": 0,
+   "troops": {
+    "infantry": 0,
+    "cavalry": 9000,
+    "archer": 1000
+   },
+   "morale": 84,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_mo",
+   "name": "南陽王軍",
+   "factionId": "sima_bao",
+   "commanderId": "zhao_ran",
+   "lon": 109.3,
+   "lat": 34.5,
+   "facing": 0,
+   "troops": {
+    "infantry": 8000,
+    "cavalry": 2000,
+    "archer": 2000
+   },
+   "morale": 62,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_rui",
+   "name": "王敦軍",
+   "factionId": "jin_rui",
+   "commanderId": "wang_dun",
+   "lon": 118.4,
+   "lat": 31.75,
+   "facing": 0,
+   "troops": {
+    "infantry": 10000,
+    "cavalry": 1000,
+    "archer": 4000
+   },
+   "morale": 75,
+   "fatigue": 10,
+   "food": 45
+  },
+  {
+   "id": "army_cheng",
+   "name": "成軍",
+   "factionId": "chenghan",
+   "commanderId": "li_xiang",
+   "lon": 104.45,
+   "lat": 30.9,
+   "facing": 0,
+   "troops": {
+    "infantry": 9000,
+    "cavalry": 1500,
+    "archer": 2500
+   },
+   "morale": 80,
+   "fatigue": 10,
+   "food": 45
+  }
+ ],
+ "roster": {
+  "liu_cong": {
+   "factionId": "han_zhao",
+   "role": "ruler"
+  },
+  "liu_yao": {
+   "factionId": "han_zhao",
+   "title": "始安王"
+  },
+  "liu_can": {
+   "factionId": "han_zhao",
+   "title": "河内王"
+  },
+  "liu_yi": {
+   "factionId": "han_zhao"
+  },
+  "liu_ji": {
+   "factionId": "han_zhao",
+   "title": "済南王"
+  },
+  "liu_jing": {
+   "factionId": "han_zhao",
+   "title": "漢の将"
+  },
+  "liu_yannian": {
+   "factionId": "han_zhao",
+   "title": "漢の皇族"
+  },
+  "liu_ya": {
+   "factionId": "han_zhao",
+   "title": "漢の将"
+  },
+  "liu_yue": {
+   "factionId": "han_zhao",
+   "title": "漢の皇族の将"
+  },
+  "liu_chang": {
+   "factionId": "han_zhao",
+   "title": "漢の将"
+  },
+  "huyan_yan": {
+   "factionId": "han_zhao",
+   "title": "漢の重臣"
+  },
+  "chen_yuanda": {
+   "factionId": "han_zhao",
+   "title": "漢の臣"
+  },
+  "zhu_ji": {
+   "factionId": "han_zhao",
+   "title": "漢の重臣"
+  },
+  "fan_long": {
+   "factionId": "han_zhao",
+   "title": "漢の重臣"
+  },
+  "jin_zhun": {
+   "factionId": "han_zhao",
+   "title": "漢の臣"
+  },
+  "zhao_gu": {
+   "factionId": "han_zhao",
+   "title": "河内の守将"
+  },
+  "shi_le": {
+   "factionId": "shile",
+   "role": "ruler",
+   "title": "漢の将"
+  },
+  "zhang_bin": {
+   "factionId": "shile",
+   "title": "石勒の参謀"
+  },
+  "diao_ying": {
+   "factionId": "shile"
+  },
+  "shi_hu": {
+   "factionId": "shile",
+   "title": "石勒の甥(17歳)",
+   "note": "この年に石勒のもとへ送り届けられた"
+  },
+  "kong_chang": {
+   "factionId": "shile"
+  },
+  "kui_an": {
+   "factionId": "shile"
+  },
+  "zhi_xiong": {
+   "factionId": "shile"
+  },
+  "tao_bao": {
+   "factionId": "shile"
+  },
+  "lu_ming": {
+   "factionId": "shile"
+  },
+  "guo_ao": {
+   "factionId": "shile"
+  },
+  "liu_zheng": {
+   "factionId": "shile"
+  },
+  "wang_yang": {
+   "factionId": "shile"
+  },
+  "huyan_mo2": {
+   "factionId": "shile"
+  },
+  "zhi_quliu": {
+   "factionId": "shile"
+  },
+  "zhang_jing": {
+   "factionId": "shile",
+   "title": "石勒の配下"
+  },
+  "shi_sheng": {
+   "factionId": "shile",
+   "title": "石勒の将"
+  },
+  "wang_mi": {
+   "factionId": "wangmi",
+   "role": "ruler"
+  },
+  "cao_yi": {
+   "factionId": "wangmi",
+   "role": "general",
+   "title": "王弥の左長史(青州にいる)"
+  },
+  "liu_tun": {
+   "factionId": "wangmi"
+  },
+  "zhang_song": {
+   "factionId": "wangmi"
+  },
+  "xu_miao": {
+   "factionId": "wangmi"
+  },
+  "sima_rui": {
+   "factionId": "jin_rui",
+   "role": "ruler",
+   "title": "琅邪王・安東将軍"
+  },
+  "wang_dao": {
+   "factionId": "jin_rui",
+   "title": "安東将軍の司馬"
+  },
+  "wang_dun": {
+   "factionId": "jin_rui",
+   "title": "揚州刺史"
+  },
+  "zhou_qi": {
+   "factionId": "jin_rui"
+  },
+  "gu_rong": {
+   "factionId": "jin_rui"
+  },
+  "he_xun": {
+   "factionId": "jin_rui",
+   "title": "江南の名族の臣"
+  },
+  "ji_zhan": {
+   "factionId": "jin_rui",
+   "title": "江南の名族の臣"
+  },
+  "gan_zhuo": {
+   "factionId": "jin_rui",
+   "title": "司馬睿の将"
+  },
+  "zhou_fang": {
+   "factionId": "jin_rui",
+   "title": "司馬睿の将"
+  },
+  "zhou_yi": {
+   "factionId": "jin_rui",
+   "title": "司馬睿の配下"
+  },
+  "diao_xie": {
+   "factionId": "jin_rui",
+   "title": "司馬睿の配下"
+  },
+  "bian_kun": {
+   "factionId": "jin_rui",
+   "title": "司馬睿の配下"
+  },
+  "dai_yuan": {
+   "factionId": "jin_rui",
+   "title": "司馬睿の配下"
+  },
+  "wang_yi": {
+   "factionId": "jin_rui",
+   "title": "司馬睿の配下"
+  },
+  "yu_liang": {
+   "factionId": "jin_rui",
+   "title": "司馬睿の配下"
+  },
+  "zu_ti": {
+   "factionId": "jin_rui",
+   "title": "徐州刺史",
+   "note": "この年に人々を率いて京口へ南下した"
+  },
+  "tao_kan": {
+   "factionId": "jin_rui",
+   "title": "武昌太守",
+   "note": "司馬睿の側に加わった時期は、はっきりしない(推定)"
+  },
+  "xun_fan": {
+   "factionId": "jin",
+   "role": "ruler",
+   "title": "司空(仮の朝廷を立てる)"
+  },
+  "xun_zu": {
+   "factionId": "jin",
+   "title": "荀藩の弟"
+  },
+  "li_ju": {
+   "factionId": "jin",
+   "title": "滎陽太守"
+  },
+  "guo_mo": {
+   "factionId": "jin",
+   "title": "河内の砦の主"
+  },
+  "guo_song": {
+   "factionId": "jin",
+   "title": "李矩の甥"
+  },
+  "wei_gai": {
+   "factionId": "jin",
+   "title": "砦の主"
+  },
+  "shan_jian": {
+   "factionId": "jin"
+  },
+  "wang_cheng": {
+   "factionId": "jin"
+  },
+  "zhang_guang": {
+   "factionId": "jin"
+  },
+  "wang_xun": {
+   "factionId": "jin",
+   "title": "寧州刺史"
+  },
+  "ying_zhan": {
+   "factionId": "jin",
+   "title": "荊州の将"
+  },
+  "xun_song": {
+   "factionId": "jin",
+   "title": "襄城太守",
+   "note": "宛にいたとするのは推定"
+  },
+  "hua_yi": {
+   "factionId": "jin"
+  },
+  "zhang_tong": {
+   "factionId": "jin"
+  },
+  "ju_peng": {
+   "factionId": "jin",
+   "title": "東莱太守"
+  },
+  "su_jun": {
+   "factionId": "jin",
+   "title": "流民の長(青州)"
+  },
+  "xi_jian": {
+   "factionId": "jin",
+   "title": "流民の長(鄒山)"
+  },
+  "liu_xia": {
+   "factionId": "jin",
+   "title": "砦の主"
+  },
+  "wang_jun": {
+   "factionId": "wang_jun",
+   "role": "ruler"
+  },
+  "qi_hong": {
+   "factionId": "wang_jun"
+  },
+  "sun_wei": {
+   "factionId": "wang_jun"
+  },
+  "zao_song": {
+   "factionId": "wang_jun"
+  },
+  "pei_xian": {
+   "factionId": "wang_jun",
+   "title": "王浚の尚書"
+  },
+  "shao_xu": {
+   "factionId": "wang_jun",
+   "title": "楽陵太守",
+   "note": "王浚の所属とするのは推定"
+  },
+  "liu_kun": {
+   "factionId": "liu_kun",
+   "role": "ruler",
+   "title": "并州刺史"
+  },
+  "wen_jiao": {
+   "factionId": "liu_kun",
+   "title": "劉琨の参軍"
+  },
+  "liu_qun": {
+   "factionId": "liu_kun"
+  },
+  "liu_yan": {
+   "factionId": "liu_kun"
+  },
+  "sima_mo": {
+   "factionId": "sima_bao",
+   "role": "ruler"
+  },
+  "sima_bao": {
+   "factionId": "sima_bao",
+   "role": "general",
+   "title": "司馬模の子(上邽にいる)"
+  },
+  "chen_an": {
+   "factionId": "sima_bao",
+   "title": "司馬模の配下の将"
+  },
+  "zhang_chun": {
+   "factionId": "sima_bao",
+   "title": "司馬保の将"
+  },
+  "zhao_ran": {
+   "factionId": "sima_bao"
+  },
+  "jia_pi": {
+   "factionId": "sima_bao"
+  },
+  "suo_chen": {
+   "factionId": "sima_bao"
+  },
+  "qu_yun": {
+   "factionId": "sima_bao"
+  },
+  "zhang_gui": {
+   "factionId": "qianliang",
+   "role": "ruler",
+   "title": "涼州刺史"
+  },
+  "zhang_shi": {
+   "factionId": "qianliang",
+   "role": "general",
+   "title": "張軌の子"
+  },
+  "zhang_mao": {
+   "factionId": "qianliang",
+   "title": "張軌の子"
+  },
+  "song_pei": {
+   "factionId": "qianliang"
+  },
+  "fan_yuan": {
+   "factionId": "qianliang"
+  },
+  "suo_fu": {
+   "factionId": "qianliang"
+  },
+  "zhang_lang": {
+   "factionId": "qianliang"
+  },
+  "li_xiong": {
+   "factionId": "chenghan",
+   "role": "ruler"
+  },
+  "li_xiang": {
+   "factionId": "chenghan"
+  },
+  "li_shi": {
+   "factionId": "chenghan"
+  },
+  "li_ban": {
+   "factionId": "chenghan"
+  },
+  "li_yun": {
+   "factionId": "chenghan"
+  },
+  "fan_changsheng": {
+   "factionId": "chenghan"
+  },
+  "yan_shi": {
+   "factionId": "chenghan"
+  },
+  "yang_bao": {
+   "factionId": "chenghan"
+  },
+  "ren_hui": {
+   "factionId": "chenghan"
+  },
+  "li_feng": {
+   "factionId": "chenghan"
+  },
+  "du_tao": {
+   "factionId": "du_tao",
+   "role": "ruler"
+  },
+  "wang_zhen": {
+   "factionId": "du_tao"
+  },
+  "tuoba_yilu": {
+   "factionId": "dai",
+   "role": "ruler",
+   "title": "代公"
+  },
+  "tuoba_yulv": {
+   "factionId": "dai",
+   "role": "general",
+   "title": "拓跋部の王族"
+  },
+  "tuoba_liuxiu": {
+   "factionId": "dai"
+  },
+  "tuoba_pugen": {
+   "factionId": "dai"
+  },
+  "wei_xiong": {
+   "factionId": "dai"
+  },
+  "ji_dan": {
+   "factionId": "dai"
+  },
+  "mo_han": {
+   "factionId": "dai"
+  },
+  "duan_jilujuan": {
+   "factionId": "duan",
+   "role": "ruler",
+   "note": "この年に部の長を継いだとするのは推定"
+  },
+  "duan_pidi": {
+   "factionId": "duan"
+  },
+  "duan_wenyang": {
+   "factionId": "duan"
+  },
+  "duan_mobo": {
+   "factionId": "duan"
+  },
+  "duan_shefuchen": {
+   "factionId": "duan"
+  },
+  "murong_hui": {
+   "factionId": "murong",
+   "role": "ruler"
+  },
+  "murong_han": {
+   "factionId": "murong"
+  },
+  "murong_huang": {
+   "factionId": "murong",
+   "title": "慕容廆の子(14歳)"
+  },
+  "lu_chang": {
+   "factionId": "murong"
+  },
+  "yuwen_mogui": {
+   "factionId": "yuwen",
+   "role": "ruler"
+  },
+  "eulbul": {
+   "factionId": "goguryeo",
+   "role": "ruler"
+  },
+  "chang_jori": {
+   "factionId": "goguryeo"
+  },
+  "biryu": {
+   "factionId": "baekje",
+   "role": "ruler"
+  },
+  "heulhae": {
+   "factionId": "silla",
+   "role": "ruler"
+  },
+  "geupri": {
+   "factionId": "silla"
+  },
+  "liu_hu": {
+   "factionId": "tiefu",
+   "role": "ruler"
+  },
+  "liu_lugu": {
+   "factionId": "tiefu"
+  },
+  "tuyuhun_khan": {
+   "factionId": "tuyuhun",
+   "role": "ruler"
+  },
+  "tuyan": {
+   "factionId": "tuyuhun",
+   "role": "general",
+   "title": "吐谷渾の子"
+  },
+  "yang_maosou": {
+   "factionId": "chouchi",
+   "role": "ruler"
+  },
+  "yang_nandi": {
+   "factionId": "chouchi",
+   "role": "general",
+   "title": "楊茂搜の子"
+  },
+  "yang_jiantou": {
+   "factionId": "chouchi",
+   "title": "楊茂搜の子"
+  }
+ }
+}
