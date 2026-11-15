@@ -1,5 +1,6 @@
 // 会戦準備画面。攻撃側を左、防御側を右に置き、中央は戦略マップ(戦場と両軍の陣営)をそのまま見せる。
 // 「両軍情報」で、兵力・士気などを左右の棒で比べる表に切り替える。
+import { estimateWinRate } from "../sim/autoBattle";
 import { fillPortrait } from "./portrait";
 import { factionById, terrainRules } from "../data";
 import type { BattleSetup, BattleSide } from "../data/types";
@@ -94,8 +95,16 @@ export class BattlePrep {
       line.append(left, barL, el("span", "battle-label", r.label), barR, right);
       table.appendChild(line);
     }
+    // 勝率の目安(自動戦闘と同じ強さの式から出す)
+    const odds = estimateWinRate(setup);
+    const pa = Math.round(odds.attacker * 100);
+    this.q(".battle-odds-value.attacker").textContent = `攻 ${pa}%`;
+    this.q(".battle-odds-value.defender").textContent = `守 ${100 - pa}%`;
+    (this.q(".battle-odds-bar").firstElementChild as HTMLElement).style.width = `${pa}%`;
+    this.q(".battle-odds-note").textContent = "勝率の目安(兵力・兵種・地形・士気・疲労・指揮官・城壁から計算。指揮しだいで変わります)";
+    this.root.dataset.odds = String(pa);
     const noteList = this.q(".battle-notes");
-    noteList.replaceChildren(...notes.map((n) => el("li", "", n)));
+    noteList.replaceChildren(...[...notes, ...odds.factors.map((f) => `勝率の目安に効いているもの:${f}`)].map((n) => el("li", "", n)));
 
     this.q(".battle-handoff").hidden = true;
     this.setPlayerSide("attacker");

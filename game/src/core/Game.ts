@@ -19,6 +19,7 @@ import { BattlePrep } from "../ui/BattlePrep";
 import { CityLabels } from "../ui/CityLabels";
 import { InfoPanel } from "../ui/InfoPanel";
 import { DiplomacyScreen } from "../ui/DiplomacyScreen";
+import { estimateWinRate } from "../sim/autoBattle";
 import { PersonScreen } from "../ui/PersonScreen";
 import { ScenarioScreen } from "../ui/ScenarioScreen";
 import { strategyRules } from "../sim/strategy";
@@ -492,7 +493,7 @@ export class Game {
     (this.root.querySelector("#event-open") as HTMLElement).hidden = false;
     const kind = event.battleType === "field_battle" ? "野戦" : "攻城戦";
     (this.root.querySelector("#event-text") as HTMLElement).textContent =
-      `${kind}:${setup.name}。${setup.attacker.name}が${setup.defender.name}と対峙しました。時間を止めています`;
+      `${kind}:${setup.name}。${setup.attacker.name}が${setup.defender.name}と対峙しました(攻撃側の勝率の目安 ${Math.round(estimateWinRate(setup).attacker * 100)}%)。時間を止めています`;
     (this.root.querySelector("#event") as HTMLElement).hidden = false;
     this.syncSpeedButton();
     this.dirty = true;

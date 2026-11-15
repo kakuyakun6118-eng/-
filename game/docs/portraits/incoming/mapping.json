@@ -1,0 +1,27 @@
+{
+ "note": "届いた見本(4枚の一覧画像)を1人ずつに切り分けたもの。A=16枚, B=24枚, C=22枚, D=22枚。どの絵がだれかは、送り主の確認が必要。Cを batch01 の順に当てはめたのは、仮の割り当て。",
+ "provisional": {
+  "C01": "liu_yuan",
+  "C02": "shi_le",
+  "C03": "shi_hu",
+  "C04": "liu_yao",
+  "C05": "sima_rui",
+  "C06": "wang_dao",
+  "C07": "zu_ti",
+  "C08": "tao_kan",
+  "C09": "murong_hui",
+  "C10": "tuoba_yilu",
+  "C11": "li_xiong",
+  "C12": "zhang_gui",
+  "C13": "zhang_bin",
+  "C14": "sima_ying",
+  "C15": "zhang_fang",
+  "C16": "fu_jian",
+  "C17": "wang_meng",
+  "C18": "murong_ke",
+  "C19": "huan_wen",
+  "C20": "xie_an",
+  "C21": "yao_xiang",
+  "C22": "eulbul"
+ }
+}

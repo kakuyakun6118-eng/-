@@ -834,8 +834,8 @@ body {
   inset: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1fr);
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  grid-template-areas: "head head head" "att view def" "act act act";
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-areas: "head head head" "odds odds odds" "att view def" "act act act";
   gap: 8px;
   padding-top: calc(8px + env(safe-area-inset-top, 0px));
   padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
@@ -1187,8 +1187,8 @@ body {
 @media (orientation: portrait) {
   #battle {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr) auto auto;
-    grid-template-areas: "head head" "view view" "att def" "act act";
+    grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "head head" "odds odds" "view view" "att def" "act act";
   }
 
   .battle-side {
@@ -3238,4 +3238,67 @@ select:focus-visible {
   border-radius: 2px;
   object-fit: cover;
   background: #130c0a;
+}
+
+/* 軍団パネルの指揮官の肖像 */
+.army-commander {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.army-face {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border: 1px solid var(--gold-dim);
+  border-radius: 2px;
+  object-fit: cover;
+  background: #130c0a;
+}
+
+.army-face[hidden] {
+  display: none;
+}
+
+/* 会戦準備:勝率の目安 */
+.battle-odds {
+  grid-area: odds;
+  display: grid;
+  grid-template-columns: auto minmax(80px, 1fr) auto;
+  align-items: center;
+  gap: 2px 10px;
+  padding: 4px 10px;
+  border: 1px solid var(--gold-dim);
+  border-radius: 2px;
+  background: rgba(12, 9, 8, 0.82);
+  border-bottom: 1px solid var(--gold-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.battle-odds-value {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--kinari);
+}
+
+.battle-odds-bar {
+  height: 10px;
+  border: 1px solid var(--gold-dim);
+  border-radius: 2px;
+  background: #3b6f9a;
+  overflow: hidden;
+}
+
+.battle-odds-bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #8a1f17, #c9463a);
+}
+
+.battle-odds-note {
+  grid-column: 1 / 4;
+  font-size: 10px;
+  color: var(--muted);
 }

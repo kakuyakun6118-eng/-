@@ -1,4 +1,5 @@
 // 軍団をタップしたときに、画面の下に出る詳細パネル。移動の指示もここから出す。
+import { fillPortrait } from "./portrait";
 import { terrainRules, totalTroops } from "../data";
 import type { TerrainKind } from "../data/types";
 import type { SupplyState } from "../sim/Campaign";
@@ -53,7 +54,12 @@ export class ArmyPanel {
     this.q(".army-title").textContent = a.name;
     this.q(".army-chip").style.background = marker.faction ? marker.faction.color : "#9a9a9a";
     this.q(".army-faction").textContent = marker.faction ? marker.faction.name : "所属なし";
-    this.q(".army-commander").textContent = marker.commander ? `指揮官 ${marker.commander.name}` : "指揮官なし";
+    // 指揮官:肖像(人物画面と同じ処理)と、統率・武力・知力
+    const c = marker.commander;
+    const face = this.q(".army-face") as HTMLImageElement;
+    face.hidden = !c;
+    if (c) fillPortrait(face, c);
+    this.q(".army-commander-name").textContent = c ? `指揮官 ${c.name}(統${c.leadership} 武${c.war} 知${c.intelligence})` : "指揮官なし";
     const badge = this.q(".army-badge");
     badge.textContent = STATUS_TEXT[marker.state.status];
     badge.dataset.status = marker.state.status;

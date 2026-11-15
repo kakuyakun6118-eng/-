@@ -67,6 +67,45 @@ export function wallBonus(defense: number): number {
 
 const clamp = (v: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, v));
 
+/**
+ * 勝率の目安(攻撃側が勝つ見込み。0〜1)。自動戦闘と同じ強さの式(兵力・兵種・地形・士気・疲労・指揮官・城壁)から出す。
+ * プレイヤーが指揮する3Dの会戦では、指揮しだいで結果が変わるので、あくまで目安。
+ */
+export function estimateWinRate(setup: BattleSetup): { attacker: number; defender: number; ratio: number; factors: string[] } {
+  const siege = setup.battleType === "siege_battle";
+  const a = Math.max(1, sideStrength(setup.attacker, setup.terrain, siege));
+  let d = Math.max(1, sideStrength(setup.defender, setup.terrain, siege));
+  const factors: string[] = [];
+  const fort = setup.defender.fortification;
+  if (siege && fort) {
+    d *= wallBonus(fort.defense);
+    factors.push(`城壁(防御${fort.defense})で守備側が${wallBonus(fort.defense).toFixed(1)}倍`);
+  } else {
+    const bonus = terrainBonus(setup.terrain);
+    d *= bonus;
+    if (bonus > 1) factors.push(`地形で守備側が${bonus.toFixed(2)}倍`);
+  }
+  for (const [side, label] of [[setup.attacker, "攻撃側"], [setup.defender, "防御側"]] as const) {
+    if (side.commander) factors.push(`${label}の指揮官 ${side.commander.name}(統率${side.commander.leadership})`);
+    else factors.push(`${label}は指揮官なし`);
+  }
+  const ratio = a / d;
+  // 強さの比が1なら五分。比が2倍で約9割になる曲線
+  let p = 1 / (1 + Math.pow(ratio, -3.2));
+  // 城攻めは、囲み続ける食糧がなければ落とせない
+  if (siege && setup.attacker.food < 5) {
+    p *= 0.4;
+    factors.push("攻撃側の食糧が少ない");
+  }
+  p = Math.max(0.02, Math.min(0.98, p));
+  return { attacker: p, defender: 1 - p, ratio, factors };
+}
+
+/** 野戦で、守る側が地形から受ける利(山・丘・森・川) */
+function terrainBonus(terrain: TerrainKind): number {
+  return terrain === "mountain" || terrain === "highMountain" ? 1.25 : terrain === "hill" || terrain === "forest" ? 1.1 : terrain === "river" || terrain === "crossing" ? 1.2 : 1;
+}
+
 export function autoResolve(setup: BattleSetup): BattleResult {
   const rand = seeded(setup.battleId + setup.createdAt.day);
   const siege = setup.battleType === "siege_battle";
@@ -76,7 +115,7 @@ export function autoResolve(setup: BattleSetup): BattleResult {
   if (siege && fort) {
     d *= wallBonus(fort.defense);
   } else {
-    d *= setup.terrain === "mountain" || setup.terrain === "highMountain" ? 1.25 : setup.terrain === "hill" || setup.terrain === "forest" ? 1.1 : setup.terrain === "river" || setup.terrain === "crossing" ? 1.2 : 1;
+    d *= terrainBonus(setup.terrain);
   }
   a = Math.max(1, a);
   d = Math.max(1, d);
