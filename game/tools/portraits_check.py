@@ -9,7 +9,8 @@ from PIL import Image
 ROOT = os.path.join(os.path.dirname(__file__), '..')
 need = json.load(open(os.path.join(ROOT, 'docs', 'portraits', 'prompts.json'), encoding='utf-8'))['prompts']
 ids = {k.split('@')[0].replace('.webp', '') for k in need}
-d = os.path.join(ROOT, 'public', 'portraits')
+# --dir <フォルダ> で、検査する置き場を変えられる
+d = sys.argv[sys.argv.index('--dir') + 1] if '--dir' in sys.argv else os.path.join(ROOT, 'public', 'portraits')
 files = sorted(f for f in os.listdir(d) if os.path.splitext(f)[1].lower() in ('.webp', '.png', '.jpg', '.jpeg')) if os.path.isdir(d) else []
 have = {os.path.splitext(f)[0]: f for f in files}
 problems = []; hashes = {}; ahash = {}

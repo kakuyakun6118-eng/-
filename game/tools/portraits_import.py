@@ -9,7 +9,9 @@ ROOT = os.path.join(os.path.dirname(__file__), '..')
 ids = {p['id'] for f in ('s317.persons.json', 'persons.extra.json') for p in json.load(open(os.path.join(ROOT, 'src', 'data', 'scenarios', f), encoding='utf-8'))['persons']}
 src = sys.argv[1] if len(sys.argv) > 1 else None
 if not src or not os.path.isdir(src): sys.exit('使い方: python3 tools/portraits_import.py <画像のあるフォルダ>')
-dst = os.path.join(ROOT, 'public', 'portraits'); os.makedirs(dst, exist_ok=True)
+# --dest <フォルダ> で、取り込み先を変えられる(確認用の置き場に先に取り込むとき)
+dst = sys.argv[sys.argv.index('--dest') + 1] if '--dest' in sys.argv else os.path.join(ROOT, 'public', 'portraits')
+os.makedirs(dst, exist_ok=True)
 done, skipped = 0, []
 for name in sorted(os.listdir(src)):
     base, ext = os.path.splitext(name)

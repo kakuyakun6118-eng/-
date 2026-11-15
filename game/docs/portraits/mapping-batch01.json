@@ -1,0 +1,182 @@
+{
+ "note": "第1回の対応表(仮)。番号は、保管している切り分け画像の番号(A=1枚目の一覧画像16枚、B=2枚目24枚、C=3枚目22枚、D=4枚目22枚)。ご指定の「A=4枚目…D=1枚目」の読み方では、D17・D19・D21 が存在せず、ほかも人物と合わないため、保管番号のままの読み方で照合した。確認がすむまで、ゲームには入れない。",
+ "convention": "保管番号のまま(A=1枚目)",
+ "entries": [
+  {
+   "code": "D01",
+   "person": "liu_yuan",
+   "name": "劉淵",
+   "people": "匈奴",
+   "role": "general",
+   "status": "登録候補"
+  },
+  {
+   "code": "C02",
+   "person": "shi_le",
+   "name": "石勒",
+   "people": "羯",
+   "role": "ruler",
+   "status": "保留(低確度)"
+  },
+  {
+   "code": "B05",
+   "person": "shi_hu",
+   "name": "石虎",
+   "people": "羯",
+   "role": "general",
+   "status": "登録候補"
+  },
+  {
+   "code": "D15",
+   "person": "liu_yao",
+   "name": "劉曜",
+   "people": "匈奴",
+   "role": "general",
+   "status": "登録候補"
+  },
+  {
+   "code": "C12",
+   "person": "sima_rui",
+   "name": "司馬睿",
+   "people": "漢",
+   "role": "ruler",
+   "status": "登録候補"
+  },
+  {
+   "code": "D06",
+   "person": "wang_dao",
+   "name": "王導",
+   "people": "漢",
+   "role": "strategist",
+   "status": "登録候補"
+  },
+  {
+   "code": "B07",
+   "person": "zu_ti",
+   "name": "祖逖",
+   "people": "漢",
+   "role": "general",
+   "status": "登録候補"
+  },
+  {
+   "code": "B08",
+   "person": "tao_kan",
+   "name": "陶侃",
+   "people": "漢",
+   "role": "general",
+   "status": "保留(低確度)"
+  },
+  {
+   "code": "D03",
+   "person": "murong_hui",
+   "name": "慕容廆",
+   "people": "鮮卑",
+   "role": "ruler",
+   "status": "登録候補"
+  },
+  {
+   "code": "C10",
+   "person": "tuoba_yilu",
+   "name": "拓跋猗盧",
+   "people": "鮮卑",
+   "role": "general",
+   "status": "登録候補"
+  },
+  {
+   "code": "D21",
+   "person": "li_xiong",
+   "name": "李雄",
+   "people": "巴氐",
+   "role": "ruler",
+   "status": "登録候補"
+  },
+  {
+   "code": "A16",
+   "person": "zhang_gui",
+   "name": "張軌",
+   "people": "漢",
+   "role": "general",
+   "status": "登録候補"
+  },
+  {
+   "code": "D19",
+   "person": "zhang_bin",
+   "name": "張賓",
+   "people": "漢",
+   "role": "strategist",
+   "status": "登録候補"
+  },
+  {
+   "code": "D05",
+   "person": "sima_ying",
+   "name": "司馬穎",
+   "people": "漢",
+   "role": "ruler",
+   "status": "登録候補"
+  },
+  {
+   "code": "B09",
+   "person": "zhang_fang",
+   "name": "張方",
+   "people": "漢",
+   "role": "general",
+   "status": "登録候補"
+  },
+  {
+   "code": "C09",
+   "person": "fu_jian",
+   "name": "苻堅",
+   "people": "氐",
+   "role": "general",
+   "status": "登録候補"
+  },
+  {
+   "code": "D08",
+   "person": "wang_meng",
+   "name": "王猛",
+   "people": "漢",
+   "role": "strategist",
+   "status": "保留(低確度)"
+  },
+  {
+   "code": "D10",
+   "person": "murong_ke",
+   "name": "慕容恪",
+   "people": "鮮卑",
+   "role": "general",
+   "status": "登録候補"
+  },
+  {
+   "code": "D11",
+   "person": "huan_wen",
+   "name": "桓温",
+   "people": "漢",
+   "role": "general",
+   "status": "登録候補"
+  },
+  {
+   "code": "D14",
+   "person": "xie_an",
+   "name": "謝安",
+   "people": "漢",
+   "role": "minister",
+   "status": "保留(低確度)"
+  },
+  {
+   "code": "D17",
+   "person": "yao_xiang",
+   "name": "姚襄",
+   "people": "羌",
+   "role": "ruler",
+   "status": "登録候補"
+  },
+  {
+   "code": "D16",
+   "person": "eulbul",
+   "name": "美川王",
+   "people": "高句麗",
+   "role": "ruler",
+   "status": "登録候補"
+  }
+ ]
+}
