@@ -1,7 +1,8 @@
 // 都市をタップしたときに、画面の下に出る情報パネル。
+import { fillPortrait } from "./portrait";
 import { governorIdOf } from "../sim/battle";
 import { cityLevelOf, cityLevels, personById } from "../data";
-import type { City, CityState, Faction } from "../data/types";
+import type { Person, City, CityState, Faction } from "../data/types";
 
 export class InfoPanel {
   private readonly name: HTMLElement;
@@ -33,7 +34,33 @@ export class InfoPanel {
   }
 
   /** state は、いまの都市の状態(守備兵・守将)。uncertain は、所属が推定かどうか */
-  show(city: City, faction: Faction | undefined, state?: CityState, uncertain = false): void {
+  /**
+   * 都市の情報。residents は滞在している人物(太守・后妃など)、treasureCount は蔵の名品の数。
+   */
+  show(city: City, faction: Faction | undefined, state?: CityState, uncertain = false, residents: Person[] = [], treasureCount = 0): void {
+    const box = this.root.querySelector(".info-residents") as HTMLElement;
+    box.replaceChildren(...residents.slice(0, 6).map((p) => {
+      const chip = document.createElement("span");
+      chip.className = "info-resident";
+      const img = document.createElement("img");
+      img.alt = "";
+      fillPortrait(img, p);
+      chip.append(img, p.name);
+      return chip;
+    }));
+    if (treasureCount > 0) {
+      const t = document.createElement("span");
+      t.className = "info-resident info-treasure";
+      t.textContent = `蔵の名品 ${treasureCount}点`;
+      box.append(t);
+    }
+    if (state?.prosperity !== undefined && state.prosperity < 100) {
+      const t = document.createElement("span");
+      t.className = "info-resident info-treasure";
+      t.textContent = `繁栄 ${Math.round(state.prosperity)}・治安 ${Math.round(state.order ?? 70)}`;
+      box.append(t);
+    }
+    box.hidden = box.childElementCount === 0;
     this.name.textContent = city.name;
     this.reading.textContent = city.reading;
     this.chip.style.background = faction ? faction.color : "#9a9a9a";

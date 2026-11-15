@@ -101,10 +101,16 @@ function buildScenario(file: ScenarioFile): { scenario: Scenario; persons: Perso
   const list: Person[] = file.roster
     ? Object.entries(file.roster).flatMap(([id, r]) => {
         const base = personLedger.get(id);
-        return base ? [{ ...base, factionId: r.factionId, role: r.role ?? base.role, title: r.title ?? base.title, note: r.note ?? base.note }] : [];
+        return base ? [{ ...base, factionId: r.factionId, role: r.role ?? base.role, title: r.title ?? base.title, note: r.note ?? base.note, residence: r.cityId }] : [];
       })
-    : (s317Persons.persons as Person[]);
-  const { roster: _roster, armies: fileArmies, defaultOwner: _default, ...rest } = file;
+    : [
+        ...(s317Persons.persons as Person[]).map((p) => ({ ...p })),
+        ...Object.entries(file.womenRoster ?? {}).flatMap(([id, r]) => {
+          const base = personLedger.get(id);
+          return base ? [{ ...base, factionId: r.factionId, title: r.title ?? base.title, note: r.note ?? base.note, residence: r.cityId }] : [];
+        }),
+      ];
+  const { roster: _roster, womenRoster: _women, armies: fileArmies, defaultOwner: _default, ...rest } = file;
   return { scenario: { ...rest, cityOwners, passOwners }, persons: list, armies: fileArmies ?? [] };
 }
 

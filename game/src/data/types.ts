@@ -168,7 +168,8 @@ export interface UnitType {
 export type PersonRole = "ruler" | "general" | "strategist" | "minister";
 
 /** 人物の状態:健在・負傷・捕虜・死亡 */
-export type PersonStatus = "active" | "wounded" | "captured" | "dead";
+/** 健在・負傷・捕虜・死亡・保護(都市が落ちたときに保護された人。捕虜とは別) */
+export type PersonStatus = "active" | "wounded" | "captured" | "dead" | "protected";
 
 /**
  * 人物(君主・武将・軍師)。軍団の指揮官、都市の太守、関所の守将として、IDで参照する。
@@ -198,6 +199,13 @@ export interface Person {
   favoredUnit: UnitTypeId | null;
   /** 人物の説明・経歴 */
   bio: string;
+  /** 性別。書かれていなければ男性 */
+  gender?: "male" | "female";
+  /** 外交・文化(女性の人物などに設定。書かれていなければ表示しない) */
+  diplomacy?: number;
+  culture?: number;
+  /** いま滞在している都市(シナリオの名簿で決まる。都市が落ちたとき、その場にいた人として扱う) */
+  residence?: string;
   /** 民族(漢・匈奴・羯・鮮卑・氐・羌 など)。確かでないものは「不明」 */
   people?: string;
   /** 民族についての注記(推定の根拠など) */
@@ -344,6 +352,10 @@ export interface CityState {
   governorId?: string | null;
   /** 守将の状態(戦死・捕虜なら、守将はいなくなる) */
   governorFate?: "healthy" | "wounded" | "captured" | "killed";
+  /** 都市の繁栄(0〜100。収入に掛かる。略奪で大きく下がり、少しずつ戻る) */
+  prosperity?: number;
+  /** 治安(0〜100) */
+  order?: number;
 }
 
 /** 会戦の片方の陣営。軍団でも都市でも同じ形で扱う */
@@ -435,6 +447,8 @@ export interface ScenarioEntry {
 /** シナリオごとの名簿の1人分。人物の台帳(生没年・能力・経歴)に、その年代の所属と官職を重ねる */
 export interface RosterEntry {
   factionId: string;
+  /** 滞在している都市 */
+  cityId?: string;
   role?: PersonRole;
   title?: string;
   note?: string;
@@ -447,5 +461,7 @@ export interface ScenarioFile extends Omit<Scenario, "cityOwners"> {
   defaultOwner?: string;
   /** 名簿(人物ID → その年代の所属)。省くと、台帳に書かれた所属をそのまま使う */
   roster?: Record<string, RosterEntry>;
+  /** 317年のように名簿を持たないシナリオで、女性の人物を置くための欄 */
+  womenRoster?: Record<string, RosterEntry>;
   armies?: Army[];
 }

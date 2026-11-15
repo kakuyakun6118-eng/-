@@ -1,9 +1,10 @@
 // ゲームの進行を計算する。日付を進め、軍団の行軍・食糧・疲労・士気・敵との接触を扱う。
 // ここは計算だけで、3D表示のことは知らない。変化があったら、登録された関数で知らせる。
-import { personById, resolveCityLayout, scenario, totalTroops } from "../data";
+import { cityLevelOf, persons, personById, resolveCityLayout, scenario, totalTroops } from "../data";
 import { autoResolve } from "./autoBattle";
 import { createBattleSetup, governorIdOf, initialCityState, placeName } from "./battle";
 import { garrisonCap, StrategyAi, strategyRules } from "./strategy";
+import { chance, setCurrentSpoils, Spoils, type CaptureRecord, type PendingCapture } from "./spoils";
 import { seasonOf, type CampaignSave, type Relation } from "./save";
 import type { BattleResult, CommanderFate, SideResult } from "../battle/types";
 import type { Army, ArmyStatus, BattleEvent, City, CityState, PersonStatus, UnitTypeId } from "../data/types";
@@ -58,6 +59,8 @@ export interface CampaignListener {
   onCityCaptured(cityId: string, factionId: string): void;
   /** 出来事の知らせ(AIの行動や、自動で決着した戦い) */
   onNews?(text: string): void;
+  /** プレイヤーの勢力が都市を落とし、処置(略奪・保全)を選ぶのを待っている */
+  onCapturePending?(pc: PendingCapture): void;
 }
 
 export class Campaign {
@@ -88,6 +91,8 @@ export class Campaign {
       targetCityId: null,
     }));
     for (const s of this.armies) s.supplied = this.nearFriendlyCity(s);
+    this.spoils = new Spoils(cities, (id) => scenario.cityOwners[id]);
+    setCurrentSpoils(this.spoils);
     // 勢力の蓄え:最初は、支配する都市の3か月分の収入を持っている
     for (const f of scenario.factions) this.factionStates[f.id] = { gold: 0, grain: 0 };
     for (let i = 0; i < 3; i++) this.collectIncome();
@@ -99,10 +104,14 @@ export class Campaign {
     let grain = 0;
     for (const c of this.cities) {
       if (scenario.cityOwners[c.id] !== factionId) continue;
-      gold += c.economy ?? 0;
-      grain += c.food ?? 0;
+      // 略奪された都市は、繁栄が戻るまで収入が減る
+      const prosperity = (this.cityStates[c.id]?.prosperity ?? 100) / 100;
+      gold += (c.economy ?? 0) * prosperity;
+      grain += (c.food ?? 0) * prosperity;
     }
-    return { gold, grain };
+    // 収蔵している名品の効果(収入)
+    const bonus = 1 + (this.spoils?.factionEffects(factionId).income ?? 0) / 100;
+    return { gold: Math.round(gold * bonus), grain: Math.round(grain) };
   }
 
   /** 月に1度、各勢力に収入を入れる。軍団の兵は糧を食べる(1,000人で月に2) */
@@ -179,6 +188,8 @@ export class Campaign {
   private nextArmyId = 1;
   private readonly pendingAuto: BattleEvent[] = [];
   private readonly strategy = new StrategyAi(this);
+  /** 名品・捕虜・保護・陥落の記録 */
+  readonly spoils!: Spoils;
 
   relationOf(a: string, b: string): Relation {
     return this.relations[[a, b].sort().join("|")] ?? "peace";
@@ -248,7 +259,9 @@ export class Campaign {
     if (action === "peace") {
       if (now !== "war") return "戦争中ではありません";
       const theirWars = others.filter((f) => this.relationOf(target, f.id) === "war").length;
-      if (this.strengthOf(me) >= this.strengthOf(target) * 0.8 || theirWars >= 1) {
+      // 収蔵している名品の外交の効果で、相手が少し応じやすくなる
+      const persuasion = 1 - Math.min(0.3, this.spoils.factionEffects(me).diplomacy / 100);
+      if (this.strengthOf(me) >= this.strengthOf(target) * 0.8 * persuasion || theirWars >= 1) {
         this.setRelation(me, target, "peace");
         this.addNews(`${factionName(me)}と${name}が和睦しました`);
         return `${name}は和睦を受け入れました`;
@@ -364,6 +377,7 @@ export class Campaign {
       news: this.news,
       proposals: this.proposals,
       nextArmyId: this.nextArmyId,
+      spoils: this.spoils.serialize(),
     });
   }
 
@@ -393,6 +407,7 @@ export class Campaign {
     this.proposals.length = 0;
     this.proposals.push(...(data.proposals ?? []));
     this.nextArmyId = data.nextArmyId ?? 1;
+    this.spoils.restore(data.spoils);
     this.pendingAuto.length = 0;
     for (const k of Object.keys(this.personStates)) delete this.personStates[k];
     Object.assign(this.personStates, data.personStates);
@@ -436,6 +451,8 @@ export class Campaign {
   /** 城壁と城門の損傷は、日数をかけて少しずつ直る(修復に資金がかかる仕組みは、まだ無い) */
   private repairCities(): void {
     for (const state of Object.values(this.cityStates)) {
+      if (state.prosperity !== undefined) state.prosperity = Math.min(100, state.prosperity + 0.05);
+      if (state.order !== undefined) state.order = Math.min(70, state.order + 0.1);
       state.wallDamage = Math.max(0, state.wallDamage - 0.004);
       state.gateDamage = Math.max(0, state.gateDamage - 0.01);
       state.morale = Math.min(70, state.morale + 0.5);
@@ -675,6 +692,142 @@ export class Campaign {
     this.resolveAutoBattles();
   }
 
+  /**
+   * 陥落の処置。プレイヤーの勢力が落としたときは、選んでもらうまで待つ(時間を止める)。
+   * AIの勢力が落としたときは、その場で決める。
+   */
+  private handleCapture(pc: PendingCapture): void {
+    const mine = this.playerFactionId === null || pc.captor === this.playerFactionId;
+    if (mine) {
+      // 前の処置がまだ決まっていなければ、保全で決めてしまう(2つ同時には待たない)
+      if (this.spoils.pending) this.resolveCapture("preserve", true);
+      this.spoils.pending = pc;
+      this.speed = 0;
+      this.listener.onCapturePending?.(pc);
+      return;
+    }
+    // AI:大きな都市は保全して名品を接収する。小さな都市は、攻める気の強い難易度ほど略奪しやすい
+    const city = this.cities.find((c) => c.id === pc.cityId)!;
+    const p = strategyRules.profiles[this.difficulty] ?? strategyRules.profiles.normal;
+    const loot = cityLevelOf(city) <= 2 && chance(`${pc.day}|${pc.cityId}|ai`) < p.aggression * 1.5;
+    this.spoils.pending = pc;
+    const rec = this.resolveCapture(loot ? "loot" : "preserve", true);
+    // 捕虜には、一度だけ登用を持ちかける
+    for (const id of rec?.captives ?? []) this.custodyAction(id, "recruit");
+  }
+
+  /** 陥落の処置を決める(待っている処置に対して) */
+  resolveCapture(choice: "loot" | "preserve", confiscate: boolean): CaptureRecord | null {
+    const pc = this.spoils.pending;
+    if (!pc) return null;
+    this.spoils.pending = null;
+    const city = this.cities.find((c) => c.id === pc.cityId)!;
+    // 同じ入れ物を書き換える(落城の処理の中で、あとから同じ入れ物が都市の状態として置かれるため)
+    const state = this.cityStates[city.id] ?? (this.cityStates[city.id] = { ...this.cityState(city) });
+    const rec = this.spoils.resolveCapture(pc, choice, confiscate, city, state, this.dateText(),
+      (f, gold, grain) => {
+        const st = (this.factionStates[f] ??= { gold: 0, grain: 0 });
+        st.gold += gold;
+        st.grain += grain;
+      },
+      (id, s) => {
+        this.personStates[id] = s;
+      });
+    const names = (ids: string[]): string => ids.map((id) => personById(id)?.name ?? id).join("・");
+    const items = rec.treasures.map((id) => this.spoils.treasure(id)?.name).filter(Boolean).join("・");
+    this.addNews(`${factionName(pc.captor)}が${city.name}を${choice === "loot" ? "略奪" : "保全"}しました(金${rec.gold}・糧${rec.grain}${items ? `、名品:${items}` : ""}${rec.captives.length ? `、捕虜:${names(rec.captives)}` : ""}${rec.protected.length ? `、保護:${names(rec.protected)}` : ""})`);
+    return rec;
+  }
+
+  /**
+   * 捕虜・保護している人物への処置。結果を、画面に出す文で返す。
+   * 本人の意思と立場(元の勢力の王族か、元の勢力が残っているか)によって、応じるかどうかが変わる。
+   */
+  custodyAction(personId: string, action: "keep" | "recruit" | "court" | "release" | "return" | "ransom" | "negotiate"): string {
+    const c = this.spoils.custodyOf(personId);
+    const p = personById(personId);
+    if (!c || !p) return "その人物は、捕虜でも保護中でもありません";
+    const day = Math.floor(this.day);
+    const holder = c.holder;
+    const from = c.from;
+    const fromAlive = this.cities.some((x) => scenario.cityOwners[x.id] === from);
+    const free = (factionId: string): void => {
+      this.spoils.release(personId);
+      delete this.personStates[personId];
+      this.spoils.setFaction(personId, factionId);
+      p.residence = undefined;
+    };
+    const royal = p.role === "ruler" || /后|妃|公主|皇太|夫人|母|世子|太子/.test(p.title);
+    switch (action) {
+      case "keep":
+        return `${p.name}を、引き続き${c.kind === "captive" ? "捕虜としておきます" : "保護します"}`;
+      case "release":
+      case "return": {
+        if (!fromAlive && action === "return") return `${factionName(from)}は、もう都市を持っていません。解放することはできます`;
+        free(fromAlive ? from : holder === from ? from : p.factionId);
+        let extra = "";
+        // 帰還させると、相手が恩に感じて、戦をやめることがある
+        if (action === "return" && this.atWar(holder, from) && chance(`${day}|${personId}|return`) < 0.25 + (royal ? 0.15 : 0)) {
+          this.setRelation(holder, from, "peace");
+          extra = `。${factionName(from)}は感謝し、和睦に応じました`;
+        }
+        this.addNews(`${factionName(holder)}が${p.name}を${action === "return" ? `${factionName(from)}へ帰還させました` : "解放しました"}${extra}`);
+        return `${p.name}を${action === "return" ? "帰還させました" : "解放しました"}${extra}`;
+      }
+      case "ransom": {
+        if (c.kind !== "captive") return "身代金は、捕虜についてだけ求められます";
+        if (!fromAlive) return `${factionName(from)}は、もう都市を持っていません`;
+        const price = Math.round((p.leadership + p.war + p.intelligence + p.politics) * (royal ? 8 : 4));
+        const purse = this.factionStates[from];
+        if (!purse || purse.gold < price) return `${factionName(from)}には、身代金(金${price})を払う余裕がありません`;
+        purse.gold -= price;
+        (this.factionStates[holder] ??= { gold: 0, grain: 0 }).gold += price;
+        free(from);
+        this.addNews(`${factionName(from)}が金${price}を払い、${p.name}を引き取りました`);
+        return `${factionName(from)}が金${price}を払い、${p.name}を引き取りました`;
+      }
+      case "negotiate": {
+        if (!fromAlive) return `${factionName(from)}は、もう都市を持っていません`;
+        if (!this.atWar(holder, from)) {
+          free(from);
+          return `${p.name}を${factionName(from)}へ送り返しました(戦争中ではないので、関係は変わりません)`;
+        }
+        const weight = (p.politics + p.charisma) / 400 + (royal ? 0.25 : 0);
+        if (chance(`${day}|${personId}|nego`) < 0.25 + weight) {
+          free(from);
+          this.setRelation(holder, from, "peace");
+          this.addNews(`${p.name}の返還を条件に、${factionName(holder)}と${factionName(from)}が和睦しました`);
+          return `${p.name}を返すことを条件に、${factionName(from)}と和睦しました`;
+        }
+        c.lastTry = day;
+        return `${factionName(from)}は、${p.name}の返還を条件とした和睦に応じませんでした`;
+      }
+      case "recruit":
+      case "court": {
+        if (c.lastTry === day) return "今日はもう持ちかけました。日をあらためてください";
+        c.lastTry = day;
+        if (p.role === "ruler") return `${p.name}は${factionName(from)}の君主です。仕えることはありません`;
+        // 応じる見込み:持ちかける側の君主の魅力と威信、とどめておいた日数(待遇)、元の勢力が残っているか、王族か
+        const ruler = persons.find((x) => x.factionId === holder && x.role === "ruler");
+        const prestige = this.spoils.factionEffects(holder).prestige;
+        let pr = (action === "court" ? 0.4 : 0.32) + ((ruler?.charisma ?? 60) - 60) / 150 + prestige / 300 + Math.min(0.15, (day - c.day) / 600);
+        if (ruler?.people && ruler.people === p.people) pr += 0.08;
+        if (fromAlive) pr -= 0.12;
+        else pr += 0.15;
+        if (royal) pr -= 0.3;
+        if (this.atWar(holder, from)) pr -= 0.05;
+        pr = Math.max(0.03, Math.min(0.85, pr));
+        if (chance(`${day}|${personId}|${action}`) < pr) {
+          free(holder);
+          if (action === "court") p.title = `${factionName(holder)}の宮廷に仕える`;
+          this.addNews(`${p.name}が${factionName(holder)}に${action === "court" ? "迎えられました" : "仕えることになりました"}`);
+          return `${p.name}は応じました(見込み${Math.round(pr * 100)}%)`;
+        }
+        return `${p.name}は応じませんでした(見込み${Math.round(pr * 100)}%。日をあらためると、また持ちかけられます)`;
+      }
+    }
+  }
+
   /** 古い戦闘の記録を捨てる(長く遊ぶと、記録が増え続けてセーブが大きくなるため)。新しい60件と、決着していないものは残す */
   private trimEvents(): void {
     const closed = this.events.filter((e) => e.status === "completed" || e.status === "cancelled");
@@ -846,6 +999,14 @@ export class Campaign {
       this.setStatus(s, "camping");
       return s;
     };
+    // 会戦で捕らえられた指揮官は、勝った側の捕虜になる(apply で指揮官が外れる前に控える)
+    const captured: [string, string, string][] = [];
+    const cmdOf = (id: string | null): string | undefined => (id ? this.stateOf(id)?.army.commanderId : undefined) || undefined;
+    const ca = cmdOf(event.attackerArmyId);
+    const cd = cmdOf(event.defenderArmyId);
+    if (ca && result.sides.attacker.commander === "captured") captured.push([ca, event.defenderFactionId, event.attackerFactionId]);
+    if (cd && result.sides.defender.commander === "captured") captured.push([cd, event.attackerFactionId, event.defenderFactionId]);
+    for (const [pid, holder, from] of captured) this.spoils.addCaptive(pid, holder, from, Math.floor(this.day));
     const attacker = apply(event.attackerArmyId, result.sides.attacker);
     const defender = apply(event.defenderArmyId, result.sides.defender);
 
@@ -863,6 +1024,8 @@ export class Campaign {
         gateDamage: Math.max(prev.gateDamage, result.siege.gateDamage),
         governorFate: d.commander,
         governorId: governorIdOf(city, prev) ?? null,
+        prosperity: prev.prosperity,
+        order: prev.order,
       };
       const governorId = governorIdOf(city, prev);
       this.recordFate(governorId, d.commander);
@@ -874,7 +1037,12 @@ export class Campaign {
         this.recordFate(governorId, d.commander === "killed" ? "killed" : "captured");
         state.governorFate = "healthy"; // 新しい持ち主のもとでは、太守はまだいない
         state.governorId = null;
+        // 戦利品:その場にいた人物と、蔵の名品を調べる(持ち主が変わる前に)
+        const pc = this.spoils.onCityCaptured(city, event.attackerFactionId, event.defenderFactionId, governorId, d.commander === "killed" ? "killed" : "captured",
+          Math.max(result.siege.wallDamage, result.siege.gateDamage), Math.floor(this.day), (id) => this.personStatus(id));
+        this.cityStates[city.id] = state;
         this.listener.onCityCaptured(city.id, event.attackerFactionId);
+        this.handleCapture(pc);
       } else if (attacker) {
         // 攻め落とせなかった軍団は、都市から離れる方向へ退く
         const dx = attacker.army.lon - city.lon;

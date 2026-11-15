@@ -613,6 +613,61 @@
   "naemul": {
    "factionId": "silla",
    "role": "ruler"
+  },
+  "xi_xuan": {
+   "factionId": "jin",
+   "title": "王羲之の妻",
+   "cityId": "kuaiji"
+  },
+  "sima_xingnan": {
+   "factionId": "jin",
+   "title": "南康長公主(桓温の妻)",
+   "cityId": "jiangling"
+  },
+  "chu_suanzi": {
+   "factionId": "jin",
+   "title": "皇太后(臨朝)",
+   "cityId": "jiankang"
+  },
+  "he_fani": {
+   "factionId": "jin",
+   "title": "穆帝の皇后",
+   "cityId": "jiankang"
+  },
+  "wang_muzhi": {
+   "factionId": "jin",
+   "title": "琅邪王妃",
+   "cityId": "jiankang"
+  },
+  "liu_xiean": {
+   "factionId": "jin",
+   "title": "謝安の妻",
+   "cityId": "kuaiji"
+  },
+  "xie_daoyun": {
+   "factionId": "jin",
+   "title": "謝奕の娘",
+   "cityId": "kuaiji"
+  },
+  "li_shimei": {
+   "factionId": "jin",
+   "title": "桓温の側室",
+   "cityId": "jiangling"
+  },
+  "kezuhun": {
+   "factionId": "qianyan",
+   "title": "燕の皇后",
+   "cityId": "ji"
+  },
+  "duan_chui": {
+   "factionId": "qianyan",
+   "title": "呉王妃",
+   "cityId": "ji"
+  },
+  "gou_taihou": {
+   "factionId": "qianqin",
+   "title": "東海王の母",
+   "cityId": "changan"
   }
  },
  "cityOwners": {

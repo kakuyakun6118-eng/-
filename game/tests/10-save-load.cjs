@@ -41,6 +41,8 @@ const open = async () => {
     const g = window.__goko, c = g.campaign, s = g.battle.sim; const t = (x) => x.infantry + x.cavalry + x.archer;
     for (let i = 0; i < 60000 && !s.result; i++) s.update(0.1);
     const res = s.result; g.finishBattle(res);
+    // 落城の処置(略奪・保全)の画面が出たら、保全を選んで閉じる(この検査の対象外)
+    if (c.spoils.pending) document.querySelector('.capture-preserve').click();
     const owner1 = g.territory.factionAt(114.35, 36.33);
     await g.saves.put('slot2', g.buildSave());
     // 状態を変えてから、保存したものを読み込む

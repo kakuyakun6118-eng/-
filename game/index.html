@@ -33,6 +33,7 @@
       <button id="menu-open" class="menu-open" type="button">メニュー</button>
       <button id="persons-open" type="button">人物</button>
       <button id="diplomacy-open" type="button">外交</button>
+      <button id="spoils-open" type="button">名品</button>
       <section id="info" hidden>
         <div class="info-inner">
           <div class="info-head">
@@ -50,6 +51,7 @@
             <div><dt>人口</dt><dd class="info-population"></dd></div>
             <div><dt>城防御</dt><dd class="info-defense"></dd></div>
           </dl>
+          <div class="info-residents"></div>
           <p class="info-description"></p>
           <div class="info-actions" hidden>
             <button class="info-recruit" type="button">徴兵 +500</button>
@@ -227,6 +229,7 @@
               <option value="general">武将</option>
               <option value="strategist">軍師</option>
               <option value="minister">文官</option>
+              <option value="female">女性</option>
             </select>
             <select class="persons-sort" aria-label="並べ替え">
               <option value="">並び:勢力順</option>
@@ -283,6 +286,40 @@
               <h3>最近の出来事</h3>
               <ul class="diplomacy-news"></ul>
             </div>
+          </div>
+        </div>
+      </section>
+      <section id="spoils" hidden>
+        <div class="persons-inner">
+          <div class="persons-head">
+            <h2>名品・戦利品</h2>
+            <button class="spoils-tab" data-tab="items" type="button">名品</button>
+            <button class="spoils-tab" data-tab="people" type="button">捕虜・保護</button>
+            <button class="spoils-tab" data-tab="records" type="button">入手の記録</button>
+            <select class="spoils-filter" aria-label="表示する名品">
+              <option value="mine">収蔵品</option>
+              <option value="city">都市の蔵</option>
+              <option value="all">すべての名品</option>
+            </select>
+            <span class="spoils-message" role="status"></span>
+            <button class="persons-close spoils-close" type="button">閉じる</button>
+          </div>
+          <div class="spoils-body"></div>
+        </div>
+      </section>
+      <section id="capture" hidden>
+        <div class="persons-inner capture-inner">
+          <div class="persons-head"><h2 class="capture-title"></h2></div>
+          <p class="capture-meta"></p>
+          <div class="capture-cols">
+            <div><h3>城内にいた人物</h3><div class="capture-people"></div></div>
+            <div><h3>蔵の名品</h3><div class="capture-items"></div></div>
+          </div>
+          <label class="capture-check"><input class="capture-confiscate" type="checkbox" checked /> 名品を接収する(保全のときは希少以上の品だけ。略奪のときはすべて)</label>
+          <p class="spoils-note">城内にいた人物は、どちらを選んでも、捕虜(武将)または保護(后妃・文人など)になります。処置はあとで「名品」の画面から選べます。</p>
+          <div class="capture-buttons">
+            <button class="capture-preserve" type="button">保全する(都市を保つ。得るものは少ない)</button>
+            <button class="capture-loot" type="button">略奪する(金と名品を多く得る。都市が荒れる)</button>
           </div>
         </div>
       </section>

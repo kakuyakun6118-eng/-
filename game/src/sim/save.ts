@@ -1,5 +1,6 @@
 // セーブデータの形と、バージョンの管理。
 // 形を変えたら SAVE_VERSION を上げ、migrateSave に古い版からの変換を書き足す。
+import type { SpoilsSave } from "./spoils";
 import type { CommanderFate } from "../battle/types";
 import type { Army, ArmyStatus, BattleEvent, CityState, PersonStatus } from "../data/types";
 import type { Route } from "./pathfinding";
@@ -41,6 +42,8 @@ export interface CampaignSave {
   news?: { day: number; text: string }[];
   /** プレイヤーへの外交の申し入れ(返事待ち) */
   proposals?: { from: string; kind: "peace" | "alliance"; day: number }[];
+  /** 名品・捕虜・保護・陥落の記録(古いセーブには無い) */
+  spoils?: SpoilsSave;
   /** 次に作る軍団の番号 */
   nextArmyId?: number;
 }

@@ -41,6 +41,8 @@ function commanderLine(side: BattleSide): HTMLElement {
 }
 
 export class BattlePrep {
+  /** いま開いている会戦の設定(点検用) */
+  setup: BattleSetup | null = null;
   private readonly q: (sel: string) => HTMLElement;
   private detailOpen = false;
   /** プレイヤーが指揮する側(もう一方は自動で動く) */
@@ -68,6 +70,7 @@ export class BattlePrep {
 
   show(setup: BattleSetup, rows: ComparisonRow[], notes: string[]): void {
     this.root.dataset.type = setup.battleType;
+    this.setup = setup;
     this.q(".battle-type").textContent = TYPE_TEXT[setup.battleType];
     this.q(".battle-name").textContent = setup.name;
     this.q(".battle-meta").textContent =

@@ -3302,3 +3302,353 @@ select:focus-visible {
   font-size: 10px;
   color: var(--muted);
 }
+
+/* ===== 名品・戦利品 ===== */
+#spoils-open {
+  position: absolute;
+  top: calc(212px + env(safe-area-inset-top, 0px));
+  right: max(16px, env(safe-area-inset-right, 0px));
+  min-height: 32px;
+  min-width: 64px;
+  padding: 4px 12px;
+  border: 1px solid var(--gold-dim);
+  border-left: 3px solid var(--gold);
+  border-radius: 2px;
+  background: linear-gradient(180deg, #3b1e17, #21110d);
+  color: var(--kinari);
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+#app.in-battle #spoils-open,
+#app.battle-open #spoils-open {
+  display: none;
+}
+
+#spoils,
+#capture {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding-block: 8px;
+  padding-left: max(12px, env(safe-area-inset-left, 0px));
+  padding-right: max(12px, env(safe-area-inset-right, 0px));
+  background: var(--shade);
+}
+
+#capture {
+  z-index: 7;
+}
+
+#spoils[hidden],
+#capture[hidden] {
+  display: none;
+}
+
+#spoils button,
+#capture button {
+  min-height: 30px;
+  padding: 2px 10px;
+  border: 1px solid var(--gold-dim);
+  border-radius: 2px;
+  background: linear-gradient(180deg, #3b1e17, #21110d);
+  color: var(--kinari);
+  font-family: var(--font-display);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.spoils-tab[aria-pressed="true"] {
+  background: linear-gradient(180deg, #d9b968, #a8843a) !important;
+  border-color: #f0d998 !important;
+  color: #1c120c !important;
+}
+
+.spoils-filter,
+.spoils-equip {
+  min-height: 30px;
+  border: 1px solid var(--gold-dim);
+  border-radius: 2px;
+  background: #130c0a;
+  color: var(--kinari);
+}
+
+.spoils-message {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--good);
+}
+
+.spoils-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.spoils-split {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 10px;
+}
+
+.spoils-list,
+.spoils-people,
+.spoils-records {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.spoils-list {
+  flex: 0 0 46%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.spoils-row {
+  display: grid !important;
+  grid-template-columns: 34px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 8px;
+  align-items: center;
+  padding: 3px 6px !important;
+  text-align: left;
+  background: rgba(255, 240, 210, 0.035) !important;
+  box-shadow: none !important;
+}
+
+.spoils-row[aria-pressed="true"] {
+  border-color: var(--gold) !important;
+  background: linear-gradient(90deg, rgba(163, 42, 32, 0.35), rgba(200, 162, 82, 0.1)) !important;
+}
+
+.spoils-row .treasure-seal {
+  grid-row: 1 / 3;
+}
+
+.spoils-sub {
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  color: var(--muted);
+  letter-spacing: 0;
+}
+
+.treasure-seal {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--gold-dim);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #4a3a22, #1a120c);
+  color: #d9c48c;
+  font-family: var(--font-display);
+  font-size: 16px;
+}
+
+.treasure-seal.rarity-3 { border-color: #7fb89e; color: #b9e2cf; }
+.treasure-seal.rarity-4 { border-color: #d6b46a; color: #f0d998; box-shadow: 0 0 6px rgba(214, 180, 106, 0.45); }
+.treasure-seal.rarity-5 { border: 2px solid #e0b56a; background: radial-gradient(circle at 35% 30%, #b8382c, #6f1a14); color: #fff0d0; box-shadow: 0 0 10px rgba(224, 181, 106, 0.6); }
+
+.spoils-detail {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.spoils-detail p {
+  margin: 0;
+}
+
+.spoils-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.spoils-detail h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--kinari);
+}
+
+.spoils-meta,
+.spoils-note,
+.spoils-empty {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.spoils-history {
+  color: #d8cdb5;
+}
+
+.spoils-effect,
+.spoils-total {
+  margin: 0;
+  color: var(--bronze);
+  font-size: 12px;
+}
+
+.spoils-act {
+  align-self: flex-start;
+}
+
+.spoils-person {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  gap: 2px 8px;
+  padding: 4px 6px;
+  margin-bottom: 4px;
+  border: 1px solid rgba(200, 162, 82, 0.25);
+  border-radius: 2px;
+}
+
+.spoils-person-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.spoils-acts {
+  grid-column: 1 / 3;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.spoils-face {
+  grid-row: 1 / 2;
+  width: 46px;
+  height: 46px;
+  border: 1px solid var(--gold-dim);
+  border-radius: 2px;
+  object-fit: cover;
+}
+
+.spoils-records {
+  margin: 0;
+  padding-left: 1.2em;
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+
+.capture-inner {
+  width: min(760px, 100%);
+  overflow-y: auto;
+}
+
+.capture-title {
+  color: #f0d998 !important;
+}
+
+.capture-meta {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.capture-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.capture-cols h3 {
+  margin: 0 0 3px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--bronze);
+}
+
+.capture-person,
+.capture-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+  font-size: 12px;
+}
+
+.capture-person .spoils-face {
+  width: 34px;
+  height: 34px;
+}
+
+.capture-check {
+  font-size: 12px;
+}
+
+.capture-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.capture-loot {
+  border-color: #d4634e !important;
+  color: #ffd9cf !important;
+}
+
+.capture-preserve {
+  background: linear-gradient(180deg, #2f5a48, #1a3329) !important;
+}
+
+/* 都市の情報:滞在している人物 */
+.info-residents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  width: 100%;
+}
+
+.info-residents[hidden] {
+  display: none;
+}
+
+.info-resident {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  color: var(--kinari);
+}
+
+.info-resident img {
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--gold-dim);
+  border-radius: 2px;
+  object-fit: cover;
+}
+
+.info-treasure {
+  color: var(--bronze);
+}
+
+@media (max-width: 600px) {
+  .spoils-split,
+  .capture-cols {
+    display: flex;
+    flex-direction: column;
+  }
+  .spoils-list {
+    flex-basis: 40%;
+  }
+}

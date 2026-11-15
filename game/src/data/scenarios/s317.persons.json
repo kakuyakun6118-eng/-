@@ -2498,7 +2498,10 @@
    "favoredUnit": null,
    "bio": "拓跋猗㐌の后。のちに鬱律を除いて子を王に立て、自ら政治を執った。惟氏とも書かれる。",
    "people": "鮮卑",
-   "peopleNote": "出自は確かでない(推定)"
+   "peopleNote": "出自は確かでない(推定)",
+   "gender": "female",
+   "diplomacy": 62,
+   "culture": 40
   },
   {
    "id": "tuoba_gena",

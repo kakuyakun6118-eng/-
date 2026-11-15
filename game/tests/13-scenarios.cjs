@@ -26,7 +26,10 @@ const read = (f) => JSON.parse(fs.readFileSync(path.join(root, f), 'utf8'));
     for (const f of s.factions) if (!Object.values(owners).includes(f.id)) problems.push(tag + '拠点を持たない勢力: ' + f.name);
     for (const id of s.uncertainOwners ?? []) if (!cityIds.has(id) && !passIds.has(id)) problems.push(tag + '推定の印の対象が無い: ' + id);
     // 人物
-    const roster = s.roster ? Object.entries(s.roster).map(([id, r]) => ({ id, ...ledger.get(id), factionId: r.factionId, role: r.role ?? ledger.get(id)?.role, known: ledger.has(id) })) : read('scenarios/s317.persons.json').persons.map(p => ({ ...p, known: true }));
+    const entries = { ...(s.roster ?? {}), ...(s.womenRoster ?? {}) };
+    const roster = [...(s.roster ? [] : read('scenarios/s317.persons.json').persons.map(p => ({ ...p, known: true }))),
+      ...Object.entries(entries).map(([id, r]) => ({ id, ...ledger.get(id), factionId: r.factionId, role: r.role ?? ledger.get(id)?.role, known: ledger.has(id), cityId: r.cityId }))];
+    for (const p of roster) if (p.cityId && owners[p.cityId] !== p.factionId) problems.push(`${tag}滞在の都市が、その人の勢力のものでない: ${p.name} ${p.cityId}`);
     for (const p of roster) {
       if (!p.known) { problems.push(tag + '台帳に無い人物: ' + p.id); continue; }
       if (!factions.has(p.factionId)) problems.push(tag + '人物の勢力が無い: ' + p.id);
@@ -43,7 +46,7 @@ const read = (f) => JSON.parse(fs.readFileSync(path.join(root, f), 'utf8'));
     for (const a of armies) { const p = byId.get(a.commanderId); if (!p) problems.push(tag + '指揮官が名簿に無い: ' + a.id); else if (p.factionId !== a.factionId) problems.push(tag + '指揮官の勢力が違う: ' + a.id); if (used.has(a.commanderId)) problems.push(tag + '指揮官が太守を兼任: ' + a.commanderId); if (!factions.has(a.factionId)) problems.push(tag + '軍団の勢力が無い: ' + a.id); }
     for (const k of Object.keys(s.relations ?? {})) for (const f of k.split('|')) if (!factions.has(f)) problems.push(tag + '外交の勢力が無い: ' + k);
     const count = {}; for (const p of roster) count[p.factionId] = (count[p.factionId] || 0) + 1;
-    console.log(`${e.year}年 ${e.title}: 勢力${s.factions.length} 人物${roster.length} 軍団${armies.length} | ` + s.factions.map(f => `${f.name}${count[f.id] || 0}`).join(' '));
+    console.log(`${e.year}年 ${e.title}: 勢力${s.factions.length} 人物${roster.length}(女性${roster.filter(p => p.gender === 'female').length}) 軍団${armies.length} | ` + s.factions.map(f => `${f.name}${count[f.id] || 0}`).join(' '));
   }
   if (problems.length) { console.log('データの問題:', problems); process.exit(1); }
 

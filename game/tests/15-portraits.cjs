@@ -6,11 +6,17 @@ const fs = require('fs');
 const path = require('path');
 (async () => {
   const root = path.join(__dirname, '..'); const problems = [];
+  spawnSync('python3', [path.join(root, 'tools', 'face_design.py')], { encoding: 'utf8' });
   const sheet = spawnSync('python3', [path.join(root, 'tools', 'portrait_sheet.py')], { encoding: 'utf8' });
   console.log(sheet.stdout.trim());
   const need = JSON.parse(fs.readFileSync(path.join(root, 'docs', 'portraits', 'prompts.json'), 'utf8')).prompts;
   const ledger = [...JSON.parse(fs.readFileSync(path.join(root, 'src/data/scenarios/s317.persons.json'), 'utf8')).persons, ...JSON.parse(fs.readFileSync(path.join(root, 'src/data/scenarios/persons.extra.json'), 'utf8')).persons];
   for (const p of ledger) { if (!need[p.id + '.webp']) problems.push('制作の一覧に無い人物: ' + p.id); if (!p.people) problems.push('民族が入っていない: ' + p.id); }
+  // 顔の設計データ:全員ぶんあり、どの2人も十分に違う
+  const faces = JSON.parse(fs.readFileSync(path.join(root, 'docs', 'portraits', 'faces.json'), 'utf8'));
+  for (const p of ledger) if (!faces.faces[p.id]) problems.push('顔の設計が無い: ' + p.id);
+  if (faces.min_distance < 6) problems.push('顔の設計が似すぎている組がある: ' + faces.min_distance);
+  console.log('顔の設計:', faces.count, '人、どの2人でも違う項目の最小数', faces.min_distance);
   const texts = new Set(Object.values(need).map(x => x.person + x.face_fiction)); if (texts.size !== Object.keys(need).length) problems.push('同じ内容の制作指示がある');
   const check = spawnSync('python3', [path.join(root, 'tools', 'portraits_check.py')], { encoding: 'utf8' });
   console.log(check.stdout.trim()); if (check.status !== 0) problems.push('置いてある肖像に問題がある');

@@ -1,0 +1,802 @@
+{
+ "note": "名品の台帳。historicity は「史実」(その品が実在したと史料にある)・「伝承」(言い伝え)・「実在の様式にもとづく創作」(同じ種類の品は出土しているが、この品そのものは創作)・「創作」(ゲーム上の創作)。holdings はシナリオごとの初めの所在の都市(配置の多くはゲーム上の設定)。効果はゲーム上の設定。",
+ "categories": {
+  "jade": "玉器",
+  "jewelry": "宝飾品",
+  "arms": "武具",
+  "culture": "書画・文化財",
+  "court": "宮廷財宝",
+  "religion": "仏教・宗教"
+ },
+ "rarities": [
+  "通常",
+  "上質",
+  "希少",
+  "名品",
+  "国宝級"
+ ],
+ "items": [
+  {
+   "id": "chuanguo_xi",
+   "name": "伝国璽",
+   "category": "court",
+   "kind": "玉璽",
+   "rarity": 5,
+   "historicity": "伝承",
+   "description": "秦の始皇帝が作らせたと伝わる玉の印。「受命于天、既寿永昌」と刻まれたという。",
+   "history": "秦から漢・魏・晋へ伝えられたとされる。311年に洛陽が落ちると漢(前趙)に渡り、のちに後趙、冉魏を経て、352年に東晋へ戻ったと伝わる。本物かどうかは古くから疑われている。",
+   "effects": {
+    "prestige": 40,
+    "diplomacy": 10
+   },
+   "equip": false,
+   "holdings": {
+    "s300": "luoyang",
+    "s304": "changan",
+    "s311": "pingyang",
+    "s317": "pingyang",
+    "s319": "changan",
+    "s329": "shanggui",
+    "s357": "jiankang",
+    "s383": "jiankang"
+   }
+  },
+  {
+   "id": "jizhong_shu",
+   "name": "汲冢書",
+   "category": "culture",
+   "kind": "古典籍",
+   "rarity": 5,
+   "historicity": "史実",
+   "description": "竹簡に記された古い書物の一群。『竹書紀年』『穆天子伝』などを含む。",
+   "history": "279年、汲郡の古い墓から掘り出され、晋の朝廷で整理された。永嘉の乱で多くが失われた。",
+   "effects": {
+    "intelligence": 6,
+    "culture": 30
+   },
+   "equip": true,
+   "holdings": {
+    "s300": "luoyang",
+    "s304": "luoyang"
+   }
+  },
+  {
+   "id": "xuanshi_biao",
+   "name": "宣示表",
+   "category": "culture",
+   "kind": "書画",
+   "rarity": 5,
+   "historicity": "史実",
+   "description": "魏の鍾繇の書。楷書の手本とされた。",
+   "history": "王導が江南へ渡るとき、衣の帯に縫い込んで持ち出したと伝わる。のちに王羲之の手に渡った。",
+   "effects": {
+    "intelligence": 4,
+    "charisma": 4,
+    "culture": 25
+   },
+   "equip": true,
+   "holdings": {
+    "s300": "luoyang",
+    "s304": "xiapi",
+    "s311": "jiankang",
+    "s317": "jiankang",
+    "s319": "jiankang",
+    "s329": "jiankang"
+   }
+  },
+  {
+   "id": "lanting_xu",
+   "name": "蘭亭序",
+   "category": "culture",
+   "kind": "書画",
+   "rarity": 5,
+   "historicity": "史実",
+   "description": "王羲之が353年、会稽の蘭亭での集いのために書いた序文。",
+   "history": "書の最高の手本とされ、のちに唐の太宗が手に入れて、自分の墓に納めさせたと伝わる。",
+   "effects": {
+    "intelligence": 5,
+    "charisma": 6,
+    "culture": 35
+   },
+   "equip": true,
+   "holdings": {
+    "s357": "kuaiji",
+    "s383": "kuaiji"
+   }
+  },
+  {
+   "id": "bowu_zhi",
+   "name": "博物志",
+   "category": "culture",
+   "kind": "書物",
+   "rarity": 3,
+   "historicity": "史実",
+   "description": "張華がまとめた、各地の地理・動植物・異聞の書。",
+   "history": "張華は300年に司馬倫に殺された。書の原本は伝わらず、いま読めるのは後の時代にまとめ直されたもの。",
+   "effects": {
+    "intelligence": 4,
+    "culture": 10
+   },
+   "equip": true,
+   "holdings": {
+    "s300": "luoyang"
+   }
+  },
+  {
+   "id": "guangling_qin",
+   "name": "広陵散を伝える琴",
+   "category": "culture",
+   "kind": "楽器",
+   "rarity": 4,
+   "historicity": "伝承",
+   "description": "嵆康が刑の前に弾いたと伝わる曲「広陵散」にちなむ琴。",
+   "history": "嵆康は「広陵散はこれで絶える」と言ったと伝わる。この琴そのものは、ゲーム上の創作。",
+   "effects": {
+    "charisma": 5,
+    "culture": 15
+   },
+   "equip": true,
+   "holdings": {
+    "s300": "luoyang",
+    "s304": "luoyang"
+   }
+  },
+  {
+   "id": "tongtuo",
+   "name": "洛陽の銅駝",
+   "category": "court",
+   "kind": "宮廷調度品",
+   "rarity": 4,
+   "historicity": "史実",
+   "description": "洛陽の宮殿の前にあった青銅の駱駝。",
+   "history": "西晋の索靖は、天下の乱れを予感して「お前が荊棘(いばら)の中にいるのを見ることになろう」と嘆いたと伝わる。",
+   "effects": {
+    "prestige": 15
+   },
+   "equip": false,
+   "holdings": {
+    "s300": "luoyang",
+    "s304": "luoyang"
+   }
+  },
+  {
+   "id": "zhongju_wengzhong",
+   "name": "鍾虡と翁仲",
+   "category": "court",
+   "kind": "青銅器",
+   "rarity": 4,
+   "historicity": "史実",
+   "description": "漢・魏の宮殿にあった、鐘をかける青銅の台と、青銅の人の像。",
+   "history": "後趙の石虎が、洛陽から鄴へ運ばせたと伝わる。",
+   "effects": {
+    "prestige": 18,
+    "culture": 5
+   },
+   "equip": false,
+   "holdings": {
+    "s300": "luoyang",
+    "s311": "luoyang",
+    "s317": "luoyang",
+    "s319": "luoyang",
+    "s329": "luoyang",
+    "s357": "ye"
+   }
+  },
+  {
+   "id": "jin_wang_jinyin",
+   "name": "晋王の金印",
+   "category": "jewelry",
+   "kind": "金印",
+   "rarity": 4,
+   "historicity": "創作",
+   "description": "司馬睿が晋王となったときの金の印(ゲーム上の創作)。",
+   "history": "司馬睿は317年に晋王を称した。印そのものは伝わらない。",
+   "effects": {
+    "charisma": 4,
+    "diplomacy": 6,
+    "prestige": 10
+   },
+   "equip": true,
+   "holdings": {
+    "s317": "jiankang",
+    "s319": "jiankang"
+   }
+  },
+  {
+   "id": "buyao_guan",
+   "name": "金の歩揺冠",
+   "category": "jewelry",
+   "kind": "金冠",
+   "rarity": 4,
+   "historicity": "実在の様式にもとづく創作",
+   "description": "歩くと揺れる金の葉の飾りが付いた冠。",
+   "history": "慕容氏は歩揺冠を好み、それが「慕容」の名の由来という説がある。遼寧の墓から同じ様式の金の飾りが出土している。この冠そのものは創作。",
+   "effects": {
+    "charisma": 6,
+    "diplomacy": 4,
+    "prestige": 8
+   },
+   "equip": true,
+   "holdings": {
+    "s300": "jicheng",
+    "s304": "jicheng",
+    "s311": "jicheng",
+    "s317": "jicheng",
+    "s319": "jicheng",
+    "s329": "jicheng",
+    "s357": "ji",
+    "s383": "ji"
+   }
+  },
+  {
+   "id": "shu_jin",
+   "name": "蜀錦",
+   "category": "court",
+   "kind": "宮廷調度品",
+   "rarity": 3,
+   "historicity": "実在の様式にもとづく創作",
+   "description": "蜀(成都)で織られた錦。",
+   "history": "蜀錦は漢代から名高く、蜀の大きな財源だった。この品そのものは創作。",
+   "effects": {
+    "income": 6,
+    "prestige": 4
+   },
+   "equip": false,
+   "holdings": {
+    "s300": "chengdu",
+    "s304": "chengdu",
+    "s311": "chengdu",
+    "s317": "chengdu",
+    "s319": "chengdu",
+    "s329": "chengdu",
+    "s357": "chengdu",
+    "s383": "chengdu"
+   }
+  },
+  {
+   "id": "hanxue_ma",
+   "name": "大宛の汗血馬",
+   "category": "arms",
+   "kind": "名馬",
+   "rarity": 4,
+   "historicity": "実在の様式にもとづく創作",
+   "description": "西域の大宛から来たとされる駿馬。",
+   "history": "漢の武帝が大宛から汗血馬を得たことは史実。この馬そのものは創作。",
+   "effects": {
+    "war": 4,
+    "leadership": 2,
+    "morale": 4
+   },
+   "equip": true,
+   "holdings": {
+    "s304": "guzang",
+    "s311": "guzang",
+    "s317": "guzang",
+    "s319": "guzang",
+    "s329": "guzang",
+    "s357": "guzang",
+    "s383": "dunhuang"
+   }
+  },
+  {
+   "id": "dunhuang_bolij",
+   "name": "西方の玻璃器",
+   "category": "court",
+   "kind": "金銀器",
+   "rarity": 4,
+   "historicity": "実在の様式にもとづく創作",
+   "description": "西方から隊商で運ばれた、透きとおったガラスの器。",
+   "history": "中国の墓から、西方のガラス器が出土している。この器そのものは創作。",
+   "effects": {
+    "income": 4,
+    "prestige": 8,
+    "diplomacy": 3
+   },
+   "equip": false,
+   "holdings": {
+    "s304": "dunhuang",
+    "s311": "dunhuang",
+    "s317": "dunhuang",
+    "s319": "dunhuang",
+    "s329": "dunhuang",
+    "s357": "dunhuang",
+    "s383": "dunhuang"
+   }
+  },
+  {
+   "id": "tongque_yu",
+   "name": "銅雀台の玉器",
+   "category": "jade",
+   "kind": "玉璧",
+   "rarity": 3,
+   "historicity": "創作",
+   "description": "鄴の銅雀台に伝わったという玉の璧(ゲーム上の創作)。",
+   "history": "銅雀台は魏の曹操が鄴に築いた。後趙の石虎も鄴の宮殿を大きくした。",
+   "effects": {
+    "politics": 3,
+    "charisma": 3,
+    "prestige": 6
+   },
+   "equip": true,
+   "holdings": {
+    "s300": "ye",
+    "s304": "ye",
+    "s311": "ye",
+    "s317": "ye",
+    "s319": "ye",
+    "s329": "ye",
+    "s357": "ye",
+    "s383": "ye"
+   }
+  },
+  {
+   "id": "xiangguo_jinyin",
+   "name": "後趙の金銀器",
+   "category": "court",
+   "kind": "金銀器",
+   "rarity": 3,
+   "historicity": "創作",
+   "description": "襄国の宮殿の金銀の器(ゲーム上の創作)。",
+   "history": "石勒は襄国を都とした。",
+   "effects": {
+    "income": 5,
+    "prestige": 6
+   },
+   "equip": false,
+   "holdings": {
+    "s317": "xiangguo",
+    "s319": "xiangguo",
+    "s329": "xiangguo"
+   }
+  },
+  {
+   "id": "shile_jian",
+   "name": "石勒の佩剣",
+   "category": "arms",
+   "kind": "名剣",
+   "rarity": 4,
+   "historicity": "創作",
+   "description": "石勒が身に着けたとされる剣(ゲーム上の創作)。",
+   "history": "石勒が剣を愛したという記録は、確かめていない。",
+   "effects": {
+    "war": 5,
+    "leadership": 3,
+    "morale": 3
+   },
+   "equip": true,
+   "holdings": {
+    "s317": "xiangguo",
+    "s319": "xiangguo",
+    "s329": "xiangguo"
+   }
+  },
+  {
+   "id": "liuyao_gong",
+   "name": "劉曜の鉄弓",
+   "category": "arms",
+   "kind": "名弓",
+   "rarity": 4,
+   "historicity": "伝承",
+   "description": "劉曜は、鉄の厚さ一寸を射通したと伝わる。その弓にちなむ品。",
+   "history": "劉曜が弓の名手だったことは史書に記される。この弓そのものは創作。",
+   "effects": {
+    "war": 6,
+    "morale": 2
+   },
+   "equip": true,
+   "holdings": {
+    "s311": "pingyang",
+    "s317": "changan",
+    "s319": "changan",
+    "s329": "shanggui"
+   }
+  },
+  {
+   "id": "zuti_ji",
+   "name": "祖逖の戟",
+   "category": "arms",
+   "kind": "名甲冑",
+   "rarity": 3,
+   "historicity": "創作",
+   "description": "北伐の誓いにちなむ品(ゲーム上の創作)。",
+   "history": "祖逖は長江を渡るとき、楫(かじ)を打って「中原を清めずには戻らない」と誓ったと伝わる。",
+   "effects": {
+    "leadership": 4,
+    "morale": 5
+   },
+   "equip": true,
+   "holdings": {
+    "s317": "qiao",
+    "s319": "qiao"
+   }
+  },
+  {
+   "id": "chengdu_jinguan",
+   "name": "成の金冠",
+   "category": "jewelry",
+   "kind": "金冠",
+   "rarity": 3,
+   "historicity": "創作",
+   "description": "成都の宮殿の金の冠(ゲーム上の創作)。",
+   "history": "李雄は304年に成都王、306年に皇帝を称した。",
+   "effects": {
+    "charisma": 4,
+    "prestige": 6
+   },
+   "equip": true,
+   "holdings": {
+    "s311": "chengdu",
+    "s317": "chengdu",
+    "s319": "chengdu",
+    "s329": "chengdu"
+   }
+  },
+  {
+   "id": "dongjin_yudai",
+   "name": "晋の玉帯",
+   "category": "jade",
+   "kind": "玉帯",
+   "rarity": 3,
+   "historicity": "創作",
+   "description": "東晋の宮廷の玉の帯(ゲーム上の創作)。",
+   "history": "帯に玉の飾りを付けることは、漢・晋の貴人に行われた。",
+   "effects": {
+    "politics": 4,
+    "charisma": 2
+   },
+   "equip": true,
+   "holdings": {
+    "s317": "jiankang",
+    "s319": "jiankang",
+    "s329": "jiankang",
+    "s357": "jiankang",
+    "s383": "jiankang"
+   }
+  },
+  {
+   "id": "wangdao_yupei",
+   "name": "琅邪王氏の玉佩",
+   "category": "jade",
+   "kind": "玉佩",
+   "rarity": 3,
+   "historicity": "創作",
+   "description": "琅邪の王氏の家に伝わる玉の飾り(ゲーム上の創作)。",
+   "history": "琅邪の王氏は、東晋でもっとも力のあった家の一つ。",
+   "effects": {
+    "politics": 3,
+    "diplomacy": 3
+   },
+   "equip": true,
+   "holdings": {
+    "s311": "jiankang",
+    "s317": "jiankang",
+    "s319": "jiankang",
+    "s329": "jiankang"
+   }
+  },
+  {
+   "id": "jiankang_qingtong",
+   "name": "建康の祭器",
+   "category": "court",
+   "kind": "祭器",
+   "rarity": 4,
+   "historicity": "創作",
+   "description": "東晋の宗廟の青銅の祭器(ゲーム上の創作)。",
+   "history": "東晋は建康に宗廟を建てた。",
+   "effects": {
+    "prestige": 12,
+    "culture": 5
+   },
+   "equip": false,
+   "holdings": {
+    "s317": "jiankang",
+    "s319": "jiankang",
+    "s329": "jiankang",
+    "s357": "jiankang",
+    "s383": "jiankang"
+   }
+  },
+  {
+   "id": "fotucheng_bo",
+   "name": "仏図澄の鉢",
+   "category": "religion",
+   "kind": "仏具",
+   "rarity": 4,
+   "historicity": "伝承",
+   "description": "後趙で重んじられた僧・仏図澄にちなむ鉢。",
+   "history": "仏図澄は西域から来た僧で、石勒・石虎に重んじられた。鉢そのものは創作。",
+   "effects": {
+    "morale": 4,
+    "culture": 12,
+    "prestige": 6
+   },
+   "equip": false,
+   "holdings": {
+    "s319": "xiangguo",
+    "s329": "xiangguo"
+   }
+  },
+  {
+   "id": "jin_fo",
+   "name": "金銅の仏像",
+   "category": "religion",
+   "kind": "仏像",
+   "rarity": 4,
+   "historicity": "実在の様式にもとづく創作",
+   "description": "鍍金した青銅の小さな仏像。",
+   "history": "後趙の時代の年号を刻んだ金銅仏が、今に伝わっている。この像そのものは創作。",
+   "effects": {
+    "culture": 15,
+    "prestige": 8,
+    "morale": 2
+   },
+   "equip": false,
+   "holdings": {
+    "s357": "ye",
+    "s383": "ye"
+   }
+  },
+  {
+   "id": "daoan_jing",
+   "name": "道安の経典目録",
+   "category": "religion",
+   "kind": "仏教経典",
+   "rarity": 5,
+   "historicity": "史実",
+   "description": "道安が、それまでに漢訳された経典を整理した目録(綜理衆経目録)。",
+   "history": "道安は379年に前秦の長安へ迎えられ、経典の翻訳を進めた。目録の原本は伝わらない。",
+   "effects": {
+    "culture": 25,
+    "prestige": 10
+   },
+   "equip": false,
+   "holdings": {
+    "s383": "changan"
+   }
+  },
+  {
+   "id": "chang_an_yuxi",
+   "name": "長安の宮廷の玉器",
+   "category": "jade",
+   "kind": "玉琮",
+   "rarity": 4,
+   "historicity": "創作",
+   "description": "長安の宮殿に伝わる玉の器(ゲーム上の創作)。",
+   "history": "長安は前漢の都で、西晋の末には愍帝の朝廷が置かれた。",
+   "effects": {
+    "politics": 3,
+    "prestige": 8
+   },
+   "equip": true,
+   "holdings": {
+    "s311": "changan",
+    "s317": "changan",
+    "s319": "changan",
+    "s329": "shanggui",
+    "s357": "changan",
+    "s383": "changan"
+   }
+  },
+  {
+   "id": "fujian_ma",
+   "name": "苻堅の駿馬",
+   "category": "arms",
+   "kind": "名馬",
+   "rarity": 4,
+   "historicity": "創作",
+   "description": "苻堅の乗馬(ゲーム上の創作)。",
+   "history": "苻堅が淝水で敗れたとき、流れ矢に当たって単騎で逃れたと伝わる。",
+   "effects": {
+    "war": 3,
+    "leadership": 3,
+    "morale": 4
+   },
+   "equip": true,
+   "holdings": {
+    "s357": "changan",
+    "s383": "changan"
+   }
+  },
+  {
+   "id": "murong_jia",
+   "name": "慕容氏の鉄甲",
+   "category": "arms",
+   "kind": "名甲冑",
+   "rarity": 4,
+   "historicity": "実在の様式にもとづく創作",
+   "description": "鮮卑の重い騎兵の鉄の鎧。",
+   "history": "前燕の墓から、人馬の鉄の鎧が出土している。この鎧そのものは創作。",
+   "effects": {
+    "war": 4,
+    "leadership": 3,
+    "morale": 3
+   },
+   "equip": true,
+   "holdings": {
+    "s329": "jicheng",
+    "s357": "ji",
+    "s383": "ji"
+   }
+  },
+  {
+   "id": "huanwen_jian",
+   "name": "桓温の剣",
+   "category": "arms",
+   "kind": "名剣",
+   "rarity": 3,
+   "historicity": "創作",
+   "description": "桓温の剣(ゲーム上の創作)。",
+   "history": "桓温は成漢を滅ぼし、北伐で洛陽を取り戻した。",
+   "effects": {
+    "leadership": 4,
+    "war": 2
+   },
+   "equip": true,
+   "holdings": {
+    "s357": "jiangling"
+   }
+  },
+  {
+   "id": "xiean_qi",
+   "name": "謝安の碁盤",
+   "category": "culture",
+   "kind": "宮廷調度品",
+   "rarity": 4,
+   "historicity": "伝承",
+   "description": "淝水の勝利の知らせが届いたとき、謝安が碁を打ち続けたという話にちなむ碁盤。",
+   "history": "謝安は知らせを読んでも顔色を変えず、碁を打ち終えたと伝わる。碁盤そのものは創作。",
+   "effects": {
+    "intelligence": 4,
+    "charisma": 4,
+    "culture": 12
+   },
+   "equip": true,
+   "holdings": {
+    "s383": "jiankang"
+   }
+  },
+  {
+   "id": "guzang_jin",
+   "name": "河西の金の帯飾り",
+   "category": "jewelry",
+   "kind": "金製装飾品",
+   "rarity": 3,
+   "historicity": "実在の様式にもとづく創作",
+   "description": "草原と西域の様式をまじえた金の帯飾り。",
+   "history": "河西は、西域と中原を結ぶ交易の道だった。この品そのものは創作。",
+   "effects": {
+    "charisma": 3,
+    "income": 3
+   },
+   "equip": true,
+   "holdings": {
+    "s300": "guzang",
+    "s304": "guzang",
+    "s311": "guzang",
+    "s317": "guzang",
+    "s319": "guzang",
+    "s329": "guzang",
+    "s357": "guzang"
+   }
+  },
+  {
+   "id": "goguryeo_guan",
+   "name": "高句麗の金銅冠",
+   "category": "jewelry",
+   "kind": "金冠",
+   "rarity": 3,
+   "historicity": "実在の様式にもとづく創作",
+   "description": "金銅の冠。",
+   "history": "高句麗の古墳から、金銅の冠の飾りが出土している。この冠そのものは創作。",
+   "effects": {
+    "charisma": 3,
+    "diplomacy": 3,
+    "prestige": 5
+   },
+   "equip": true,
+   "holdings": {
+    "s300": "wandu",
+    "s304": "wandu",
+    "s311": "wandu",
+    "s317": "wandu",
+    "s319": "wandu",
+    "s329": "wandu",
+    "s357": "wandu",
+    "s383": "wandu"
+   }
+  },
+  {
+   "id": "baekje_dao",
+   "name": "百済の環頭大刀",
+   "category": "arms",
+   "kind": "名刀",
+   "rarity": 3,
+   "historicity": "実在の様式にもとづく創作",
+   "description": "柄の端に輪の飾りが付いた刀。",
+   "history": "朝鮮半島と日本の古墳から、環頭大刀が出土している。この刀そのものは創作。",
+   "effects": {
+    "war": 3,
+    "charisma": 2
+   },
+   "equip": true,
+   "holdings": {
+    "s300": "hanseong",
+    "s304": "hanseong",
+    "s311": "hanseong",
+    "s317": "hanseong",
+    "s319": "hanseong",
+    "s329": "hanseong",
+    "s357": "hanseong",
+    "s383": "hanseong"
+   }
+  },
+  {
+   "id": "silla_bead",
+   "name": "新羅の曲玉の首飾り",
+   "category": "jewelry",
+   "kind": "宝石をあしらった装飾品",
+   "rarity": 3,
+   "historicity": "実在の様式にもとづく創作",
+   "description": "曲玉を連ねた首飾り。",
+   "history": "新羅の墓から、金と曲玉の飾りが出土している。この品そのものは創作。",
+   "effects": {
+    "charisma": 3,
+    "prestige": 4
+   },
+   "equip": true,
+   "holdings": {
+    "s300": "geumseong",
+    "s304": "geumseong",
+    "s311": "geumseong",
+    "s317": "geumseong",
+    "s319": "geumseong",
+    "s329": "geumseong",
+    "s357": "geumseong",
+    "s383": "geumseong"
+   }
+  },
+  {
+   "id": "tuoba_jinpai",
+   "name": "拓跋部の金の飾り板",
+   "category": "jewelry",
+   "kind": "金製装飾品",
+   "rarity": 3,
+   "historicity": "実在の様式にもとづく創作",
+   "description": "獣をかたどった金の飾り板。",
+   "history": "内モンゴルの鮮卑の墓から、獣の形の金の飾りが出土している。この品そのものは創作。",
+   "effects": {
+    "charisma": 2,
+    "leadership": 2,
+    "prestige": 4
+   },
+   "equip": true,
+   "holdings": {
+    "s300": "shengle",
+    "s304": "shengle",
+    "s311": "shengle",
+    "s317": "shengle",
+    "s319": "shengle",
+    "s329": "shengle",
+    "s357": "shengle"
+   }
+  },
+  {
+   "id": "pingyang_dian",
+   "name": "漢の玉座",
+   "category": "court",
+   "kind": "玉座",
+   "rarity": 4,
+   "historicity": "創作",
+   "description": "平陽の宮殿の玉座(ゲーム上の創作)。",
+   "history": "劉淵は平陽に都を置き、劉聡もここで政治を執った。",
+   "effects": {
+    "prestige": 14
+   },
+   "equip": false,
+   "holdings": {
+    "s311": "pingyang",
+    "s317": "pingyang"
+   }
+  }
+ ]
+}

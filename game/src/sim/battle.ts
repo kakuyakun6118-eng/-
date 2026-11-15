@@ -1,5 +1,6 @@
 // 会戦に関する計算。戦闘イベントから、会戦準備画面や3D戦闘に渡す「会戦の設定」を組み立てる。
 // ここは計算だけで、画面のことは知らない。
+import { factionMoraleBonus, withEquipment } from "./spoils";
 import { cityLevelOf, cityLevels, officerById, personById, resolveCityLayout, terrainRules } from "../data";
 import type { Army, BattleEvent, BattleSetup, BattleSide, City, CityState, Fortification, Officer, TerrainKind } from "../data/types";
 
@@ -107,9 +108,9 @@ function armySide(role: BattleSide["role"], army: Army): BattleSide {
     armyId: army.id,
     cityId: null,
     name: army.name,
-    commander: officerById(army.commanderId) ?? null,
+    commander: withEquipment(officerById(army.commanderId)) ?? null,
     troops: { ...army.troops },
-    morale: army.morale,
+    morale: Math.min(100, army.morale + factionMoraleBonus(army.factionId)),
     fatigue: army.fatigue,
     food: army.food,
     fortification: null,
@@ -120,7 +121,7 @@ function citySide(city: City, factionId: string, state: CityState): BattleSide {
   // 守備兵は歩兵と弓兵で構成する(城を守るのに騎兵は使わない)
   const garrison = state.garrison;
   // 守将:都市データに名前があれば、能力値は仮の値で指揮官とする(戦死・捕虜になっていれば不在)
-  const governor: Officer | null = personById(governorIdOf(city, state)) ?? null;
+  const governor: Officer | null = withEquipment(personById(governorIdOf(city, state))) ?? null;
   return {
     role: "defender",
     kind: "city",

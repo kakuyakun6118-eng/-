@@ -4,7 +4,7 @@ import type { Person, PersonRole, PersonStatus } from "../data/types";
 import type { Campaign } from "../sim/Campaign";
 
 const ROLE_LABEL: Record<PersonRole, string> = { ruler: "君主", general: "武将", strategist: "軍師", minister: "文官" };
-const STATUS_LABEL: Record<PersonStatus, string> = { active: "健在", wounded: "負傷", captured: "捕虜", dead: "死亡" };
+const STATUS_LABEL: Record<PersonStatus, string> = { active: "健在", wounded: "負傷", captured: "捕虜", dead: "死亡", protected: "保護" };
 const STATS: [keyof Person, string][] = [
   ["leadership", "統率"],
   ["war", "武力"],
@@ -57,7 +57,7 @@ export class PersonScreen {
     const faction = this.q<HTMLSelectElement>(".persons-faction").value;
     const role = this.q<HTMLSelectElement>(".persons-role").value;
     const sort = this.q<HTMLSelectElement>(".persons-sort").value as keyof Person | "";
-    const list = persons.filter((p) => (!faction || p.factionId === faction) && (!role || p.role === role));
+    const list = persons.filter((p) => (!faction || p.factionId === faction) && (!role || (role === "female" ? p.gender === "female" : p.role === role)));
     if (sort) list.sort((a, b) => (b[sort] as number) - (a[sort] as number));
     return list;
   }
@@ -128,7 +128,15 @@ export class PersonScreen {
       }),
     );
     this.q(".person-traits").textContent = [...p.traits, p.favoredUnit ? `得意:${{ infantry: "歩兵", cavalry: "騎兵", archer: "弓兵" }[p.favoredUnit]}` : ""].filter(Boolean).join("・");
-    this.q(".person-bio").textContent = p.bio;
+    const items = campaign.spoils.equippedBy(p.id).map((t) => t.name);
+    const extra = [
+      p.gender === "female" ? "女性" : "",
+      p.diplomacy !== undefined ? `外交${p.diplomacy}` : "",
+      p.culture !== undefined ? `文化${p.culture}` : "",
+      p.residence ? `滞在:${campaign.cities.find((c) => c.id === p.residence)?.name ?? ""}` : "",
+      items.length ? `装備:${items.join("・")}` : "",
+    ].filter(Boolean).join("・");
+    this.q(".person-bio").textContent = (extra ? `【${extra}】` : "") + p.bio;
     const uncertain = this.q(".person-uncertain");
     uncertain.textContent = p.note ? `注記:${p.note}` : "";
     uncertain.hidden = !p.note;

@@ -458,6 +458,46 @@
   "naemul": {
    "factionId": "silla",
    "role": "ruler"
+  },
+  "xi_xuan": {
+   "factionId": "jin",
+   "title": "王羲之の妻",
+   "cityId": "kuaiji"
+  },
+  "chu_suanzi": {
+   "factionId": "jin",
+   "title": "太皇太后",
+   "cityId": "jiankang"
+  },
+  "he_fani": {
+   "factionId": "jin",
+   "title": "穆章皇后",
+   "cityId": "jiankang"
+  },
+  "liu_xiean": {
+   "factionId": "jin",
+   "title": "謝安の妻",
+   "cityId": "jiankang"
+  },
+  "xie_daoyun": {
+   "factionId": "jin",
+   "title": "王凝之の妻",
+   "cityId": "kuaiji"
+  },
+  "li_lingrong": {
+   "factionId": "jin",
+   "title": "孝武帝の母(淑妃)",
+   "cityId": "jiankang"
+  },
+  "zhang_furen": {
+   "factionId": "qianqin",
+   "title": "苻堅の夫人",
+   "cityId": "changan"
+  },
+  "su_hui": {
+   "factionId": "qianqin",
+   "title": "竇滔の妻",
+   "cityId": "changan"
   }
  },
  "cityOwners": {

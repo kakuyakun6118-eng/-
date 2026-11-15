@@ -16,12 +16,13 @@ appear = {}
 for e in catalog:
     s = json.load(open(os.path.join(D, e['id'] + '.json'), encoding='utf-8'))
     fac = {f['id']: f['name'] for f in s['factions']}
-    roster = s.get('roster') or {p['id']: {'factionId': p['factionId']} for p in json.load(open(os.path.join(D, 's317.persons.json'), encoding='utf-8'))['persons']}
+    roster = s.get('roster') or {**{p['id']: {'factionId': p['factionId']} for p in json.load(open(os.path.join(D, 's317.persons.json'), encoding='utf-8'))['persons']}, **s.get('womenRoster', {})}
     for pid, r in roster.items():
         b = ledger[pid]
         appear.setdefault(pid, []).append({'year': e['year'], 'faction': fac[r['factionId']], 'role': r.get('role') or b['role'], 'title': r.get('title') or b['title']})
 
-STYLE = ("写実的で重厚な歴史人物の肖像画。油彩のような質感、落ち着いた光、暗い無地の背景。胸から上の構図で、顔がはっきり見える。正方形。"
+STYLE = ("写実的で重厚な歴史人物の肖像画(三國志14やTotal Warシリーズのような重厚さ)。油彩のような質感、落ち着いた光、暗い無地の背景。胸から上の構図で、顔がはっきり見える。正方形。"
+         "1枚に1人だけを描く(何人も並べた一覧画像にしない)。顔の設計(輪郭・額・頬骨・顎・鼻・目・眉・口元・髭・肌・皺・体格・表情)に必ず従い、ほかの人物と同じ顔にしない。冠や髭や色を変えただけの使い回しは不可。"
          "4世紀の中国(西晋〜東晋・五胡十六国)の装い。明・清の官服や官帽、満洲式の辮髪、近世以降の甲冑、日本式の兜、西洋の板金鎧、現代の小物は描かない。"
          "文字・印・枠・透かしは入れない。ほかの人物と同じ顔にしない。")
 ATTIRE = {
@@ -53,6 +54,24 @@ def age_words(age):
     if age < 50: return (f'{age}歳ごろの壮年', BEARD_M)
     if age < 62: return (f'{age}歳ごろの初老。髪に白いものが混じる', BEARD_M + BEARD_O[:1])
     return (f'{age}歳ごろの老人。白髪', BEARD_O)
+FACES = json.load(open(os.path.join(OUT, 'faces.json'), encoding='utf-8'))['faces']
+WOMEN = {
+ '后': '皇后・皇太后:高く結い上げた髪に、金の歩揺(揺れる飾り)を挿す。襟を右前に合わせた袖の広い深衣、裾に飾りの垂れ布(雑裾垂髾)。色は黒・朱・深紅。',
+ '妃': '王妃・夫人:高い髻にかんざし。袖の広い上衣と長い裳、帯から細い垂れ布。',
+ '主': '公主・貴族の女性:高い髻、薄い絹の上衣と長い裳。顧愷之の絵に見られるような、たなびく垂れ布。',
+ '文': '文人・書家の女性:簡素にまとめた髪、落ち着いた色の上衣と裳。筆や書物を手にしてもよい。',
+ '武': '武勇の事績のある女性:髪を固く結い、袖を絞った上衣に、革の帯。簡素な鎧を重ねてもよい(推定)。',
+ '胡': '鮮卑など北方の女性:袖の細い胡服に革の帯、毛皮の縁取り。帽子をかぶってもよい(推定)。',
+}
+def woman_attire(p, a):
+    t = (a['title'] or '') + p['title']
+    if p.get('people') in ('鮮卑', '匈奴', '羯') and '后' not in t: return WOMEN['胡']
+    if any(k in t for k in ('皇后', '皇太后', '太皇太后', '后')): return WOMEN['后']
+    if any(k in t for k in ('妃', '夫人', '母')): return WOMEN['妃']
+    if '公主' in t or '娘' in t: return WOMEN['主']
+    if p['role'] == 'general': return WOMEN['武']
+    return WOMEN['文']
+
 def prompt(p, a, year):
     kind = '君' if a['role'] == 'ruler' else '武' if a['role'] == 'general' else '文'
     people = p.get('people', '漢')
@@ -60,18 +79,22 @@ def prompt(p, a, year):
     age = year - p['born'] if p.get('born') else None
     words, beards = age_words(age)
     traits = []
-    if p['war'] >= 85: traits.append('がっしりした体つき、戦場の傷あと、鋭い眼光')
-    elif p['war'] <= 35: traits.append('武人らしくない、細い肩')
+    female = p.get('gender') == 'female'
+    if female: pass
+    elif p['war'] >= 85: traits.append('がっしりした体つき、戦場の傷あと、鋭い眼光')
+    elif p['war'] <= 35 and not female: traits.append('武人らしくない、細い肩')
     if p['intelligence'] >= 85: traits.append('思慮深く落ち着いた表情')
     if p['charisma'] >= 85: traits.append('人を引きつける堂々とした佇まい')
     elif p['charisma'] <= 35: traits.append('険しく近寄りがたい表情')
     if p['politics'] >= 85: traits.append('穏やかで端正な身なり')
-    face = f"{pick(FACE, p['id'], 'f')}、{pick(BROW, p['id'], 'b')}、{pick(EYE, p['id'], 'e')}、{pick(beards, p['id'], 'h')}"
-    if kind != '武' and age is not None and age < 16: face = f"{pick(FACE, p['id'], 'f')}、{pick(BROW, p['id'], 'b')}、{pick(EYE, p['id'], 'e')}、髭はない"
+    fd = FACES[p['id']]
+    face = '、'.join(fd[k] for k in ('outline', 'forehead', 'cheekbone', 'jaw', 'nose', 'eyes', 'brows', 'mouth', 'skin', 'build', 'expression', 'mark')) + f"、{fd['beard']}" + (f"、{fd['hair']}" if fd.get('hair') else '')
+    if age is not None and age < 18 and p.get('gender') != 'female': face = face.replace(fd['beard'], '髭はまだない')
     return {
         'style': STYLE,
-        'person': f"{p['name']}({p['reading']})。{year}年ごろ、{words}。{people}{'(' + p['peopleNote'] + ')' if p.get('peopleNote') else ''}。{a['faction']}の{ROLE[a['role']]}、{a['title'] or '官職不明'}。{p['bio']}",
-        'attire': att[kind] + (' ' + att['顔'] if '顔' in att else ''),
+        'person': f"{p['name']}({p['reading']})。{'女性。' if p.get('gender') == 'female' else ''}{year}年ごろ、{words}。{people}{'(' + p['peopleNote'] + ')' if p.get('peopleNote') else ''}。{a['faction']}の{ROLE[a['role']]}、{a['title'] or '官職不明'}。{p['bio']}",
+        'gender': '女性' if p.get('gender') == 'female' else '男性',
+        'attire': woman_attire(p, a) if p.get('gender') == 'female' else att[kind] + (' ' + att['顔'] if '顔' in att else ''),
         'face_fiction': face + ('、' + '、'.join(traits) if traits else ''),
         'note': '顔立ちの指定は、ほかの人物と描き分けるための創作設定(史料にもとづくものではない)。装いは、史料や出土品から分かる範囲の指針で、「推定」とあるものは根拠が乏しい。',
     }

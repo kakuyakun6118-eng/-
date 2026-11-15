@@ -919,6 +919,46 @@
   },
   "liu_eloutou": {
    "factionId": "tiefu"
+  },
+  "yang_xianrong": {
+   "factionId": "han_zhao",
+   "title": "趙の皇后",
+   "cityId": "changan"
+  },
+  "liu_shile": {
+   "factionId": "shile",
+   "title": "趙王の后",
+   "cityId": "xiangguo"
+  },
+  "ren_lixiong": {
+   "factionId": "chenghan",
+   "title": "李雄の皇后",
+   "cityId": "chengdu"
+  },
+  "xun_guan": {
+   "factionId": "jin",
+   "title": "荀崧の娘",
+   "cityId": "wan"
+  },
+  "zheng_achun": {
+   "factionId": "jin",
+   "title": "元帝の夫人",
+   "cityId": "jiankang"
+  },
+  "yu_wenjun": {
+   "factionId": "jin",
+   "title": "皇太子妃",
+   "cityId": "jiankang"
+  },
+  "wei_shuo": {
+   "factionId": "jin",
+   "title": "書家",
+   "cityId": "jiankang"
+  },
+  "wang_yulv": {
+   "factionId": "dai",
+   "title": "鬱律の妃",
+   "cityId": "shengle"
   }
  },
  "cityOwners": {

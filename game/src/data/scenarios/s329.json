@@ -715,6 +715,36 @@
   },
   "yang_yi": {
    "factionId": "chouchi"
+  },
+  "liu_shile": {
+   "factionId": "shile",
+   "title": "趙天王の后",
+   "cityId": "xiangguo"
+  },
+  "zheng_yingtao": {
+   "factionId": "shile",
+   "title": "石虎の妃",
+   "cityId": "ye"
+  },
+  "ren_lixiong": {
+   "factionId": "chenghan",
+   "title": "李雄の皇后",
+   "cityId": "chengdu"
+  },
+  "wei_shuo": {
+   "factionId": "jin",
+   "title": "書家",
+   "cityId": "jiankang"
+  },
+  "xi_xuan": {
+   "factionId": "jin",
+   "title": "郗鑒の娘",
+   "cityId": "jingkou"
+  },
+  "wang_yulv": {
+   "factionId": "dai",
+   "title": "什翼犍の母",
+   "cityId": "shengle"
   }
  },
  "cityOwners": {

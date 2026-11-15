@@ -1,11 +1,11 @@
 // ゲーム全体のまとめ役。地形・都市・軍団・カメラ・入力・画面表示と、進行の計算(sim)をつなぐ。
 import * as THREE from "three";
 import { MapCamera, type WorldRect } from "../camera/MapCamera";
-import { passes, extraBarriers, armies as armyData, factionById, factionOfCity, initialCityOwners, officerById, persons, regions, resolveCityLayout, scenario, scenarioCatalog } from "../data";
+import { passes, extraBarriers, armies as armyData, factionById, factionOfCity, initialCityOwners, officerById, personById, persons, regions, resolveCityLayout, scenario, scenarioCatalog } from "../data";
 import type { Difficulty } from "../battle/ai";
 import { BattleScreen } from "../battle/BattleScreen";
 import type { BattleResult } from "../battle/types";
-import type { BattleEvent, BattleSetup, City } from "../data/types";
+import type { BattleEvent, BattleSetup, City, Person } from "../data/types";
 import { InputController } from "../input/InputController";
 import { compareSides, createBattleSetup, placeName } from "../sim/battle";
 import { Campaign, type ArmyState } from "../sim/Campaign";
@@ -20,7 +20,9 @@ import { CityLabels } from "../ui/CityLabels";
 import { InfoPanel } from "../ui/InfoPanel";
 import { DiplomacyScreen } from "../ui/DiplomacyScreen";
 import { estimateWinRate } from "../sim/autoBattle";
+import { governorIdOf } from "../sim/battle";
 import { PersonScreen } from "../ui/PersonScreen";
+import { SpoilsScreen } from "../ui/SpoilsScreen";
 import { ScenarioScreen } from "../ui/ScenarioScreen";
 import { strategyRules } from "../sim/strategy";
 import { AUTO_SLOT, SaveMenu } from "../ui/SaveMenu";
@@ -90,6 +92,7 @@ export class Game {
   /** 操作する勢力(null なら制限なし) */
   private playerFactionId: string | null = null;
   private personScreen!: PersonScreen;
+  private spoilsScreen?: SpoilsScreen;
   private territoryOpacity = 1;
   /** セーブデータの保存先(動作確認のために外からも見られるようにしてある) */
   readonly saves = new SaveStore();
@@ -199,6 +202,10 @@ export class Game {
       onBattleEvent: (event) => this.showBattleEvent(event),
       onDayChanged: () => this.onDayChanged(),
       onCityCaptured: (cityId, factionId) => this.setCityOwner(cityId, factionId),
+      onCapturePending: (pc) => {
+        this.spoilsScreen?.showCapture(pc);
+        this.syncSpeedButton();
+      },
       onNews: (text) => {
         // 会戦の知らせ(「会戦準備へ」のボタンつき)を出している間は、上書きしない
         if ((this.root.querySelector("#event-open") as HTMLElement).hidden) this.showNotice(text);
@@ -313,6 +320,20 @@ export class Game {
       onChanged: () => (this.dirty = true),
     });
     (root.querySelector("#diplomacy-open") as HTMLElement).addEventListener("click", () => diplomacy.open());
+    // 名品・戦利品と、陥落の処置
+    this.spoilsScreen = new SpoilsScreen(root.querySelector("#spoils") as HTMLElement, root.querySelector("#capture") as HTMLElement, {
+      campaign: () => this.campaign,
+      playerFactionId: () => this.playerFactionId,
+      cityName: (id) => this.allCities.find((c) => c.id === id)?.name ?? id,
+      onChanged: () => {
+        this.showTreasury();
+        this.refreshPosts();
+        this.dirty = true;
+      },
+    });
+    this.spoilsScreen.bindCapture((text) => this.showNotice(text));
+    (root.querySelector("#spoils-open") as HTMLElement).addEventListener("click", () => this.spoilsScreen?.open());
+    if (this.campaign.spoils.pending) this.spoilsScreen.showCapture(this.campaign.spoils.pending);
     // 都市での徴兵と出陣
     (root.querySelector(".info-recruit") as HTMLElement).addEventListener("click", () => this.cityAction("recruit"));
     (root.querySelector(".info-raise") as HTMLElement).addEventListener("click", () => this.cityAction("raise"));
@@ -639,6 +660,9 @@ export class Game {
       if (marker) this.labels.refresh(marker);
     }
     this.campaign.restore(data.campaign);
+    // 処置を待っていた陥落があれば、その画面に戻す
+    (this.root.querySelector("#capture") as HTMLElement).hidden = true;
+    if (this.campaign.spoils.pending) this.spoilsScreen?.showCapture(this.campaign.spoils.pending);
     this.refreshTerritory();
     this.changeSettings(data.settings);
     this.lastAutosaveDay = this.campaign.day;
@@ -880,7 +904,10 @@ export class Game {
     this.clearSelection();
     this.selected = marker;
     this.cities.select(marker);
-    this.panel.show(marker.city, marker.faction, this.campaign.cityState(marker.city), scenario.uncertainOwners?.includes(marker.city.id) && scenario.cityOwners[marker.city.id] === initialCityOwners[marker.city.id]);
+    // 滞在している人物:太守・守将と、その都市にいる人(后妃など)。捕虜や保護中の人は除く
+    const gov = personById(governorIdOf(marker.city, this.campaign.cityStates[marker.city.id]));
+    const residents = [gov, ...persons.filter((p) => p.residence === marker.city.id && p !== gov && this.campaign.personStatus(p.id) === "active")].filter((p): p is Person => !!p);
+    this.panel.show(marker.city, marker.faction, this.campaign.cityState(marker.city), scenario.uncertainOwners?.includes(marker.city.id) && scenario.cityOwners[marker.city.id] === initialCityOwners[marker.city.id], residents, this.campaign.spoils.inCity(marker.city.id).length);
     // 徴兵と出陣は、その都市の勢力を操作できるときだけ
     const owner = scenario.cityOwners[marker.city.id];
     (this.root.querySelector(".info-actions") as HTMLElement).hidden = !owner || (this.playerFactionId !== null && this.playerFactionId !== owner);

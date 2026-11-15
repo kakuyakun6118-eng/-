@@ -630,6 +630,16 @@
    "factionId": "chouchi",
    "role": "general",
    "title": "楊茂搜の子"
+  },
+  "yang_xianrong": {
+   "factionId": "jin",
+   "title": "皇后",
+   "cityId": "changan"
+  },
+  "wei_shuo": {
+   "factionId": "jin",
+   "title": "書家",
+   "cityId": "luoyang"
   }
  }
 }

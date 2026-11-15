@@ -54,7 +54,9 @@ const path = require('path');
     const err = c.appoint('yu_liang', { kind: 'city', id: 'kuaiji' }); const s = JSON.parse(JSON.stringify(g.buildSave())); c.appoint('yu_liang', null); g.applySave(s);
     return { rows, ministers, renderMs, note, appoint: err, afterLoad: c.postOf('yu_liang')?.label, governors: g.allCities.filter(k => c.postOf && k.governorId).length }; });
   console.log('画面:', JSON.stringify(ui));
-  if (ui.rows !== persons.length) problems.push('一覧の人数が違う: ' + ui.rows);
+  // 317年の一覧:台帳の200人と、名簿で置いた女性(womenRoster)
+  const women317 = Object.keys(sc.womenRoster ?? {}).length;
+  if (ui.rows !== persons.length + women317) problems.push('一覧の人数が違う: ' + ui.rows);
   if (!ui.note || ui.afterLoad !== '会稽 太守') problems.push('注記または任命の保存が動かない');
   await page.waitForTimeout(300); await page.screenshot({ path: path.join(__dirname, 'out', 'persons.png') });
   await b.close();
