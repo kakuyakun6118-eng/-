@@ -12,6 +12,7 @@ import ncRoads from "./regions/north-china/roads.json";
 import ncPasses from "./regions/north-china/passes.json";
 import terrainCostRules from "./rules/terrainCosts.json";
 import portraitManifest from "./portraits.manifest.json";
+import inlinePortraits from "./portraitsInline";
 import catalog from "./scenarios/catalog.json";
 import extraPersons from "./scenarios/persons.extra.json";
 import s300 from "./scenarios/s300.json";
@@ -135,7 +136,8 @@ for (const c of northChina.cities) c.governorId = scenario.governors?.[c.id] ?? 
 // 置いてある画像の一覧(portraits.manifest.json)は、tools/portraits.cjs が作る。無い人物は、画面側で仮のシルエットを出す
 const portraitFiles = new Map<string, { year: number; file: string }[]>();
 // 画像は、ページの中に埋め込む(公開するページは1つのファイルなので、別のファイルとしては読めない)
-const portraitData = import.meta.glob("../../public/portraits/*.{webp,png,jpg,jpeg}", { eager: true, query: "?inline", import: "default" }) as Record<string, string>;
+// (公開用の版では、ページを軽くするため埋め込まず、ページと同じ場所の portraits/ から読む。vite.config.ts を参照)
+const portraitData = inlinePortraits;
 const portraitUrl = new Map<string, string>();
 for (const [path, url] of Object.entries(portraitData)) portraitUrl.set(path.slice(path.lastIndexOf("/") + 1), url);
 for (const file of portraitManifest.files as string[]) {
