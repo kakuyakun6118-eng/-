@@ -40,6 +40,19 @@ const path = require('path');
     out.prepFaces = document.querySelectorAll('.battle-face').length; out.prepText = [...document.querySelectorAll('.battle-commander')].map(x => x.textContent).join(' / ');
     return out; });
   console.log('画面:', JSON.stringify(r));
+  // 置いてある肖像が、どのシナリオでも本物の画像として出ること(ページに埋め込まれていること)。年齢差分は、その年以降で使われること
+  const have = new Set(onDisk.map(f => f.replace(/\.[a-z]+$/i, '')));
+  for (const sid of ['s300', 's317', 's329', 's357']) {
+    const q = await (await b.newContext({ viewport: { width: 844, height: 390 } })).newPage();
+    await q.goto('file://' + process.argv[2] + '#s=' + sid); await q.waitForFunction(() => window.__goko, null, { timeout: 120000 });
+    const v = await q.evaluate(async () => { document.querySelector('#persons-open').click(); const imgs = [...document.querySelectorAll('.person-row img')]; await Promise.all(imgs.map(i => i.decode().catch(() => null)));
+      return { year: Number(document.querySelector('.scenario').textContent.match(/\d+/)[0]), rows: imgs.map(i => ({ id: i.closest('.person-row').dataset.id, real: i.dataset.real === 'true', data: i.src.startsWith('data:image/'), w: i.naturalWidth, src: i.src.slice(-40) })) }; });
+    const expect = v.rows.filter(x => have.has(x.id)).length;
+    const shown = v.rows.filter(x => x.real && x.data && x.w === 256).length;
+    console.log(`  ${sid}: 肖像あり ${shown}人 / 置いてある人 ${expect}人`);
+    if (shown !== expect) problems.push(`${sid}: 置いてある肖像が出ない人がいる`);
+    await q.close();
+  }
   await p.screenshot({ path: path.join(__dirname, 'out', 'portraits-prep.png') });
   if (r.listFaces !== r.rows || !r.detailFace || r.rulerFaces !== r.factions || r.prepFaces !== 2) problems.push('肖像の枠が出ていない画面がある');
   await b.close();

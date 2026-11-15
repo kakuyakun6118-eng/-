@@ -134,6 +134,10 @@ for (const c of northChina.cities) c.governorId = scenario.governors?.[c.id] ?? 
 // 肖像画像:public/portraits/<人物ID>.webp(png・jpg も可)。年齢で絵を変えるときは <人物ID>@<年>.webp を足す。
 // 置いてある画像の一覧(portraits.manifest.json)は、tools/portraits.cjs が作る。無い人物は、画面側で仮のシルエットを出す
 const portraitFiles = new Map<string, { year: number; file: string }[]>();
+// 画像は、ページの中に埋め込む(公開するページは1つのファイルなので、別のファイルとしては読めない)
+const portraitData = import.meta.glob("../../public/portraits/*.{webp,png,jpg,jpeg}", { eager: true, query: "?inline", import: "default" }) as Record<string, string>;
+const portraitUrl = new Map<string, string>();
+for (const [path, url] of Object.entries(portraitData)) portraitUrl.set(path.slice(path.lastIndexOf("/") + 1), url);
 for (const file of portraitManifest.files as string[]) {
   const m = /^([a-z0-9_]+)(?:@(\d+))?\.[a-z]+$/i.exec(file);
   if (!m) continue;
@@ -146,7 +150,7 @@ export function portraitOf(personId: string): string | undefined {
   const list = portraitFiles.get(personId);
   if (!list) return undefined;
   const best = list.filter((x) => x.year <= scenario.year).sort((a, b) => b.year - a.year)[0];
-  return best ? `portraits/${best.file}` : undefined;
+  return best ? portraitUrl.get(best.file) ?? `portraits/${best.file}` : undefined;
 }
 
 // 関所の所属も、都市と同じ表で引けるようにする
