@@ -3884,3 +3884,21 @@ select:focus-visible {
 @media (max-width: 900px) {
   .hist-body, .timeline-body { flex-direction: column; overflow-y: auto; }
 }
+/* 歴史の事件(Version 38):戦略マップ表示・事件の一覧 */
+#history-event.hist-mapmode { background: transparent; justify-content: flex-end; pointer-events: none; }
+#history-event.hist-mapmode .hist-inner { pointer-events: auto; width: min(420px, 34%); max-height: 70%; align-self: flex-start; background: rgba(20, 13, 10, 0.92); animation: none; }
+.hist-legend h4 { margin: 0 0 6px; font-family: var(--font-display); color: var(--bronze); font-size: 15px; }
+.hist-legend p { margin: 4px 0; font-size: 12.5px; }
+.hist-legend-row i { display: inline-block; width: 22px; height: 6px; margin-right: 8px; vertical-align: middle; border-radius: 3px; }
+#timeline .tl-tab { min-height: 30px; padding: 2px 12px; border: 1px solid var(--gold-dim); background: none; color: var(--muted); font-size: 12.5px; cursor: pointer; }
+#timeline .tl-tab.on { color: var(--bronze); border-color: var(--gold); background: rgba(200, 162, 82, 0.12); }
+.ev-wrap { flex: 1; overflow: auto; }
+.ev-sum { margin: 0 0 6px; color: var(--bronze); font-size: 12.5px; }
+.ev-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.ev-table th { position: sticky; top: 0; background: #22150f; color: var(--bronze); text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--gold-dim); }
+.ev-table td { padding: 4px 6px; border-bottom: 1px dashed var(--line); vertical-align: top; }
+.ev-table td:nth-child(5), .ev-table td:nth-child(6) { min-width: 16em; }
+.ev-table .ev-name { color: var(--kinari); white-space: nowrap; }
+.ev-table tr[data-status="occurred"] .ev-status { color: var(--gold); }
+.ev-table tr[data-status="branched"] .ev-status, .ev-table tr[data-status="duplicate"] .ev-status { color: #e2a070; }
+.ev-table tr[data-status="pending"] { opacity: 0.7; }

@@ -98,6 +98,9 @@ export class Game {
   /** 自分の国が滅びたとき、どうするか */
   private onFall: "gameover" | "continue" = "gameover";
   private personScreen!: PersonScreen;
+  private readonly histRoutes: RouteLine[] = [];
+  private readonly histMarks = new THREE.Group();
+  private histHeight: (lon: number, lat: number) => number = () => 0;
   /** 皇室の画面を開く(人物を渡すと、その人物の家系図) */
   private openCourt: (personId?: string) => void = () => undefined;
   private spoilsScreen?: SpoilsScreen;
@@ -197,6 +200,15 @@ export class Game {
     this.armies = new Armies(heightAt);
     this.route = new RouteLine(heightAt);
     this.scene.add(this.armies.group, this.route.group);
+    // 歴史の事件の地図表示:関係する軍団の進軍経路(国ごとの色)・戦場の印・関係都市の印
+    this.histHeight = heightAt;
+    for (const color of [0xe2705c, 0x6fa8dc, 0x9fd28a]) {
+      const r = new RouteLine(heightAt, color);
+      this.histRoutes.push(r);
+      this.scene.add(r.group);
+    }
+    this.histMarks.visible = false;
+    this.scene.add(this.histMarks);
     this.armyLabels = new ArmyLabels(root.querySelector("#labels") as HTMLElement);
 
     // ゲームの進行。状態が変わるたびに、表示を合わせる
@@ -359,6 +371,8 @@ export class Game {
       campaign: () => this.campaign,
       playerFactionId: () => this.playerFactionId,
       focus: (lon, lat) => this.focus(lon, lat, 6),
+      showMap: (place, cities, armies) => this.showHistoryMap(place, cities, armies),
+      hideMap: () => this.hideHistoryMap(),
       onChanged: () => {
         this.showTreasury();
         this.refreshPosts();
@@ -931,6 +945,55 @@ export class Game {
   }
 
   /** カメラを指定した場所へ向ける(都市へのジャンプなどに使う) */
+  /**
+   * 歴史の事件を、戦略マップの上に示す:戦場(赤い輪)・関係都市(金の輪)・関係する軍団の進軍経路(国ごとの色の点線)。
+   * routes は「軍団 → 戦場」の経路の見込み(実際に軍は動かさない)。
+   */
+  showHistoryMap(place: { lon: number; lat: number }, cityIds: string[], armyIds: string[][]): { routes: number; cities: number } {
+    this.hideHistoryMap();
+    const ring = (lon: number, lat: number, color: number, kind: string): void => {
+      const m = new THREE.Mesh(new THREE.RingGeometry(0.75, 1, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, depthTest: false, side: THREE.DoubleSide }));
+      const w = toWorld(lon, lat);
+      m.position.set(w.x, this.histHeight(lon, lat) + 0.08, w.z);
+      m.renderOrder = 4;
+      m.userData.kind = kind;
+      this.histMarks.add(m);
+    };
+    ring(place.lon, place.lat, 0xe2705c, "battle");
+    let cities = 0;
+    for (const id of cityIds) {
+      const c = this.allCities.find((x) => x.id === id);
+      if (c) {
+        ring(c.lon, c.lat, 0xe0c070, "city");
+        cities++;
+      }
+    }
+    this.histMarks.visible = true;
+    let routes = 0;
+    armyIds.forEach((ids, i) => {
+      for (const id of ids.slice(0, 1)) {
+        const route = this.campaign.planRoute(id, place);
+        if (route && this.histRoutes[i]) {
+          this.histRoutes[i].show(route);
+          routes++;
+        }
+      }
+    });
+    this.focus(place.lon, place.lat, 9);
+    this.dirty = true;
+    return { routes, cities };
+  }
+
+  hideHistoryMap(): void {
+    for (const r of this.histRoutes) r.hide();
+    for (const m of [...this.histMarks.children]) {
+      this.histMarks.remove(m);
+      (m as THREE.Mesh).geometry.dispose();
+    }
+    this.histMarks.visible = false;
+    this.dirty = true;
+  }
+
   focus(lon: number, lat: number, distance: number): void {
     this.glide = null;
     const p = toWorld(lon, lat);
@@ -1075,6 +1138,8 @@ export class Game {
     this.cities.update(this.mapCamera.distance);
     this.armies.update(this.mapCamera.distance);
     this.route.update(this.mapCamera.distance);
+    for (const r of this.histRoutes) r.update(this.mapCamera.distance);
+    if (this.histMarks.visible) for (const m of this.histMarks.children) m.scale.setScalar(this.mapCamera.distance * (m.userData.kind === "battle" ? 0.03 : 0.018));
     for (const terrain of this.terrains) terrain.setCameraDistance(this.mapCamera.distance);
     this.renderer.render(this.scene, this.mapCamera.camera);
     this.labels.update(this.mapCamera.camera, this.width, this.height, this.selected, this.mapCamera.distance);

@@ -79,9 +79,10 @@ const path = require('path');
   // 12. 年表:開始前の史実・選択・結果・会戦が残り、画面で史実と比べられる
   const r12 = await p.evaluate(() => { const h = window.__goko.campaign.history; document.querySelector('#history-event').hidden = true; document.querySelector('#timeline-open').click();
     const kinds = {}; for (const t of h.timeline) kinds[t.kind] = (kinds[t.kind] || 0) + 1;
-    return { kinds, rowsHist: document.querySelectorAll('#timeline .tl-col:first-child .tl-row').length, rowsGame: document.querySelectorAll('#timeline .tl-col:last-child .tl-row').length, diff: document.querySelectorAll('#timeline .tl-diff').length }; });
+    const pastDefs = h.defs.filter(d => d.year * 12 + d.month < 383 * 12 + 8).length;
+    return { pastDefs, defs: h.defs.length, kinds, rowsHist: document.querySelectorAll('#timeline .tl-col:first-child .tl-row').length, rowsGame: document.querySelectorAll('#timeline .tl-col:last-child .tl-row').length, diff: document.querySelectorAll('#timeline .tl-diff').length }; });
   await p.screenshot({ path: out + '/pc-timeline.png' });
-  check('12 歴史年表が正しく記録される', r12.kinds.past === 13 && r12.kinds.choice >= 1 && r12.kinds.battle >= 1 && r12.rowsHist === 17 && r12.rowsGame >= 15, r12);
+  check('12 歴史年表が正しく記録される', r12.kinds.past === r12.pastDefs && r12.kinds.choice >= 1 && r12.kinds.battle >= 1 && r12.rowsHist === r12.defs && r12.rowsGame >= 15, r12);
 
   // 13・14. 保存と互換
   const r13 = await p.evaluate(() => { const g = window.__goko, c = g.campaign; const s = JSON.parse(JSON.stringify(g.buildSave())); const a = JSON.stringify(c.history.serialize());
@@ -102,7 +103,8 @@ const path = require('path');
   // PC:永嘉の乱の画面(西晋を操作。最重要の演出・3つの選択肢・影響の予想)
   p = await open('s304');
   const ui = await p.evaluate(`(() => { const g = window.__goko, c = g.campaign, h = c.history; g.changeSettings({ playerFactionId: 'jin' }); c.speed = 0; c.setRelation('jin', 'han_zhao', 'war');
-    (${advance})(311 * 12 + 6);
+    let n = 0; while (n++ < 200) { (${advance})(311 * 12 + 6); const a = h.awaiting; if (!a || a.id === 'yongjia311') break; const rr = a.roles(h.ctx()); const role = Object.keys(a.choices).find(k => rr[k] === 'jin'); h.choose(a.id, a.choices[role][1].id); document.querySelector('#history-event').hidden = true; }
+    (${advance})(311 * 12 + 6); document.querySelector('#history-event').hidden = true; c.history.onPrompt();
     const aw = h.awaiting; const box = document.querySelector('#history-event .hist-inner'); const r = box.getBoundingClientRect();
     const tiny = [...document.querySelectorAll('#history-event *')].filter(e => e.offsetParent && [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) && parseFloat(getComputedStyle(e).fontSize) < 10.5).length;
     return { aw: aw && aw.id, critical: box.classList.contains('hist-critical'), title: box.querySelector('h2').textContent, choices: [...document.querySelectorAll('.hist-choice b')].map(x => x.textContent), previews: document.querySelectorAll('.hist-choice em').length, out: r.right > innerWidth + 1 || r.bottom > innerHeight + 1, tiny }; })()`);

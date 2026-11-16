@@ -1231,6 +1231,21 @@ export class Campaign {
     return ev;
   }
 
+  /** 歴史の攻城戦を始める */
+  startSiegeAt(att: ArmyState, city: City, histId: string): BattleEvent | null {
+    const n = this.events.length;
+    this.startEvent(att, "siege_battle", null, city);
+    const ev = this.events.length > n ? this.events[this.events.length - 1] : null;
+    if (ev) ev.histId = histId;
+    this.resolveAutoBattles();
+    return ev;
+  }
+
+  /** 地名(近くの都市からの方角と距離) */
+  placeNameAt(lon: number, lat: number): string {
+    return placeName(this.cities, lon, lat);
+  }
+
   /** 廃立:君主 old を退け(生きたまま臣下に)、ほかの人物 next を君主にする */
   replaceRuler(factionId: string, old: Person, next: Person): void {
     const f = scenario.factions.find((x) => x.id === factionId)!;
@@ -1572,6 +1587,9 @@ export class Campaign {
       status: "pending",
       createdAt: { day: Math.floor(this.day), text: this.dateText() },
     };
+    // 進軍中の歴史の会戦なら、事件の印を付ける
+    const tag = this.history?.tagFor(attacker.army.id, defender?.army.id, city?.id);
+    if (tag) event.histId = tag;
     this.addSupporters(event, attacker, defender);
     this.events.push(event);
     // 両軍を止めて対峙させ、時間も止める(プレイヤーが状況を確かめられるように)

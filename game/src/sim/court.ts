@@ -1052,6 +1052,8 @@ export class Court {
   private depositions(year: number): void {
     const day = Math.floor(this.c.day);
     for (const d of FAMILY.depositions ?? []) {
+      // 歴史の重大事件で扱う廃立(桓温の廃立)は、ここでは起こさない
+      if (this.c.history?.def(`huanwen${d.year}`)) continue;
       const r = this.c.rulerOf(d.faction);
       if (!r || r.id !== d.victim || year < d.year) continue;
       const by = persons.find((x) => x.id === d.by && x.factionId === d.faction && this.c.personStatus(x.id) === "active");

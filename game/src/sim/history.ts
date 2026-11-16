@@ -2,12 +2,13 @@
 // 史実の条件がそろえば史実の事件として起こり、そろわなければ「歴史の分岐」として示す(存在しない国や軍団は出さない)。
 // 関係する勢力は、選択肢(史実どおり・合理的な別案・大胆な改変)を選ぶ。プレイヤーの国はプレイヤーが、ほかはAIが選ぶ。
 // 結果は国・都市・軍団・人物に反映し、年表に史実との違いとともに残す。同じ事件は二重に起こさない。
-import { persons, scenario, totalTroops } from "../data";
+import { ledgerPerson, persons, scenario, totalTroops } from "../data";
 import type { BattleEvent, Person } from "../data/types";
 import type { BattleResult } from "../battle/types";
 import type { ArmyState, Campaign } from "./Campaign";
 import { distanceKm } from "./pathfinding";
 import { chance } from "./spoils";
+import { EXTRA_EVENTS } from "./historyEvents2";
 
 export type ChoiceKind = "historic" | "alt" | "bold";
 export const KIND_LABEL: Record<ChoiceKind, string> = { historic: "史実どおり", alt: "合理的な別案", bold: "大胆な改変" };
@@ -30,6 +31,8 @@ export interface HistRecord {
   result?: string;
   /** 史実と同じ結果になったか */
   historic?: boolean;
+  /** 起きたときの役(会戦の決着のときに使う) */
+  roles?: Record<string, string | undefined>;
 }
 export interface TimelineEntry {
   day: number;
@@ -45,10 +48,41 @@ export interface HistorySave {
   flags: Record<string, string>;
   timeline: TimelineEntry[];
   queue: { id: string; mode: "decide" | "news" | "branch" }[];
+  tags?: { a: string; b?: string; city?: string; histId: string; until: number }[];
+  prep?: Record<string, string[]>;
+}
+
+/** 史実で、ある年にある国に加わる人物 */
+const JOINS: { id: string; year: number; month: number; label: string; note: string; to: (c: Campaign) => string | undefined; army?: number }[] = [
+  { id: "shi_le", year: 307, month: 9, label: "漢", note: "307年、汲桑の敗死ののち、石勒は劉淵に帰順した", to: (c) => hanOf(c), army: 6000 },
+  { id: "kui_an", year: 307, month: 9, label: "石勒の軍", note: "石勒の「十八騎」の一人", to: (c) => factionOfPersons(c, ["shi_le"]) },
+  { id: "zhi_xiong", year: 307, month: 9, label: "石勒の軍", note: "石勒の「十八騎」の一人", to: (c) => factionOfPersons(c, ["shi_le"]) },
+  { id: "kong_chang", year: 307, month: 9, label: "石勒の軍", note: "石勒の「十八騎」の一人", to: (c) => factionOfPersons(c, ["shi_le"]) },
+  { id: "tao_bao", year: 307, month: 9, label: "石勒の軍", note: "石勒の「十八騎」の一人", to: (c) => factionOfPersons(c, ["shi_le"]) },
+  { id: "lu_ming", year: 307, month: 9, label: "石勒の軍", note: "石勒の「十八騎」の一人", to: (c) => factionOfPersons(c, ["shi_le"]) },
+  { id: "zhi_quliu", year: 307, month: 9, label: "石勒の軍", note: "石勒の「十八騎」の一人", to: (c) => factionOfPersons(c, ["shi_le"]) },
+  { id: "zhang_bin", year: 308, month: 1, label: "石勒の軍", note: "張賓は石勒の謀主となった", to: (c) => factionOfPersons(c, ["shi_le"]) },
+  { id: "wang_mi", year: 308, month: 5, label: "漢", note: "308年、王弥は青州の乱ののち劉淵に帰順した", to: (c) => hanOf(c), army: 5000 },
+  { id: "liu_yao", year: 304, month: 11, label: "漢", note: "劉曜は劉淵の族子として漢に仕えた", to: (c) => hanOf(c) },
+];
+
+/** 人物がいない理由(亡くなった・捕らわれた・ほかの国にいる・まだいない) */
+export function absent(c: Campaign, id: string, want?: string): string {
+  const p = P(id);
+  const nm = ledgerPerson(id)?.name ?? id;
+  if (!p) return `${nm}はこの時点でゲームにいない`;
+  const st = c.personStatus(id);
+  if (st === "dead") return `${p.name}はすでに亡くなっている(${({ illness: "病死", old_age: "老衰", battle: "戦死", execution: "処刑", assassination: "暗殺", suicide: "自害", unknown: "死因不明" } as Record<string, string>)[c.court.causeOf(id)?.cause ?? "unknown"]})`;
+  const cu = c.spoils.custodyOf(id);
+  if (cu) return `${p.name}は${name(cu.holder)}に捕らわれている`;
+  if (want && p.factionId !== want) return `${p.name}は${name(p.factionId)}に身を寄せている`;
+  if (p.role !== "ruler") return `${p.name}は${name(p.factionId)}の臣下で、君主ではない`;
+  if (st === "wounded") return `${p.name}は負傷している`;
+  return `${p.name}は${name(p.factionId)}の君主だが、条件がそろっていない`;
 }
 
 /** 事件の定義 */
-interface Ctx {
+export interface Ctx {
   h: HistorySystem;
   c: Campaign;
 }
@@ -75,28 +109,34 @@ export interface HistEventDef {
   ai?: (x: Ctx, r: Record<string, string | undefined>, role: string) => string;
   /** 結果を反映し、結果の文を返す */
   apply: (x: Ctx, r: Record<string, string | undefined>, picks: Record<string, string>) => string;
+  /** 発生の条件(一覧に出す文) */
+  cond?: string;
+  /** 会戦の事件:戦う2つの役(イベント前の集結に使う) */
+  battle?: string[];
+  /** 歴史の会戦が決着したときの結果(勝った役。引き分けは null) */
+  onBattle?: (x: Ctx, r: Record<string, string | undefined>, winner: string | null) => string;
 }
 
 // ---------------- 勢力の見つけ方 ----------------
-const live = (c: Campaign, f: string | undefined): boolean => !!f && !scenario.factions.find((x) => x.id === f)?.fallen && c.cities.some((x) => scenario.cityOwners[x.id] === f);
+export const live = (c: Campaign, f: string | undefined): boolean => !!f && !scenario.factions.find((x) => x.id === f)?.fallen && c.cities.some((x) => scenario.cityOwners[x.id] === f);
 /** 人物たちのうち、生きている最初の人の国 */
-function factionOfPersons(c: Campaign, ids: string[], rulerOnly = false): string | undefined {
+export function factionOfPersons(c: Campaign, ids: string[], rulerOnly = false): string | undefined {
   for (const id of ids) {
     const p = persons.find((x) => x.id === id);
     if (p && c.personStatus(p.id) !== "dead" && !c.spoils.custodyOf(p.id) && live(c, p.factionId) && (!rulerOnly || p.role === "ruler")) return p.factionId;
   }
   return undefined;
 }
-const pick = (c: Campaign, ...ids: (string | undefined)[]): string | undefined => ids.find((f) => live(c, f));
+export const pick = (c: Campaign, ...ids: (string | undefined)[]): string | undefined => ids.find((f) => live(c, f));
 /** 漢(前趙):劉氏の君主の国 */
-const hanOf = (c: Campaign): string | undefined => factionOfPersons(c, ["liu_yuan", "liu_cong", "liu_can", "liu_yao", "liu_xi", "liu_yin"], true) ?? pick(c, "han_zhao", c.history?.flags.han_founded);
-const shiOf = (c: Campaign): string | undefined => factionOfPersons(c, ["shi_le", "shi_hong", "shi_hu", "shi_shi", "shi_zun", "shi_jian2", "shi_zhi"], true) ?? pick(c, "shile");
-const jinOf = (c: Campaign): string | undefined => pick(c, "jin", "jin_rui") ?? factionOfPersons(c, ["sima_rui", "sima_shao", "sima_yan", "sima_yao"], true);
-const qinOf = (c: Campaign): string | undefined => factionOfPersons(c, ["fu_jian_jian", "fu_sheng", "fu_jian", "fu_pi", "fu_deng"], true) ?? pick(c, "qianqin");
-const owner = (id: string): string | undefined => scenario.cityOwners[id];
-const P = (id: string): Person | undefined => persons.find((x) => x.id === id);
-const alive = (c: Campaign, id: string): boolean => !!P(id) && c.personStatus(id) === "active" && !c.spoils.custodyOf(id);
-const name = (f: string | undefined): string => scenario.factions.find((x) => x.id === f)?.name ?? "(なし)";
+export const hanOf = (c: Campaign): string | undefined => factionOfPersons(c, ["liu_yuan", "liu_cong", "liu_can", "liu_yao", "liu_xi", "liu_yin"], true) ?? pick(c, "han_zhao", c.history?.flags.han_founded);
+export const shiOf = (c: Campaign): string | undefined => factionOfPersons(c, ["shi_le", "shi_hong", "shi_hu", "shi_shi", "shi_zun", "shi_jian2", "shi_zhi"], true) ?? pick(c, "shile");
+export const jinOf = (c: Campaign): string | undefined => pick(c, "jin", "jin_rui") ?? factionOfPersons(c, ["sima_rui", "sima_shao", "sima_yan", "sima_yao"], true);
+export const qinOf = (c: Campaign): string | undefined => factionOfPersons(c, ["fu_jian_jian", "fu_sheng", "fu_jian", "fu_pi", "fu_deng"], true) ?? pick(c, "qianqin");
+export const owner = (id: string): string | undefined => scenario.cityOwners[id];
+export const P = (id: string): Person | undefined => persons.find((x) => x.id === id);
+export const alive = (c: Campaign, id: string): boolean => !!P(id) && c.personStatus(id) === "active" && !c.spoils.custodyOf(id);
+export const name = (f: string | undefined): string => scenario.factions.find((x) => x.id === f)?.name ?? "(なし)";
 
 export class HistorySystem {
   records: Record<string, HistRecord> = {};
@@ -104,22 +144,121 @@ export class HistorySystem {
   timeline: TimelineEntry[] = [];
   /** プレイヤーに見せる順番待ち(decide:選択、news:結果の知らせ、branch:分岐の説明) */
   queue: { id: string; mode: "decide" | "news" | "branch" }[] = [];
-  readonly defs: HistEventDef[] = EVENTS;
+  readonly defs: HistEventDef[] = [...EVENTS, ...EXTRA_EVENTS].sort((a, b) => a.year * 12 + a.month - (b.year * 12 + b.month));
+  /** 進軍中の歴史の会戦の目印(出会ったとき・城に着いたときの戦いに、事件のIDを付ける) */
+  tags: { a: string; b?: string; city?: string; histId: string; until: number }[] = [];
+  /** イベント前の準備行動の記録(集結・兵糧・援軍・防備・偵察) */
+  prep: Record<string, string[]> = {};
+
+  /** 戦いが始まるとき:進軍中の歴史の会戦なら、その事件のID */
+  tagFor(att: string, def?: string, city?: string): string | undefined {
+    const day = Math.floor(this.c.day);
+    const t = this.tags.find((x) => x.until >= day && ((x.a === att && (x.b ? x.b === def : x.city === city)) || (x.b === att && x.a === def)));
+    if (t) this.tags.splice(this.tags.indexOf(t), 1);
+    return t?.histId;
+  }
+
   /**
-   * 最重要の事件(淝水の戦いなど)の前の半年は、関係する2国のAIは互いに攻めかからず、兵を集める(史実でも、決戦の前は集結の時期だった)。
-   * 事件の前に、ふつうの戦いで決着がついてしまわないようにする。プレイヤーの軍は自由に動ける。
+   * 会戦の事件の前の半年:関係する国のAIは、戦争を止めずに準備をする。
+   * 主力の集結先(戦場にいちばん近い自国の都市)を返す。ほかの軍団は、ふだんどおり戦う。
    */
-  restrained(a: string, b: string): boolean {
+  stagingFor(f: string): { city: string; lon: number; lat: number; eventId: string } | undefined {
     const { year, month } = this.c.calendar();
     const now = year * 12 + month;
     for (const d of this.defs) {
-      if (d.importance !== "critical" || this.records[d.id]?.status !== "pending") continue;
+      if (!d.battle || this.records[d.id]?.status !== "pending") continue;
       const at = d.year * 12 + d.month;
       if (now > at || at - now > 6) continue;
-      const r = Object.values(d.roles(this.ctx()));
-      if (r.includes(a) && r.includes(b)) return true;
+      const roles = d.roles(this.ctx());
+      if (!d.battle.some((r) => roles[r] === f)) continue;
+      const city = this.c.cities.filter((x) => x.kind !== "pass" && owner(x.id) === f).sort((a, b) => distanceKm(a, d.place) - distanceKm(b, d.place))[0];
+      if (city && distanceKm(city, d.place) < 700) return { city: city.id, lon: city.lon, lat: city.lat, eventId: d.id };
     }
-    return false;
+    return undefined;
+  }
+
+  /** 準備行動(毎月):兵糧の輸送・援軍の要請・国境の防備・偵察。記録を残す */
+  private prepare(): void {
+    const day = Math.floor(this.c.day);
+    for (const f of scenario.factions) {
+      if (f.passive || f.fallen || f.id === this.c.playerFactionId) continue;
+      const st = this.stagingFor(f.id);
+      if (!st) continue;
+      const d = this.def(st.eventId)!;
+      const log = (this.prep[`${d.id}|${f.id}`] ??= []);
+      const add = (t: string): void => {
+        if (!log.includes(t)) {
+          log.push(t);
+          this.log("history", `${f.name}:${d.name}に備えて${t}`, undefined, d.id);
+        }
+      };
+      const near = this.c.armies.filter((s) => s.army.factionId === f.id && distanceKm(s.army, st) < 120);
+      if (near.length) add(`${near.length}つの軍団を${this.c.cities.find((x) => x.id === st.city)?.name}に集結`);
+      // 兵糧の輸送:集結した軍団の食糧を満たす(国の兵糧を使う)
+      const purse = this.c.factionStates[f.id];
+      for (const s of near) if (purse && s.army.food < 60 && purse.grain > 300) {
+        purse.grain -= 100;
+        s.army.food = 60;
+        add("兵糧を前線へ輸送");
+      }
+      // 国境の防備:集結先の守備兵を増やす(1度だけ)
+      const city = this.c.cities.find((x) => x.id === st.city)!;
+      if (!log.some((t) => t.startsWith("国境")) && purse && purse.gold > 800) {
+        purse.gold -= 400;
+        const cs = this.c.cityState(city);
+        this.c.cityStates[city.id] = { ...cs, garrison: cs.garrison + 3000 };
+        add(`国境の防備(${city.name}の守備兵+3000)`);
+      }
+      // 援軍の要請:同盟国に(1度だけ)
+      if (!log.some((t) => t.startsWith("援軍"))) {
+        const ally = scenario.factions.find((g) => this.c.relationOf(f.id, g.id) === "alliance" && !g.fallen);
+        if (ally && ally.id !== this.c.playerFactionId && this.c.diplo.dispatchAid(ally.id, f.id, { lon: st.lon, lat: st.lat, name: city.name }).ok) add(`援軍を要請(${ally.name})`);
+      }
+      // 偵察:敵の主力の位置
+      if (!log.some((t) => t.startsWith("偵察"))) {
+        const foeRole = d.battle!.find((r) => d.roles(this.ctx())[r] !== f.id);
+        const foe = foeRole ? d.roles(this.ctx())[foeRole] : undefined;
+        const fa = foe ? this.largestArmy(foe) : undefined;
+        if (fa) add(`偵察(敵の主力 ${fa.army.name}・${Math.round(totalTroops(fa.army) / 1000)}千は${this.c.placeNameAt(fa.army.lon, fa.army.lat)})`);
+      }
+      void day;
+    }
+  }
+
+  /** 史実で、ある年にある国に加わる人物(石勒・王弥らが漢に加わるなど)。生まれていない人・亡くなった人は出さない */
+  private joins(): void {
+    const { year, month } = this.c.calendar();
+    for (const j of JOINS) {
+      if (this.flags[`join_${j.id}`] || year * 12 + month < j.year * 12 + j.month) continue;
+      this.flags[`join_${j.id}`] = "1";
+      if (persons.some((x) => x.id === j.id)) continue;
+      const base = ledgerPerson(j.id);
+      if (!base || (base.born !== null && base.born > year - 14) || (base.died !== null && base.died < year)) continue;
+      const f = j.to(this.c);
+      if (!f || !live(this.c, f)) {
+        this.log("history", `${base.name}は、史実では${j.year}年に${j.label}に加わったが、その国がないため現れなかった`, "史実と異なる");
+        continue;
+      }
+      const p: Person = { ...base, factionId: f, role: base.role === "ruler" ? "general" : base.role };
+      persons.push(p);
+      this.c.court.added.push(p);
+      this.c.loyalty.fame[p.id] = Math.max(30, this.c.loyalty.fame[p.id] ?? 0);
+      this.c.loyalty.loyalty[p.id] = 75;
+      if (j.army) {
+        const city = this.c.cities.filter((x) => x.kind !== "pass" && owner(x.id) === f).sort((a, b) => this.c.cityState(b).garrison - this.c.cityState(a).garrison)[0];
+        if (city) {
+          const st = this.c.cityState(city);
+          this.c.cityStates[city.id] = { ...st, garrison: st.garrison + j.army };
+          // 加わる軍勢は、自分の兵糧を持ってくる
+          const purse = (this.c.factionStates[f] ??= { gold: 0, grain: 0 });
+          purse.grain += j.army / 10;
+          const res = this.c.raiseArmy(city.id, j.army, p.id);
+          if (typeof res === "string") this.log("history", `${base.name}の軍勢は軍団にならなかった(${res})`);
+        }
+      }
+      this.log("history", `${base.name}が${name(f)}に加わる(史実:${j.note})`);
+      this.c.addNews(`【歴史】${base.name}が${name(f)}に加わりました(${j.note})`);
+    }
   }
 
   /** これから起こる事件(1年以内)の主役か */
@@ -130,7 +269,7 @@ export class HistorySystem {
   }
 
   /** 宮廷の簒奪の表のうち、ここで扱う人物(二重に起こさない) */
-  readonly coveredUsurpers = new Set(["jin_zhun", "shi_hu", "fu_jian", "ran_min"]);
+  readonly coveredUsurpers = new Set(["jin_zhun", "shi_hu", "fu_jian", "ran_min", "zhang_zuo", "liu_cong", "huan_xuan2"]);
   /** 画面に知らせる(UIがつなぐ) */
   onPrompt: (() => void) | null = null;
 
@@ -143,6 +282,8 @@ export class HistorySystem {
     this.flags = {};
     this.timeline = [];
     this.queue = [];
+    this.tags = [];
+    this.prep = {};
     const startM = scenario.startMonth ?? 3;
     for (const d of this.defs) {
       const past = d.year < scenario.year || (d.year === scenario.year && d.month < startM);
@@ -176,6 +317,8 @@ export class HistorySystem {
 
   /** 毎月:年月が来た事件を調べる */
   monthly(): void {
+    this.joins();
+    this.prepare();
     const { year, month } = this.c.calendar();
     for (const d of this.defs) {
       const rec = this.records[d.id];
@@ -252,6 +395,7 @@ export class HistorySystem {
         rec.picks[role] = { choice: picks[role], by: "ai" };
       }
     }
+    rec.roles = roles;
     const text = d.apply(x, roles, picks);
     const historic = Object.entries(picks).every(([role, id]) => d.choices[role].find((ch) => ch.id === id)?.kind === "historic");
     rec.status = historic ? "occurred" : "branched";
@@ -296,6 +440,16 @@ export class HistorySystem {
   onBattle(event: BattleEvent, result: BattleResult): void {
     const total = result.sides.attacker.before.infantry + result.sides.attacker.before.cavalry + result.sides.attacker.before.archer + result.sides.defender.before.infantry + result.sides.defender.before.cavalry + result.sides.defender.before.archer;
     const win = result.winner === "attacker" ? event.attackerFactionId : result.winner === "defender" ? event.defenderFactionId : null;
+    const hd = event.histId ? this.def(event.histId) : undefined;
+    if (hd?.onBattle) {
+      const rec = this.records[hd.id];
+      const roles = rec.roles ?? hd.roles(this.ctx());
+      const winRole = win ? Object.keys(roles).find((k) => roles[k] === win) ?? null : null;
+      const text = hd.onBattle(this.ctx(), roles, winRole);
+      rec.result = `${rec.result ?? ""} → 会戦:${win ? `${name(win)}の勝利` : "引き分け"}。${text}`;
+      this.log("battle", `${hd.name}の会戦:${win ? `${name(win)}の勝利` : "引き分け"}(${event.location.name})。${text}`, undefined, hd.id);
+      this.c.addNews(`【歴史】${hd.name}:${text}`);
+    }
     if (event.histId === "feishui383") {
       this.flag("feishui_winner", win ?? "draw");
       const qin = event.attackerFactionId === "jin" || name(event.attackerFactionId).includes("晋") ? event.defenderFactionId : event.attackerFactionId;
@@ -317,7 +471,7 @@ export class HistorySystem {
   }
 
   serialize(): HistorySave {
-    return JSON.parse(JSON.stringify({ records: this.records, flags: this.flags, timeline: this.timeline, queue: this.queue })) as HistorySave;
+    return JSON.parse(JSON.stringify({ records: this.records, flags: this.flags, timeline: this.timeline, queue: this.queue, tags: this.tags, prep: this.prep })) as HistorySave;
   }
 
   /** 古いセーブ(歴史の記録なし)は、いまの日付までの事件を「開始前の史実」と同じに扱わず、未発生のまま残す */
@@ -339,6 +493,8 @@ export class HistorySystem {
     this.flags = { ...save.flags };
     this.timeline = [...save.timeline];
     this.queue = [...(save.queue ?? [])];
+    this.tags = [...(save.tags ?? [])];
+    this.prep = { ...(save.prep ?? {}) };
   }
 
   // ================= 事件で使う操作 =================
@@ -384,6 +540,26 @@ export class HistorySystem {
     return this.c.secede(id, "史実の事件として自立し") ? p.factionId : undefined;
   }
 
+  /**
+   * 歴史の攻城戦:攻める軍団が都市から km 以内なら、都市の前に陣を敷いて攻城戦を始める(3Dの攻城戦と同じ流れ)。
+   * 遠ければ、都市へ向けて進軍させ、着いたときの攻城戦にこの事件の印を付ける。
+   */
+  siege(att: ArmyState | undefined, cityId: string, histId: string, km = 420): string {
+    const city = this.c.cities.find((x) => x.id === cityId);
+    if (!att || !city) return "攻城に出る軍団がない";
+    if (distanceKm(att.army, city) > km) {
+      const route = this.c.planRoute(att.army.id, city);
+      if (route) this.c.orderMove(att.army.id, route);
+      this.tags.push({ a: att.army.id, city: cityId, histId, until: Math.floor(this.c.day) + 240 });
+      return `${att.army.name}が${city.name}へ向かいます(着いてから攻城戦になります)`;
+    }
+    att.army.lon = city.lon - 0.35;
+    att.army.lat = city.lat;
+    att.route = null;
+    const ev = this.c.startSiegeAt(att, city, histId);
+    return ev ? `${city.name}の攻城戦が始まります(${att.army.name})` : "攻城戦を始められませんでした";
+  }
+
   largestArmy(f: string, near?: { lon: number; lat: number }, km = 9999): ArmyState | undefined {
     return this.c.armies.filter((s) => s.army.factionId === f && s.status !== "fighting" && totalTroops(s.army) > 0 && (!near || distanceKm(s.army, near) <= km))
       .sort((a, b) => totalTroops(b.army) - totalTroops(a.army))[0];
@@ -401,6 +577,7 @@ export class HistorySystem {
         const route = this.c.planRoute(s.army.id, place);
         if (route) this.c.orderMove(s.army.id, route);
       }
+      this.tags.push({ a: att.army.id, b: def.army.id, histId, until: Math.floor(this.c.day) + 240 });
       this.flag(`${histId}_march`, "1");
       return `両軍が${place.name}へ向かいます(遠いため、着いてから戦いになります)`;
     }
@@ -417,13 +594,14 @@ export class HistorySystem {
 }
 
 // ================= 事件の一覧(17件) =================
-const H = (x: Ctx): HistorySystem => x.h;
-const roll = (x: Ctx, s: string): number => chance(`${Math.floor(x.c.day)}|${s}`);
-const pw = (x: Ctx, f: string | undefined): number => (f ? x.c.diplo.power(f) : 0);
+export const H = (x: Ctx): HistorySystem => x.h;
+export const roll = (x: Ctx, s: string): number => chance(`${Math.floor(x.c.day)}|${s}`);
+export const pw = (x: Ctx, f: string | undefined): number => (f ? x.c.diplo.power(f) : 0);
 
 export const EVENTS: HistEventDef[] = [
   {
     id: "han304", name: "漢の建国(劉淵の自立)", year: 304, month: 10, importance: "major",
+    cond: "劉淵が生きていて、どこかの国に仕えている(君主でない)",
     place: { name: "離石(左国城)", lon: 111.13, lat: 37.52 }, persons: ["liu_yuan", "liu_cong", "liu_xuan", "sima_ying"],
     background: "八王の乱のさなか、成都王司馬穎に仕えていた匈奴の劉淵は、北方の并州が乱れるのを機に、匈奴の五部に推されて帰郷を願い出た。",
     history: "304年、劉淵は離石(左国城)で大単于、ついで漢王を称し、漢(のちの前趙)を建てた。五胡十六国の幕開けとされる。",
@@ -470,7 +648,8 @@ export const EVENTS: HistEventDef[] = [
     },
   },
   {
-    id: "yongjia311", name: "永嘉の乱(洛陽の陥落)", year: 311, month: 6, importance: "critical",
+    id: "yongjia311", name: "永嘉の乱(洛陽の陥落)", year: 311, month: 6, importance: "critical", battle: ["jin", "han"],
+    cond: "漢(劉氏の国)と西晋があり、洛陽が西晋のもので、両国が同盟していない",
     place: { name: "洛陽", lon: 112.6, lat: 34.72 }, persons: ["liu_cong", "liu_yao", "shi_le", "wang_mi", "sima_chi", "sima_yue"],
     background: "漢の劉聡は、劉曜・王弥・石勒を送って西晋の都・洛陽に迫った。東海王司馬越は大軍を率いて都を出たまま病死し、その軍は石勒に寧平城で全滅させられた。洛陽は孤立している。",
     history: "311年6月、劉曜・王弥が洛陽を攻め落とし、懐帝(司馬熾)を捕らえた。宮殿は焼かれ、王公・官人の多くが殺された。中原の人々は江南へ逃れた(永嘉の乱)。",
@@ -482,10 +661,10 @@ export const EVENTS: HistEventDef[] = [
       jin: [
         { id: "stay", label: "洛陽にとどまる", kind: "historic", desc: "皇帝は都を離れず、守りを固める。", preview: "漢が総攻撃すれば洛陽は落ち、君主が捕らえられて国が滅ぶ(後継の国が残る)" },
         { id: "retreat", label: "長安へ遷都する", kind: "alt", desc: "洛陽を捨て、関中へ逃れて再起を図る。", preview: "洛陽は失うが、君主は無事。兵の1割を失い、安定が下がる" },
-        { id: "call", label: "諸侯に援軍を求め、洛陽で決戦する", kind: "bold", desc: "王浚・劉琨らに急使を送り、都を死守する。", preview: "国力しだいで守り切れる。敗れれば洛陽を失い君主も捕らわれる。金を使う" },
+        { id: "call", label: "諸侯に援軍を求め、洛陽で決戦する", kind: "bold", desc: "王浚・劉琨らに急使を送り、都を死守する。", preview: "金1,500で洛陽の守備兵+8,000。洛陽の攻城戦で勝敗が決まる(敗れれば君主も捕らわれる)" },
       ],
       han: [
-        { id: "storm", label: "洛陽を総攻撃する", kind: "historic", desc: "劉曜・王弥・石勒の軍を合わせて都を攻める。", preview: "洛陽を落とし、晋の君主を捕らえる見込みが高い" },
+        { id: "storm", label: "洛陽を総攻撃する", kind: "historic", desc: "劉曜・王弥・石勒の軍を合わせて都を攻める。", preview: "主力の士気+8で洛陽の攻城戦を始める。落とせば晋の君主を捕らえる" },
         { id: "siege", label: "包囲して降伏を待つ", kind: "alt", desc: "兵を損なわず、都の飢えを待つ。", preview: "洛陽の守備兵が半減し、晋の兵が減る。都はまだ落ちない" },
         { id: "divert", label: "洛陽を避け、関中・長安を狙う", kind: "bold", desc: "都を捨て置き、西の要地を先に取る。", preview: "洛陽は陥落しない。漢の名声が下がる" },
       ],
@@ -515,12 +694,13 @@ export const EVENTS: HistEventDef[] = [
         h.flag("emperor_safe", "1");
         return `晋は洛陽を捨てて${cap ? "長安へ遷った" : "逃れた"}。洛陽は漢のものとなったが、君主は無事`;
       }
-      const defense = pw(x, jin) * (p.jin === "call" ? 1.5 : 0.7) * (p.han === "siege" ? 1.6 : 1);
-      const attack = pw(x, han);
       if (p.jin === "call") {
         const purse = x.c.factionStates[jin];
         if (purse) purse.gold = Math.max(0, purse.gold - 1500);
         for (const f of ["wang_jun", "liu_kun"]) if (live(x.c, f)) x.c.diplo.addAmity(jin, f, 15);
+        const city = x.c.cities.find((k) => k.id === "luoyang")!;
+        const st = x.c.cityState(city);
+        x.c.cityStates.luoyang = { ...st, garrison: st.garrison + 8000 };
       }
       if (p.han === "siege" && p.jin !== "call") {
         const city = x.c.cities.find((k) => k.id === "luoyang")!;
@@ -530,24 +710,32 @@ export const EVENTS: HistEventDef[] = [
         h.flag("luoyang_siege", "1");
         return "漢は洛陽を包囲した。都の守備兵は飢えで半減したが、まだ落ちていない";
       }
-      if (roll(x, "yj-res") < defense / (defense + attack)) {
-        h.troops(han, 0.85);
-        h.flag("luoyang_held", "1");
-        x.c.loyalty.addFame(ruler?.id ?? "", 8);
-        return "晋は洛陽を守り切った。漢の軍は大きな損害を出して退いた";
+      // 洛陽の攻城戦(3Dの攻城戦と同じ)。勝敗は戦いで決まる
+      const att = h.largestArmy(han, { lon: 112.6, lat: 34.72 }, 900);
+      if (att) att.army.morale = Math.min(100, att.army.morale + (p.han === "storm" ? 8 : 0));
+      return `漢が洛陽に迫った${p.jin === "call" ? "(晋は諸侯の援軍で守りを固めた)" : ""}。${h.siege(att, "luoyang", "yongjia311")}`;
+    },
+    onBattle: (x, r) => {
+      const h = H(x);
+      const jin = r.jin!;
+      const han = r.han!;
+      if (owner("luoyang") === han) {
+        h.flag("luoyang_lost", "1");
+        const ruler = x.c.rulerOf(jin);
+        if (ruler && alive(x.c, ruler.id) && (ruler.residence === "luoyang" || !ruler.residence)) {
+          h.capture(ruler.id, han);
+          h.flag("emperor_captured", "1");
+          return `洛陽は陥落し、${ruler.name}は漢に捕らえられた`;
+        }
+        return "洛陽は陥落した";
       }
-      h.give("luoyang", han);
-      h.flag("luoyang_lost", "1");
-      const emp = ruler && alive(x.c, ruler.id) ? ruler : undefined;
-      if (emp) {
-        h.capture(emp.id, han);
-        h.flag("emperor_captured", "1");
-      }
-      return `洛陽は陥落した${emp ? `。${emp.name}は漢に捕らえられた` : ""}`;
+      h.flag("luoyang_held", "1");
+      return "洛陽は持ちこたえた";
     },
   },
   {
     id: "changan316", name: "長安の陥落・西晋の滅亡", year: 316, month: 11, importance: "major",
+    cond: "洛陽を守り切っておらず、漢があり、長安に晋の朝廷がある",
     place: { name: "長安", lon: 108.87, lat: 34.31 }, persons: ["liu_yao", "sima_ye", "qu_yun", "suo_chen"],
     background: "洛陽を失った晋の残る朝廷は、長安で愍帝(司馬鄴)を立てた。劉曜の軍が関中を囲み、城内は飢えに苦しんでいる。",
     history: "316年11月、愍帝は長安を出て劉曜に降り、西晋は滅んだ。江南の司馬睿が晋の再興を担うことになる。",
@@ -568,6 +756,7 @@ export const EVENTS: HistEventDef[] = [
       han: [
         { id: "press", label: "包囲を続け、降伏させる", kind: "historic", desc: "劉曜に関中の平定を続けさせる。", preview: "長安を得て、晋の君主を捕らえる" },
         { id: "withdraw", label: "包囲を解き、平陽を固める", kind: "alt", desc: "宮廷の乱れを恐れて兵を返す。", preview: "長安は落ちない" },
+        { id: "sweep", label: "長安を落とし、秦州まで追撃する", kind: "bold", desc: "関中と隴右を一気に平定する。", preview: "長安を得て、さらに上邽が晋のものなら奪う。兵の1割を失う" },
       ],
     },
     apply: (x, r, p) => {
@@ -575,6 +764,10 @@ export const EVENTS: HistEventDef[] = [
       const jin = r.jin!;
       const han = r.han!;
       if (p.han === "withdraw") return "漢は長安の包囲を解いた。西晋は命脈を保った";
+      if (p.han === "sweep") {
+        h.troops(han, 0.9);
+        if (owner("shanggui") === jin) h.give("shanggui", han);
+      }
       if (!x.c.atWar(jin, han)) x.c.setRelation(jin, han, "war");
       const ruler = x.c.rulerOf(jin);
       if (p.jin === "flee") {
@@ -595,6 +788,7 @@ export const EVENTS: HistEventDef[] = [
   },
   {
     id: "dongjin318", name: "東晋の成立(司馬睿の即位)", year: 318, month: 3, importance: "major",
+    cond: "司馬睿が君主の国がある",
     place: { name: "建康", lon: 118.8, lat: 32.05 }, persons: ["sima_rui", "wang_dao", "wang_dun", "zu_ti"],
     background: "愍帝の死が江南に伝わった。琅邪王司馬睿は晋王を称していたが、王導・王敦ら琅邪王氏の支えのもとで、帝位に即くよう勧められている。「王と馬、天下を共にす」と言われた。",
     history: "318年3月、司馬睿は建康で皇帝に即位した(元帝)。東晋の始まりである。",
@@ -638,6 +832,7 @@ export const EVENTS: HistEventDef[] = [
   },
   {
     id: "jinzhun318", name: "靳準の乱", year: 318, month: 8, importance: "major",
+    cond: "劉粲が漢の君主で、靳準が漢の宮廷にいる",
     place: { name: "平陽", lon: 111.52, lat: 36.08 }, persons: ["jin_zhun", "liu_can", "liu_yao", "shi_le", "jin_yuehua"],
     background: "劉聡が没し、子の劉粲が即位した。外戚の靳準は国政を握り、劉氏の一族を除こうとしている。",
     history: "318年8月、靳準は劉粲と劉氏の一族を殺し、漢天王を称した。劉曜は長安で即位し、石勒とともに平陽を攻めた。靳準は一族に殺された。",
@@ -678,6 +873,7 @@ export const EVENTS: HistEventDef[] = [
   },
   {
     id: "houzhao319", name: "後趙の成立(石勒の自立)", year: 319, month: 11, importance: "major",
+    cond: "石勒が君主の国がある",
     place: { name: "襄国", lon: 114.5, lat: 37.07 }, persons: ["shi_le", "zhang_bin", "shi_hu", "liu_yao"],
     background: "劉曜は長安で即位して国号を趙(前趙)とし、石勒に趙公を授けた。しかし石勒の使者が殺され、両者の間に溝が生じている。",
     history: "319年11月、石勒は襄国で趙王を称し、前趙から独立した(後趙)。以後、二つの趙が華北を争う。",
@@ -718,7 +914,8 @@ export const EVENTS: HistEventDef[] = [
     },
   },
   {
-    id: "qianzhao329", name: "前趙の滅亡(洛陽の戦い)", year: 329, month: 9, importance: "major",
+    id: "qianzhao329", name: "前趙の滅亡(洛陽の戦い)", year: 329, month: 9, importance: "major", battle: ["han", "shi"],
+    cond: "前趙と後趙があり、同盟・従属の関係にない",
     place: { name: "洛陽", lon: 112.6, lat: 34.72 }, persons: ["liu_yao", "liu_xi", "shi_le", "shi_hu"],
     background: "前趙の劉曜は洛陽を囲んだが、石勒は自ら大軍を率いて救援に向かった。劉曜は酒に酔って戦いに臨んだと伝えられる。",
     history: "328年12月、洛陽の戦いで劉曜は落馬して捕らえられ、のちに殺された。329年9月、太子の劉熙らが守る上邽が石虎に落とされ、前趙は滅んだ。",
@@ -728,13 +925,14 @@ export const EVENTS: HistEventDef[] = [
     ready: (x, r) => (!r.han ? "前趙がない" : !r.shi ? "後趙がない" : ["alliance", "vassal"].includes(x.c.relationOf(r.han, r.shi)) ? "前趙と後趙が同盟・従属の関係にある" : true),
     choices: {
       han: [
-        { id: "fight", label: "洛陽で石勒と決戦する", kind: "historic", desc: "全軍で石勒を迎え撃つ。", preview: "国力で劣れば、君主が捕らえられて国が滅ぶ" },
+        { id: "fight", label: "洛陽で石勒と決戦する", kind: "historic", desc: "全軍で石勒を迎え撃つ。", preview: "君主みずから主力を率いて洛陽の会戦。敗れれば君主が捕らえられ国が滅ぶ" },
         { id: "west", label: "関中に退き、上邽・長安を守る", kind: "alt", desc: "東の都市を捨てて西で守りを固める。", preview: "洛陽より東の都市を後趙に渡すが、国は保つ" },
         { id: "peace", label: "後趙に和を請い、成漢・前涼と結ぶ", kind: "bold", desc: "外交で生き残りを図る。", preview: "後趙が和を受ければ停戦。受けなければ戦いが続く" },
       ],
       shi: [
-        { id: "crush", label: "全軍で前趙を討つ", kind: "historic", desc: "石勒自ら洛陽へ向かう。", preview: "前趙の君主を捕らえる見込みがある" },
+        { id: "crush", label: "全軍で前趙を討つ", kind: "historic", desc: "石勒自ら洛陽へ向かう。", preview: "主力の士気+8で洛陽の会戦。勝てば前趙の君主を捕らえる" },
         { id: "hold", label: "守りを固め、前趙の自滅を待つ", kind: "alt", desc: "無理な決戦を避ける。", preview: "決戦は起きない" },
+        { id: "turn", label: "前趙と和し、東晋を討つ", kind: "bold", desc: "西を固めて南へ向かう。", preview: "前趙と不可侵、東晋と戦争" },
       ],
     },
     apply: (x, r, p) => {
@@ -752,19 +950,36 @@ export const EVENTS: HistEventDef[] = [
         return `前趙は関中に退いた(${moved.length}の都市を後趙に渡した)`;
       }
       if (p.shi === "hold") return "後趙は決戦を避けた。前趙は滅びなかった";
-      if (!x.c.atWar(han, shi)) x.c.setRelation(han, shi, "war");
-      if (roll(x, "qz-res") < pw(x, shi) / (pw(x, shi) + pw(x, han) * 0.9)) {
-        const ruler = x.c.rulerOf(han);
-        h.give("luoyang", shi);
-        if (ruler) h.capture(ruler.id, shi);
-        return `洛陽の戦いで${ruler?.name ?? "前趙の君主"}が捕らえられた${scenario.factions.find((f) => f.id === han)?.fallen ? "。前趙は滅んだ" : ""}`;
+      if (p.shi === "turn") {
+        x.c.setRelation(han, shi, "nonaggression");
+        const jin = jinOf(x.c);
+        if (jin) x.c.setRelation(shi, jin, "war");
+        return "後趙は前趙と和し、矛先を東晋に向けた";
       }
-      h.troops(shi, 0.85);
-      return "洛陽の戦いは前趙が持ちこたえ、後趙の軍は退いた";
+      if (!x.c.atWar(han, shi)) x.c.setRelation(han, shi, "war");
+      // 洛陽の戦い(3Dの会戦と同じ)。前趙が決戦を選べば、君主みずから軍を率いる
+      const ha = h.largestArmy(han, { lon: 112.6, lat: 34.72 }, 900);
+      const sa = h.largestArmy(shi, { lon: 112.6, lat: 34.72 }, 900);
+      const hr = x.c.rulerOf(han);
+      if (ha && hr && p.han === "fight" && alive(x.c, hr.id) && !x.c.postOf(hr.id)) x.c.appoint(hr.id, { kind: "army", id: ha.army.id });
+      if (sa && p.shi === "crush") sa.army.morale = Math.min(100, sa.army.morale + 8);
+      return h.battle(sa, ha, { name: "洛陽", lon: 112.6, lat: 34.72 }, "qianzhao329");
+    },
+    onBattle: (x, r, win) => {
+      const h = H(x);
+      if (win !== "shi") return "前趙は持ちこたえた";
+      const ruler = x.c.rulerOf(r.han!);
+      if (owner("luoyang") === r.han) h.give("luoyang", r.shi!);
+      if (ruler && alive(x.c, ruler.id)) {
+        h.capture(ruler.id, r.shi!);
+        return `${ruler.name}は落馬して捕らえられた${scenario.factions.find((f) => f.id === r.han)?.fallen ? "。前趙は滅んだ" : ""}`;
+      }
+      return "後趙が洛陽を取った";
     },
   },
   {
     id: "shihu334", name: "後趙の継承争い(石虎の簒奪)", year: 334, month: 11, importance: "major",
+    cond: "石弘が後趙の君主で、石虎が後趙の宮廷にいる",
     place: { name: "襄国", lon: 114.5, lat: 37.07 }, persons: ["shi_hong", "shi_hu", "cheng_xia", "xu_guang"],
     background: "333年に石勒が没し、世子の石弘が継いだ。しかし兵権を握る石虎は丞相・魏王となり、石弘の側近の程遐・徐光を殺した。",
     history: "334年11月、石虎は石弘を廃して自ら居摂趙天王となり、石弘はまもなく殺された。",
@@ -810,6 +1025,7 @@ export const EVENTS: HistEventDef[] = [
   },
   {
     id: "ranmin350", name: "後趙の崩壊・冉閔の台頭", year: 350, month: 2, importance: "major",
+    cond: "冉閔が後趙(石氏の国)にいる",
     place: { name: "鄴", lon: 114.35, lat: 36.33 }, persons: ["ran_min", "shi_jian2", "shi_zhi", "shi_zun"],
     background: "349年に石虎が没すると、石世・石遵・石鑑と短い間に君主が替わった。石虎の養孫である冉閔が兵を握っている。",
     history: "350年閏2月、冉閔は石鑑を殺して魏(冉魏)を建て、胡人の殺戮を命じた。後趙は石祗のもとで襄国に残ったが、351年に滅んだ。",
@@ -843,7 +1059,8 @@ export const EVENTS: HistEventDef[] = [
     },
   },
   {
-    id: "huanwen354", name: "桓温の北伐(関中への遠征)", year: 354, month: 2, importance: "major",
+    id: "huanwen354", name: "桓温の北伐(関中への遠征)", year: 354, month: 2, importance: "major", battle: ["jin", "qin"],
+    cond: "桓温が東晋にいて、前秦がある",
     place: { name: "灞上", lon: 109.1, lat: 34.3 }, persons: ["huan_wen", "fu_jian_jian", "fu_chang2", "wang_meng"],
     background: "東晋の桓温は、荊州の兵を率いて武関から関中に入り、前秦の都・長安に迫ろうとしている。",
     history: "354年、桓温は灞上まで進んだが、前秦が麦を刈り取って兵糧を断ったため、補給が続かずに退いた。王猛が桓温を訪ねたのはこのときである。",
@@ -884,23 +1101,30 @@ export const EVENTS: HistEventDef[] = [
           if (purse) purse.gold = Math.max(0, purse.gold - 800);
         }
         if (p.qin === "scorch") army.army.food = Math.max(5, army.army.food * 0.5);
-        const route = x.c.planRoute(army.army.id, { lon: 109.1, lat: 34.3 });
-        if (route) x.c.orderMove(army.army.id, route);
       }
       if (p.qin === "scorch") {
         const st = x.c.factionStates[qin];
         if (st) st.grain *= 0.8;
       }
-      if (p.qin === "meet") {
-        const qa = h.largestArmy(qin);
-        const route = qa ? x.c.planRoute(qa.army.id, { lon: 109.1, lat: 34.3 }) : null;
-        if (qa && route) x.c.orderMove(qa.army.id, route);
+      // 灞上の戦い(3Dの会戦と同じ)。遠ければ、両軍が灞上へ向かう。補給(食糧)が戦いを左右する
+      const qa = h.largestArmy(qin);
+      if (qa && p.qin === "meet") qa.army.morale = Math.min(100, qa.army.morale + 5);
+      const res = h.battle(army, qa, { name: "灞上", lon: 109.1, lat: 34.3 }, "huanwen354", p.qin === "meet" ? 600 : 300);
+      return `東晋の軍${army ? `(${army.army.name})` : ""}が関中へ向かった${p.qin === "scorch" ? "。前秦は麦を刈り取り、晋軍の兵糧は乏しい" : ""}。${res}`;
+    },
+    onBattle: (x, r, win) => {
+      if (win === "jin") {
+        x.c.loyalty.addFame("huan_wen", 10);
+        x.c.diplo.log(r.jin!, r.qin!, "灞上で晋軍が勝つ");
+        return "桓温は灞上で勝ち、関中の民は晋軍を迎えた";
       }
-      return `東晋の軍${army ? `(${army.army.name})` : ""}が関中へ向かった${p.qin === "scorch" ? "。前秦は麦を刈り取り、晋軍の兵糧は乏しい" : ""}`;
+      x.c.loyalty.addFame("huan_wen", -4);
+      return "桓温は勝てず、兵糧も乏しくなって退いた";
     },
   },
   {
     id: "fujian357", name: "苻堅の即位(苻生の廃位)", year: 357, month: 6, importance: "major",
+    cond: "苻生が前秦の君主で、苻堅が前秦の宮廷にいる",
     place: { name: "長安", lon: 108.87, lat: 34.31 }, persons: ["fu_sheng", "fu_jian", "wang_meng", "lv_polou", "fu_fa"],
     background: "前秦の苻生は暴虐で、臣下を次々に殺している。苻堅のもとには、王猛・呂婆楼・権翼らが集まり、苻生を除くよう勧めている。",
     history: "357年6月、苻堅は苻法らと兵を挙げて苻生を廃し(のち殺す)、大秦天王を称した。王猛を重く用いて国を立て直した。",
@@ -942,7 +1166,8 @@ export const EVENTS: HistEventDef[] = [
     },
   },
   {
-    id: "qianyan370", name: "前燕の滅亡(王猛の遠征)", year: 370, month: 11, importance: "major",
+    id: "qianyan370", name: "前燕の滅亡(王猛の遠征)", year: 370, month: 11, importance: "major", battle: ["qin", "yan"],
+    cond: "前秦と前燕があり、同盟・従属の関係にない",
     place: { name: "鄴", lon: 114.35, lat: 36.33 }, persons: ["wang_meng", "murong_wei", "murong_ping", "murong_chui", "fu_jian"],
     background: "前燕は慕容恪の死後、太傅の慕容評が権を握って腐敗し、名将の慕容垂は前秦へ亡命した。前秦の王猛が大軍を率いて東へ向かう。",
     history: "370年、王猛は潞川で慕容評の大軍を破り、鄴を落とした。慕容暐は捕らえられ、前燕は滅んだ。慕容氏の一族は長安へ移された。",
@@ -958,7 +1183,7 @@ export const EVENTS: HistEventDef[] = [
       ],
       yan: [
         { id: "ping", label: "慕容評に迎え撃たせる", kind: "historic", desc: "太傅が大軍を率いる。", preview: "国力しだいで、敗れれば君主が捕らわれる" },
-        { id: "chui", label: "名将に防衛を任せる", kind: "alt", desc: "有能な将に全権を委ねる。", preview: "防衛の力が上がる" },
+        { id: "chui", label: "名将に防衛を任せる", kind: "alt", desc: "有能な将に全権を委ねる。", preview: "慕容垂(いなければ慕容恪・慕容徳)が指揮し、士気+10" },
         { id: "cede", label: "洛陽を割いて和を請う", kind: "bold", desc: "領土を差し出して生き残る。", preview: "洛陽を前秦に渡して停戦" },
       ],
     },
@@ -980,19 +1205,29 @@ export const EVENTS: HistEventDef[] = [
         return res.ok ? "前燕は前秦に臣従した" : `前燕は従属を拒んだ(${res.text})`;
       }
       if (!x.c.atWar(qin, yan)) x.c.setRelation(qin, yan, "war");
-      const def = pw(x, yan) * (p.yan === "chui" ? 1.4 : 0.9);
-      if (roll(x, "qy") < pw(x, qin) / (pw(x, qin) + def)) {
-        const ruler = x.c.rulerOf(yan);
-        if (owner("ye") === yan) h.give("ye", qin);
-        if (ruler) h.capture(ruler.id, qin);
-        return `前秦が鄴を落とした${ruler ? `。${ruler.name}は捕らえられた` : ""}`;
-      }
-      h.troops(qin, 0.85);
-      return "前燕は前秦の遠征を退けた";
+      // 潞川の戦い(3Dの会戦と同じ)。王猛が率い、前燕は慕容評か名将が迎え撃つ
+      const place = { name: "潞川", lon: 113.1, lat: 36.3 };
+      const qa = h.largestArmy(qin, place, 900);
+      const ya = h.largestArmy(yan, place, 900);
+      if (qa && alive(x.c, "wang_meng") && P("wang_meng")!.factionId === qin && qa.army.commanderId !== "wang_meng") x.c.appoint("wang_meng", { kind: "army", id: qa.army.id });
+      const gen = p.yan === "chui" ? ["murong_chui", "murong_ke", "murong_de"].find((id) => alive(x.c, id) && P(id)!.factionId === yan) : ["murong_ping"].find((id) => alive(x.c, id) && P(id)!.factionId === yan);
+      if (ya && gen && ya.army.commanderId !== gen) x.c.appoint(gen, { kind: "army", id: ya.army.id });
+      if (ya && p.yan === "chui") ya.army.morale = Math.min(100, ya.army.morale + 10);
+      if (ya && p.yan === "ping") ya.army.morale = Math.max(10, ya.army.morale - 5);
+      return h.battle(qa, ya, place, "qianyan370");
+    },
+    onBattle: (x, r, win) => {
+      const h = H(x);
+      if (win !== "qin") return "前燕は前秦の遠征を退けた";
+      const ruler = x.c.rulerOf(r.yan!);
+      if (owner("ye") === r.yan) h.give("ye", r.qin!);
+      if (ruler && alive(x.c, ruler.id)) h.capture(ruler.id, r.qin!);
+      return `前秦が鄴を落とした${ruler ? `。${ruler.name}は捕らえられた` : ""}`;
     },
   },
   {
     id: "unify376", name: "前秦の華北統一(前涼・代の征服)", year: 376, month: 8, importance: "major",
+    cond: "前秦があり、前涼か代が残っている",
     place: { name: "姑臧", lon: 102.63, lat: 37.93 }, persons: ["fu_jian", "zhang_tianxi", "shiyijian", "liu_weichen"],
     background: "前燕を滅ぼした前秦は、西の前涼と北の代を残すのみとなった。苻堅は両国に使者を送り、服属を求めた。",
     history: "376年8月、前秦は前涼を滅ぼし(張天錫は降伏)、同年12月には代を滅ぼした。華北は前秦のもとに統一された。",
@@ -1008,10 +1243,12 @@ export const EVENTS: HistEventDef[] = [
       liang: [
         { id: "yield", label: "降伏する", kind: "historic", desc: "張天錫は抗えない。", preview: "前秦が征服を選べば、国は併合される" },
         { id: "resist", label: "徹底抗戦する", kind: "alt", desc: "河西の守りに賭ける。", preview: "併合されず、戦争になる" },
+        { id: "ally", label: "東晋と結んで挟み撃ちを図る", kind: "bold", desc: "遠い東晋に使者を送る。", preview: "東晋と同盟(友好度+30)し、前秦と戦争" },
       ],
       dai: [
         { id: "yield", label: "降伏する", kind: "historic", desc: "代王は老い、内紛もある。", preview: "前秦が征服を選べば、国は併合される" },
         { id: "resist", label: "草原へ退いて抵抗する", kind: "alt", desc: "遊牧の機動力で戦う。", preview: "併合されず、戦争になる" },
+        { id: "ally", label: "鉄弗部・東晋と結ぶ", kind: "bold", desc: "敵の敵と手を組む。", preview: "東晋と同盟(友好度+30)し、前秦と戦争" },
       ],
     },
     apply: (x, r, p) => {
@@ -1028,6 +1265,14 @@ export const EVENTS: HistEventDef[] = [
         if (p.qin === "tribute") {
           const res = x.c.diplo.act(qin, f, "vassal");
           out.push(`${name(f)}は${res.ok ? "臣従した" : "従属を拒んだ"}`);
+        } else if (p[role] === "ally") {
+          const jin = jinOf(x.c);
+          if (jin) {
+            x.c.diplo.addAmity(f, jin, 30);
+            x.c.setRelation(f, jin, "alliance");
+          }
+          x.c.setRelation(qin, f, "war");
+          out.push(`${name(f)}は東晋と結んで抵抗した`);
         } else if (p[role] === "yield" && pw(x, qin) > pw(x, f) * 3) {
           const n = name(f);
           x.c.annex(f, qin);
@@ -1041,7 +1286,8 @@ export const EVENTS: HistEventDef[] = [
     },
   },
   {
-    id: "feishui383", name: "淝水の戦い", year: 383, month: 11, importance: "critical",
+    id: "feishui383", name: "淝水の戦い", year: 383, month: 11, importance: "critical", battle: ["qin", "jin"],
+    cond: "前秦と東晋が戦争していて、両国に軍団がある",
     place: { name: "淝水(寿春の東)", lon: 116.7, lat: 32.6 }, persons: ["fu_jian", "fu_rong", "zhu_xu", "xie_an", "xie_xuan", "xie_shi", "liu_laozhi"],
     background: "華北を統一した苻堅は、「投鞭断流(鞭を投げ込めば流れも止まる)」と号する大軍で東晋に向かった。先鋒の苻融は寿春を落とし、淝水の西岸に陣を敷いた。東晋は謝安が指揮を執り、謝石・謝玄と北府兵の劉牢之が東岸に迫る。",
     history: "383年11月、謝玄は苻融に「少し退いて我々を渡らせよ」と求めた。前秦軍が後退すると、捕らわれていた晋将朱序が「秦軍敗れたり」と叫び、全軍が崩れた。苻融は戦死し、苻堅は流れ矢を受けて敗走した。",
@@ -1126,7 +1372,8 @@ export const EVENTS: HistEventDef[] = [
     },
   },
   {
-    id: "split384", name: "前秦の分裂(慕容垂・姚萇らの自立)", year: 384, month: 1, importance: "major",
+    id: "split384", name: "前秦の分裂(慕容垂の自立・後燕の建国)", year: 384, month: 1, importance: "major",
+    cond: "前秦が淝水で敗れたか不安定で、慕容垂が前秦にいて、前秦に亡命していること",
     place: { name: "長安", lon: 108.87, lat: 34.31 }, persons: ["murong_chui", "yao_chang", "murong_chong", "murong_hong", "fu_jian"],
     background: "淝水の敗戦で、前秦に服していた諸族の心は離れた。慕容垂は河北の鎮撫を願い出て、姚萇・慕容沖らも機をうかがっている。",
     history: "384年、慕容垂は燕王を称し(後燕)、姚萇は万年秦王を称し(後秦)、慕容泓・慕容沖は関中で挙兵した(西燕)。385年、苻堅は姚萇に捕らえられ殺された。",
@@ -1137,13 +1384,14 @@ export const EVENTS: HistEventDef[] = [
       if (x.h.flags.feishui_winner === r.qin) return "前秦は淝水で勝ち、安定している";
       const weak = x.h.flags.feishui_winner && x.h.flags.feishui_winner !== r.qin || (x.c.court.stability[r.qin] ?? 60) < 40;
       if (!weak) return "前秦は弱っていない(淝水の敗戦が起きていない)";
-      if (!["murong_chui", "yao_chang", "murong_chong"].some((id) => alive(x.c, id) && P(id)!.factionId === r.qin)) return "独立する人物が前秦にいない";
+      if (x.h.flags.chui_stayed) return "慕容垂は前燕に留まったため(369年の選択)、前秦にいない";
+      if (!(alive(x.c, "murong_chui") && P("murong_chui")!.factionId === r.qin)) return absent(x.c, "murong_chui", r.qin);
       return true;
     },
     choices: {
       qin: [
-        { id: "allow", label: "慕容垂の河北行きを許す", kind: "historic", desc: "苻堅は恩義を信じ、慕容垂を送り出す。", preview: "慕容垂・姚萇・慕容沖が各地で自立する(拠点があれば)" },
-        { id: "reward", label: "慕容垂を恩賞で引き留める", kind: "alt", desc: "金と官位で慕容垂をつなぎとめる。", preview: "金1,500。慕容垂の忠誠が大きく上がる。姚萇は自立するおそれ" },
+        { id: "allow", label: "慕容垂の河北行きを許す", kind: "historic", desc: "苻堅は恩義を信じ、慕容垂を送り出す。", preview: "慕容垂が鄴・中山で「燕(後燕)」を建てて自立する" },
+        { id: "reward", label: "慕容垂を恩賞で引き留める", kind: "alt", desc: "金と官位で慕容垂をつなぎとめる。", preview: "金1,500。慕容垂の忠誠+30。後燕は生まれない" },
         { id: "purge", label: "慕容氏を粛清する", kind: "bold", desc: "王猛の遺言に従い、慕容氏を除く。", preview: "慕容暐・慕容垂らを処刑。鮮卑の人々の忠誠が大きく下がる" },
       ],
     },
@@ -1161,24 +1409,21 @@ export const EVENTS: HistEventDef[] = [
         for (const id of ["murong_wei", "murong_chui", "murong_chong", "murong_hong"]) if (alive(x.c, id) && P(id)!.factionId === qin) x.c.court.kill(id, "execution", "慕容氏の粛清");
         for (const q of persons) if (q.people === "鮮卑") x.c.loyalty.add(q.id, -30, "慕容氏の粛清");
         x.c.court.addStability(qin, -15);
-        tryFound("yao_chang", ["anding"], "秦(後秦)", "万年秦王");
-        return `慕容氏は粛清された${out.length ? "。" + out.join("。") : ""}`;
+        return "慕容氏は粛清された(鮮卑の人々の心は離れた)";
       }
       if (p.qin === "reward") {
         const purse = x.c.factionStates[qin];
         if (purse) purse.gold = Math.max(0, purse.gold - 1500);
         x.c.loyalty.add("murong_chui", 30, "恩賞で引き留められる");
-        if ((x.c.loyalty.loyalty.yao_chang ?? 60) < 50) tryFound("yao_chang", ["anding"], "秦(後秦)", "万年秦王");
-        return `慕容垂は引き留められた${out.length ? "。" + out.join("。") : ""}`;
+        return "慕容垂は引き留められた";
       }
       tryFound("murong_chui", ["ye", "zhongshan", "xindu"], "燕(後燕)", "燕王");
-      tryFound("yao_chang", ["anding"], "秦(後秦)", "万年秦王");
-      tryFound("murong_chong", ["shangdang", "pingyang"], "燕(西燕)", "皇帝");
       return out.length ? out.join("。") : "自立を図る者はいたが、拠点を得られなかった";
     },
   },
   {
     id: "beiwei386", name: "北魏の成立(拓跋珪の代の再興)", year: 386, month: 1, importance: "major",
+    cond: "拓跋珪が生きていて、どこかの国に仕えている",
     place: { name: "盛楽", lon: 111.8, lat: 40.4 }, persons: ["tuoba_gui", "liu_kuren"],
     background: "代が前秦に滅ぼされたのち、什翼犍の孫の拓跋珪は独孤部の劉庫仁のもとで育った。前秦の崩壊を機に、諸部が拓跋珪を推している。",
     history: "386年正月、拓跋珪は牛川で代王に即き、4月に魏王と改めた(北魏)。",
@@ -1210,7 +1455,8 @@ export const EVENTS: HistEventDef[] = [
     },
   },
   {
-    id: "canhe395", name: "参合陂の戦い", year: 395, month: 11, importance: "major",
+    id: "canhe395", name: "参合陂の戦い", year: 395, month: 11, importance: "major", battle: ["yan", "wei"],
+    cond: "後燕(慕容垂・慕容宝の国)と北魏(拓跋珪の国)がある",
     place: { name: "参合陂", lon: 113.6, lat: 40.5 }, persons: ["murong_bao", "murong_chui", "tuoba_gui", "murong_lin"],
     background: "後燕の慕容垂は、太子の慕容宝に大軍を授けて北魏を討たせた。北魏の拓跋珪は兵を退き、後燕軍が疲れて引き返すのを待っている。",
     history: "395年11月、引き返す後燕軍は参合陂で北魏の奇襲を受けて大敗し、数万の兵が坑殺された。後燕は大きく傾いた。",
@@ -1222,6 +1468,7 @@ export const EVENTS: HistEventDef[] = [
       yan: [
         { id: "expedition", label: "慕容宝に北魏遠征を命じる", kind: "historic", desc: "太子に大軍を授けて北へ。", preview: "北魏と戦争になり、大軍が北へ向かう。帰り道で奇襲を受けるおそれ" },
         { id: "defend", label: "国境を守り、北魏の出方を見る", kind: "alt", desc: "遠征を避ける。", preview: "会戦は起きない" },
+        { id: "all", label: "慕容垂みずから全軍で親征する", kind: "bold", desc: "老将が自ら北へ向かう。", preview: "慕容垂が指揮し士気+10で北へ。奇襲されにくい(士気の低下が半分)" },
       ],
       wei: [
         { id: "ambush", label: "退いて誘い、参合陂で奇襲する", kind: "historic", desc: "敵の疲れを待ち、夜に襲う。", preview: "後燕の軍の士気が下がり、疲労がたまった状態で会戦になる" },
@@ -1241,10 +1488,12 @@ export const EVENTS: HistEventDef[] = [
       const place = { name: "参合陂", lon: 113.6, lat: 40.5 };
       const ya = h.largestArmy(yan, place, 900);
       const wa = h.largestArmy(wei, place, 900);
-      if (ya && alive(x.c, "murong_bao") && P("murong_bao")!.factionId === yan && ya.army.commanderId !== "murong_bao") x.c.appoint("murong_bao", { kind: "army", id: ya.army.id });
+      const leader = p.yan === "all" ? "murong_chui" : "murong_bao";
+      if (ya && alive(x.c, leader) && P(leader)!.factionId === yan && ya.army.commanderId !== leader) x.c.appoint(leader, { kind: "army", id: ya.army.id });
+      if (ya && p.yan === "all") ya.army.morale = Math.min(100, ya.army.morale + 10);
       if (p.wei === "ambush" && ya) {
-        ya.army.morale = Math.max(10, ya.army.morale - 15);
-        ya.army.fatigue = Math.min(100, ya.army.fatigue + 30);
+        ya.army.morale = Math.max(10, ya.army.morale - (p.yan === "all" ? 8 : 15));
+        ya.army.fatigue = Math.min(100, ya.army.fatigue + (p.yan === "all" ? 15 : 30));
         return `北魏は退いて後燕軍を誘った。${h.battle(wa, ya, place, "canhe395", 500)}`;
       }
       if (ya) {

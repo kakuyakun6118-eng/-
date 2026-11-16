@@ -10,6 +10,9 @@ export interface HistoryActions {
   campaign: () => Campaign;
   playerFactionId: () => string | null;
   focus: (lon: number, lat: number) => void;
+  /** 戦略マップに、戦場・関係都市・軍団の進軍経路を出す */
+  showMap: (place: { lon: number; lat: number }, cities: string[], armies: string[][]) => { routes: number; cities: number };
+  hideMap: () => void;
   onChanged: () => void;
 }
 
@@ -37,6 +40,8 @@ export class HistoryEventScreen {
   }
 
   close(): void {
+    this.actions.hideMap();
+    this.root.classList.remove("hist-mapmode");
     const c = this.actions.campaign();
     if (this.current && this.current.mode !== "decide") c.history.dismiss(this.current.id, this.current.mode);
     this.current = null;
@@ -83,7 +88,7 @@ export class HistoryEventScreen {
 
     const right = el("div", "hist-col");
     // 地図上の地点(小さな略図と、地図を動かす釦)
-    right.append(el("h4", "", `発生地点:${d.place.name}`), this.miniMap(d), this.btn("地図でこの地点を見る", () => this.actions.focus(d.place.lon, d.place.lat), "hist-focus"));
+    right.append(el("h4", "", `発生地点:${d.place.name}`), this.miniMap(d), this.btn("戦略マップで見る(関係都市・軍団・進軍経路・戦場)", () => this.mapMode(d), "hist-focus"));
     if (cur.mode === "decide") {
       const role = Object.keys(d.choices).find((r) => roles[r] === this.actions.playerFactionId());
       right.append(el("h4", "", `選択(${scenario.factions.find((x) => x.id === roles[role!])?.name ?? ""})`));
@@ -115,6 +120,39 @@ export class HistoryEventScreen {
     }
     box.replaceChildren(head, el("div", "hist-body"));
     (box.querySelector(".hist-body") as HTMLElement).append(left, right);
+  }
+
+  /** 戦略マップ(3Dの地形)の上に、事件の位置を示す。事件の画面は右側に寄せる */
+  private mapMode(d: HistEventDef): void {
+    const c = this.actions.campaign();
+    const h = c.history;
+    const roles = h.records[d.id].roles ?? d.roles(h.ctx());
+    const cities = c.cities.filter((k) => k.kind !== "pass").sort((a, b) => Math.hypot(a.lon - d.place.lon, a.lat - d.place.lat) - Math.hypot(b.lon - d.place.lon, b.lat - d.place.lat)).slice(0, 5).map((k) => k.id);
+    const sides = (d.battle ?? Object.keys(roles)).map((r) => roles[r]).filter((f): f is string => !!f);
+    const armies = sides.map((f) => {
+      const a = h.largestArmy(f);
+      return a ? [a.army.id] : [];
+    });
+    const res = this.actions.showMap(d.place, cities, armies);
+    this.root.classList.add("hist-mapmode");
+    const box = this.root.querySelector(".hist-inner") as HTMLElement;
+    const legend = el("div", "hist-legend");
+    const colors = ["#e2705c", "#6fa8dc", "#9fd28a"];
+    legend.append(el("h4", "", `戦略マップ:${d.place.name}`), el("p", "", `赤い輪=戦場、金の輪=関係都市(${res.cities})、点線=各国の主力から戦場への進軍経路(${res.routes}本。見込みで、軍はまだ動いていない)`));
+    sides.forEach((f, i) => {
+      const a = armies[i][0] ? c.stateOf(armies[i][0]) : undefined;
+      const row = el("p", "hist-legend-row");
+      const sw = el("i");
+      sw.style.background = colors[i] ?? "#ccc";
+      row.append(sw, document.createTextNode(`${scenario.factions.find((x) => x.id === f)?.name ?? f}:${a ? `${a.army.name}(${Math.round((a.army.troops.infantry + a.army.troops.cavalry + a.army.troops.archer) / 1000)}千)` : "軍団なし"}`));
+      legend.append(row);
+    });
+    legend.append(this.btn("事件の画面に戻る", () => {
+      this.actions.hideMap();
+      this.root.classList.remove("hist-mapmode");
+      this.render();
+    }, "hist-back"));
+    box.replaceChildren(legend);
   }
 
   private btn(label: string, f: () => void, cls = ""): HTMLButtonElement {
@@ -155,14 +193,49 @@ export class HistoryEventScreen {
   }
 }
 
-/** 歴史年表:史実の出来事と、ゲームの中の出来事を並べて比べる */
+/** 歴史年表(史実とゲームの比較)と、歴史の事件の一覧 */
 export class TimelineScreen {
+  private tab: "timeline" | "list" = "timeline";
+
   constructor(private readonly root: HTMLElement, private readonly campaign: () => Campaign) {
     (root.querySelector(".timeline-close") as HTMLElement).addEventListener("click", () => (this.root.hidden = true));
+    for (const b of root.querySelectorAll<HTMLButtonElement>(".tl-tab")) b.addEventListener("click", () => {
+      this.tab = b.dataset.tab as "timeline" | "list";
+      this.open();
+    });
   }
 
   open(): void {
     this.root.hidden = false;
+    for (const b of this.root.querySelectorAll<HTMLButtonElement>(".tl-tab")) b.classList.toggle("on", b.dataset.tab === this.tab);
+    if (this.tab === "list") return this.renderList();
+    this.renderTimeline();
+  }
+
+  /** 事件の一覧:名称・予定の年月・発生の条件・関係人物・史実の結果・ゲームの結果・状態 */
+  private renderList(): void {
+    const h = this.campaign().history;
+    const table = el("table", "ev-table");
+    const head = el("tr");
+    for (const t of ["年月", "事件", "発生の条件", "関係人物", "史実の結果", "このゲームの結果", "状態"]) head.append(el("th", "", t));
+    table.append(head);
+    for (const d of h.defs) {
+      const rec = h.records[d.id];
+      const tr = el("tr");
+      tr.dataset.status = rec.status;
+      const ppl = d.persons.map((id) => persons.find((p) => p.id === id)?.name ?? "").filter(Boolean).join("・");
+      tr.append(el("td", "", `${d.year}年${d.month}月`), el("td", "ev-name", d.name), el("td", "", d.cond ?? ""), el("td", "", ppl), el("td", "", d.history), el("td", "", rec.result ?? "—"), el("td", "ev-status", STATUS_LABEL[rec.status]));
+      table.append(tr);
+    }
+    const counts: Record<string, number> = {};
+    for (const r of Object.values(h.records)) counts[r.status] = (counts[r.status] ?? 0) + 1;
+    const sum = el("p", "ev-sum", `全${h.defs.length}件:` + Object.entries(counts).map(([k, v]) => `${STATUS_LABEL[k as keyof typeof STATUS_LABEL]} ${v}`).join("・"));
+    const wrap = el("div", "ev-wrap");
+    wrap.append(sum, table);
+    (this.root.querySelector(".timeline-body") as HTMLElement).replaceChildren(wrap);
+  }
+
+  private renderTimeline(): void {
     const h = this.campaign().history;
     const hist = el("div", "tl-col");
     hist.append(el("h3", "", "史実の歴史"));

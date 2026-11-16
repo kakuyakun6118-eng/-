@@ -12,8 +12,8 @@ export class RouteLine {
   private readonly material: THREE.MeshBasicMaterial;
   private positions: THREE.Vector3[] = [];
 
-  constructor(private readonly heightAt: (lon: number, lat: number) => number) {
-    this.material = new THREE.MeshBasicMaterial({ color: 0xf2d489, transparent: true, opacity: 0.95, depthTest: false });
+  constructor(private readonly heightAt: (lon: number, lat: number) => number, color = 0xf2d489) {
+    this.material = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95, depthTest: false });
     this.dots = new THREE.InstancedMesh(new THREE.CircleGeometry(1, 12).rotateX(-Math.PI / 2), this.material, MAX_DOTS);
     this.dots.frustumCulled = false;
     this.dots.renderOrder = 3;
