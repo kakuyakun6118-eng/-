@@ -2,12 +2,14 @@
 // ここは計算だけで、3D表示のことは知らない。変化があったら、登録された関数で知らせる。
 import { cityLevelOf, persons, personById, resolveCityLayout, scenario, totalTroops } from "../data";
 import successionRules from "../data/rules/succession.json";
+import relationRules from "../data/rules/diplomacyStart.json";
 import { autoResolve } from "./autoBattle";
 import { createBattleSetup, governorIdOf, initialCityState, placeName } from "./battle";
 import { garrisonCap, StrategyAi, strategyRules } from "./strategy";
 import { chance, setCurrentSpoils, Spoils, type CaptureRecord, type PendingCapture } from "./spoils";
 import { affinity, isKin, LoyaltySystem } from "./loyalty";
 import { cityEcon, Economy } from "./economy";
+import { Diplomacy, type DiploCommand } from "./diplomacy";
 import { seasonOf, type CampaignSave, type DynastySave, type Relation } from "./save";
 import type { BattleResult, CommanderFate, SideResult } from "../battle/types";
 import type { Army, ArmyStatus, BattleEvent, City, CityState, Faction, Person, PersonRole, PersonStatus, UnitTypeId } from "../data/types";
@@ -68,6 +70,14 @@ export interface CampaignListener {
   onCapturePending?(pc: PendingCapture): void;
 }
 
+/** 開始時の関係:シナリオの戦争・同盟に、史料にもとづく(または推定の)敵対・友好・従属を重ねる */
+export function initialRelations(): Record<string, Relation> {
+  const extra = (relationRules as unknown as Record<string, Record<string, { rel: Relation }>>)[scenario.id] ?? {};
+  const out: Record<string, Relation> = {};
+  for (const [k, v] of Object.entries(extra)) out[k] = v.rel;
+  return { ...out, ...(scenario.relations as Record<string, Relation> | undefined) };
+}
+
 export class Campaign {
   /** ゲーム開始からの日数(小数。0.5 = 1日目の正午) */
   day = 0;
@@ -106,6 +116,7 @@ export class Campaign {
       const r = this.economy.report(f.id);
       this.factionStates[f.id] = { gold: r.income.total * 3, grain: r.income.grain * 3 };
     }
+    this.diplo = new Diplomacy(this);
   }
 
   /** 勢力の、1か月の収入(支出を引く前) */
@@ -179,7 +190,7 @@ export class Campaign {
   }
 
   /** 勢力の組ごとの関係。書かれていない組は和平 */
-  readonly relations: Record<string, Relation> = { ...(scenario.relations as Record<string, Relation> | undefined) };
+  readonly relations: Record<string, Relation> = initialRelations();
   private relationSince: Record<string, number> = {};
   /** 操作している勢力。null のあいだは、敵の自動行動(戦略AI)は動かない */
   playerFactionId: string | null = null;
@@ -197,9 +208,12 @@ export class Campaign {
   readonly loyalty!: LoyaltySystem;
   /** 財政・官職・内政 */
   readonly economy!: Economy;
+  /** 外交(友好度・条約・婚姻・援軍) */
+  readonly diplo!: Diplomacy;
 
   relationOf(a: string, b: string): Relation {
-    return this.relations[[a, b].sort().join("|")] ?? "peace";
+    const r = this.relations[[a, b].sort().join("|")] ?? "neutral";
+    return r === "peace" ? "neutral" : r;
   }
 
   atWar(a: string, b: string | undefined): boolean {
@@ -208,8 +222,11 @@ export class Campaign {
 
   setRelation(a: string, b: string, relation: Relation): void {
     const key = [a, b].sort().join("|");
-    this.relations[key] = relation;
+    const before = this.relationOf(a, b);
+    const after = relation === "peace" ? "neutral" : relation;
+    this.relations[key] = after;
     this.relationSince[key] = Math.floor(this.day);
+    if (before !== after) this.diplo?.onRelation(a, b, before, after);
   }
 
   /** 関係が最後に変わってからの日数(開始時からの関係は、十分に長いものとして扱う) */
@@ -241,48 +258,68 @@ export class Campaign {
     if (i < 0 || !this.playerFactionId) return;
     const [x] = this.proposals.splice(i, 1);
     if (accept) {
-      this.setRelation(from, this.playerFactionId, x.kind === "peace" ? "peace" : "alliance");
+      this.setRelation(from, this.playerFactionId, x.kind === "peace" ? "neutral" : "alliance");
+      if (x.kind === "alliance") {
+        this.diplo.treaties[[from, this.playerFactionId].sort().join("|")] = { kind: "alliance", until: Math.floor(this.day) + 360 * 3 };
+        this.diplo.counts.alliances++;
+      }
+      this.diplo.addAmity(from, this.playerFactionId, 15);
+      this.diplo.log(from, this.playerFactionId, x.kind === "peace" ? "和平(申し入れを受ける)" : "同盟(申し入れを受ける)");
       this.addNews(`${factionName(from)}と${x.kind === "peace" ? "和睦" : "同盟"}しました`);
     }
   }
 
   /**
-   * プレイヤーからの外交。宣戦はすぐに成り立つ。和睦と同盟は、相手が受けるかどうかを兵力と状況で決める。
-   * 結果を、画面に出す文で返す。
+   * プレイヤーからの外交(画面の入口)。使者・贈り物・婚姻の2人などは opts で渡す。
+   * 結果を、画面に出す文で返す。古い呼び方("peace")は和平として扱う。
    */
-  diplomacy(target: string, action: "war" | "peace" | "alliance"): string {
+  diplomacy(target: string, action: DiploCommand | "peace", opts: Parameters<Diplomacy["act"]>[3] = {}): string {
     const me = this.playerFactionId;
     if (!me || me === target) return "操作する勢力を選んでください";
-    const now = this.relationOf(me, target);
-    const name = factionName(target);
-    if (this.relationAge(me, target) < 90) return `${name}との関係は変わったばかりです(90日たつまで変えられません)`;
-    const others = scenario.factions.filter((f) => f.id !== me && f.id !== target);
-    if (action === "war") {
-      if (now === "war") return "すでに戦争中です";
-      this.setRelation(me, target, "war");
-      this.addNews(`${factionName(me)}が${name}に宣戦しました`);
-      return `${name}に宣戦しました`;
+    return this.diplo.act(me, target, action, opts).text;
+  }
+
+  /** 戦ってよい相手か:戦争中の国。援軍の軍団は、助けている国の敵とも戦う(条約のある国とは戦わない) */
+  hostileTo(a: Army, factionId: string | undefined): boolean {
+    if (factionId === undefined || factionId === a.factionId) return false;
+    if (this.atWar(a.factionId, factionId)) return true;
+    const m = this.diplo?.aidOf(a.id);
+    return !!m && !m.returning && m.forFaction !== factionId && this.atWar(m.forFaction, factionId) && !["alliance", "vassal", "nonaggression"].includes(this.relationOf(a.factionId, factionId));
+  }
+
+  /** 降伏:相手の国の都市・軍団・人物を、こちらの国に加える。君主は臣下になる */
+  annex(target: string, into: string): void {
+    const oldRuler = this.rulerOf(target);
+    for (const c of this.cities) if (scenario.cityOwners[c.id] === target) {
+      scenario.cityOwners[c.id] = into;
+      this.listener.onCityCaptured(c.id, into);
     }
-    if (action === "peace") {
-      if (now !== "war") return "戦争中ではありません";
-      const theirWars = others.filter((f) => this.relationOf(target, f.id) === "war").length;
-      // 収蔵している名品の外交の効果で、相手が少し応じやすくなる
-      const persuasion = 1 - Math.min(0.3, this.spoils.factionEffects(me).diplomacy / 100);
-      if (this.strengthOf(me) >= this.strengthOf(target) * 0.8 * persuasion || theirWars >= 1) {
-        this.setRelation(me, target, "peace");
-        this.addNews(`${factionName(me)}と${name}が和睦しました`);
-        const r = this.rulerOf(me);
-        if (r) this.loyalty.addFame(r.id, 2);
-        return `${name}は和睦を受け入れました`;
-      }
-      return `${name}は和睦を断りました(相手のほうが優勢で、ほかに敵もいません)`;
+    for (const s of this.armies) if (s.army.factionId === target) {
+      this.listener.onArmyRemoved(s);
+      s.army.factionId = into;
+      this.listener.onArmyAdded(s);
     }
-    if (now !== "peace") return now === "alliance" ? "すでに同盟しています" : "戦争中の相手とは、先に和睦が必要です";
-    const common = others.some((f) => this.relationOf(me, f.id) === "war" && this.relationOf(target, f.id) === "war");
-    if (!common) return `${name}は同盟を断りました(共通の敵がいません)`;
-    this.setRelation(me, target, "alliance");
-    this.addNews(`${factionName(me)}と${name}が同盟しました`);
-    return `${name}と同盟しました`;
+    for (const p of persons) if (p.factionId === target && this.personStatus(p.id) !== "dead") this.spoils.setFaction(p.id, into);
+    if (oldRuler) {
+      this.setRole(oldRuler.id, "general");
+      this.loyalty.rebase(oldRuler.id, "降伏して臣下となる", 45);
+    }
+    for (const [id, s] of Object.entries(this.spoils.state)) if (!s.cityId && s.owner === target) Object.assign(this.spoils.state[id], { owner: into, holderId: null });
+    const a = this.factionStates[target];
+    const b = (this.factionStates[into] ??= { gold: 0, grain: 0 });
+    if (a) {
+      b.gold += a.gold;
+      b.grain += a.grain;
+      a.gold = 0;
+      a.grain = 0;
+    }
+    const f = scenario.factions.find((x) => x.id === target);
+    if (f) {
+      const day = Math.floor(this.day);
+      this.dynasty.fallen[target] = { day, by: into };
+      f.fallen = { day, by: into };
+    }
+    this.addNews(`${factionName(target)}が${factionName(into)}に降伏し、その国に加わりました`);
   }
 
   /** 徴兵:金を払って、都市の守備兵を増やす。できないときは理由を返す */
@@ -425,6 +462,7 @@ export class Campaign {
       dynasty: this.serializeDynasty(),
       economy: this.economy.serialize(),
       loyalty: this.loyalty.serialize(),
+      diplomacy: this.diplo.serialize(),
     });
   }
 
@@ -447,7 +485,7 @@ export class Campaign {
     Object.assign(this.cityStates, data.cityStates);
     // 関係は、シナリオの最初の関係に、セーブにある分を重ねる(古いセーブには関係が入っていない)
     for (const k of Object.keys(this.relations)) delete this.relations[k];
-    Object.assign(this.relations, scenario.relations, data.relations);
+    Object.assign(this.relations, initialRelations(), data.relations);
     this.relationSince = { ...data.relationSince };
     this.news.length = 0;
     this.news.push(...(data.news ?? []));
@@ -459,6 +497,7 @@ export class Campaign {
     this.restoreRoles(data);
     this.economy.restore(data.economy);
     this.loyalty.restore(data.loyalty);
+    this.diplo.restore(data.diplomacy);
     this.pendingAuto.length = 0;
     for (const k of Object.keys(this.personStates)) delete this.personStates[k];
     Object.assign(this.personStates, data.personStates);
@@ -540,7 +579,7 @@ export class Campaign {
   }
 
   private hostile(a: Army, factionId: string | undefined): boolean {
-    return this.atWar(a.factionId, factionId);
+    return this.hostileTo(a, factionId);
   }
 
   /** 都市の大きさ(度)。軍団が都市の中に入り込まないために使う */
@@ -631,7 +670,9 @@ export class Campaign {
       const passId = this.grid.gates.get(cell);
       // 関所は、持ち主と同盟の勢力だけが通れる(和平の相手でも、通してはもらえない)
       const owner = passId === undefined ? undefined : scenario.cityOwners[passId];
-      return owner !== undefined && owner !== army.factionId && this.relationOf(army.factionId, owner) !== "alliance";
+      if (owner === undefined || owner === army.factionId) return false;
+      const r = this.relationOf(army.factionId, owner);
+      return r !== "alliance" && r !== "vassal";
     };
   }
 
@@ -737,7 +778,9 @@ export class Campaign {
         this.collectIncome();
         this.trimEvents();
         this.loyalty.monthly();
+        this.diplo.monthly();
       }
+      this.diplo.daily();
       if (this.playerFactionId !== null) this.strategy.daily(d + 1);
       this.listener.onDayChanged(d + 1);
     }
@@ -1127,7 +1170,7 @@ export class Campaign {
       }
       if (captor) this.setRelation(id, captor, "war");
     }
-    for (const a of newIds) for (const b of newIds) if (a < b) this.setRelation(a, b, "peace");
+    for (const a of newIds) for (const b of newIds) if (a < b) this.setRelation(a, b, "neutral");
     const fallback = captor ?? newIds[0] ?? null;
     const claim = (lon: number, lat: number): string | null => {
       let best: string | null = null;
@@ -1187,13 +1230,27 @@ export class Campaign {
         this.armies.splice(this.armies.indexOf(s), 1);
       }
     }
-    // 金・兵糧:都市の数に応じて分ける。名品と捕虜も、いちばん大きい後継国家(無ければ捕らえた勢力)へ
-    const total = Object.values(shares).reduce((a, b) => a + b, 0) || 1;
-    for (const [to, n] of Object.entries(shares)) {
-      const st = (this.factionStates[to] ??= { gold: 0, grain: 0 });
-      st.gold += Math.round(purse.gold * n / total);
-      st.grain += Math.round(purse.grain * n / total);
+    // 金・兵糧:受け継いだ都市の人口に応じて分ける。ただし、その国の収入の1年半分まで(残りは戦乱で散逸する)。
+    // 小さな後継国家が、もとの国の蓄えを丸ごと抱え込まないように。名品と捕虜は、いちばん大きい後継国家(無ければ捕らえた勢力)へ
+    const popOf: Record<string, number> = {};
+    for (const c of myCities) {
+      const to = scenario.cityOwners[c.id];
+      if (shares[to]) popOf[to] = (popOf[to] ?? 0) + Math.max(1, cityEcon(c, this.cityState(c)).pop);
     }
+    const total = Object.values(popOf).reduce((a, b) => a + b, 0) || 1;
+    let scattered = 0;
+    for (const [to, n] of Object.entries(popOf)) {
+      const st = (this.factionStates[to] ??= { gold: 0, grain: 0 });
+      const inc = this.economy.report(to).income;
+      const g = Math.round(purse.gold * n / total);
+      const gr = Math.round(purse.grain * n / total);
+      const capG = Math.max(1500, inc.total * 18);
+      const capR = Math.max(1500, inc.grain * 18);
+      st.gold += Math.min(g, capG);
+      st.grain += Math.min(gr, capR);
+      scattered += Math.max(0, g - capG);
+    }
+    if (scattered > 0) this.dynasty.scattered = (this.dynasty.scattered ?? 0) + scattered;
     this.factionStates[factionId] = { gold: 0, grain: 0 };
     const heir = newIds[0] ?? captor;
     if (heir) {
@@ -1327,7 +1384,7 @@ export class Campaign {
         if (d > CONTACT_RANGE * 1.4) s.ignore.delete(o.army.id);
         continue;
       }
-      if (d < CONTACT_RANGE && this.hostile(s.army, o.army.factionId)) {
+      if (d < CONTACT_RANGE && (this.hostileTo(s.army, o.army.factionId) || this.hostileTo(o.army, s.army.factionId))) {
         this.startEvent(s, "field_battle", o, null);
         return true;
       }
@@ -1335,7 +1392,7 @@ export class Campaign {
     for (const c of this.cities) {
       if (c.id !== s.targetCityId) continue;
       const owner = scenario.cityOwners[c.id];
-      if (!this.hostile(s.army, owner)) continue;
+      if (!this.hostileTo(s.army, owner)) continue;
       if (Math.hypot(c.lon - s.army.lon, c.lat - s.army.lat) < this.cityReach(c) + 0.3) {
         this.startEvent(s, "siege_battle", null, c);
         return true;
@@ -1374,6 +1431,7 @@ export class Campaign {
       status: "pending",
       createdAt: { day: Math.floor(this.day), text: this.dateText() },
     };
+    this.addSupporters(event, attacker, defender);
     this.events.push(event);
     // 両軍を止めて対峙させ、時間も止める(プレイヤーが状況を確かめられるように)
     this.setStatus(attacker, "fighting");
@@ -1391,6 +1449,73 @@ export class Campaign {
   }
 
   /**
+   * 共同作戦:戦いの場の近く(約0.8度)にいて、手の空いている同盟国・援軍の軍団が加勢する。
+   * 連携の度合いは、指揮官どうしの相性・加勢する指揮官の統率と名声で決まる(0.5〜1)。離れた軍団は加わらない。
+   */
+  private addSupporters(event: BattleEvent, attacker: ArmyState, defender: ArmyState | null): void {
+    const sides: ["attacker" | "defender", ArmyState | null, string, string][] = [
+      ["attacker", attacker, event.attackerFactionId, event.defenderFactionId],
+      ["defender", defender, event.defenderFactionId, event.attackerFactionId],
+    ];
+    const used = new Set([attacker.army.id, defender?.army.id]);
+    for (const [side, main, mine, foe] of sides) {
+      if (!main) continue; // 都市の守りには、加勢を入れない(守備兵の計算を分けないため)
+      const lead = persons.find((p) => p.id === main.army.commanderId);
+      for (const o of this.armies) {
+        if (used.has(o.army.id) || o.status === "fighting" || totalTroops(o.army) <= 0) continue;
+        if (o.army.factionId === mine) continue; // 同じ国の軍団は、これまでどおり別々に戦う
+        if (Math.hypot(o.army.lon - event.location.lon, o.army.lat - event.location.lat) > 0.8) continue;
+        const aid = this.diplo.aidOf(o.army.id);
+        const friend = (aid && !aid.returning && aid.forFaction === mine) || ["alliance", "vassal"].includes(this.relationOf(o.army.factionId, mine));
+        if (!friend || !this.hostileTo(o.army, foe)) continue;
+        const c = persons.find((p) => p.id === o.army.commanderId);
+        const aff = c && lead ? affinity(c, lead).value : 50;
+        const efficiency = Math.max(0.5, Math.min(1, 0.45 + aff / 250 + (c ? c.leadership / 400 + (this.loyalty.fame[c.id] ?? 0) / 1000 : 0)));
+        (event.supporters ??= []).push({ side, armyId: o.army.id, efficiency: Math.round(efficiency * 100) / 100 });
+        used.add(o.army.id);
+        o.route = null;
+        this.setStatus(o, "fighting");
+      }
+    }
+    if (event.supporters?.length) {
+      const names = event.supporters.map((x) => this.stateOf(x.armyId)?.army.name).filter(Boolean).join("・");
+      this.addNews(`${event.location.name}の戦いに、${names}が加勢しました(共同作戦)`);
+    }
+  }
+
+  /** 共同作戦の結果:陣営の損害を、兵の割合で加勢した軍団にも分ける。本隊の結果からは、その分を引く */
+  private splitSupporters(event: BattleEvent, result: BattleResult): void {
+    for (const sup of event.supporters ?? []) {
+      const s = this.stateOf(sup.armyId);
+      const r = result.sides[sup.side];
+      if (!s || !r) continue;
+      const after = { ...s.army.troops };
+      for (const k of ["infantry", "cavalry", "archer"] as const) {
+        const rate = r.before[k] > 0 ? r.after[k] / r.before[k] : 1;
+        after[k] = Math.max(0, Math.min(s.army.troops[k], Math.round(s.army.troops[k] * rate)));
+        r.before[k] = Math.max(0, r.before[k] - s.army.troops[k]);
+        r.after[k] = Math.max(0, r.after[k] - after[k]);
+      }
+      s.army.troops = after;
+      s.army.morale = r.morale;
+      s.army.fatigue = r.fatigue;
+      s.route = null;
+      if (totalTroops(s.army) <= 0) {
+        this.armies.splice(this.armies.indexOf(s), 1);
+        this.listener.onArmyRemoved(s);
+        continue;
+      }
+      this.setStatus(s, "camping");
+      const ally = factionName(s.army.factionId);
+      const helped = sup.side === "attacker" ? event.attackerFactionId : event.defenderFactionId;
+      const won = result.winner === sup.side;
+      if (won) this.diplo.addAmity(s.army.factionId, helped, 5);
+      this.diplo.log(s.army.factionId, helped, `${event.location.name}の戦いで共同作戦(${won ? "勝利" : result.winner === "draw" ? "引き分け" : "敗北"})`);
+      void ally;
+    }
+  }
+
+  /**
    * 会戦の結果を、戦略マップの軍団へ書き戻す。会戦側のデータを反映する入口は、ここだけにする。
    * 兵力・士気・疲労・食糧・指揮官の状態を更新し、イベントを決着済みにして記録を残す。
    * 壊滅した軍団は地図から消え、敗れた軍団は勝者から離れる方向へ後退する。
@@ -1398,6 +1523,7 @@ export class Campaign {
   applyBattleResult(result: BattleResult): void {
     const event = this.eventOf(result.battleId);
     if (!event || event.status === "completed") return;
+    this.splitSupporters(event, result);
     event.status = "completed";
     event.record = {
       winner: result.winner,

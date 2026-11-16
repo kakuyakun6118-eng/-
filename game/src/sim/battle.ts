@@ -170,6 +170,20 @@ export function createBattleSetup(
     if (city) defender = citySide(city, event.defenderFactionId, cityStateOf(city));
   }
   if (!defender) return null;
+  const att = armySide("attacker", attacker);
+  // 共同作戦:加勢する軍団の兵を陣営に加える。士気は、連携の度合いで割り引いて兵数で平均する
+  for (const sup of event.supporters ?? []) {
+    const a = armyOf(sup.armyId);
+    const side = sup.side === "attacker" ? att : defender;
+    if (!a || side.kind !== "army") continue;
+    const n = a.troops.infantry + a.troops.cavalry + a.troops.archer;
+    const m = side.troops.infantry + side.troops.cavalry + side.troops.archer;
+    if (n <= 0) continue;
+    side.morale = Math.round((side.morale * m + a.morale * sup.efficiency * n) / (m + n));
+    side.fatigue = Math.round((side.fatigue * m + a.fatigue * n) / (m + n));
+    for (const k of ["infantry", "cavalry", "archer"] as const) side.troops[k] += a.troops[k];
+    (side.supporters ??= []).push({ armyId: a.id, name: a.name, factionId: a.factionId, troops: n, efficiency: sup.efficiency });
+  }
   return {
     battleId: event.battleId,
     battleType: event.battleType,
@@ -177,7 +191,7 @@ export function createBattleSetup(
     location: { ...event.location },
     terrain: event.terrain,
     createdAt: { ...event.createdAt },
-    attacker: armySide("attacker", attacker),
+    attacker: att,
     defender,
   };
 }

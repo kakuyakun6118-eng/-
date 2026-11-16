@@ -298,6 +298,8 @@ export interface BattleEvent {
   createdAt: { day: number; text: string };
   /** 決着したあとの記録(勝敗と損害) */
   record?: BattleRecord;
+  /** 近くにいて加勢した、同盟国・援軍の軍団(共同作戦)。efficiency は連携の度合い(0.5〜1) */
+  supporters?: { side: "attacker" | "defender"; armyId: string; efficiency: number }[];
 }
 
 /** 戦闘の記録。イベントに残して、あとから戦歴として見られるようにする */
@@ -396,6 +398,8 @@ export interface BattleSide {
   food: number;
   /** 都市のときだけ入る */
   fortification: Fortification | null;
+  /** 加勢している軍団(兵力はこの陣営の troops に含まれる) */
+  supporters?: { armyId: string; name: string; factionId: string; troops: number; efficiency: number }[];
 }
 
 /**

@@ -22,11 +22,12 @@ const { chromium } = require('playwright');
   // 外交
   await p.evaluate(() => document.querySelector('#diplomacy-open').click()); await p.waitForTimeout(300);
   console.log('diplomacy:', await p.evaluate(() => { const g = window.__goko, c = g.campaign; const out = {}; const row = (name) => [...document.querySelectorAll('.diplomacy-row')].find(r => r.querySelector('.diplomacy-name').textContent.startsWith(name));
+    const act = (name, cmd) => { row(name).click(); const sel = document.querySelector('.dd-command'); sel.value = cmd; sel.dispatchEvent(new Event('change')); document.querySelector('.dd-run').click(); return document.querySelector('.diplomacy-message').textContent; };
     out.rows = document.querySelectorAll('.diplomacy-row').length; out.shile = row('石勒').innerText.replace(/\s+/g, ' ');
-    [...row('曹嶷').querySelectorAll('button')].find(b => b.textContent === '宣戦').click(); out.war = document.querySelector('.diplomacy-message').textContent; out.rel = c.relationOf('jin', 'cao_yi');
-    [...row('曹嶷').querySelectorAll('button')].find(b => b.textContent === '和睦').click(); out.tooSoon = document.querySelector('.diplomacy-message').textContent;
-    [...row('石勒').querySelectorAll('button')].find(b => b.textContent === '和睦').click(); out.peaceShile = document.querySelector('.diplomacy-message').textContent;
-    [...row('仇池').querySelectorAll('button')].find(b => b.textContent === '同盟').click(); out.allyChouchi = document.querySelector('.diplomacy-message').textContent;
+    out.war = act('曹嶷', 'war'); out.rel = c.relationOf('jin', 'cao_yi');
+    out.tooSoon = act('曹嶷', 'peace');
+    out.peaceShile = act('石勒', 'peace');
+    out.allyChouchi = act('仇池', 'alliance');
     c.propose('han_zhao', 'peace'); return JSON.stringify(out); }));
   await p.evaluate(() => { document.querySelector('.diplomacy-close').click(); document.querySelector('#diplomacy-open').click(); }); await p.waitForTimeout(300);
   await p.screenshot({ path: `${S}/r2-diplomacy.png` });

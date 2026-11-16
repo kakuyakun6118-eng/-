@@ -3,6 +3,7 @@ import "./ui/style.css";
 import { Game } from "./core/Game";
 import { affinity } from "./sim/loyalty";
 import { createBattleSetup } from "./sim/battle";
+import { autoResolve } from "./sim/autoBattle";
 import type { BattleEvent } from "./data/types";
 import { credits, persons, scenario } from "./data";
 
@@ -20,6 +21,7 @@ Game.create(root)
     (window as unknown as { __gokoData: unknown }).__gokoData = { scenario, persons };
     (window as unknown as { __gokoAffinity: unknown }).__gokoAffinity = affinity;
     (window as unknown as { __gokoSetup: unknown }).__gokoSetup = (ev: BattleEvent) => createBattleSetup(ev, (id) => game.campaign.stateOf(id)?.army, game["allCities"], (c) => game.campaign.cityState(c));
+    (window as unknown as { __gokoAuto: unknown }).__gokoAuto = autoResolve;
     hint.textContent = "ドラッグで移動・ピンチで拡大縮小・都市や軍団をタップ";
   })
   .catch((err) => {

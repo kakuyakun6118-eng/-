@@ -1,0 +1,56 @@
+{
+  "_note": "開始時の関係のうち、戦争・同盟以外のもの(敵対・友好・従属)。basis は「史実」か「推定」。シナリオのファイルにも、ここにも無い組は「中立(推定)」として扱う。vassal は overlord が宗主。",
+  "s300": {
+    "jin|jiong": { "rel": "hostile", "basis": "推定", "note": "斉王冏は301年に趙王倫打倒の兵を挙げる。その前夜の緊張" },
+    "jin|ying": { "rel": "hostile", "basis": "推定", "note": "成都王穎も趙王倫に対して挙兵する側" }
+  },
+  "s304": {
+    "han_zhao|wang_jun": { "rel": "hostile", "basis": "推定", "note": "王浚は鮮卑と結んで漢に対抗する立場" }
+  },
+  "s311": {
+    "shile|wangmi": { "rel": "hostile", "basis": "史実", "note": "311年、石勒は王弥を謀殺する。両者は漢の将どうしで不和" },
+    "jin|murong": { "rel": "friendly", "basis": "推定", "note": "慕容廆は晋に名目上従う" }
+  },
+  "s317": {
+    "goguryeo|murong": { "rel": "hostile", "basis": "推定", "note": "遼東をめぐり対立(319年に交戦)" },
+    "cui_bi|murong": { "rel": "hostile", "basis": "推定", "note": "崔毖は慕容廆の台頭を警戒し、319年に諸部と攻める" },
+    "cui_bi|goguryeo": { "rel": "friendly", "basis": "推定", "note": "319年に崔毖と高句麗は連携する" },
+    "cui_bi|yuwen": { "rel": "friendly", "basis": "推定", "note": "同上" },
+    "cao_yi|jin": { "rel": "friendly", "basis": "史実", "note": "曹嶷は晋の官職を受けている" },
+    "cao_yi|shile": { "rel": "hostile", "basis": "推定", "note": "青州をめぐり石勒と緊張(のち323年に石虎が滅ぼす)" },
+    "chouchi|jin": { "rel": "friendly", "basis": "史実", "note": "仇池の楊氏は晋の官爵を受ける" },
+    "chouchi|han_zhao": { "rel": "hostile", "basis": "推定", "note": "関中・隴右で漢と接して対立" },
+    "jin|sima_bao": { "rel": "friendly", "basis": "史実", "note": "司馬保は晋の宗室" },
+    "qianliang|sima_bao": { "rel": "friendly", "basis": "推定", "note": "張寔は司馬保と連絡を保つ" },
+    "dai|shile": { "rel": "hostile", "basis": "推定", "note": "并州をめぐり対立(拓跋部は晋・劉琨の側)" },
+    "duan|murong": { "rel": "hostile", "basis": "推定", "note": "遼西の覇権を争う鮮卑の諸部" }
+  },
+  "s319": {
+    "goguryeo|murong": { "rel": "war", "basis": "史実", "note": "319年、崔毖・高句麗・宇文部が慕容廆を攻める" },
+    "duan|murong": { "rel": "hostile", "basis": "推定", "note": "遼西の覇権を争う" },
+    "chouchi|jin": { "rel": "friendly", "basis": "史実", "note": "仇池の楊氏は晋の官爵を受ける" },
+    "cao_yi|jin": { "rel": "friendly", "basis": "史実", "note": "曹嶷は晋の官職を受けている" },
+    "cao_yi|shile": { "rel": "hostile", "basis": "推定", "note": "青州をめぐり緊張" }
+  },
+  "s329": {
+    "goguryeo|murong": { "rel": "hostile", "basis": "史実", "note": "遼東をめぐる対立が続く" },
+    "chouchi|jin": { "rel": "friendly", "basis": "推定", "note": "仇池の楊氏は晋の官爵を受ける" },
+    "duan|yuwen": { "rel": "friendly", "basis": "推定", "note": "ともに慕容部と対立" }
+  },
+  "s357": {
+    "qianqin|qianyan": { "rel": "hostile", "basis": "推定", "note": "華北を二分する両国。本格的な戦争は370年" },
+    "dai|qianyan": { "rel": "friendly", "basis": "史実", "note": "拓跋什翼犍は慕容氏から妻を迎えている(婚姻関係)" },
+    "qianqin|tiefu": { "rel": "friendly", "basis": "推定", "note": "劉衛辰は358年ごろ前秦に通じる" },
+    "jin|yaoxiang": { "rel": "hostile", "basis": "史実", "note": "姚襄は353年に晋に背き、356年に桓温に敗れる" },
+    "qianliang|qianqin": { "rel": "hostile", "basis": "推定", "note": "隴右で接し、のち376年に前秦が前涼を滅ぼす" },
+    "baekje|jin": { "rel": "friendly", "basis": "推定", "note": "百済はのち372年に東晋へ朝貢する" }
+  },
+  "s383": {
+    "goguryeo|qianqin": { "rel": "friendly", "basis": "史実", "note": "372年に前秦が高句麗へ仏教を伝える。使節の往来" },
+    "qianqin|silla": { "rel": "friendly", "basis": "史実", "note": "新羅は377年・382年に前秦へ使者を送る" },
+    "goguryeo|silla": { "rel": "friendly", "basis": "史実", "note": "新羅の使者は高句麗とともに前秦へ赴く" },
+    "baekje|jin": { "rel": "friendly", "basis": "史実", "note": "百済は372年に東晋へ朝貢し、官爵を受ける" },
+    "baekje|goguryeo": { "rel": "war", "basis": "史実", "note": "371年に百済が平壌を攻め、故国原王が戦死。対立が続く" },
+    "qianqin|tuyuhun": { "rel": "vassal", "overlord": "qianqin", "basis": "推定", "note": "吐谷渾の碎奚は前秦に朝貢する(臣従の度合いは推定)" }
+  }
+}

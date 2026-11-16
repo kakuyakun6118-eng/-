@@ -18,12 +18,6 @@ export function garrisonCap(city: City): number {
 }
 
 /** 日付と名前から決まる乱数(同じ状況なら同じ判断になる) */
-function chance(seed: string): number {
-  let a = 2166136261;
-  for (let i = 0; i < seed.length; i++) a = Math.imul(a ^ seed.charCodeAt(i), 16777619);
-  a = Math.imul(a ^ (a >>> 15), a | 1);
-  return ((a ^ (a >>> 13)) >>> 0) / 4294967296;
-}
 
 export class StrategyAi {
   constructor(private readonly c: Campaign) {}
@@ -54,7 +48,7 @@ export class StrategyAi {
       if ((day + i) % p.interval !== 0) return;
       this.act(f.id, p);
     });
-    if (day % 90 === 45) this.diplomacy(p, day);
+    if (day % 90 === 45) this.c.diplo.aiQuarter(p.aggression, p.warRatio);
   }
 
   private act(factionId: string, p: StrategyProfile): void {
@@ -132,6 +126,7 @@ export class StrategyAi {
   private moveArmies(factionId: string, p: StrategyProfile, mine: City[], enemies: City[]): void {
     for (const s of this.c.armies) {
       if (s.army.factionId !== factionId || s.status === "fighting" || s.status === "marching") continue;
+      if (this.c.diplo.aidOf(s.army.id)) continue; // 援軍は、援軍の任務に従う
       this.orderArmy(s, p, mine, enemies);
     }
   }
@@ -191,42 +186,5 @@ export class StrategyAi {
 
     // することがなければ、補給の届く所へ戻る
     if (!s.supplied) goTo(home.lon, home.lat);
-  }
-
-  /** 3か月に1度の外交:劣勢なら和睦を求め、優勢で手が空いていれば、隣の勢力に宣戦する */
-  private diplomacy(p: StrategyProfile, day: number): void {
-    const alive = scenario.factions.filter((f) => this.citiesOf(f.id).length > 0);
-    for (const f of alive) {
-      if (f.id === this.c.playerFactionId || f.passive) continue;
-      const mine = this.strengthOf(f.id);
-      const wars = alive.filter((g) => g.id !== f.id && this.c.relationOf(f.id, g.id) === "war");
-      const strongest = [...wars].sort((x, y) => this.strengthOf(y.id) - this.strengthOf(x.id))[0];
-      // 和睦を求めるのは、戦いが1年以上続き、相手がずっと強いか、敵が多すぎるとき
-      if (strongest && (wars.length >= 4 || this.strengthOf(strongest.id) > mine * 2) && this.c.relationAge(f.id, strongest.id) >= 360) {
-        // 和睦の申し入れ。相手がプレイヤーなら、返事を待つ
-        if (strongest.id === this.c.playerFactionId) {
-          this.c.propose(f.id, "peace");
-        } else {
-          const theirWars = alive.filter((g) => g.id !== strongest.id && this.c.relationOf(strongest.id, g.id) === "war").length;
-          if (theirWars >= 2 || chance(`${day}${f.id}${strongest.id}`) < 0.25) {
-            this.c.setRelation(f.id, strongest.id, "peace");
-            this.c.addNews(`${f.name}と${strongest.name}が和睦しました`);
-          }
-        }
-        continue;
-      }
-      if (wars.length > 1) continue;
-      // 宣戦:都市が近く、兵力で上回る相手に(同盟の相手には宣戦しない)
-      const myCities = this.citiesOf(f.id);
-      for (const g of alive) {
-        if (g.id === f.id || g.passive || this.c.relationOf(f.id, g.id) !== "peace" || this.c.relationAge(f.id, g.id) < 720) continue;
-        const close = this.citiesOf(g.id).some((gc) => myCities.some((mc) => distanceKm(gc, mc) < 300));
-        if (!close || mine < this.strengthOf(g.id) * p.warRatio) continue;
-        if (chance(`${day}${f.id}${g.id}war`) >= p.aggression) continue;
-        this.c.setRelation(f.id, g.id, "war");
-        this.c.addNews(`${f.name}が${g.name}に宣戦しました`);
-        break;
-      }
-    }
   }
 }

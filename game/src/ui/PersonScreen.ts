@@ -143,7 +143,12 @@ export class PersonScreen {
     const status = campaign.personStatus(p.id);
     const post = campaign.postOf(p.id);
     this.q(".person-line").textContent = `${faction?.name ?? "所属なし"}・${ROLE_LABEL[p.role]}・${p.title || "官職不明"}${p.people ? `・${p.people}${p.peopleNote ? "(注)" : ""}` : ""}`;
-    this.q(".person-post").textContent = `状態:${STATUS_LABEL[status]} / 役目:${post ? post.label : "なし"}`;
+    // 婚姻(人物IDで記録):史実の婚姻と、ゲームの中で結んだ婚姻を分けて示す
+    const spouses = campaign.diplo.marriages.filter((m) => m.husband === p.id || m.wife === p.id).map((m) => {
+      const other = persons.find((x) => x.id === (m.husband === p.id ? m.wife : m.husband));
+      return `${other?.name ?? "?"}(${m.historic ? "史実" : "ゲーム内"}${m.husband === p.id ? `・${m.kind === "primary" ? "正室" : "側室"}` : ""})`;
+    });
+    this.q(".person-post").textContent = `状態:${STATUS_LABEL[status]} / 役目:${post ? post.label : "なし"}${spouses.length ? ` / 配偶者:${spouses.join("、")}` : ""}`;
     this.q(".person-stats").replaceChildren(
       ...STATS.map(([key, label]) => {
         const row = document.createElement("div");

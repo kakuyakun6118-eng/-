@@ -11,7 +11,8 @@ import type { Route } from "./pathfinding";
 export const SAVE_VERSION = 2;
 
 /** 勢力どうしの関係。いまは切り替える手段がなく、すべて戦争として扱う(将来の外交のための入れ物) */
-export type Relation = "war" | "peace" | "alliance";
+/** 国どうしの関係。"peace" は古いセーブの値で、中立として読む */
+export type Relation = "war" | "hostile" | "neutral" | "friendly" | "nonaggression" | "alliance" | "vassal" | "peace";
 
 /** 軍団1つ分の保存内容 */
 export interface ArmySave {
@@ -45,6 +46,8 @@ export interface CampaignSave {
   news?: { day: number; text: string }[];
   /** プレイヤーへの外交の申し入れ(返事待ち) */
   proposals?: { from: string; kind: "peace" | "alliance"; day: number }[];
+  /** 外交(友好度・条約・婚姻・援軍)。古いセーブには無い */
+  diplomacy?: import("./diplomacy").DiplomacySave;
   /** 財政・官職・内政(古いセーブには無い。無ければ、官職を割り当て直す) */
   economy?: EconomySave;
   /** 忠誠度・名声(古いセーブには無い。無ければ、読み込んだ時点の状況から作り直す) */
@@ -128,4 +131,6 @@ export interface DynastySave {
   roles: Record<string, PersonRole>;
   rulers: Record<string, string>;
   gameOver?: boolean;
+  /** 滅亡のとき、後継国家が受け継げずに散逸した金の合計 */
+  scattered?: number;
 }

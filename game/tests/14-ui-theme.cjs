@@ -37,7 +37,7 @@ const path = require('path');
   await p.evaluate(() => { document.querySelector('.diplomacy-close').click(); const g = window.__goko; g.selectCity(g.cities.markers.find(m => m.city.id === 'luoyang')); }); await p.waitForTimeout(900); await p.screenshot({ path: out + '/ui-6-city.png' });
 
   // 画面の大きさを変える:板と釦が、画面の外にはみ出さないこと
-  const sizes = [[844, 390], [932, 430], [667, 375], [390, 844], [1024, 768]];
+  const sizes = [[844, 390], [932, 430], [667, 375], [390, 844], [1024, 768], [1366, 768], [1920, 1200]];
   for (const [w, h] of sizes) {
     await p.setViewportSize({ width: w, height: h }); await p.waitForTimeout(350);
     for (const open of ['#menu-open', '#persons-open', '#diplomacy-open', '#scenarios']) {
@@ -49,6 +49,7 @@ const path = require('path');
       if (r.left < -1 || r.right > r.vw + 1 || r.top < -1 || r.bottom > r.vh + 1 || r.scrollX || r.small || r.canvas !== `${w}x${h}`) problems.push(`${w}x${h} ${JSON.stringify(r)}`);
     }
     if (w === 390) await p.screenshot({ path: out + '/ui-7-portrait.png' });
+    if (w === 1920) { await p.evaluate(() => document.querySelector('#diplomacy-open').click()); await p.waitForTimeout(300); await p.screenshot({ path: out + '/ui-8-pc-diplomacy.png' }); }
     await p.evaluate(() => { for (const s of ['#menu', '#persons', '#diplomacy', '#scenarios']) document.querySelector(s).hidden = true; });
   }
   console.log('画面の大きさ:', sizes.map(s => s.join('x')).join(' '), problems.length ? '' : 'はみ出しなし');

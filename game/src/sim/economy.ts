@@ -89,7 +89,9 @@ export class Economy {
     const staff = persons.filter((p) => p.factionId === factionId && this.c.personStatus(p.id) !== "dead" && !this.c.spoils.custodyOf(p.id));
     const nominal = staff.reduce((s, p) => s + this.salaryOf(p), 0);
     const inc = income ?? this.report(factionId).income.total;
-    return nominal <= 0 ? 1 : Math.max(0.2, Math.min(1, (inc * 0.4) / nominal));
+    // 遊牧の国は、俸禄の多くを家畜や戦利品で払うので、金の俸禄の下限が低い
+    const floor = this.systemOf(factionId).id === "steppe" ? 0.1 : 0.2;
+    return nominal <= 0 ? 1 : Math.max(floor, Math.min(1, (inc * 0.4) / nominal));
   }
 
   /** 官職の条件を満たすか */
@@ -175,13 +177,21 @@ export class Economy {
     const marching = armies.filter((s) => s.status === "marching" || s.status === "fighting").reduce((sum, s) => sum + totalTroops(s.army), 0);
     const staff = persons.filter((p) => p.factionId === factionId && this.c.personStatus(p.id) !== "dead" && !this.c.spoils.custodyOf(p.id));
     const n = mine.filter((x) => x.kind !== "pass").length;
+    // 遊牧の国:部族の兵は、ふだんは牧畜で自らを養う(守備兵・軍団の維持費が軽い)。宮廷と官僚も小さい。
+    // そのかわり、家畜と交易からの収入(牧畜)がある。ただし、軍団を遠くに出せば、ほかの国と同じく費用がかかる
+    const nomad = this.systemOf(factionId).id === "steppe";
+    if (nomad) {
+      const herd = mine.reduce((s, city) => s + cityEcon(city, this.c.cityState(city)).pop, 0) / 1000 * 0.15;
+      inc.trade += herd;
+      inc.total += herd;
+    }
     const exp = {
-      army: troops * 0.012,
-      garrison: garrison * 0.003,
+      army: troops * (nomad ? 0.008 : 0.012),
+      garrison: garrison * (nomad ? 0.0012 : 0.003),
       salary: staff.reduce((s, p) => s + this.salaryOf(p), 0) * this.salaryLevel(factionId, inc.total),
-      bureaucracy: 2 * Math.pow(n, 1.5),
+      bureaucracy: (nomad ? 1 : 2) * Math.pow(n, 1.5),
       cities: levels * 2,
-      court: n > 0 ? 5 + 6 * Math.sqrt(n) : 0,
+      court: n > 0 ? (nomad ? 3 + 3 * Math.sqrt(n) : 5 + 6 * Math.sqrt(n)) : 0,
       expedition: marching * 0.01,
       total: 0,
       grain: troops / 250 + garrison / 800 + marching / 500,
@@ -212,6 +222,10 @@ export class Economy {
       // 兵糧は、2年分(毎月の収穫の24倍)を超えると傷んで減る
       st.grain = Math.max(0, Math.min(Math.max(2000, rep.income.grain * 24), st.grain + rep.netGrain));
       st.gold = Math.max(-rep.expense.total * 3, st.gold);
+      // 蓄えが収入の3年分(最低3,000)を超えると、超えた分の4%が毎月失われる(管理の費用・横領・散財)。
+      // 都市を失った国が、昔の蓄えをいつまでも抱え込まないように
+      const hoard = Math.max(3000, rep.income.total * 36);
+      if (st.gold > hoard) st.gold -= (st.gold - hoard) * 0.04;
       const h = (this.history[f.id] ??= []);
       h.push({ day, gold: Math.round(st.gold), net: rep.net });
       if (h.length > 24) h.shift();
@@ -240,6 +254,9 @@ export class Economy {
       const fed = (this.c.factionStates[owner]?.grain ?? 1) > 0;
       const cap = (city.population ?? cityLevelOf(city) * 20000) * 1.4;
       st.pop = Math.round(Math.min(cap, e.pop * (fed ? 1.002 : 0.996)));
+      // 帰農:守備兵が人口の6%(募兵の上限と同じ)を超える都市では、超えた分の4%が毎月、田畑に帰る(人口に見合わない大軍は保てない)
+      const over = st.garrison - st.pop * 0.06;
+      if (over > 0) st.garrison = Math.round(st.garrison - over * 0.04);
       st.support = Math.min(70, e.support + 0.5);
     }
   }
