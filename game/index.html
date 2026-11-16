@@ -37,6 +37,7 @@
       <button id="finance-open" type="button">財政</button>
       <button id="court-open" type="button">皇室</button>
       <button id="timeline-open" type="button">年表</button>
+      <button id="events-open" type="button">歴史イベント</button>
       <button id="trade-open" type="button" aria-pressed="false">交易路</button>
       <button id="supply-open" type="button" aria-pressed="false">補給</button>
       <section id="overlay-panel" hidden></section>
@@ -240,6 +241,7 @@
           <div class="persons-head">
             <h2>人物</h2>
             <select class="persons-faction" aria-label="勢力で絞る"></select>
+            <select class="persons-place" aria-label="所在で絞る"></select>
             <select class="persons-role" aria-label="役割で絞る">
               <option value="">すべての役割</option>
               <option value="ruler">君主</option>
@@ -372,6 +374,32 @@
           <div class="timeline-body"></div>
         </div>
       </section>
+      <section id="events" hidden>
+        <div class="persons-inner">
+          <div class="persons-head">
+            <h2>歴史イベント</h2>
+            <select class="ev-filter" aria-label="絞り込み">
+              <option value="all">全イベント</option>
+              <option value="available">発動可能</option>
+              <option value="unmet">条件未達</option>
+              <option value="occurred">発生済み</option>
+              <option value="branched">分岐済み</option>
+              <option value="mine">自国関連</option>
+              <option value="military">軍事</option>
+              <option value="politics">政治</option>
+              <option value="diplomacy">外交</option>
+              <option value="founding">建国・滅亡</option>
+            </select>
+            <span class="ev-count"></span>
+            <span class="ev-mode"></span>
+            <button class="persons-close events-close" type="button">閉じる</button>
+          </div>
+          <div class="ev-body">
+            <div class="ev-list"></div>
+            <div class="ev-detail"></div>
+          </div>
+        </div>
+      </section>
       <section id="court" hidden>
         <div class="persons-inner">
           <div class="persons-head">
@@ -424,7 +452,7 @@
               <select id="menu-faction"></select>
               <label>敵の強さ(難易度)</label>
               <div id="menu-difficulty" class="difficulty-cards" role="radiogroup" aria-label="敵の強さ"></div>
-              <p class="difficulty-note">資金や兵が無から増えることはありません。変わるのは、敵の判断の速さ・攻める基準・徴兵の量・軍団の数です。地形を読んだ戦略判断は、まだ実装していません。</p>
+              <p class="difficulty-note">資金や兵が無から増えることはありません。変わるのは、敵の判断の速さ・攻める基準・徴兵の量・軍団の数です。敵の国は毎月、兵力・財政・兵糧・国境の脅威・君主の性格から方針(侵攻・拡大・防衛・内政・外交・統一)を決め、勝算・到着日数・地形・兵糧・援軍の見込みで攻める都市を選びます。</p>
               <label>自分の君主が捕らえられ、国が滅びたとき</label>
               <div class="fall-choice" role="radiogroup" aria-label="国が滅びたとき">
                 <button type="button" data-value="gameover">ゲームオーバー</button>
@@ -433,11 +461,17 @@
               <label>歴史の流れ</label>
               <div class="history-choice fall-choice" role="radiogroup" aria-label="歴史の流れ">
                 <button type="button" data-mode="historic">史実重視</button>
+                <button type="button" data-mode="normal">通常</button>
                 <button type="button" data-mode="free">自由歴史</button>
               </div>
-              <p class="difficulty-note">史実重視:AIの国は、歴史の事件で史実の行動を選びやすくなります。自由歴史:AIも別案や大胆な改変を選びます。どちらでも、滅んだ国が生き返ったり、プレイヤーの選択が取り消されたりはしません。</p>
+              <p class="difficulty-note">史実重視:AIの国は史実の行動を選びやすく、歴史イベントは史実の年月になってから発動できます(年月を過ぎて分岐した事件は発動しません)。通常:中間。史実の年月に達して条件がそろった事件を発動できます(分岐した事件も10年以内なら)。自由歴史:AIも別案や大胆な改変を選び、条件がそろえば史実より早く(15年前まで)発動できます。どのモードでも、滅んだ国が生き返ったり、まだいない人物や国が現れたり、プレイヤーの選択が取り消されたりはしません。</p>
               <label for="menu-opacity">領土の色の濃さ</label>
               <input id="menu-opacity" type="range" min="0.3" max="1.6" step="0.1" />
+              <label class="dev-toggle"><input id="menu-dev" type="checkbox" /> 開発用の表示(敵AIの判断ログ)</label>
+              <div id="menu-dev-panel" hidden>
+                <p class="dev-summary"></p>
+                <ol class="dev-log"></ol>
+              </div>
               <h3>書き出しと読み込み</h3>
               <textarea id="menu-json" rows="3" spellcheck="false" aria-label="セーブデータ(JSON)" placeholder="「書き出す」を押すと、ここにセーブデータが出ます。読み込むときは、保管しておいたデータを貼り付けます"></textarea>
               <div class="menu-row">

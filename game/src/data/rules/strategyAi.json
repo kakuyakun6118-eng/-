@@ -1,12 +1,301 @@
 {
-  "note": "敵勢力の戦略AIの、難易度ごとの設定(すべてゲーム上の数値)。資金や兵を無から増やすことはせず、判断の速さ・積極さ・兵を集める効率だけを変える。",
-  "profiles": {
-    "veryEasy": { "interval": 10, "attackRatio": 2.6, "interceptRatio": 1.4, "recruitPerTurn": 300, "extraArmies": 0, "reachKm": 250, "defendKm": 80, "aggression": 0.05, "warRatio": 2.2 },
-    "easy":     { "interval": 8,  "attackRatio": 2.1, "interceptRatio": 1.2, "recruitPerTurn": 400, "extraArmies": 0, "reachKm": 300, "defendKm": 100, "aggression": 0.1, "warRatio": 1.9 },
-    "normal":   { "interval": 6,  "attackRatio": 1.7, "interceptRatio": 1.0, "recruitPerTurn": 500, "extraArmies": 0, "reachKm": 350, "defendKm": 130, "aggression": 0.18, "warRatio": 1.6 },
-    "hard":     { "interval": 4,  "attackRatio": 1.4, "interceptRatio": 0.9, "recruitPerTurn": 600, "extraArmies": 1, "reachKm": 420, "defendKm": 160, "aggression": 0.28, "warRatio": 1.4 },
-    "veryHard": { "interval": 3,  "attackRatio": 1.2, "interceptRatio": 0.8, "recruitPerTurn": 700, "extraArmies": 1, "reachKm": 500, "defendKm": 200, "aggression": 0.4, "warRatio": 1.25 }
+ "note": "敵勢力の戦略AIの、難易度ごとの設定(すべてゲーム上の数値)。資金や兵を無から増やすことはせず、判断の速さ・積極さ・兵を集める効率だけを変える。",
+ "profiles": {
+  "veryEasy": {
+   "interval": 10,
+   "attackRatio": 2.6,
+   "interceptRatio": 1.4,
+   "recruitPerTurn": 300,
+   "extraArmies": 0,
+   "reachKm": 250,
+   "defendKm": 80,
+   "aggression": 0.05,
+   "warRatio": 2.2
   },
-  "costs": { "goldPer100Troops": 20, "grainPer100TroopsToRaise": 1, "minGarrison": 800, "minArmy": 3000, "maxArmy": 12000, "armyGrowth": 2.5 },
-  "garrisonCap": { "pass": 5000, "levels": [3000, 3000, 6000, 12000, 20000] }
+  "easy": {
+   "interval": 8,
+   "attackRatio": 2.1,
+   "interceptRatio": 1.2,
+   "recruitPerTurn": 400,
+   "extraArmies": 0,
+   "reachKm": 300,
+   "defendKm": 100,
+   "aggression": 0.1,
+   "warRatio": 1.9
+  },
+  "normal": {
+   "interval": 6,
+   "attackRatio": 1.7,
+   "interceptRatio": 1.0,
+   "recruitPerTurn": 500,
+   "extraArmies": 0,
+   "reachKm": 350,
+   "defendKm": 130,
+   "aggression": 0.18,
+   "warRatio": 1.6
+  },
+  "hard": {
+   "interval": 4,
+   "attackRatio": 1.4,
+   "interceptRatio": 0.9,
+   "recruitPerTurn": 600,
+   "extraArmies": 1,
+   "reachKm": 420,
+   "defendKm": 160,
+   "aggression": 0.28,
+   "warRatio": 1.4
+  },
+  "veryHard": {
+   "interval": 3,
+   "attackRatio": 1.2,
+   "interceptRatio": 0.8,
+   "recruitPerTurn": 700,
+   "extraArmies": 1,
+   "reachKm": 500,
+   "defendKm": 200,
+   "aggression": 0.4,
+   "warRatio": 1.25
+  }
+ },
+ "costs": {
+  "goldPer100Troops": 20,
+  "grainPer100TroopsToRaise": 1,
+  "minGarrison": 800,
+  "minArmy": 3000,
+  "maxArmy": 12000,
+  "armyGrowth": 2.5
+ },
+ "garrisonCap": {
+  "pass": 5000,
+  "levels": [
+   3000,
+   3000,
+   6000,
+   12000,
+   20000
+  ]
+ },
+ "personalities": {
+  "note": "ゲームAIの性格付け(史実の人物評価ではない)。aggr=攻撃性、caution=慎重さ、logistics=補給重視、mobility=機動戦、diplomacy=外交重視、unify=統一志向。-1〜1。名前のない人物は能力値から決める。",
+  "people": {
+   "shi_le": {
+    "aggr": 0.35,
+    "caution": 0.3,
+    "logistics": 0.2,
+    "mobility": 0.7,
+    "diplomacy": 0.2,
+    "unify": 0.4,
+    "label": "状況判断と機動戦を重視"
+   },
+   "shi_hu": {
+    "aggr": 0.85,
+    "caution": -0.4,
+    "logistics": -0.2,
+    "mobility": 0.2,
+    "diplomacy": -0.4,
+    "unify": 0.5,
+    "label": "攻勢的で強引"
+   },
+   "fu_jian": {
+    "aggr": 0.45,
+    "caution": -0.1,
+    "logistics": 0.1,
+    "mobility": 0.1,
+    "diplomacy": 0.3,
+    "unify": 0.95,
+    "label": "大規模な統一戦略を志向"
+   },
+   "wang_meng": {
+    "aggr": 0.0,
+    "caution": 0.5,
+    "logistics": 0.8,
+    "mobility": 0.2,
+    "diplomacy": 0.2,
+    "unify": 0.3,
+    "label": "内政・補給・合理的な軍事判断"
+   },
+   "murong_ke": {
+    "aggr": -0.1,
+    "caution": 0.7,
+    "logistics": 0.4,
+    "mobility": 0.2,
+    "diplomacy": 0.1,
+    "unify": 0.2,
+    "label": "慎重な軍事行動と防衛"
+   },
+   "murong_chui": {
+    "aggr": 0.5,
+    "caution": 0.1,
+    "logistics": 0.1,
+    "mobility": 0.8,
+    "diplomacy": 0.0,
+    "unify": 0.3,
+    "label": "機動戦と攻撃機会"
+   },
+   "xie_an": {
+    "aggr": -0.5,
+    "caution": 0.6,
+    "logistics": 0.3,
+    "mobility": 0.0,
+    "diplomacy": 0.7,
+    "unify": -0.2,
+    "label": "防衛と外交"
+   },
+   "xie_xuan": {
+    "aggr": 0.3,
+    "caution": 0.2,
+    "logistics": 0.2,
+    "mobility": 0.8,
+    "diplomacy": 0.0,
+    "unify": 0.0,
+    "label": "精鋭による機動戦"
+   },
+   "liu_yuan": {
+    "aggr": 0.4,
+    "caution": 0.3,
+    "logistics": 0.2,
+    "mobility": 0.3,
+    "diplomacy": 0.3,
+    "unify": 0.6,
+    "label": "漢の再興を掲げる計画的な拡大"
+   },
+   "liu_cong": {
+    "aggr": 0.6,
+    "caution": -0.1,
+    "logistics": 0.0,
+    "mobility": 0.4,
+    "diplomacy": -0.1,
+    "unify": 0.7,
+    "label": "洛陽・長安を狙う攻勢"
+   },
+   "liu_yao": {
+    "aggr": 0.55,
+    "caution": -0.2,
+    "logistics": 0.0,
+    "mobility": 0.3,
+    "diplomacy": 0.0,
+    "unify": 0.4,
+    "label": "関中を固める武断"
+   },
+   "huan_wen": {
+    "aggr": 0.5,
+    "caution": 0.1,
+    "logistics": 0.2,
+    "mobility": 0.2,
+    "diplomacy": 0.0,
+    "unify": 0.4,
+    "label": "北伐で威信を高める"
+   },
+   "zu_ti": {
+    "aggr": 0.5,
+    "caution": 0.2,
+    "logistics": 0.3,
+    "mobility": 0.3,
+    "diplomacy": 0.3,
+    "unify": 0.3,
+    "label": "北伐の志"
+   },
+   "sima_rui": {
+    "aggr": -0.4,
+    "caution": 0.5,
+    "logistics": 0.2,
+    "mobility": 0.0,
+    "diplomacy": 0.4,
+    "unify": -0.2,
+    "label": "江南の保全"
+   },
+   "wang_dao": {
+    "aggr": -0.4,
+    "caution": 0.6,
+    "logistics": 0.4,
+    "mobility": 0.0,
+    "diplomacy": 0.6,
+    "unify": -0.2,
+    "label": "安定と調和"
+   },
+   "tao_kan": {
+    "aggr": 0.1,
+    "caution": 0.6,
+    "logistics": 0.6,
+    "mobility": 0.1,
+    "diplomacy": 0.1,
+    "unify": 0.0,
+    "label": "堅実な守りと兵站"
+   },
+   "murong_hui": {
+    "aggr": 0.1,
+    "caution": 0.5,
+    "logistics": 0.3,
+    "mobility": 0.3,
+    "diplomacy": 0.5,
+    "unify": 0.2,
+    "label": "晋に従いつつ遼西を固める"
+   },
+   "murong_huang": {
+    "aggr": 0.4,
+    "caution": 0.3,
+    "logistics": 0.2,
+    "mobility": 0.4,
+    "diplomacy": 0.2,
+    "unify": 0.4,
+    "label": "段部・宇文部を討つ拡大"
+   },
+   "murong_jun": {
+    "aggr": 0.5,
+    "caution": 0.2,
+    "logistics": 0.2,
+    "mobility": 0.3,
+    "diplomacy": 0.1,
+    "unify": 0.6,
+    "label": "中原への進出"
+   },
+   "tuoba_gui": {
+    "aggr": 0.6,
+    "caution": 0.2,
+    "logistics": 0.1,
+    "mobility": 0.7,
+    "diplomacy": 0.2,
+    "unify": 0.6,
+    "label": "騎馬による拡大"
+   },
+   "lv_guang": {
+    "aggr": 0.4,
+    "caution": 0.2,
+    "logistics": 0.5,
+    "mobility": 0.3,
+    "diplomacy": 0.0,
+    "unify": 0.1,
+    "label": "遠征と河西の確保"
+   },
+   "zhang_gui": {
+    "aggr": -0.4,
+    "caution": 0.6,
+    "logistics": 0.4,
+    "mobility": 0.0,
+    "diplomacy": 0.5,
+    "unify": -0.3,
+    "label": "河西の保全"
+   },
+   "li_xiong": {
+    "aggr": -0.1,
+    "caution": 0.5,
+    "logistics": 0.3,
+    "mobility": 0.1,
+    "diplomacy": 0.3,
+    "unify": -0.2,
+    "label": "蜀の保全"
+   }
+  }
+ },
+ "plan": {
+  "note": "作戦の判断に使う数値(ゲーム上の設定)",
+  "marchKmPerDay": 22,
+  "foodMargin": 1.3,
+  "foodReserveDays": 10,
+  "retreatLoss": 0.5,
+  "reliefKm": 320,
+  "homeGuardKm": 420,
+  "maxTargets": 10,
+  "analyzeEvery": 30
+ }
 }

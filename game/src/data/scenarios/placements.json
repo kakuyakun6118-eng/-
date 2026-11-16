@@ -1,0 +1,62 @@
+{
+ "note": "シナリオ開始時の人物の所在(Version 40)。ここに無い人物は、太守・守将の任地、軍団、君主の都(宮廷)の順に決め、どれにも当たらない人物は「ゲーム上の推定配置」として所属国家の都(宮廷)に置く。certainty は 確認(史料に所在が書かれている)・推定(前後の経歴から推し量った)・不明。kind は city(都市・関所)・court(都の宮廷)・army(軍団)。",
+ "scenarios": {
+  "s300": {
+   "liu_yuan": { "kind": "city", "at": "ye", "certainty": "確認", "source": "『晋書』劉元海載記", "note": "成都王 司馬穎のもとで寧朔将軍・監五部軍事として鄴に留め置かれていた" },
+   "liu_cong": { "kind": "city", "at": "ye", "certainty": "推定", "source": "『晋書』劉聡載記", "note": "成都王 司馬穎に仕え、積弩将軍となる。所在は鄴と推定" },
+   "sima_rui": { "kind": "court", "at": "luoyang", "certainty": "推定", "source": "『晋書』元帝紀", "note": "琅邪王。洛陽の朝廷にいたと推定" },
+   "wang_dao": { "kind": "court", "at": "luoyang", "certainty": "推定", "source": "『晋書』王導伝", "note": "東閤祭酒などを経る。洛陽にいたと推定" },
+   "zu_ti": { "kind": "court", "at": "luoyang", "certainty": "推定", "source": "『晋書』祖逖伝", "note": "司州主簿・大司馬掾など、洛陽の官を歴任。所在は推定" },
+   "tao_kan": { "kind": "court", "at": "luoyang", "certainty": "推定", "source": "『晋書』陶侃伝", "note": "洛陽で郎中となる。所在は推定" },
+   "murong_hui": { "kind": "city", "at": "jicheng", "certainty": "確認", "source": "『晋書』慕容廆載記", "note": "294年に大棘城へ移る" }
+  },
+  "s304": {
+   "liu_yuan": { "kind": "city", "at": "lishi", "certainty": "確認", "source": "『晋書』劉元海載記", "note": "左国城(離石)で大単于、ついで漢王を称する" },
+   "liu_cong": { "kind": "city", "at": "lishi", "certainty": "推定", "source": "『晋書』劉聡載記", "note": "父の劉淵とともに左国城へ" },
+   "sima_rui": { "kind": "city", "at": "xiapi", "certainty": "推定", "source": "『晋書』元帝紀", "note": "蕩陰の戦いのあと鄴を脱し、東の琅邪国へ帰る。下邳に置く(推定)" },
+   "wang_dao": { "kind": "city", "at": "xiapi", "certainty": "推定", "source": "『晋書』王導伝", "note": "琅邪王 司馬睿の参謀として従う" },
+   "zu_ti": { "kind": "court", "at": "luoyang", "certainty": "推定", "source": "『晋書』祖逖伝", "note": "恵帝の北征に従ったのち洛陽に戻る(推定)" },
+   "tao_kan": { "kind": "city", "at": "wuchang", "certainty": "推定", "source": "『晋書』陶侃伝", "note": "張昌の乱の討伐で江夏太守となる。江夏に近い武昌に置く" },
+   "murong_hui": { "kind": "city", "at": "jicheng", "certainty": "確認", "source": "『晋書』慕容廆載記" }
+  },
+  "s311": {
+   "liu_cong": { "kind": "court", "at": "pingyang", "certainty": "確認", "source": "『晋書』劉聡載記", "note": "310年に即位し、平陽を都とする" },
+   "shi_hu": { "kind": "army", "army": "army_shile", "certainty": "推定", "source": "『晋書』石季龍載記", "note": "石勒の軍に従う" },
+   "zhang_bin": { "kind": "army", "army": "army_shile", "certainty": "確認", "source": "『晋書』石勒載記", "note": "石勒の謀主として軍中にある" },
+   "wang_dao": { "kind": "city", "at": "jiankang", "certainty": "確認", "source": "『晋書』王導伝" },
+   "tao_kan": { "kind": "city", "at": "wuchang", "certainty": "確認", "source": "『晋書』陶侃伝", "note": "武昌太守" },
+   "murong_huang": { "kind": "city", "at": "jicheng", "certainty": "推定", "source": "『晋書』慕容皝載記" }
+  },
+  "s317": {
+   "liu_cong": { "kind": "court", "at": "pingyang", "certainty": "確認", "source": "『晋書』劉聡載記" },
+   "liu_yao": { "kind": "city", "at": "changan", "certainty": "確認", "source": "『晋書』劉曜載記", "note": "316年に長安を落とし、関中を治める" },
+   "shi_le": { "kind": "city", "at": "xiangguo", "certainty": "確認", "source": "『晋書』石勒載記" },
+   "shi_hu": { "kind": "city", "at": "ye", "certainty": "確認", "source": "『晋書』石季龍載記", "note": "313年に鄴を取り、魏郡太守として三台に鎮する" },
+   "zhang_bin": { "kind": "city", "at": "xiangguo", "certainty": "確認", "source": "『晋書』石勒載記", "note": "右長史" },
+   "sima_rui": { "kind": "court", "at": "jiankang", "certainty": "確認", "source": "『晋書』元帝紀" },
+   "wang_dao": { "kind": "court", "at": "jiankang", "certainty": "確認", "source": "『晋書』王導伝" },
+   "zu_ti": { "kind": "city", "at": "qiao", "certainty": "推定", "source": "『晋書』祖逖伝", "note": "北伐の途上。譙城の樊雅を攻めていた" },
+   "tao_kan": { "kind": "city", "at": "panyu", "certainty": "確認", "source": "『晋書』陶侃伝", "note": "広州刺史" },
+   "murong_hui": { "kind": "city", "at": "jicheng", "certainty": "確認", "source": "『晋書』慕容廆載記" },
+   "murong_huang": { "kind": "city", "at": "jicheng", "certainty": "推定", "source": "『晋書』慕容皝載記" }
+  },
+  "s319": {
+   "zhang_bin": { "kind": "city", "at": "xiangguo", "certainty": "確認", "source": "『晋書』石勒載記" },
+   "wang_dao": { "kind": "court", "at": "jiankang", "certainty": "確認", "source": "『晋書』王導伝" }
+  },
+  "s329": {
+   "wang_dao": { "kind": "court", "at": "jiankang", "certainty": "確認", "source": "『晋書』王導伝" },
+   "huan_wen": { "kind": "court", "at": "jiankang", "certainty": "推定", "source": "『晋書』桓温伝", "note": "若年。父の桓彝の死(328年)の後、建康にいたと推定" }
+  },
+  "s357": {
+   "wang_meng": { "kind": "court", "at": "changan", "certainty": "確認", "source": "『晋書』苻堅載記", "note": "苻堅の謀主" },
+   "xie_an": { "kind": "city", "at": "kuaiji", "certainty": "確認", "source": "『晋書』謝安伝", "note": "会稽の東山に隠れ住む(360年に出仕)" },
+   "xie_xuan": { "kind": "city", "at": "kuaiji", "certainty": "推定", "source": "『晋書』謝玄伝", "note": "若年。叔父の謝安のもとで育つ" },
+   "lv_guang": { "kind": "court", "at": "changan", "certainty": "推定", "source": "『晋書』呂光載記", "note": "前秦に仕える" }
+  },
+  "s383": {
+   "xie_an": { "kind": "court", "at": "jiankang", "certainty": "確認", "source": "『晋書』謝安伝", "note": "征討大都督として建康で指揮" },
+   "tuoba_gui": { "kind": "city", "at": "shengle", "certainty": "推定", "source": "『魏書』太祖紀", "note": "代の滅亡(376年)の後、独孤部の劉庫仁のもとで育つ。盛楽の近くと推定" }
+  }
+ }
+}

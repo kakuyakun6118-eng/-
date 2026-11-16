@@ -26,8 +26,21 @@ export class Territory {
     this.owners = new Uint8Array(grid.cols * grid.rows);
   }
 
+  /** 計算し直しを、あとでまとめて行うための予約(都市が一度にたくさん持ち主を変えるとき、毎回は計算しない) */
+  private pending: (() => void) | null = null;
+  markStale(recompute: () => void): void {
+    this.pending = recompute;
+  }
+  /** 予約された計算し直しがあれば、いま行う */
+  ensure(): void {
+    const p = this.pending;
+    this.pending = null;
+    p?.();
+  }
+
   /** cityOwners(都市ID → 勢力ID)をもとに、領土を計算し直す */
   compute(cities: City[], cityOwners: Record<string, string>): void {
+    this.pending = null;
     const { cols, rows, costs } = this.grid;
     const n = cols * rows;
     const best = new Float64Array(n).fill(Infinity);
@@ -110,6 +123,7 @@ export class Territory {
 
   /** ある地点を支配している勢力のID(空白地は null) */
   factionAt(lon: number, lat: number): string | null {
+    if (this.pending) this.ensure();
     const [i, j] = this.grid.cellOf(lon, lat);
     const o = this.owners[j * this.grid.cols + i];
     return o === 0 ? null : this.factionIds[o - 1];

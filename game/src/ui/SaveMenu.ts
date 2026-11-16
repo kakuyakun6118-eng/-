@@ -19,6 +19,9 @@ export interface SaveMenuActions {
   applySave(data: unknown): void;
   settings(): GameSettings;
   changeSettings(change: Partial<GameSettings>): void;
+  /** 開発用:敵AIの判断ログと、行動の集計 */
+  aiLog?(): { date: string; text: string }[];
+  aiSummary?(): string;
 }
 
 /** 難易度の札(画面に出す4段階)。効果の数字は strategyAi.json にあり、ここには名前と一言だけを書く */
@@ -35,6 +38,13 @@ export class SaveMenu {
   constructor(private readonly root: HTMLElement, private readonly store: SaveStore, private readonly actions: SaveMenuActions) {
     this.q = <T extends HTMLElement>(sel: string) => root.querySelector(sel) as T;
     this.q("#menu-close").addEventListener("click", () => this.close());
+
+    // 開発用の表示(ふだんは隠す。チェックを入れると、敵AIの判断ログを出す)
+    this.q<HTMLInputElement>("#menu-dev").addEventListener("change", (e) => {
+      const on = (e.target as HTMLInputElement).checked;
+      try { localStorage.setItem("goko-dev", on ? "1" : ""); } catch { /* 保存できなくても表示はする */ }
+      this.renderDev(on);
+    });
 
     // 設定
     const faction = this.q<HTMLSelectElement>("#menu-faction");
@@ -135,9 +145,27 @@ export class SaveMenu {
     this.syncFall(s.onFall ?? "gameover");
     this.syncHistory(s.historyMode ?? "historic");
     this.q<HTMLInputElement>("#menu-opacity").value = String(s.territoryOpacity);
+    let dev = false;
+    try { dev = localStorage.getItem("goko-dev") === "1"; } catch { /* 読めなければ隠す */ }
+    this.q<HTMLInputElement>("#menu-dev").checked = dev;
+    this.renderDev(dev);
     this.say("");
     this.root.hidden = false;
     await this.refresh();
+  }
+
+  /** 開発用:敵AIの判断ログ(新しい順に80件) */
+  private renderDev(on: boolean): void {
+    const panel = this.q("#menu-dev-panel");
+    panel.hidden = !on;
+    if (!on) return;
+    this.q(".dev-summary").textContent = this.actions.aiSummary?.() ?? "";
+    const list = this.q(".dev-log");
+    list.replaceChildren(...(this.actions.aiLog?.() ?? []).slice(-80).reverse().map((l) => {
+      const li = document.createElement("li");
+      li.textContent = `${l.date} ${l.text}`;
+      return li;
+    }));
   }
 
   private syncFall(value: GameSettings["onFall"]): void {

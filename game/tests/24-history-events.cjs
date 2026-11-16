@@ -59,14 +59,17 @@ const path = require('path');
     const ui = { critical: box.classList.contains('hist-critical'), choices: [...document.querySelectorAll('#history-event .hist-choice')].map(x => x.dataset.kind), persons: document.querySelectorAll('#history-event .hist-person img').length, map: !!document.querySelector('#history-event .hist-map'), focus: !!document.querySelector('.hist-focus'), history: document.querySelector('.hist-history')?.textContent.slice(0, 20) };
     const ja = h.largestArmy('jin', h.def('feishui383').place, 900); const m0 = ja?.army.morale;
     document.querySelector('#history-event .hist-choice[data-id="decisive"]').click();
-    const r = h.records.feishui383; const ev = c.events.find(e => e.histId === 'feishui383');
+    const r = h.records.feishui383; const before = c.events.some(e => e.histId === 'feishui383');
+    // Version 40:離れた軍団は瞬間移動させない。両軍が淝水へ進軍し、接触したところで会戦になる
+    let ev = null; let n = 0; c.speed = 8; while (!ev && n++ < 40000) { c.update(0.25); ev = c.events.find(e => e.histId === 'feishui383'); if (c.speed === 0 && !ev) c.speed = 8; }
+    const marchDays = Math.round(c.day - h.records.feishui383.day);
     const setup = ev ? window.__gokoSetup(ev) : null;
-    return { awaiting: aw && aw.id, shown, ui, picks: r.picks, status: r.status, result: r.result, cmd: ja && ja.army.commanderId, morale: [m0, ja && ja.army.morale], ev: ev && { status: ev.status, place: ev.location.name, att: ev.attackerFactionId, def: ev.defenderFactionId }, setup: setup && { att: setup.attacker.name, def: setup.defender.name, troops: setup.attacker.troops.infantry + setup.defender.troops.infantry }, prep: !document.querySelector('#event-open').hidden, resultShown: document.querySelector('#history-event .hist-result')?.textContent.slice(0, 40) }; })()`);
+    return { awaiting: aw && aw.id, shown, ui, picks: r.picks, status: r.status, result: r.result, cmd: ja && ja.army.commanderId, morale: [m0, ja && ja.army.morale], ev: ev && { status: ev.status, place: ev.location.name, att: ev.attackerFactionId, def: ev.defenderFactionId }, before, marchDays, setup: setup && { att: setup.attacker.name, def: setup.defender.name, troops: setup.attacker.troops.infantry + setup.defender.troops.infantry }, prep: !document.querySelector('#event-open').hidden, resultShown: document.querySelector('#history-event .hist-result')?.textContent.slice(0, 40) }; })()`);
   await p.screenshot({ path: out + '/pc-history-feishui.png' });
   check('8 淝水の戦いが383年に示される(最重要の演出)', r4.awaiting === 'feishui383' && r4.shown && r4.ui.critical && r4.ui.choices.join() === 'historic,alt,bold' && r4.ui.persons === 7 && r4.ui.map && r4.ui.focus, r4.ui);
   check('4 プレイヤーが選択肢を選べる', r4.picks.jin?.by === 'player' && r4.picks.jin.choice === 'decisive' && r4.picks.qin?.by === 'ai', r4.picks);
   check('5 選択が軍団・人物に影響する(謝玄が指揮・士気)', r4.cmd === 'xie_xuan' && r4.morale[1] > r4.morale[0] - 1, r4);
-  check('9 淝水の戦いが3D会戦と連動する', !!r4.ev && r4.ev.status === 'pending' && !!r4.setup && r4.prep, r4);
+  check('9 淝水の戦いが3D会戦と連動する(両軍が進軍してから会戦。瞬間移動しない)', !!r4.ev && r4.ev.status === 'pending' && !!r4.setup && r4.prep && r4.before === false && r4.marchDays >= 1, r4);
 
   // 10. 前秦が勝てば、敗北も分裂も強制しない
   const r10 = await p.evaluate(`(() => { const c = window.__goko.campaign, h = c.history; const ev = c.events.find(e => e.histId === 'feishui383');

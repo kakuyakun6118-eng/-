@@ -20,6 +20,7 @@ import { CityLabels } from "../ui/CityLabels";
 import { InfoPanel } from "../ui/InfoPanel";
 import { DiplomacyScreen } from "../ui/DiplomacyScreen";
 import { CourtScreen } from "../ui/CourtScreen";
+import { EventsScreen } from "../ui/EventsScreen";
 import { HistoryEventScreen, TimelineScreen } from "../ui/HistoryScreen";
 import { estimateWinRate } from "../sim/autoBattle";
 import { governorIdOf } from "../sim/battle";
@@ -98,6 +99,7 @@ export class Game {
   /** 自分の国が滅びたとき、どうするか */
   private onFall: "gameover" | "continue" = "gameover";
   private personScreen!: PersonScreen;
+  private eventsScreen!: EventsScreen;
   private readonly histRoutes: RouteLine[] = [];
   private readonly histMarks = new THREE.Group();
   /** 交易路・補給範囲の表示 */
@@ -322,6 +324,12 @@ export class Game {
       applySave: (data) => this.applySave(data),
       settings: () => this.settings(),
       changeSettings: (change) => this.changeSettings(change),
+      aiLog: () => this.campaign.strategy.log,
+      aiSummary: () => {
+        const t = this.campaign.strategy.totals();
+        const top = (r: Record<string, number>): string => Object.entries(r).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, v]) => `${k}${v}`).join("・") || "なし";
+        return `計画${t.planned}・出兵${t.dispatched}・到着${t.arrived}・野戦${t.fieldBattles}・攻城${t.sieges}・占領${t.captures}・撤退${t.retreats}・宣戦${t.wars}・あなたの国への侵攻${t.vsPlayer}(攻城${t.vsPlayerSieges}・占領${t.vsPlayerCaptures})/見送りの理由:${top(t.notLaunched)}/中止の理由:${top(t.aborted)}`;
+      },
     });
     for (const b of root.querySelectorAll<HTMLElement>(".menu-open")) {
       b.addEventListener("click", () => void this.menu.open());
@@ -332,6 +340,12 @@ export class Game {
       playerFactionId: () => this.playerFactionId,
       onAppointed: () => this.refreshPosts(),
       openFamily: (id) => this.openCourt(id),
+      focusPlace: (w) => {
+        const army = w.armyId ? this.armies.markerOf(w.armyId) : undefined;
+        if (army) return this.selectArmy(army);
+        const city = this.cities.markers.find((m) => m.city.id === w.cityId);
+        if (city) this.selectCity(city);
+      },
     });
     (root.querySelector("#persons-open") as HTMLElement).addEventListener("click", () => this.personScreen.open());
     // シナリオの選択(メニューから開く。はじめて開いたときは、起動時にも出す)
@@ -390,6 +404,12 @@ export class Game {
     histScreen.showNext();
     const timeline = new TimelineScreen(root.querySelector("#timeline") as HTMLElement, () => this.campaign);
     (root.querySelector("#timeline-open") as HTMLElement).addEventListener("click", () => timeline.open());
+    // 歴史イベントの一覧(発動の条件と、一覧からの発動)
+    this.eventsScreen = new EventsScreen(root.querySelector("#events") as HTMLElement, {
+      campaign: () => this.campaign,
+      onFired: () => histScreen.showNext(),
+    });
+    (root.querySelector("#events-open") as HTMLElement).addEventListener("click", () => this.eventsScreen.open());
     // 交易路と補給範囲の表示(地図の上に重ねる。もう一度押すと消える)
     (root.querySelector("#trade-open") as HTMLElement).addEventListener("click", () => this.toggleOverlay("trade"));
     (root.querySelector("#supply-open") as HTMLElement).addEventListener("click", () => this.toggleOverlay("supply"));
@@ -467,7 +487,9 @@ export class Game {
     scenario.cityOwners[cityId] = factionId;
     const marker = this.cities.setFaction(cityId, factionById(factionId));
     if (marker) this.labels.refresh(marker);
-    this.refreshTerritory(true);
+    // 領土の計算は重いので、次の描画のときに1度だけ行う(国が滅びて都市がまとめて移るとき、何十回も計算しない)
+    this.territory.markStale(() => this.refreshTerritory(true));
+    this.dirty = true;
   }
 
   // ===== 軍団の操作 =====
@@ -1148,8 +1170,11 @@ export class Game {
     this.cities.select(marker);
     // 滞在している人物:太守・守将と、その都市にいる人(后妃など)。捕虜や保護中の人は除く
     const gov = personById(governorIdOf(marker.city, this.campaign.cityStates[marker.city.id]));
-    const residents = [gov, ...persons.filter((p) => p.residence === marker.city.id && p !== gov && this.campaign.personStatus(p.id) === "active")].filter((p): p is Person => !!p);
+    // 所在がこの都市の人(太守・在住・宮廷)。出陣中の軍団長は入れない
+    const here = this.campaign.placement.peopleAt(marker.city.id).map((id) => personById(id)).filter((p): p is Person => !!p);
+    const residents = [gov, ...here.filter((p) => p !== gov)].filter((p): p is Person => !!p);
     this.panel.show(marker.city, marker.faction, this.campaign.cityState(marker.city), scenario.uncertainOwners?.includes(marker.city.id) && scenario.cityOwners[marker.city.id] === initialCityOwners[marker.city.id], residents, this.campaign.spoils.inCity(marker.city.id).length);
+    this.panel.setStaff(residents.length, () => this.personScreen.open(undefined, marker.city.id));
     // 徴兵と出陣は、その都市の勢力を操作できるときだけ
     const owner = scenario.cityOwners[marker.city.id];
     (this.root.querySelector(".info-actions") as HTMLElement).hidden = !owner || (this.playerFactionId !== null && this.playerFactionId !== owner);
@@ -1198,6 +1223,7 @@ export class Game {
 
   private frame(): void {
     // 領土の塗り直しの続き(1フレームに1区切り)
+    this.territory.ensure();
     if (this.territoryJob) {
       if (this.territoryJob.next().done) this.territoryJob = null;
       this.dirty = true;

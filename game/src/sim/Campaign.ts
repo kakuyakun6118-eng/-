@@ -6,6 +6,7 @@ import relationRules from "../data/rules/diplomacyStart.json";
 import { autoResolve } from "./autoBattle";
 import { createBattleSetup, governorIdOf, initialCityState, placeName } from "./battle";
 import { garrisonCap, StrategyAi, strategyRules } from "./strategy";
+import { Placement } from "./placement";
 import { chance, setCurrentSpoils, Spoils, type CaptureRecord, type PendingCapture } from "./spoils";
 import { affinity, isKin, LoyaltySystem } from "./loyalty";
 import { cityEcon, Economy } from "./economy";
@@ -123,6 +124,7 @@ export class Campaign {
     this.court = new Court(this);
     this.history = new HistorySystem(this);
     this.trade = new TradeSystem(this);
+    this.placement.init(true);
   }
 
   /** 勢力の、1か月の収入(支出を引く前) */
@@ -192,7 +194,10 @@ export class Campaign {
     for (const c of this.cities) {
       if (governorIdOf(c, this.cityStates[c.id]) === personId) this.cityStates[c.id] = { ...this.cityState(c), governorId: null };
     }
-    if (city) this.cityStates[city.id] = { ...this.cityState(city), governorId: personId, governorFate: "healthy" };
+    if (city) {
+      this.cityStates[city.id] = { ...this.cityState(city), governorId: personId, governorFate: "healthy" };
+      this.placement.moveTo(personId, city.id, "city", `${city.name}の${city.kind === "pass" ? "守将" : "太守"}に任命`);
+    }
     if (army && target?.kind === "deputy") army.army.deputyId = personId;
     else if (army) army.army.commanderId = personId;
     if (city || army) this.loyalty?.add(personId, 5, city ? `${city.name}の太守に任命` : `${army!.army.name}の${target?.kind === "deputy" ? "副将" : "指揮官"}に任命`);
@@ -211,7 +216,9 @@ export class Campaign {
   readonly proposals: { from: string; kind: "peace" | "alliance"; day: number }[] = [];
   private nextArmyId = 1;
   private readonly pendingAuto: BattleEvent[] = [];
-  private readonly strategy = new StrategyAi(this);
+  readonly strategy = new StrategyAi(this);
+  /** 人物の所在(Version 40) */
+  readonly placement = new Placement(this);
   /** 名品・捕虜・保護・陥落の記録 */
   readonly spoils!: Spoils;
   /** 忠誠度・相性・名声 */
@@ -227,7 +234,8 @@ export class Campaign {
   /** シルクロードの交易 */
   readonly trade!: TradeSystem;
   /** 歴史の流れ:史実重視か自由歴史か(AIの選択の重みが変わる。国の復活やプレイヤーの選択の取り消しはしない) */
-  historyMode: "historic" | "free" = "historic";
+  /** 歴史の流れ:通常・史実重視・自由歴史(Version 40で「通常」を追加) */
+  historyMode: "normal" | "historic" | "free" = "historic";
   /** 兵站の記録:補給が尽きて失った兵(国ごと)・砂漠や山での損耗 */
   readonly logistics: { attrition: Record<string, number>; expeditions: Record<string, number> } = { attrition: {}, expeditions: {} };
 
@@ -488,6 +496,8 @@ export class Campaign {
       history: this.history.serialize(),
       trade: this.trade.serialize(),
       logistics: this.logistics,
+      strategy: this.strategy.serialize(),
+      placement: this.placement.serialize(),
     });
   }
 
@@ -561,6 +571,9 @@ export class Campaign {
         this.listener.onArmyChanged(s, true);
       }
     }
+    // 戦略AIの作戦は、軍団を戻したあとで(いない軍団の作戦は捨てる)
+    this.strategy.restore(data.strategy);
+    this.placement.restore(data.placement);
   }
 
   /** 都市の、いまの状態(まだ戦いを受けていなければ、最初の状態) */
@@ -646,6 +659,11 @@ export class Campaign {
   }
 
   /** 軍団のいる場所の地形(砂漠・山地など) */
+  /** その地点の地形の種類(戦略AIの見積もり用) */
+  terrainKindAt(lon: number, lat: number): string {
+    return this.grid.kindAt(lon, lat);
+  }
+
   terrainOf(s: ArmyState): string {
     return this.grid.kindAt(s.army.lon, s.army.lat);
   }
@@ -842,6 +860,7 @@ export class Campaign {
         if (this.playerFactionId !== null && (d + 1) % 360 === 210) this.court.aiYearly();
       }
       this.diplo.daily();
+      this.history.daily();
       if (this.playerFactionId !== null) this.strategy.daily(d + 1);
       this.listener.onDayChanged(d + 1);
     }
@@ -1640,6 +1659,7 @@ export class Campaign {
     if (this.pendingTactics) event.tactics = this.pendingTactics;
     this.addSupporters(event, attacker, defender);
     this.events.push(event);
+    this.strategy.onBattleStart(event);
     // 両軍を止めて対峙させ、時間も止める(プレイヤーが状況を確かめられるように)
     this.setStatus(attacker, "fighting");
     if (defender) {
@@ -1847,6 +1867,8 @@ export class Campaign {
       const route = this.planRoute(loser.army.id, { lon: loser.army.lon + (dx / len) * 0.9, lat: loser.army.lat + (dy / len) * 0.9 });
       if (route) this.orderMove(loser.army.id, route);
     }
+    // 戦略AIの記録と、敗れたAIの軍団の撤退の判断
+    this.strategy.onBattleResult(event, result);
   }
 
   /** 1日ごとの消耗と回復 */

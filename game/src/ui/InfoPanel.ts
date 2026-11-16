@@ -88,6 +88,18 @@ export class InfoPanel {
     this.root.hidden = false;
   }
 
+  /** 「この都市の人物」釦(人数と、押したときの動き) */
+  setStaff(count: number, open: () => void): void {
+    const box = this.root.querySelector(".info-residents") as HTMLElement;
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "info-staff";
+    b.textContent = `この都市の人物 ${count}人`;
+    b.addEventListener("click", open);
+    box.prepend(b);
+    box.hidden = false;
+  }
+
   hide(): void {
     this.root.hidden = true;
   }

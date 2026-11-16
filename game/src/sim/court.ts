@@ -869,7 +869,10 @@ export class Court {
         if (year > p.died || (year === p.died && month >= (h.month ?? 1 + Math.floor(chance(p.id + "|dm") * 12)))) cause = h.cause;
       } else if (p.died !== null && p.died >= scenario.year && year > p.died) {
         const age = b !== null ? year - b : 50 + (year - p.died);
-        const annual = age < 40 ? 0.01 : age < 50 ? 0.02 : age < 60 ? 0.04 : age < 70 ? 0.08 : age < 80 ? 0.15 : 0.3;
+        // 史実の死(戦死・処刑など)を起こす出来事がなかった人も、いつまでも生き続けはしない(Version 40:主役の不死化の解消)。
+        // 没年を過ぎた年数に応じて、亡くなる見込みを上げる(1年ごとに+4%、上限50%)
+        const over = Math.min(0.5, 0.04 * (year - p.died));
+        const annual = Math.max(over, age < 40 ? 0.01 : age < 50 ? 0.02 : age < 60 ? 0.04 : age < 70 ? 0.08 : age < 80 ? 0.15 : 0.3);
         if (chance(`${day}|${p.id}|mort`) < annual / 12) cause = age >= 70 ? "old_age" : "illness";
       }
       if (life !== undefined && b !== null && year - b >= life) cause = year - b >= 65 ? "old_age" : "illness";

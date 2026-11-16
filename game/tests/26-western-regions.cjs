@@ -129,7 +129,7 @@ const path = require('path');
     document.querySelector('#supply-open').click(); const supply = { shown: !panel.hidden, rings: g.overlayGroup.children.length, text: panel.textContent.slice(0, 120) };
     document.querySelector('#supply-open').click();
     g.changeSettings({ playerFactionId: 'qianqin' }); document.querySelector('#finance-open').click(); const fin = document.querySelector('#finance').textContent.includes('シルクロード交易'); document.querySelector('.finance-close').click();
-    document.querySelector('#menu-open').click(); const hb = [...document.querySelectorAll('.history-choice button')]; hb[1].click(); const mode = g.campaign.historyMode; hb[0].click();
+    document.querySelector('#menu-open').click(); const hb = (m) => document.querySelector(`.history-choice button[data-mode="${m}"]`); hb('free').click(); const mode = g.campaign.historyMode; hb('historic').click();
     return { trade, supply, fin, mode, back: g.campaign.historyMode }; });
   check('画面:交易路・補給の表示、財政の交易収入、歴史の流れの設定', ui.trade.shown && ui.trade.lines >= 20 && /交易/.test(ui.trade.text) && ui.supply.shown && ui.supply.rings > 0 && ui.fin && ui.mode === 'free' && ui.back === 'historic', ui);
   await b.close();

@@ -10,6 +10,9 @@ import { distanceKm } from "./pathfinding";
 import { chance } from "./spoils";
 import { EXTRA_EVENTS } from "./historyEvents2";
 
+/** 歴史の会戦・攻城戦を、その場で始めてよい距離(これより遠い軍団は、戦場まで進軍させる) */
+const NEAR_KM = 45;
+
 export type ChoiceKind = "historic" | "alt" | "bold";
 export const KIND_LABEL: Record<ChoiceKind, string> = { historic: "史実どおり", alt: "合理的な別案", bold: "大胆な改変" };
 export interface HistChoice {
@@ -33,6 +36,31 @@ export interface HistRecord {
   historic?: boolean;
   /** 起きたときの役(会戦の決着のときに使う) */
   roles?: Record<string, string | undefined>;
+  /** プレイヤーが一覧から発動した(Version 40)。一度発動した事件は、もう発動できない */
+  manual?: boolean;
+}
+
+/** 発動の条件の1行(満たしているか・満たしていない理由) */
+export interface CondItem { label: string; ok: boolean; why?: string; info?: boolean }
+/** 一覧での状態 */
+export type ListState = "available" | "unmet" | "occurred" | "branched" | "past" | "awaiting";
+export const LIST_STATE_LABEL: Record<ListState, string> = { available: "発動可能", unmet: "条件未達", occurred: "発生済み", branched: "分岐済み", past: "開始前の史実", awaiting: "選択待ち" };
+export type EventCategory = "military" | "politics" | "diplomacy" | "founding";
+export const CATEGORY_LABEL: Record<EventCategory, string> = { military: "軍事", politics: "政治", diplomacy: "外交", founding: "建国・滅亡" };
+/** 外交の色の濃い事件(入朝・亡命・連合・服属・和親) */
+const DIPLOMACY_EVENTS = new Set(["xiyu382", "chui369", "murong319", "yangxuan345", "changan313", "unify376"]);
+/** 事件の種類(複数あり得る。一覧の絞り込み用):会戦のある事件は軍事、建国・滅亡・自立は建国・滅亡、入朝・亡命などは外交、残りは政治 */
+export function categoriesOf(d: HistEventDef): EventCategory[] {
+  const out: EventCategory[] = [];
+  if (d.battle || /戦い|乱|遠征|北伐|陥落|征伐|攻略|反攻/.test(d.name)) out.push("military");
+  if (/建国|成立|滅亡|自立|独立|称する|国号|簒奪|再興|分裂|崩壊|最期/.test(d.name)) out.push("founding");
+  if (DIPLOMACY_EVENTS.has(d.id)) out.push("diplomacy");
+  if (out.length === 0 || /即位|廃位|廃立|廃太子|権力|改革|暴政|継承|内紛|台頭/.test(d.name)) out.push("politics");
+  return out;
+}
+/** 主な種類(一覧に出す1つ) */
+export function categoryOf(d: HistEventDef): EventCategory {
+  return categoriesOf(d)[0];
 }
 export interface TimelineEntry {
   day: number;
@@ -161,6 +189,35 @@ export class HistorySystem {
   }
 
   /**
+   * 毎日:歴史の会戦へ向かっている2つの軍団が、戦場で近づいたら会戦を始める(進軍してから戦う。瞬間移動はしない)。
+   * 片方がまだ遠ければ待つ。片方が来なくなったら(滅亡・壊滅)、印を外す。
+   */
+  daily(): void {
+    const day = Math.floor(this.c.day);
+    for (const t of [...this.tags]) {
+      if (t.until < day) {
+        this.tags.splice(this.tags.indexOf(t), 1);
+        continue;
+      }
+      if (!t.b) continue;
+      const a = this.c.stateOf(t.a);
+      const b = this.c.stateOf(t.b);
+      if (!a || !b) {
+        this.tags.splice(this.tags.indexOf(t), 1);
+        continue;
+      }
+      if (a.status === "fighting" || b.status === "fighting") continue;
+      if (distanceKm(a.army, b.army) > NEAR_KM * 1.6) continue;
+      // 戦場で向かい合った:会戦を始める(startEventAt が印を外す)
+      a.route = null;
+      b.route = null;
+      const ev = this.c.startEventAt(a, b, t.histId, t.tactics);
+      const d = this.def(t.histId);
+      if (ev && d) ev.location.name = d.place.name;
+    }
+  }
+
+  /**
    * 会戦の事件の前の半年:関係する国のAIは、戦争を止めずに準備をする。
    * 主力の集結先(戦場にいちばん近い自国の都市)を返す。ほかの軍団は、ふだんどおり戦う。
    */
@@ -264,6 +321,12 @@ export class HistorySystem {
     }
   }
 
+  /** 歴史の会戦・攻城戦へ向かっている軍団か(AIはほかの用に使わない) */
+  taggedArmy(armyId: string): boolean {
+    const day = Math.floor(this.c.day);
+    return this.tags.some((t) => t.until >= day && (t.a === armyId || t.b === armyId));
+  }
+
   /** 事件のために取っておく軍団か(1年以内の事件の reserve の人物が率いる軍団) */
   reservedArmy(commanderId: string): boolean {
     if (!commanderId) return false;
@@ -340,7 +403,7 @@ export class HistorySystem {
   }
 
   /** 事件を起こす(または分岐として示す)。年月が来たら必ず呼ばれる */
-  trigger(d: HistEventDef): void {
+  trigger(d: HistEventDef, manual = false): void {
     const x = this.ctx();
     const rec = this.records[d.id];
     const roles = d.roles(x);
@@ -368,7 +431,8 @@ export class HistorySystem {
     // 選ぶ側:プレイヤーの国が含まれていれば、プレイヤーの選択を待つ(時間を止める)
     const me = this.c.playerFactionId;
     const sides = Object.keys(d.choices).filter((role) => roles[role]);
-    if (me && sides.some((role) => roles[role] === me)) {
+    // 観賞・編集モード(操作する勢力が「すべて」)で一覧から発動したときは、プレイヤーが最初の役の選択をする
+    if ((me && sides.some((role) => roles[role] === me)) || (manual && me === null && sides.length > 0)) {
       rec.status = "awaiting";
       this.queue.push({ id: d.id, mode: "decide" });
       this.c.speed = 0;
@@ -384,7 +448,7 @@ export class HistorySystem {
     const rec = this.records[id];
     if (!d || rec.status !== "awaiting") return "選べる事件がありません";
     const roles = d.roles(this.ctx());
-    const role = Object.keys(d.choices).find((r) => roles[r] === this.c.playerFactionId);
+    const role = Object.keys(d.choices).find((r) => (this.c.playerFactionId === null ? !!roles[r] : roles[r] === this.c.playerFactionId));
     if (!role || !d.choices[role].some((ch) => ch.id === choiceId)) return "その選択肢はありません";
     const i = this.queue.findIndex((q) => q.id === id && q.mode === "decide");
     if (i >= 0) this.queue.splice(i, 1);
@@ -424,6 +488,103 @@ export class HistorySystem {
     return text;
   }
 
+  // ================= 一覧からの発動(Version 40) =================
+  /** その事件に、プレイヤーの国が関わっているか */
+  involves(d: HistEventDef, f: string | null = this.c.playerFactionId): boolean {
+    if (!f) return false;
+    const roles = d.roles(this.ctx());
+    return Object.keys(d.choices).some((r) => roles[r] === f);
+  }
+
+  /** 発動の条件を1つずつ調べる(満たしているか・満たしていない理由) */
+  conditions(d: HistEventDef): CondItem[] {
+    const x = this.ctx();
+    const c = this.c;
+    const rec = this.records[d.id];
+    const roles = d.roles(x);
+    const out: CondItem[] = [];
+    const { year, month } = c.calendar();
+    const now = year * 12 + month;
+    const hist = d.year * 12 + d.month;
+    const mode = c.historyMode;
+    // 1) 時期
+    if (now >= hist) out.push({ label: `史実の年月(${d.year}年${d.month}月)に達している`, ok: true });
+    else if (mode === "free") {
+      const early = hist - now <= 15 * 12;
+      out.push({ label: `自由歴史:史実(${d.year}年${d.month}月)より早い発動(15年前まで)`, ok: early, why: early ? undefined : `史実の年月まで${Math.ceil((hist - now) / 12)}年あり、早すぎる` });
+    } else out.push({ label: `史実の年月(${d.year}年${d.month}月)に達している`, ok: false, why: `まだ${c.dateText()}。${mode === "historic" ? "史実重視" : "通常"}のモードでは、史実の年月より前には発動できない(自由歴史では早めの発動ができる)` });
+    // 2) 関係国家が存在する
+    for (const role of Object.keys(d.choices)) {
+      const f = roles[role];
+      out.push({ label: `関係国家(${role}):${f ? name(f) : "該当する国"}が存在する`, ok: !!f && live(c, f), why: !f ? "この役にあたる国が、いまのゲームにない" : live(c, f) ? undefined : `${name(f)}は滅んでいるか、都市を持っていない` });
+    }
+    // 3) 会戦の事件:戦争状態か、戦争に至りうる関係か。関係する軍団がいるか
+    if (d.battle && d.battle.length >= 2) {
+      const [a, b] = d.battle.map((r) => roles[r]);
+      if (a && b) {
+        const rel = c.relationOf(a, b);
+        const can = c.atWar(a, b) || !["alliance", "vassal"].includes(rel);
+        out.push({ label: `${name(a)}と${name(b)}が戦争状態、または戦争に至りうる関係`, ok: can, why: can ? undefined : `${name(a)}と${name(b)}は${rel === "alliance" ? "同盟" : "従属"}の関係にある` });
+      }
+      for (const r of d.battle) {
+        const f = roles[r];
+        const army = f ? this.largestArmy(f) : undefined;
+        out.push({ label: `${f ? name(f) : r}の軍団が存在する`, ok: !!army, why: army ? undefined : f ? `${name(f)}に、出せる軍団がない` : "その国がない" });
+      }
+    }
+    // 4) 主要人物(いなければ、代わりの人物で起こる事件もある。最終的な判断は「史実の前提条件」)
+    for (const id of d.persons.slice(0, 2)) {
+      const p = P(id);
+      const ok = !!p && alive(c, id);
+      out.push({ label: `主要人物:${ledgerPerson(id)?.name ?? id}が健在`, ok, why: ok ? undefined : absent(c, id), info: true });
+    }
+    // 5) 史実の前提条件(事件ごとの条件。代わりの指揮官・人物で足りるかもここで見る)
+    const r = d.ready(x, roles);
+    out.push({ label: `前提条件${d.cond ? `:${d.cond}` : ""}`, ok: r === true, why: r === true ? undefined : r });
+    // 6) 二重に起こさない・一度だけ
+    const dup = d.done?.(x, roles) ?? false;
+    out.push({ label: "ほかの形で、すでに起きていない", ok: !dup, why: dup ? "同じことがゲームの中で別の形で起きている" : undefined });
+    const unused = rec.status === "pending" || (rec.status === "branched" && rec.ready === false && !rec.manual && Object.keys(rec.picks).length === 0);
+    out.push({ label: "この事件はまだ発生していない(一度だけ発動できる)", ok: unused && !rec.manual, why: unused ? undefined : `すでに「${STATUS_LABEL[rec.status]}」` });
+    // 分岐のあとの発動:史実の年月に条件がそろわなかった事件は、通常・自由歴史では10年のうちなら、条件がそろえば発動できる
+    if (rec.status === "branched" && rec.ready === false) {
+      const late = now - hist <= 120 && mode !== "historic";
+      out.push({ label: "分岐した事件を、条件がそろったあとで発動できる(史実の年月から10年以内・史実重視では不可)", ok: late, why: late ? undefined : mode === "historic" ? "史実重視のモードでは、史実の年月を過ぎた事件は発動しない" : "史実の年月から10年を過ぎた" });
+    }
+    return out;
+  }
+
+  /** 一覧での状態と、いま発動できるか(できない理由) */
+  listState(d: HistEventDef): { state: ListState; can: boolean; reasons: string[]; conds: CondItem[] } {
+    const rec = this.records[d.id];
+    if (rec.status === "past") return { state: "past", can: false, reasons: ["シナリオ開始の前に、史実で起きた"], conds: [] };
+    if (rec.status === "awaiting") return { state: "awaiting", can: false, reasons: ["選択を待っている"], conds: [] };
+    if (rec.status === "occurred" || rec.status === "duplicate") return { state: "occurred", can: false, reasons: [STATUS_LABEL[rec.status]], conds: [] };
+    const conds = this.conditions(d);
+    const unmet = conds.filter((x) => !x.ok && !x.info).map((x) => x.why ?? x.label);
+    const me = this.c.playerFactionId;
+    const watching = me === null;
+    if (unmet.length === 0 && !watching && !this.involves(d)) unmet.push("あなたの国が関わらない事件は、AIの国が判断する(観賞・編集モード=操作する勢力「すべての勢力」では発動できる)");
+    const can = unmet.length === 0;
+    if (rec.status === "branched" && !can) return { state: "branched", can: false, reasons: unmet, conds };
+    return { state: can ? "available" : "unmet", can, reasons: unmet, conds };
+  }
+
+  /** 一覧から発動する。条件を満たさなければ、理由を返して何もしない */
+  fire(id: string): string {
+    const d = this.def(id);
+    if (!d) return "その事件はありません";
+    const st = this.listState(d);
+    if (!st.can) return `発動できません:${st.reasons.join("/")}`;
+    const rec = this.records[d.id];
+    rec.manual = true;
+    rec.status = "pending";
+    rec.picks = {};
+    this.log("history", `${d.name}を発動(${this.c.historyMode === "free" ? "自由歴史" : this.c.historyMode === "historic" ? "史実重視" : "通常"}のモード・${this.c.dateText()})`, undefined, d.id);
+    this.trigger(d, true);
+    return STATUS_LABEL[this.records[d.id].status];
+  }
+
   /** AIの選択:史実の条件がそろっていれば史実の行動を選びやすい。国力・兵力・財政・君主の性格・外交で変わる */
   aiPick(d: HistEventDef, roles: Record<string, string | undefined>, role: string): string {
     const custom = d.ai?.(this.ctx(), roles, role);
@@ -434,8 +595,12 @@ export class HistorySystem {
     const rich = (this.c.factionStates[f]?.gold ?? 0) > this.c.economy.report(f).expense.total * 4;
     const bold = r ? (r.war + r.leadership - r.intelligence - r.politics) / 200 : 0;
     // 史実重視モード:史実の行動を強く選ぶ。自由歴史モード:別案・改変も選びやすい
-    const free = this.c.historyMode === "free";
-    const w = list.map((ch) => (ch.kind === "historic" ? (free ? 0.45 : 0.85) : ch.kind === "alt" ? (free ? 0.33 : 0.12) + (rich ? 0.04 : 0) : (free ? 0.18 : 0.03) + Math.max(0, bold) * (free ? 0.5 : 0.2)));
+    const mode = this.c.historyMode;
+    const free = mode === "free";
+    // 通常のモードは、史実重視と自由歴史の中間
+    const W = mode === "free" ? [0.45, 0.33, 0.18, 0.5] : mode === "normal" ? [0.65, 0.24, 0.08, 0.35] : [0.85, 0.12, 0.03, 0.2];
+    const w = list.map((ch) => (ch.kind === "historic" ? W[0] : ch.kind === "alt" ? W[1] + (rich ? 0.04 : 0) : W[2] + Math.max(0, bold) * W[3]));
+    void free;
     let v = chance(`${Math.floor(this.c.day)}|${d.id}|${role}|ai`) * w.reduce((a, b) => a + b, 0);
     for (let i = 0; i < list.length; i++) {
       v -= w[i];
@@ -561,7 +726,8 @@ export class HistorySystem {
   siege(att: ArmyState | undefined, cityId: string, histId: string, km = 420): string {
     const city = this.c.cities.find((x) => x.id === cityId);
     if (!att || !city) return "攻城に出る軍団がない";
-    if (distanceKm(att.army, city) > km) {
+    // 瞬間移動はさせない:都市のすぐそば(45km以内)にいるときだけ、その場で攻城戦を始める(Version 40)
+    if (distanceKm(att.army, city) > Math.min(km, NEAR_KM)) {
       const route = this.c.planRoute(att.army.id, city);
       if (route) this.c.orderMove(att.army.id, route);
       this.tags.push({ a: att.army.id, city: cityId, histId, until: Math.floor(this.c.day) + 240 });
@@ -585,11 +751,14 @@ export class HistorySystem {
    */
   battle(att: ArmyState | undefined, def: ArmyState | undefined, place: { name: string; lon: number; lat: number }, histId: string, km = 420, tactics?: BattleEvent["tactics"]): string {
     if (!att || !def) return "会戦に出る軍団がない";
-    const far = distanceKm(att.army, place) > km || distanceKm(def.army, place) > km;
+    // 瞬間移動はさせない:両軍が戦場のすぐそば(45km以内)にいるときだけ、その場で会戦を始める(Version 40)
+    const far = distanceKm(att.army, place) > Math.min(km, NEAR_KM) || distanceKm(def.army, place) > Math.min(km, NEAR_KM);
     if (far) {
       for (const s of [att, def]) {
         const route = this.c.planRoute(s.army.id, place);
         if (route) this.c.orderMove(s.army.id, route);
+        // 戦場へ向かう行軍:途中や戦場のそばの都市を攻めるのではなく、相手の軍団と会戦する
+        s.targetCityId = null;
       }
       this.tags.push({ a: att.army.id, b: def.army.id, histId, until: Math.floor(this.c.day) + 240, tactics });
       this.flag(`${histId}_march`, "1");

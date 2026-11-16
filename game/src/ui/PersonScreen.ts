@@ -3,6 +3,7 @@ import { fillPortrait } from "./portrait";
 import type { Person, PersonRole, PersonStatus } from "../data/types";
 import type { Campaign } from "../sim/Campaign";
 import { affinity, loyaltyBand } from "../sim/loyalty";
+import { LOCATION_LABEL } from "../sim/placement";
 
 const ROLE_LABEL: Record<PersonRole, string> = { ruler: "君主", general: "武将", strategist: "軍師", minister: "文官" };
 const STATUS_LABEL: Record<PersonStatus, string> = { active: "健在", wounded: "負傷", captured: "捕虜", dead: "死亡", protected: "保護" };
@@ -22,6 +23,8 @@ export interface PersonScreenActions {
   onAppointed: () => void;
   /** 家系図(皇室の画面)を開く */
   openFamily?: (personId: string) => void;
+  /** 所在地(都市か軍団)を地図で選ぶ */
+  focusPlace?: (where: { cityId?: string; armyId?: string }) => void;
 }
 
 /** 人物の一覧と詳細。任命(太守・守将・軍団の指揮官)もここから行う */
@@ -34,7 +37,7 @@ export class PersonScreen {
     this.q(".persons-close").addEventListener("click", () => this.close());
     const faction = this.q<HTMLSelectElement>(".persons-faction");
     faction.replaceChildren(new Option("すべての勢力", ""), ...scenario.factions.map((f) => new Option(f.name, f.id)));
-    for (const sel of [".persons-faction", ".persons-role", ".persons-sort"]) {
+    for (const sel of [".persons-faction", ".persons-role", ".persons-sort", ".persons-place"]) {
       this.q(sel).addEventListener("change", () => this.renderList());
     }
     this.q(".person-appoint").addEventListener("click", () => this.appoint());
@@ -58,13 +61,22 @@ export class PersonScreen {
     return !this.root.hidden;
   }
 
-  open(personId?: string): void {
+  open(personId?: string, cityId?: string): void {
     const sel = this.q<HTMLSelectElement>(".persons-faction");
     const keep = sel.value;
     sel.replaceChildren(new Option("すべての勢力", ""), ...scenario.factions.map((f) => new Option(f.name + (f.fallen ? "(滅亡)" : ""), f.id)));
     sel.value = keep;
     const player = this.actions.playerFactionId();
     if (player) this.q<HTMLSelectElement>(".persons-faction").value = player;
+    // 所在の絞り込み:都市ごと(都市の情報から開いたときは、その都市)
+    const place = this.q<HTMLSelectElement>(".persons-place");
+    const camp = this.actions.campaign();
+    place.replaceChildren(new Option("すべての所在", ""), new Option("出陣中・軍団", "@army"), ...camp.cities.filter((c) => scenario.cityOwners[c.id]).map((c) => new Option(c.name, c.id)));
+    place.value = cityId ?? "";
+    if (cityId) {
+      this.q<HTMLSelectElement>(".persons-faction").value = "";
+      this.selectedId = null;
+    }
     this.root.hidden = false;
     this.selectedId = personId ?? this.selectedId;
     this.renderList();
@@ -78,7 +90,15 @@ export class PersonScreen {
     const faction = this.q<HTMLSelectElement>(".persons-faction").value;
     const role = this.q<HTMLSelectElement>(".persons-role").value;
     const sort = this.q<HTMLSelectElement>(".persons-sort").value as keyof Person | "";
-    const list = persons.filter((p) => (!faction || p.factionId === faction) && (!role || (role === "female" ? p.gender === "female" : p.role === role)));
+    const place = this.root.querySelector<HTMLSelectElement>(".persons-place")?.value ?? "";
+    const pl = this.actions.campaign().placement;
+    const list = persons.filter((p) => (!faction || p.factionId === faction) && (!role || (role === "female" ? p.gender === "female" : p.role === role)))
+      .filter((p) => {
+        if (!place) return true;
+        const l = pl.locationOf(p.id);
+        if (place === "@army") return l.kind === "army" || l.kind === "moving";
+        return (l.kind === "city" || l.kind === "pass" || l.kind === "court") && l.cityId === place;
+      });
     if (sort) list.sort((a, b) => (b[sort] as number) - (a[sort] as number));
     return list;
   }
@@ -105,7 +125,9 @@ export class PersonScreen {
         const sub = document.createElement("span");
         sub.className = "person-row-sub";
         const status = campaign.personStatus(p.id);
-        sub.textContent = `${factionById(p.factionId)?.name ?? ""}・${ROLE_LABEL[p.role]}${status === "active" ? "" : `・${STATUS_LABEL[status]}`}`;
+        const age = campaign.court.age(p);
+        const where = campaign.placement.locationOf(p.id);
+        sub.textContent = `${factionById(p.factionId)?.name ?? ""}・${ROLE_LABEL[p.role]}${age !== null ? `・${age}歳` : ""}${status === "active" ? "" : `・${STATUS_LABEL[status]}`}・${where.label}`;
         const stats = document.createElement("span");
         stats.className = "person-row-stats";
         stats.textContent = STATS.map(([key, label]) => `${label[0]}${p[key]}`).join(" ");
@@ -151,6 +173,26 @@ export class PersonScreen {
       return `${other?.name ?? "?"}(${m.historic ? "史実" : "ゲーム内"}${m.husband === p.id ? `・${m.kind === "primary" ? "正室" : "側室"}` : ""})`;
     });
     this.q(".person-post").textContent = `状態:${STATUS_LABEL[status]} / 役目:${post ? post.label : "なし"}${spouses.length ? ` / 配偶者:${spouses.join("、")}` : ""}`;
+    // 所在:都市・関所・宮廷・軍団・移動中・捕虜など。史実の確かさと出典も示す
+    const loc = campaign.placement.locationOf(p.id);
+    let where = this.root.querySelector<HTMLElement>(".person-where");
+    if (!where) {
+      where = document.createElement("div");
+      where.className = "person-where";
+      this.q(".person-post").after(where);
+    }
+    const wt = document.createElement("span");
+    wt.textContent = `所在:${loc.label}(${LOCATION_LABEL[loc.kind]})/確かさ:${loc.certainty}${loc.source ? `/出典:${loc.source}` : ""}${loc.note ? `/${loc.note}` : ""}`;
+    const go = document.createElement("button");
+    go.type = "button";
+    go.className = "person-where-go";
+    go.textContent = "所在地へ";
+    go.hidden = !loc.cityId && !loc.armyId;
+    go.addEventListener("click", () => {
+      this.close();
+      this.actions.focusPlace?.({ cityId: loc.cityId, armyId: loc.armyId });
+    });
+    where.replaceChildren(wt, go);
     // 家系:父・母・兄弟・子女(人物IDでつながる。史料にない親子は出さない)と、家系図の釦
     const ct = campaign.court;
     const names = (xs: { name: string; fictional?: boolean }[]): string => xs.map((x) => x.name + (x.fictional ? "*" : "")).join("、") || "記録なし";
