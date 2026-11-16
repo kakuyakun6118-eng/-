@@ -17,9 +17,9 @@ export function relationNote(a: string, b: string): RelationNote | undefined {
   return ((relationRules as unknown as Record<string, Record<string, RelationNote>>)[scenario.id] ?? {})[[a, b].sort().join("|")];
 }
 
-export type DiploCommand = "goodwill" | "gift" | "alliance" | "nonaggression" | "ceasefire" | "peace" | "aid" | "marriage" | "surrender" | "vassal" | "war";
+export type DiploCommand = "goodwill" | "gift" | "trade" | "alliance" | "nonaggression" | "ceasefire" | "peace" | "aid" | "marriage" | "surrender" | "vassal" | "war";
 export const COMMAND_LABEL: Record<DiploCommand, string> = {
-  goodwill: "親善", gift: "贈答", alliance: "同盟", nonaggression: "不可侵条約", ceasefire: "停戦", peace: "和平",
+  goodwill: "親善", gift: "贈答", trade: "交易協定", alliance: "同盟", nonaggression: "不可侵条約", ceasefire: "停戦", peace: "和平",
   aid: "援軍要請", marriage: "婚姻同盟", surrender: "降伏勧告", vassal: "従属要求", war: "宣戦",
 };
 export const RELATION_LABEL: Record<string, string> = {
@@ -202,7 +202,7 @@ export class Diplomacy {
     const rm = this.c.rulerOf(me);
     const rt = this.c.rulerOf(target);
     const envoy = persons.find((x) => x.id === envoyId && x.factionId === me);
-    const base: Record<DiploCommand, number> = { goodwill: 0.75, gift: 0.9, alliance: 0.3, nonaggression: 0.45, ceasefire: 0.35, peace: 0.3, aid: 0.5, marriage: 0.35, surrender: 0.05, vassal: 0.1, war: 1 };
+    const base: Record<DiploCommand, number> = { goodwill: 0.75, gift: 0.9, trade: 0.6, alliance: 0.3, nonaggression: 0.45, ceasefire: 0.35, peace: 0.3, aid: 0.5, marriage: 0.35, surrender: 0.05, vassal: 0.1, war: 1 };
     let p = base[cmd];
     p += am / 200;
     parts.push(`友好度${am}`);
@@ -317,6 +317,17 @@ export class Diplomacy {
         this.addAmity(me, target, up);
         this.log(me, target, `贈答(金${gold}・兵糧${grain}${t ? `・${t.name}` : ""}、友好度+${up})`);
         return { ok: true, text: `${name}に贈り物をしました(友好度+${up})` };
+      }
+      case "trade": {
+        if (rel === "war") return { ok: false, text: "戦争中の相手とは交易できません" };
+        if (this.c.trade.hasPact(me, target)) return { ok: false, text: "すでに交易協定を結んでいます" };
+        if (!this.c.trade.linked(me, target)) return { ok: false, text: "交易路の上で隣り合っていないため、協定の意味がありません" };
+        if (roll >= p) return fail(why);
+        this.c.trade.pact(me, target);
+        this.addAmity(me, target, 8);
+        this.log(me, target, "交易協定(3年)");
+        this.c.addNews(`${me_}と${name}が交易協定を結びました(3年)`);
+        return { ok: true, text: `${name}と交易協定を結びました(3年。間の区間の交易収入が2割5分増える)` };
       }
       case "alliance":
       case "nonaggression": {
@@ -538,6 +549,23 @@ export class Diplomacy {
       const envoy = persons.filter((p) => p.factionId === me && p.role !== "ruler" && this.c.personStatus(p.id) === "active").sort((a, b) => b.politics + b.charisma - (a.politics + a.charisma))[0]?.id;
       const myPower = this.power(me);
       const rnd = (s: string): number => chance(`${day}|${me}|${s}`);
+      // 0) 交易:交易路の上で隣り合う国と、交易協定を結ぶ(戦争中でなく、友好度が0以上)
+      for (const g of alive) {
+        if (g.id === me || g.id === this.c.playerFactionId || this.c.atWar(me, g.id) || this.c.trade.hasPact(me, g.id) || !this.c.trade.linked(me, g.id)) continue;
+        if (this.amityOf(me, g.id) >= 0 && rnd("tp" + g.id) < 0.3) this.act(me, g.id, "trade", { envoyId: envoy });
+      }
+      // 西域の小国:国力が4倍以上の隣の大国があり、宗主がいなければ、自ら臣従を申し出ることがある(自治は保つ)
+      const myCities = this.c.cities.filter((x) => scenario.cityOwners[x.id] === me);
+      if (myCities.length && myCities.every((x) => x.lon < 96) && !this.overlord[me]) {
+        const big = alive.filter((g) => g.id !== me && this.power(g.id) > myPower * 4 && this.neighbors(me, g.id) && !this.c.atWar(me, g.id)).sort((x, y) => this.power(y.id) - this.power(x.id))[0];
+        if (big && rnd("sub") < 0.12 && this.amityOf(me, big.id) >= -10) {
+          this.overlord[me] = big.id;
+          this.c.setRelation(me, big.id, "vassal");
+          this.counts.vassals++;
+          this.log(me, big.id, `${f.name}が自ら臣従を申し出る`);
+          this.c.addNews(`${f.name}が${big.name}に臣従しました(自治は保つ)`);
+        }
+      }
       // 1) 劣勢の戦争は、停戦か和平を求める
       const threat = this.threatOf(me);
       if (threat && this.power(threat) > myPower * 1.6 && Math.min(this.c.relationAge(me, threat), day) >= 360) {

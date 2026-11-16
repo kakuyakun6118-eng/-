@@ -138,6 +138,48 @@
    "people": "匈奴",
    "ruler": "劉虎",
    "color": "#6b7684"
+  },
+  {
+   "id": "shanshan",
+   "name": "鄯善",
+   "people": "鄯善",
+   "ruler": "鄯善王(名は伝わらない)",
+   "color": "#b0864a"
+  },
+  {
+   "id": "yutian",
+   "name": "于闐",
+   "people": "于闐",
+   "ruler": "于闐王(名は伝わらない)",
+   "color": "#4a9a7a"
+  },
+  {
+   "id": "shule",
+   "name": "疏勒",
+   "people": "疏勒",
+   "ruler": "疏勒王(名は伝わらない)",
+   "color": "#9a6a8a"
+  },
+  {
+   "id": "qiuci",
+   "name": "亀茲",
+   "people": "亀茲",
+   "ruler": "亀茲王(名は伝わらない)",
+   "color": "#c0a040"
+  },
+  {
+   "id": "yanqi",
+   "name": "焉耆",
+   "people": "焉耆",
+   "ruler": "焉耆王(名は伝わらない)",
+   "color": "#6a8ab0"
+  },
+  {
+   "id": "jushi",
+   "name": "車師前部",
+   "people": "車師",
+   "ruler": "車師前部王(名は伝わらない)",
+   "color": "#8a6a4a"
   }
  ],
  "uncertainOwners": [
@@ -155,7 +197,11 @@
   "shuofang",
   "chencang",
   "longxi",
-  "yewang"
+  "yewang",
+  "yiwu",
+  "loulan",
+  "jushihou",
+  "weili"
  ],
  "ownerNote": "靳準の乱のあと、平陽のあたりは石勒が押さえたとして後趙の所属にした(推定)。洛陽は、漢の守将が去って晋の李矩の手に入ったが、まもなく放棄される。",
  "relations": {
@@ -959,6 +1005,38 @@
    "factionId": "dai",
    "title": "鬱律の妃",
    "cityId": "shengle"
+  },
+  "shanshan_wang": {
+   "factionId": "shanshan",
+   "role": "ruler"
+  },
+  "yutian_wang": {
+   "factionId": "yutian",
+   "role": "ruler"
+  },
+  "shule_wang": {
+   "factionId": "shule",
+   "role": "ruler"
+  },
+  "qiuci_wang": {
+   "factionId": "qiuci",
+   "role": "ruler"
+  },
+  "yanqi_wang": {
+   "factionId": "yanqi",
+   "role": "ruler"
+  },
+  "jushi_wang": {
+   "factionId": "jushi",
+   "role": "ruler"
+  },
+  "zhao_zhen": {
+   "factionId": "qianliang",
+   "title": "戊己校尉(高昌)"
+  },
+  "li_bai": {
+   "factionId": "qianliang",
+   "title": "西域長史"
   }
  },
  "cityOwners": {
@@ -1039,6 +1117,21 @@
   "tuyuhunting": "tuyuhun",
   "shuofang": "tiefu",
   "xuantu": "cui_bi",
-  "tuhe": "murong"
+  "tuhe": "murong",
+  "jiaohe": "jushi",
+  "jushihou": "jushi",
+  "shanshan": "shanshan",
+  "qiemo": "shanshan",
+  "jingjue": "shanshan",
+  "yutian": "yutian",
+  "shache": "shule",
+  "shule": "shule",
+  "qiuci": "qiuci",
+  "gumo": "qiuci",
+  "wensu": "qiuci",
+  "yanqi": "yanqi",
+  "weili": "yanqi",
+  "loulan": "qianliang",
+  "yiwu": "qianliang"
  }
 }

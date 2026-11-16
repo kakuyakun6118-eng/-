@@ -20,7 +20,7 @@ export const DEV_LABEL: Record<DevKind, string> = {
   agri: "農業開発", commerce: "商業開発", order: "治安維持", walls: "城郭整備", population: "人口回復", granary: "兵糧備蓄", talent: "人材探索",
 };
 export interface FinanceReport {
-  income: { commerce: number; tax: number; trade: number; total: number; grain: number };
+  income: { commerce: number; tax: number; trade: number; silk: number; total: number; grain: number };
   expense: { army: number; garrison: number; salary: number; bureaucracy: number; cities: number; court: number; expedition: number; total: number; grain: number };
   net: number;
   netGrain: number;
@@ -150,7 +150,7 @@ export class Economy {
   report(factionId: string): FinanceReport {
     const mine = this.c.cities.filter((x) => scenario.cityOwners[x.id] === factionId);
     const bonus = 1 + this.c.spoils.factionEffects(factionId).income / 100;
-    const inc = { commerce: 0, tax: 0, trade: 0, total: 0, grain: 0 };
+    const inc = { commerce: 0, tax: 0, trade: 0, silk: 0, total: 0, grain: 0 };
     const cityRows: FinanceReport["cities"] = [];
     let garrison = 0;
     let levels = 0;
@@ -177,7 +177,9 @@ export class Economy {
       inc.commerce *= admin;
       inc.tax *= admin;
     }
-    inc.total = inc.commerce + inc.tax + inc.trade;
+    // シルクロードの交易(先月の実績。上限・輸送費・危険を引いたもの)
+    inc.silk = this.c.trade?.incomeOf(factionId) ?? 0;
+    inc.total = inc.commerce + inc.tax + inc.trade + inc.silk;
     const armies = this.c.armies.filter((s) => s.army.factionId === factionId);
     const troops = armies.reduce((sum, s) => sum + totalTroops(s.army), 0);
     const marching = armies.filter((s) => s.status === "marching" || s.status === "fighting").reduce((sum, s) => sum + totalTroops(s.army), 0);
@@ -206,7 +208,7 @@ export class Economy {
     exp.total = exp.army + exp.garrison + exp.salary + exp.bureaucracy + exp.cities + exp.court + exp.expedition;
     const r = (x: number): number => Math.round(x);
     return {
-      income: { commerce: r(inc.commerce), tax: r(inc.tax), trade: r(inc.trade), total: r(inc.total), grain: r(inc.grain) },
+      income: { commerce: r(inc.commerce), tax: r(inc.tax), trade: r(inc.trade), silk: r(inc.silk), total: r(inc.total), grain: r(inc.grain) },
       expense: { army: r(exp.army), garrison: r(exp.garrison), salary: r(exp.salary), bureaucracy: r(exp.bureaucracy), cities: r(exp.cities), court: r(exp.court), expedition: r(exp.expedition), total: r(exp.total), grain: r(exp.grain) },
       net: r(inc.total - exp.total),
       netGrain: r(inc.grain - exp.grain),

@@ -21,7 +21,8 @@ interface PadWorld {
 }
 
 export class Terrain {
-  readonly mesh: THREE.Mesh;
+  /** 地形の区画(タイル)のまとまり */
+  readonly mesh: THREE.Group;
   private readonly material: THREE.ShaderMaterial;
   private readonly pads: PadWorld[];
   private territoryVisible = false;
@@ -54,31 +55,51 @@ export class Terrain {
       }
     }
 
-    // 格子の四角を、三角形2枚ずつでつなぐ
-    const indices = new Uint32Array((cols - 1) * (rows - 1) * 6);
-    let n = 0;
-    for (let j = 0; j < rows - 1; j++) {
-      for (let i = 0; i < cols - 1; i++) {
-        const a = j * cols + i;
-        const b = a + 1;
-        const c = a + cols;
-        const d = c + 1;
-        indices[n++] = a;
-        indices[n++] = c;
-        indices[n++] = b;
-        indices[n++] = b;
-        indices[n++] = c;
-        indices[n++] = d;
+    // 地形を区画(タイル)に分ける。画面に映らない区画は描かない(西域を広げても、華北を見ているときの負荷が増えないように)
+    const position = new THREE.BufferAttribute(positions, 3);
+    const uv = new THREE.BufferAttribute(uvs, 2);
+    this.material = createTerrainMaterial(field);
+    this.mesh = new THREE.Group();
+    const TILE = 64;
+    for (let tj = 0; tj < rows - 1; tj += TILE) {
+      for (let ti = 0; ti < cols - 1; ti += TILE) {
+        const j1 = Math.min(rows - 1, tj + TILE);
+        const i1 = Math.min(cols - 1, ti + TILE);
+        const indices = new Uint32Array((j1 - tj) * (i1 - ti) * 6);
+        let n = 0;
+        const box = new THREE.Box3();
+        const v = new THREE.Vector3();
+        for (let j = tj; j < j1; j++) {
+          for (let i = ti; i < i1; i++) {
+            const a = j * cols + i;
+            const b = a + 1;
+            const c = a + cols;
+            const d = c + 1;
+            indices[n++] = a;
+            indices[n++] = c;
+            indices[n++] = b;
+            indices[n++] = b;
+            indices[n++] = c;
+            indices[n++] = d;
+          }
+        }
+        for (const [i, j] of [[ti, tj], [i1, tj], [ti, j1], [i1, j1]]) {
+          const k = j * cols + i;
+          box.expandByPoint(v.set(positions[k * 3], 0, positions[k * 3 + 2]));
+        }
+        box.min.y = -1;
+        box.max.y = 12;
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute("position", position);
+        geometry.setAttribute("uv", uv);
+        geometry.setIndex(new THREE.BufferAttribute(indices, 1));
+        geometry.boundingBox = box;
+        geometry.boundingSphere = box.getBoundingSphere(new THREE.Sphere());
+        const mesh = new THREE.Mesh(geometry, this.material);
+        mesh.userData.tile = true;
+        this.mesh.add(mesh);
       }
     }
-
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
-    geometry.setIndex(new THREE.BufferAttribute(indices, 1));
-
-    this.material = createTerrainMaterial(field);
-    this.mesh = new THREE.Mesh(geometry, this.material);
   }
 
   /** 地形ファイルを読み込んでから地形を作る */

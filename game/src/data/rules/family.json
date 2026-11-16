@@ -588,7 +588,13 @@
    "goguryeo": "king",
    "baekje": "king",
    "silla": "king",
-   "chouchi": "duke"
+   "chouchi": "duke",
+   "shanshan": "king",
+   "yutian": "king",
+   "shule": "king",
+   "qiuci": "king",
+   "yanqi": "king",
+   "jushi": "king"
   },
   "s304": {
    "jin": "emperor",
@@ -604,7 +610,13 @@
    "goguryeo": "king",
    "baekje": "king",
    "silla": "king",
-   "chouchi": "duke"
+   "chouchi": "duke",
+   "shanshan": "king",
+   "yutian": "king",
+   "shule": "king",
+   "qiuci": "king",
+   "yanqi": "king",
+   "jushi": "king"
   },
   "s311": {
    "han_zhao": "emperor",
@@ -627,7 +639,13 @@
    "silla": "king",
    "tiefu": "chief",
    "tuyuhun": "chief",
-   "chouchi": "duke"
+   "chouchi": "duke",
+   "shanshan": "king",
+   "yutian": "king",
+   "shule": "king",
+   "qiuci": "king",
+   "yanqi": "king",
+   "jushi": "king"
   },
   "s317": {
    "han_zhao": "emperor",
@@ -647,7 +665,13 @@
    "silla": "king",
    "yuwen": "chief",
    "tuyuhun": "chief",
-   "tiefu": "chief"
+   "tiefu": "chief",
+   "shanshan": "king",
+   "yutian": "king",
+   "shule": "king",
+   "qiuci": "king",
+   "yanqi": "king",
+   "jushi": "king"
   },
   "s319": {
    "han_zhao": "emperor",
@@ -668,7 +692,13 @@
    "silla": "king",
    "yuwen": "chief",
    "tuyuhun": "chief",
-   "tiefu": "chief"
+   "tiefu": "chief",
+   "shanshan": "king",
+   "yutian": "king",
+   "shule": "king",
+   "qiuci": "king",
+   "yanqi": "king",
+   "jushi": "king"
   },
   "s329": {
    "shile": "king",
@@ -685,7 +715,13 @@
    "silla": "king",
    "tuyuhun": "chief",
    "tiefu": "chief",
-   "chouchi": "duke"
+   "chouchi": "duke",
+   "shanshan": "king",
+   "yutian": "king",
+   "shule": "king",
+   "qiuci": "king",
+   "yanqi": "king",
+   "jushi": "king"
   },
   "s357": {
    "qianqin": "emperor",
@@ -700,7 +736,13 @@
    "chouchi": "duke",
    "goguryeo": "king",
    "baekje": "king",
-   "silla": "king"
+   "silla": "king",
+   "shanshan": "king",
+   "yutian": "king",
+   "shule": "king",
+   "qiuci": "king",
+   "yanqi": "king",
+   "jushi": "king"
   },
   "s383": {
    "qianqin": "emperor",
@@ -708,7 +750,13 @@
    "tuyuhun": "chief",
    "goguryeo": "king",
    "baekje": "king",
-   "silla": "king"
+   "silla": "king",
+   "shanshan": "king",
+   "yutian": "king",
+   "shule": "king",
+   "qiuci": "king",
+   "yanqi": "king",
+   "jushi": "king"
   }
  },
  "historicCrown": {

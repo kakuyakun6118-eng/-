@@ -635,9 +635,9 @@ export class Court {
     const rank = this.rankOf(f);
     if (rank === "emperor") return { next: null, ok: false, missing: ["すでに皇帝です"] };
     const fac = scenario.factions.find((x) => x.id === f);
-    const korea = ["goguryeo", "baekje", "silla"].includes(fac?.founded?.from ?? f);
+    const korea = ["goguryeo", "baekje", "silla", "shanshan", "yutian", "shule", "qiuci", "yanqi", "jushi"].includes(fac?.founded?.from ?? f);
     const next: Rank = rank === "chief" || rank === "lord" && this.c.economy.systemOf(f).id === "steppe" ? "king" : rank === "duke" || rank === "lord" ? "king" : "emperor";
-    if (korea && next === "emperor") return { next: null, ok: false, missing: ["三国の王は、この時代は皇帝を称しません(史実の慣行)"] };
+    if (korea && next === "emperor") return { next: null, ok: false, missing: ["朝鮮三国・西域の王は、この時代は皇帝を称しません(史実の慣行)"] };
     const cities = this.c.cities.filter((x) => x.kind !== "pass" && scenario.cityOwners[x.id] === f).length;
     const r = this.c.rulerOf(f);
     const need = next === "emperor" ? { cities: 10, prestige: 55, fame: 55, stab: 45, troops: 60000 } : { cities: 4, prestige: 38, fame: 40, stab: 35, troops: 15000 };

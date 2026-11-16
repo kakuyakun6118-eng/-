@@ -38,7 +38,7 @@ import { RouteLine } from "../world/RouteLine";
 import { Terrain, type TerrainPad } from "../world/Terrain";
 import { HAZE_COLOR } from "../world/terrainMaterial";
 import { TerritoryTexture } from "../world/territoryTexture";
-import { toLonLat, toWorld } from "./geo";
+import { toLonLat, toWorld, UNITS_PER_DEGREE } from "./geo";
 
 /** 指で押しやすいように、都市や軍団の周りこの距離(ピクセル)までをタップ範囲にする */
 const PICK_RADIUS = 34;
@@ -100,6 +100,10 @@ export class Game {
   private personScreen!: PersonScreen;
   private readonly histRoutes: RouteLine[] = [];
   private readonly histMarks = new THREE.Group();
+  /** 交易路・補給範囲の表示 */
+  private readonly overlayGroup = new THREE.Group();
+  private readonly overlayRoutes: RouteLine[] = [];
+  private overlayMode: "trade" | "supply" | null = null;
   private histHeight: (lon: number, lat: number) => number = () => 0;
   /** 皇室の画面を開く(人物を渡すと、その人物の家系図) */
   private openCourt: (personId?: string) => void = () => undefined;
@@ -202,11 +206,14 @@ export class Game {
     this.scene.add(this.armies.group, this.route.group);
     // 歴史の事件の地図表示:関係する軍団の進軍経路(国ごとの色)・戦場の印・関係都市の印
     this.histHeight = heightAt;
-    for (const color of [0xe2705c, 0x6fa8dc, 0x9fd28a]) {
+    // 予測の経路(薄い色)と、確定した命令の経路(濃い色)を分けて描く
+    for (const color of [0xe2705c, 0x6fa8dc, 0x9fd28a, 0xf0b0a0, 0xb8d4ee, 0xcde8c2]) {
       const r = new RouteLine(heightAt, color);
       this.histRoutes.push(r);
       this.scene.add(r.group);
     }
+    this.overlayGroup.visible = false;
+    this.scene.add(this.overlayGroup);
     this.histMarks.visible = false;
     this.scene.add(this.histMarks);
     this.armyLabels = new ArmyLabels(root.querySelector("#labels") as HTMLElement);
@@ -383,6 +390,9 @@ export class Game {
     histScreen.showNext();
     const timeline = new TimelineScreen(root.querySelector("#timeline") as HTMLElement, () => this.campaign);
     (root.querySelector("#timeline-open") as HTMLElement).addEventListener("click", () => timeline.open());
+    // 交易路と補給範囲の表示(地図の上に重ねる。もう一度押すと消える)
+    (root.querySelector("#trade-open") as HTMLElement).addEventListener("click", () => this.toggleOverlay("trade"));
+    (root.querySelector("#supply-open") as HTMLElement).addEventListener("click", () => this.toggleOverlay("supply"));
     // 国家財政
     const finance = new FinanceScreen(root.querySelector("#finance") as HTMLElement, () => this.campaign, () => this.playerFactionId);
     (root.querySelector("#finance-open") as HTMLElement).addEventListener("click", () => finance.open());
@@ -674,12 +684,14 @@ export class Game {
       territoryOpacity: this.territoryOpacity,
       speed: this.rate,
       onFall: this.onFall,
+      historyMode: this.campaign.historyMode,
     };
   }
 
   private changeSettings(change: Partial<GameSettings>): void {
     if (change.playerFactionId !== undefined) this.playerFactionId = change.playerFactionId;
     if (change.onFall) this.onFall = change.onFall;
+    if (change.historyMode) this.campaign.historyMode = change.historyMode;
     // 画面で選べるのは4段階。古いセーブの「非常に易しい」は「易しい」として扱う
     if (change.difficulty) this.difficulty = change.difficulty === "veryEasy" ? "easy" : change.difficulty;
     // 戦略AIは、操作勢力を選んでいるあいだだけ動く(選んだ勢力以外が自動で動く)
@@ -949,7 +961,7 @@ export class Game {
    * 歴史の事件を、戦略マップの上に示す:戦場(赤い輪)・関係都市(金の輪)・関係する軍団の進軍経路(国ごとの色の点線)。
    * routes は「軍団 → 戦場」の経路の見込み(実際に軍は動かさない)。
    */
-  showHistoryMap(place: { lon: number; lat: number }, cityIds: string[], armyIds: string[][]): { routes: number; cities: number } {
+  showHistoryMap(place: { lon: number; lat: number }, cityIds: string[], armyIds: string[][]): { routes: number; cities: number; confirmed: number } {
     this.hideHistoryMap();
     const ring = (lon: number, lat: number, color: number, kind: string): void => {
       const m = new THREE.Mesh(new THREE.RingGeometry(0.75, 1, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, depthTest: false, side: THREE.DoubleSide }));
@@ -970,18 +982,98 @@ export class Game {
     }
     this.histMarks.visible = true;
     let routes = 0;
+    let confirmed = 0;
     armyIds.forEach((ids, i) => {
       for (const id of ids.slice(0, 1)) {
+        const s = this.campaign.stateOf(id);
+        // すでに進軍の命令が出ている軍団は、その経路(確定)を濃い色で。ほかは経路探索の見込み(予測)を薄い色で
+        if (s && s.status === "marching" && s.route && this.histRoutes[i]) {
+          this.histRoutes[i].show(s.route, s.progress);
+          confirmed++;
+          continue;
+        }
         const route = this.campaign.planRoute(id, place);
-        if (route && this.histRoutes[i]) {
-          this.histRoutes[i].show(route);
+        if (route && this.histRoutes[i + 3]) {
+          this.histRoutes[i + 3].show(route);
           routes++;
         }
       }
     });
     this.focus(place.lon, place.lat, 9);
     this.dirty = true;
-    return { routes, cities };
+    return { routes, cities, confirmed };
+  }
+
+  /** 交易路(つながっている区間は金、止まっている区間は赤)か、補給範囲(自国の都市から80km)を地図に重ねる */
+  toggleOverlay(mode: "trade" | "supply"): void {
+    const panel = this.root.querySelector("#overlay-panel") as HTMLElement;
+    for (const r of this.overlayRoutes) {
+      r.hide();
+      this.scene.remove(r.group);
+    }
+    this.overlayRoutes.length = 0;
+    for (const m of [...this.overlayGroup.children]) {
+      this.overlayGroup.remove(m);
+      (m as THREE.Mesh).geometry.dispose();
+    }
+    for (const id of ["#trade-open", "#supply-open"]) (this.root.querySelector(id) as HTMLElement).setAttribute("aria-pressed", "false");
+    if (this.overlayMode === mode) {
+      this.overlayMode = null;
+      this.overlayGroup.visible = false;
+      panel.hidden = true;
+      this.dirty = true;
+      return;
+    }
+    this.overlayMode = mode;
+    (this.root.querySelector(mode === "trade" ? "#trade-open" : "#supply-open") as HTMLElement).setAttribute("aria-pressed", "true");
+    const c = this.campaign;
+    const me = this.playerFactionId;
+    const lines: string[] = [];
+    if (mode === "trade") {
+      for (const { route, segs } of c.trade.status()) {
+        let open = 0;
+        for (const s of segs) {
+          const ok = c.trade.segments[`${s.a.id}>${s.b.id}`] ?? s.open;
+          const pts = [{ lon: s.a.lon, lat: s.a.lat }, { lon: s.b.lon, lat: s.b.lat }];
+          const r = new RouteLine(this.histHeight, ok ? 0xe0c070 : 0xc4573f);
+          r.show({ points: pts, effort: [0, 1] } as never);
+          this.overlayRoutes.push(r);
+          this.scene.add(r.group);
+          if (ok) open++;
+        }
+        const blocked = segs.filter((s) => !(c.trade.segments[`${s.a.id}>${s.b.id}`] ?? s.open)).map((s) => `${s.a.name}〜${s.b.name}(${s.why ?? "手前で途切れている"})`);
+        lines.push(`<b>${route.name}</b>(${route.goods.join("・")}):${open}/${segs.length}区間が通じている${blocked.length ? `。止まっている区間:${blocked.slice(0, 3).join("、")}${blocked.length > 3 ? " ほか" : ""}` : ""}`);
+      }
+      if (me) {
+        const pacts = scenario.factions.filter((f) => c.trade.hasPact(me, f.id)).map((f) => f.name);
+        lines.unshift(`<b>あなたの国の交易収入</b>:先月 ${c.trade.incomeOf(me)}(これまで ${c.trade.totals[me] ?? 0})。交易協定:${pacts.join("・") || "なし"}`);
+      }
+      lines.push("金の点線=品が通っている区間、赤=止まっている区間(戦争・治安・包囲・関所の封鎖)。収入は、市場の大きさ・輸送費(距離)・道中の危険で決まり、上限がある");
+      this.focus(88, 40, 46);
+    } else {
+      const f = me ?? scenario.factions.find((x) => !x.passive)?.id;
+      const deg = c.supplyRangeKm / 111;
+      for (const city of this.allCities) {
+        const o = scenario.cityOwners[city.id];
+        const ally = city.oasis && o && f && ["alliance", "vassal"].includes(c.relationOf(o, f));
+        if (o !== f && !ally) continue;
+        const m = new THREE.Mesh(new THREE.RingGeometry(deg * UNITS_PER_DEGREE * 0.92, deg * UNITS_PER_DEGREE, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: ally ? 0x9fd28a : 0x6fa8dc, transparent: true, opacity: 0.55, depthTest: false, side: THREE.DoubleSide }));
+        const w = toWorld(city.lon, city.lat);
+        m.position.set(w.x, this.histHeight(city.lon, city.lat) + 0.1, w.z);
+        m.renderOrder = 4;
+        this.overlayGroup.add(m);
+      }
+      this.overlayGroup.visible = true;
+      for (const s of c.armies.filter((a) => a.army.factionId === f)) {
+        const st = c.supplyState(s);
+        lines.push(`${s.army.name}:${s.supplied ? "補給あり" : "補給なし"}・食糧${Math.round(s.army.food)}日・${{ desert: "砂漠", highMountain: "険しい山", mountain: "山地", grassland: "草原" }[c.terrainOf(s)] ?? "平地など"}${st === "out" ? "・食糧が尽きている(兵が減る)" : st === "low" ? "・食糧が少ない" : ""}`);
+      }
+      lines.unshift(`青い輪=自国の都市から${c.supplyRangeKm}kmの補給範囲、緑の輪=同盟国・従属国のオアシス(水と兵糧を得られる)。砂漠では補給がないと食糧(水を含む)の減りが早く、尽きると渇きで兵を失う`);
+    }
+    panel.innerHTML = `<div class="ov-head">${mode === "trade" ? "交易路" : "補給の状況"}<button type="button" class="ov-close">閉じる</button></div>` + lines.map((l) => `<p>${l}</p>`).join("");
+    (panel.querySelector(".ov-close") as HTMLElement).addEventListener("click", () => this.toggleOverlay(mode));
+    panel.hidden = false;
+    this.dirty = true;
   }
 
   hideHistoryMap(): void {
@@ -1139,6 +1231,7 @@ export class Game {
     this.armies.update(this.mapCamera.distance);
     this.route.update(this.mapCamera.distance);
     for (const r of this.histRoutes) r.update(this.mapCamera.distance);
+    for (const r of this.overlayRoutes) r.update(this.mapCamera.distance);
     if (this.histMarks.visible) for (const m of this.histMarks.children) m.scale.setScalar(this.mapCamera.distance * (m.userData.kind === "battle" ? 0.03 : 0.018));
     for (const terrain of this.terrains) terrain.setCameraDistance(this.mapCamera.distance);
     this.renderer.render(this.scene, this.mapCamera.camera);

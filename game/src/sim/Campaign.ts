@@ -12,6 +12,7 @@ import { cityEcon, Economy } from "./economy";
 import { Diplomacy, type DiploCommand } from "./diplomacy";
 import { Court } from "./court";
 import { HistorySystem } from "./history";
+import { TradeSystem } from "./trade";
 import { seasonOf, type CampaignSave, type DynastySave, type Relation } from "./save";
 import type { BattleResult, CommanderFate, SideResult } from "../battle/types";
 import type { Army, ArmyStatus, BattleEvent, City, CityState, Faction, Person, PersonRole, PersonStatus, UnitTypeId } from "../data/types";
@@ -121,6 +122,7 @@ export class Campaign {
     this.diplo = new Diplomacy(this);
     this.court = new Court(this);
     this.history = new HistorySystem(this);
+    this.trade = new TradeSystem(this);
   }
 
   /** 勢力の、1か月の収入(支出を引く前) */
@@ -222,6 +224,12 @@ export class Campaign {
   readonly court!: Court;
   /** 歴史の重大事件と年表 */
   readonly history!: HistorySystem;
+  /** シルクロードの交易 */
+  readonly trade!: TradeSystem;
+  /** 歴史の流れ:史実重視か自由歴史か(AIの選択の重みが変わる。国の復活やプレイヤーの選択の取り消しはしない) */
+  historyMode: "historic" | "free" = "historic";
+  /** 兵站の記録:補給が尽きて失った兵(国ごと)・砂漠や山での損耗 */
+  readonly logistics: { attrition: Record<string, number>; expeditions: Record<string, number> } = { attrition: {}, expeditions: {} };
 
   relationOf(a: string, b: string): Relation {
     const r = this.relations[[a, b].sort().join("|")] ?? "neutral";
@@ -478,6 +486,8 @@ export class Campaign {
       diplomacy: this.diplo.serialize(),
       court: this.court.serialize(),
       history: this.history.serialize(),
+      trade: this.trade.serialize(),
+      logistics: this.logistics,
     });
   }
 
@@ -515,6 +525,9 @@ export class Campaign {
     this.loyalty.restore(data.loyalty);
     this.diplo.restore(data.diplomacy);
     this.history.restore(data.history);
+    this.trade.restore(data.trade);
+    this.logistics.attrition = { ...(data.logistics?.attrition ?? {}) };
+    this.logistics.expeditions = { ...(data.logistics?.expeditions ?? {}) };
     this.pendingAuto.length = 0;
     for (const k of Object.keys(this.personStates)) delete this.personStates[k];
     Object.assign(this.personStates, data.personStates);
@@ -582,7 +595,19 @@ export class Campaign {
   marchSpeed(s: ArmyState): number {
     const t = s.army.troops;
     const base = t.infantry + t.archer > 0 ? 30 : 52;
-    return Math.round(base * (1 - s.army.fatigue / 250) * (s.army.food <= 0 ? 0.7 : 1));
+    // 地形と季節:山地は遅く、冬の険しい山はさらに遅い。騎兵の多い軍は、山では遅く、草原・砂漠では速い
+    const kind = this.grid.kindAt(s.army.lon, s.army.lat);
+    const total = t.infantry + t.cavalry + t.archer || 1;
+    const cav = t.cavalry / total;
+    const month = this.calendar().month;
+    const winter = month >= 11 || month <= 2;
+    let k = 1;
+    if (kind === "highMountain") k *= winter ? 0.45 : 0.7;
+    else if (kind === "mountain") k *= winter ? 0.7 : 0.85;
+    if ((kind === "highMountain" || kind === "mountain") && cav > 0.5) k *= 0.8;
+    if ((kind === "desert" || kind === "grassland") && cav > 0.5) k *= 1.1;
+    if (kind === "desert") k *= 0.85;
+    return Math.round(base * k * (1 - s.army.fatigue / 250) * (s.army.food <= 0 ? 0.7 : 1));
   }
 
   supplyState(s: ArmyState): SupplyState {
@@ -606,9 +631,23 @@ export class Campaign {
   }
 
   private nearFriendlyCity(s: ArmyState): boolean {
-    return this.cities.some(
-      (c) => scenario.cityOwners[c.id] === s.army.factionId && distanceKm(c, s.army) <= SUPPLY_RANGE_KM,
-    );
+    // 自国の都市のほか、同盟国・従属国・宗主国のオアシスでも、水と兵糧を得られる
+    return this.cities.some((c) => {
+      const o = scenario.cityOwners[c.id];
+      if (distanceKm(c, s.army) > SUPPLY_RANGE_KM || !o) return false;
+      if (o === s.army.factionId) return true;
+      return !!c.oasis && ["alliance", "vassal"].includes(this.relationOf(o, s.army.factionId));
+    });
+  }
+
+  /** 補給を受けられる範囲(km) */
+  get supplyRangeKm(): number {
+    return SUPPLY_RANGE_KM;
+  }
+
+  /** 軍団のいる場所の地形(砂漠・山地など) */
+  terrainOf(s: ArmyState): string {
+    return this.grid.kindAt(s.army.lon, s.army.lat);
   }
 
   /** 行きたい場所の近くで、ほかの軍団や都市と重ならず、通れる場所を探す */
@@ -792,6 +831,7 @@ export class Campaign {
       for (const s of this.armies) this.dailyUpkeep(s);
       this.repairCities();
       if ((d + 1) % 30 === 0) {
+        this.trade.monthly();
         this.collectIncome();
         this.trimEvents();
         this.loyalty.monthly();
@@ -1222,14 +1262,18 @@ export class Campaign {
   }
 
   /** 決めた2つの軍団で会戦を始める(歴史の事件の会戦) */
-  startEventAt(att: ArmyState, def: ArmyState, histId: string): BattleEvent | null {
+  startEventAt(att: ArmyState, def: ArmyState, histId: string, tactics?: BattleEvent["tactics"]): BattleEvent | null {
     const n = this.events.length;
+    this.pendingTactics = tactics;
     this.startEvent(att, "field_battle", def, null);
+    this.pendingTactics = undefined;
     const ev = this.events.length > n ? this.events[this.events.length - 1] : null;
     if (ev) ev.histId = histId;
     this.resolveAutoBattles();
     return ev;
   }
+
+  private pendingTactics: BattleEvent["tactics"] | undefined;
 
   /** 歴史の攻城戦を始める */
   startSiegeAt(att: ArmyState, city: City, histId: string): BattleEvent | null {
@@ -1587,9 +1631,13 @@ export class Campaign {
       status: "pending",
       createdAt: { day: Math.floor(this.day), text: this.dateText() },
     };
-    // 進軍中の歴史の会戦なら、事件の印を付ける
+    // 進軍中の歴史の会戦なら、事件の印と作戦を付ける
     const tag = this.history?.tagFor(attacker.army.id, defender?.army.id, city?.id);
-    if (tag) event.histId = tag;
+    if (tag) {
+      event.histId = tag.histId;
+      if (tag.tactics) event.tactics = tag.tactics;
+    }
+    if (this.pendingTactics) event.tactics = this.pendingTactics;
     this.addSupporters(event, attacker, defender);
     this.events.push(event);
     // 両軍を止めて対峙させ、時間も止める(プレイヤーが状況を確かめられるように)
@@ -1806,6 +1854,18 @@ export class Campaign {
     const a = s.army;
     s.supplied = this.nearFriendlyCity(s);
     const marching = s.status === "marching";
+    // 砂漠:水の分も兵糧と同じ「食糧(日数)」でまとめて数える(水を別に数えない)。補給がなければ消費が増え、疲れ、士気が落ちる
+    const kind = this.grid.kindAt(a.lon, a.lat);
+    const month = this.calendar().month;
+    if (!s.supplied && kind === "desert") {
+      a.food -= marching ? 1.2 : 0.8;
+      a.fatigue += 2;
+      if (a.food < 15) a.morale -= 1;
+    }
+    if (kind === "highMountain" && (month >= 11 || month <= 2) && marching) {
+      a.fatigue += 3;
+      a.food -= 0.5;
+    }
     if (marching) {
       a.food -= 1;
       a.fatigue += 3 * Math.min(2, this.grid.costAt(a.lon, a.lat) || 1);
@@ -1819,9 +1879,11 @@ export class Campaign {
 
     if (a.food <= 0) {
       a.morale -= 5;
-      if (a.morale < 35) {
-        // 食糧が尽きたまま士気が下がると、兵が逃げ出す
-        for (const k of Object.keys(a.troops) as UnitTypeId[]) a.troops[k] = Math.floor(a.troops[k] * 0.97);
+      if (a.morale < 35 || kind === "desert") {
+        // 食糧が尽きたまま士気が下がると、兵が逃げ出す。砂漠では、渇きで士気に関係なく兵を失う
+        const before = totalTroops(a);
+        for (const k of Object.keys(a.troops) as UnitTypeId[]) a.troops[k] = Math.floor(a.troops[k] * (kind === "desert" ? 0.95 : 0.97));
+        this.logistics.attrition[a.factionId] = (this.logistics.attrition[a.factionId] ?? 0) + before - totalTroops(a);
       }
     } else if (a.fatigue > 75) {
       a.morale -= 2;

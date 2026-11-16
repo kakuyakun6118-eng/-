@@ -11,7 +11,7 @@ export interface HistoryActions {
   playerFactionId: () => string | null;
   focus: (lon: number, lat: number) => void;
   /** 戦略マップに、戦場・関係都市・軍団の進軍経路を出す */
-  showMap: (place: { lon: number; lat: number }, cities: string[], armies: string[][]) => { routes: number; cities: number };
+  showMap: (place: { lon: number; lat: number }, cities: string[], armies: string[][]) => { routes: number; cities: number; confirmed: number };
   hideMap: () => void;
   onChanged: () => void;
 }
@@ -138,7 +138,7 @@ export class HistoryEventScreen {
     const box = this.root.querySelector(".hist-inner") as HTMLElement;
     const legend = el("div", "hist-legend");
     const colors = ["#e2705c", "#6fa8dc", "#9fd28a"];
-    legend.append(el("h4", "", `戦略マップ:${d.place.name}`), el("p", "", `赤い輪=戦場、金の輪=関係都市(${res.cities})、点線=各国の主力から戦場への進軍経路(${res.routes}本。見込みで、軍はまだ動いていない)`));
+    legend.append(el("h4", "", `戦略マップ:${d.place.name}`), el("p", "", `赤い輪=戦場、金の輪=関係都市(${res.cities})。点線:濃い色=すでに命令の出ている進軍経路(${res.confirmed}本)、薄い色=経路探索による見込み(${res.routes}本。まだ命令は出ていない)`));
     sides.forEach((f, i) => {
       const a = armies[i][0] ? c.stateOf(armies[i][0]) : undefined;
       const row = el("p", "hist-legend-row");

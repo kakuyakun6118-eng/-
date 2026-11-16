@@ -48,7 +48,7 @@ export interface HistorySave {
   flags: Record<string, string>;
   timeline: TimelineEntry[];
   queue: { id: string; mode: "decide" | "news" | "branch" }[];
-  tags?: { a: string; b?: string; city?: string; histId: string; until: number }[];
+  tags?: { a: string; b?: string; city?: string; histId: string; until: number; tactics?: BattleEvent["tactics"] }[];
   prep?: Record<string, string[]>;
 }
 
@@ -113,6 +113,8 @@ export interface HistEventDef {
   cond?: string;
   /** 会戦の事件:戦う2つの役(イベント前の集結に使う) */
   battle?: string[];
+  /** この事件のために取っておく軍団の指揮官(呂光の遠征軍など。AIはほかの用に使わない) */
+  reserve?: string[];
   /** 歴史の会戦が決着したときの結果(勝った役。引き分けは null) */
   onBattle?: (x: Ctx, r: Record<string, string | undefined>, winner: string | null) => string;
 }
@@ -146,16 +148,16 @@ export class HistorySystem {
   queue: { id: string; mode: "decide" | "news" | "branch" }[] = [];
   readonly defs: HistEventDef[] = [...EVENTS, ...EXTRA_EVENTS].sort((a, b) => a.year * 12 + a.month - (b.year * 12 + b.month));
   /** 進軍中の歴史の会戦の目印(出会ったとき・城に着いたときの戦いに、事件のIDを付ける) */
-  tags: { a: string; b?: string; city?: string; histId: string; until: number }[] = [];
+  tags: { a: string; b?: string; city?: string; histId: string; until: number; tactics?: BattleEvent["tactics"] }[] = [];
   /** イベント前の準備行動の記録(集結・兵糧・援軍・防備・偵察) */
   prep: Record<string, string[]> = {};
 
   /** 戦いが始まるとき:進軍中の歴史の会戦なら、その事件のID */
-  tagFor(att: string, def?: string, city?: string): string | undefined {
+  tagFor(att: string, def?: string, city?: string): { histId: string; tactics?: BattleEvent["tactics"] } | undefined {
     const day = Math.floor(this.c.day);
     const t = this.tags.find((x) => x.until >= day && ((x.a === att && (x.b ? x.b === def : x.city === city)) || (x.b === att && x.a === def)));
     if (t) this.tags.splice(this.tags.indexOf(t), 1);
-    return t?.histId;
+    return t;
   }
 
   /**
@@ -166,7 +168,8 @@ export class HistorySystem {
     const { year, month } = this.c.calendar();
     const now = year * 12 + month;
     for (const d of this.defs) {
-      if (!d.battle || this.records[d.id]?.status !== "pending") continue;
+      // 遠征の事件(専用の軍団を取っておくもの)は、主力の集結には使わない
+      if (!d.battle || d.reserve || this.records[d.id]?.status !== "pending") continue;
       const at = d.year * 12 + d.month;
       if (now > at || at - now > 6) continue;
       const roles = d.roles(this.ctx());
@@ -259,6 +262,14 @@ export class HistorySystem {
       this.log("history", `${base.name}が${name(f)}に加わる(史実:${j.note})`);
       this.c.addNews(`【歴史】${base.name}が${name(f)}に加わりました(${j.note})`);
     }
+  }
+
+  /** 事件のために取っておく軍団か(1年以内の事件の reserve の人物が率いる軍団) */
+  reservedArmy(commanderId: string): boolean {
+    if (!commanderId) return false;
+    const { year, month } = this.c.calendar();
+    const now = year * 12 + month;
+    return this.defs.some((d) => d.reserve?.includes(commanderId) && this.records[d.id]?.status === "pending" && d.year * 12 + d.month - now <= 12);
   }
 
   /** これから起こる事件(1年以内)の主役か */
@@ -396,11 +407,13 @@ export class HistorySystem {
       }
     }
     rec.roles = roles;
+    rec.result = undefined;
     const text = d.apply(x, roles, picks);
     const historic = Object.entries(picks).every(([role, id]) => d.choices[role].find((ch) => ch.id === id)?.kind === "historic");
     rec.status = historic ? "occurred" : "branched";
     rec.historic = historic;
-    rec.result = text;
+    // 会戦がその場で決着した場合は、onBattle が書いた結果を後ろにつなぐ
+    rec.result = rec.result ? `${text}${rec.result}` : text;
     const chosen = Object.entries(picks).map(([role, id]) => `${name(roles[role])}:「${d.choices[role].find((ch) => ch.id === id)?.label}」(${rec.picks[role].by === "player" ? "プレイヤー" : "AI"})`).join("、");
     this.log("choice", `${d.name}:${chosen}`, undefined, d.id);
     this.log("history", `${d.name}の結果:${text}`, historic ? undefined : "史実と異なる選択", d.id);
@@ -420,8 +433,9 @@ export class HistorySystem {
     const r = this.c.rulerOf(f);
     const rich = (this.c.factionStates[f]?.gold ?? 0) > this.c.economy.report(f).expense.total * 4;
     const bold = r ? (r.war + r.leadership - r.intelligence - r.politics) / 200 : 0;
-    // 史実の条件がそろっている(ready)ときは、史実の行動を選びやすい
-    const w = list.map((ch) => (ch.kind === "historic" ? 0.72 : ch.kind === "alt" ? 0.2 + (rich ? 0.04 : 0) : 0.06 + Math.max(0, bold) * 0.5));
+    // 史実重視モード:史実の行動を強く選ぶ。自由歴史モード:別案・改変も選びやすい
+    const free = this.c.historyMode === "free";
+    const w = list.map((ch) => (ch.kind === "historic" ? (free ? 0.45 : 0.85) : ch.kind === "alt" ? (free ? 0.33 : 0.12) + (rich ? 0.04 : 0) : (free ? 0.18 : 0.03) + Math.max(0, bold) * (free ? 0.5 : 0.2)));
     let v = chance(`${Math.floor(this.c.day)}|${d.id}|${role}|ai`) * w.reduce((a, b) => a + b, 0);
     for (let i = 0; i < list.length; i++) {
       v -= w[i];
@@ -569,7 +583,7 @@ export class HistorySystem {
    * 歴史の会戦:両軍が戦場から km 以内にいれば、戦場に向かい合わせて会戦を始める(3Dの会戦と同じ流れ)。
    * 遠ければ、戦場へ向けて進軍させるだけ(瞬間移動はさせない)。
    */
-  battle(att: ArmyState | undefined, def: ArmyState | undefined, place: { name: string; lon: number; lat: number }, histId: string, km = 420): string {
+  battle(att: ArmyState | undefined, def: ArmyState | undefined, place: { name: string; lon: number; lat: number }, histId: string, km = 420, tactics?: BattleEvent["tactics"]): string {
     if (!att || !def) return "会戦に出る軍団がない";
     const far = distanceKm(att.army, place) > km || distanceKm(def.army, place) > km;
     if (far) {
@@ -577,7 +591,7 @@ export class HistorySystem {
         const route = this.c.planRoute(s.army.id, place);
         if (route) this.c.orderMove(s.army.id, route);
       }
-      this.tags.push({ a: att.army.id, b: def.army.id, histId, until: Math.floor(this.c.day) + 240 });
+      this.tags.push({ a: att.army.id, b: def.army.id, histId, until: Math.floor(this.c.day) + 240, tactics });
       this.flag(`${histId}_march`, "1");
       return `両軍が${place.name}へ向かいます(遠いため、着いてから戦いになります)`;
     }
@@ -587,7 +601,7 @@ export class HistorySystem {
     def.army.lat = place.lat;
     att.route = null;
     def.route = null;
-    const ev = this.c.startEventAt(att, def, histId);
+    const ev = this.c.startEventAt(att, def, histId, tactics);
     if (ev) ev.location.name = place.name;
     return ev ? `${place.name}で会戦が始まります(${att.army.name} 対 ${def.army.name})` : "会戦を始められませんでした";
   }
@@ -1365,8 +1379,27 @@ export const EVENTS: HistEventDef[] = [
         qa.army.morale = Math.max(10, qa.army.morale - 8 - (P("zhu_xu")?.factionId === qin && alive(x.c, "zhu_xu") ? 5 : 0));
         notes.push(`前秦は渡河を許すため後退する${P("zhu_xu")?.factionId === qin ? "(軍中には晋の降将・朱序がいる)" : ""}`);
       }
+      // 作戦の補正:
+      //  ・前秦が渡河を許して退けば、川の守りの利がなく、退くときに陣が崩れるおそれがある(朱序がいれば大きい)
+      //  ・前秦の大軍は諸族の寄せ集めで、連携が悪い(6万を超えると強さ×0.88)
+      //  ・北府兵は精鋭で、謝玄と劉牢之がそろえば連携がよい(×1.12)
+      const jinAtt = p.jin === "decisive";
+      const qinSide = jinAtt ? "defender" : "attacker";
+      const zhu = P("zhu_xu")?.factionId === qin && alive(x.c, "zhu_xu");
+      const qinTroops = qa ? totalTroops(qa.army) : 0;
+      const qinMul = qinTroops > 60000 ? 0.88 : 1;
+      const beifu = ja && ja.army.commanderId === "xie_xuan" && ja.army.deputyId === "liu_laozhi" ? 1.12 : ja?.army.commanderId === "xie_xuan" ? 1.06 : 1;
+      const tnotes = [qinMul < 1 ? "前秦の大軍は諸族の寄せ集めで連携が悪い(×0.88)" : "", beifu > 1 ? `北府兵の精鋭(×${beifu})` : ""].filter(Boolean);
+      const tactics = {
+        attacker: jinAtt ? beifu : qinMul,
+        defender: jinAtt ? qinMul : beifu,
+        noRiverBonus: p.qin === "cross",
+        panic: p.qin === "cross" ? qinSide as "attacker" | "defender" : undefined,
+        panicRisk: p.qin === "cross" ? (zhu ? 0.6 : 0.4) : undefined,
+        notes: tnotes,
+      };
       // 史実では東晋が渡河して攻めた。前秦が慎重策なら、前秦が受けて立つ
-      const res = p.jin === "decisive" ? h.battle(ja, qa, place, "feishui383") : h.battle(qa, ja, place, "feishui383");
+      const res = jinAtt ? h.battle(ja, qa, place, "feishui383", 420, tactics) : h.battle(qa, ja, place, "feishui383", 420, tactics);
       notes.push(res);
       return notes.join("。");
     },

@@ -47,6 +47,48 @@
    "people": "新羅(韓)",
    "ruler": "奈勿尼師今",
    "color": "#e6d36a"
+  },
+  {
+   "id": "shanshan",
+   "name": "鄯善",
+   "people": "鄯善",
+   "ruler": "休密馱",
+   "color": "#b0864a"
+  },
+  {
+   "id": "yutian",
+   "name": "于闐",
+   "people": "于闐",
+   "ruler": "于闐王(名は伝わらない)",
+   "color": "#4a9a7a"
+  },
+  {
+   "id": "shule",
+   "name": "疏勒",
+   "people": "疏勒",
+   "ruler": "疏勒王(名は伝わらない)",
+   "color": "#9a6a8a"
+  },
+  {
+   "id": "qiuci",
+   "name": "亀茲",
+   "people": "亀茲",
+   "ruler": "白純",
+   "color": "#c0a040"
+  },
+  {
+   "id": "yanqi",
+   "name": "焉耆",
+   "people": "焉耆",
+   "ruler": "泥流",
+   "color": "#6a8ab0"
+  },
+  {
+   "id": "jushi",
+   "name": "車師前部",
+   "people": "車師",
+   "ruler": "弥窴",
+   "color": "#8a6a4a"
   }
  ],
  "uncertainOwners": [
@@ -58,7 +100,11 @@
   "shangyong",
   "tuyuhunting",
   "gaochang",
-  "jiangzhou"
+  "jiangzhou",
+  "yiwu",
+  "loulan",
+  "jushihou",
+  "weili"
  ],
  "ownerNote": "寿春は、この年の10月に前秦の先鋒に落とされるが、開始の時点では晋のもの。淮水の北の彭城・下邳は、379年の戦いのあと前秦のものとした(推定)。",
  "cityNames": {
@@ -498,6 +544,46 @@
    "factionId": "qianqin",
    "title": "竇滔の妻",
    "cityId": "changan"
+  },
+  "xiumituo": {
+   "factionId": "shanshan",
+   "role": "ruler"
+  },
+  "yutian_wang": {
+   "factionId": "yutian",
+   "role": "ruler"
+  },
+  "shule_wang": {
+   "factionId": "shule",
+   "role": "ruler"
+  },
+  "bai_chun": {
+   "factionId": "qiuci",
+   "role": "ruler"
+  },
+  "ni_liu": {
+   "factionId": "yanqi",
+   "role": "ruler"
+  },
+  "mitian": {
+   "factionId": "jushi",
+   "role": "ruler"
+  },
+  "bai_zhen": {
+   "factionId": "qiuci",
+   "title": "亀茲王の弟"
+  },
+  "kumarajiva": {
+   "factionId": "qiuci",
+   "title": "亀茲の高僧"
+  },
+  "du_jin": {
+   "factionId": "qianqin",
+   "title": "呂光の部将"
+  },
+  "jiang_fei": {
+   "factionId": "qianqin",
+   "title": "呂光の部将"
   }
  },
  "cityOwners": {
@@ -578,6 +664,21 @@
   "tuyuhunting": "tuyuhun",
   "shuofang": "qianqin",
   "xuantu": "qianqin",
-  "tuhe": "qianqin"
+  "tuhe": "qianqin",
+  "jiaohe": "jushi",
+  "jushihou": "jushi",
+  "shanshan": "shanshan",
+  "qiemo": "shanshan",
+  "jingjue": "shanshan",
+  "yutian": "yutian",
+  "shache": "shule",
+  "shule": "shule",
+  "qiuci": "qiuci",
+  "gumo": "qiuci",
+  "wensu": "qiuci",
+  "yanqi": "yanqi",
+  "weili": "yanqi",
+  "loulan": "qianqin",
+  "yiwu": "qianqin"
  }
 }

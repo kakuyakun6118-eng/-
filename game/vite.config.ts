@@ -11,7 +11,13 @@ export default defineConfig({
   base: "./",
   plugins: [viteSingleFile()],
   resolve: external
-    ? { alias: [{ find: /^\.\/portraitsInline$/, replacement: fileURLToPath(new URL("./src/data/portraitsExternal.ts", import.meta.url)) }] }
+    ? {
+        alias: [
+          { find: /^\.\/portraitsInline$/, replacement: fileURLToPath(new URL("./src/data/portraitsExternal.ts", import.meta.url)) },
+          // 地形の絵も、公開版では別のファイル(terrain.png)として置く(ページの大きさの上限のため)
+          { find: /^\.\/regions\/north-china\/terrain\.png$/, replacement: fileURLToPath(new URL("./src/data/terrainExternal.ts", import.meta.url)) },
+        ],
+      }
     : undefined,
   build: { chunkSizeWarningLimit: 2000, outDir: external ? "dist-publish" : "dist" },
 });

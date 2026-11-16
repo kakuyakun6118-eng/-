@@ -41,7 +41,7 @@ export class FinanceScreen {
       ${warn.length ? `<p class="finance-warn">${warn.join("<br>")}</p>` : ""}
       <div class="finance-cols">
         <table><caption>毎月の収入</caption>
-          <tr><td>商業</td><td>${n(r.income.commerce)}</td></tr><tr><td>人口の税</td><td>${n(r.income.tax)}</td></tr><tr><td>交易</td><td>${n(r.income.trade)}</td></tr>
+          <tr><td>商業</td><td>${n(r.income.commerce)}</td></tr><tr><td>人口の税</td><td>${n(r.income.tax)}</td></tr><tr><td>交易(街道の市)</td><td>${n(r.income.trade)}</td></tr><tr><td>シルクロード交易</td><td>${n(r.income.silk)}</td></tr>
           <tr class="sum"><td>計(金)</td><td>${n(r.income.total)}</td></tr><tr><td>農業(兵糧)</td><td>${n(r.income.grain)}</td></tr></table>
         <table><caption>毎月の支出</caption>
           <tr><td>軍団の維持費</td><td>${n(r.expense.army)}</td></tr><tr><td>守備兵</td><td>${n(r.expense.garrison)}</td></tr><tr><td>俸禄</td><td>${n(r.expense.salary)}</td></tr>

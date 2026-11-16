@@ -37,6 +37,9 @@
       <button id="finance-open" type="button">財政</button>
       <button id="court-open" type="button">皇室</button>
       <button id="timeline-open" type="button">年表</button>
+      <button id="trade-open" type="button" aria-pressed="false">交易路</button>
+      <button id="supply-open" type="button" aria-pressed="false">補給</button>
+      <section id="overlay-panel" hidden></section>
       <section id="info" hidden>
         <div class="info-inner">
           <div class="info-head">
@@ -427,6 +430,12 @@
                 <button type="button" data-value="gameover">ゲームオーバー</button>
                 <button type="button" data-value="continue">後継国家で続ける</button>
               </div>
+              <label>歴史の流れ</label>
+              <div class="history-choice fall-choice" role="radiogroup" aria-label="歴史の流れ">
+                <button type="button" data-mode="historic">史実重視</button>
+                <button type="button" data-mode="free">自由歴史</button>
+              </div>
+              <p class="difficulty-note">史実重視:AIの国は、歴史の事件で史実の行動を選びやすくなります。自由歴史:AIも別案や大胆な改変を選びます。どちらでも、滅んだ国が生き返ったり、プレイヤーの選択が取り消されたりはしません。</p>
               <label for="menu-opacity">領土の色の濃さ</label>
               <input id="menu-opacity" type="range" min="0.3" max="1.6" step="0.1" />
               <h3>書き出しと読み込み</h3>

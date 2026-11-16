@@ -69,7 +69,13 @@ export class SaveMenu {
         return card;
       }),
     );
-    for (const b of this.root.querySelectorAll<HTMLElement>(".fall-choice button")) {
+    for (const b of this.root.querySelectorAll<HTMLElement>(".history-choice button")) {
+      b.addEventListener("click", () => {
+        actions.changeSettings({ historyMode: b.dataset.mode as GameSettings["historyMode"] });
+        this.syncHistory(b.dataset.mode as GameSettings["historyMode"]);
+      });
+    }
+    for (const b of this.root.querySelectorAll<HTMLElement>(".fall-choice:not(.history-choice) button")) {
       b.addEventListener("click", () => {
         actions.changeSettings({ onFall: b.dataset.value as GameSettings["onFall"] });
         this.syncFall(b.dataset.value as GameSettings["onFall"]);
@@ -127,6 +133,7 @@ export class SaveMenu {
     this.q<HTMLSelectElement>("#menu-faction").value = s.playerFactionId ?? "";
     this.syncDifficulty(s.difficulty);
     this.syncFall(s.onFall ?? "gameover");
+    this.syncHistory(s.historyMode ?? "historic");
     this.q<HTMLInputElement>("#menu-opacity").value = String(s.territoryOpacity);
     this.say("");
     this.root.hidden = false;
@@ -134,7 +141,11 @@ export class SaveMenu {
   }
 
   private syncFall(value: GameSettings["onFall"]): void {
-    for (const b of this.root.querySelectorAll<HTMLElement>(".fall-choice button")) b.setAttribute("aria-pressed", String(b.dataset.value === value));
+    for (const b of this.root.querySelectorAll<HTMLElement>(".fall-choice:not(.history-choice) button")) b.setAttribute("aria-pressed", String(b.dataset.value === value));
+  }
+
+  private syncHistory(value: GameSettings["historyMode"]): void {
+    for (const b of this.root.querySelectorAll<HTMLElement>(".history-choice button")) b.setAttribute("aria-pressed", String(b.dataset.mode === value));
   }
 
   /** 選んでいる難易度の札に、朱印と金の枠を付ける(古いセーブの「非常に易しい」は「易しい」として示す) */

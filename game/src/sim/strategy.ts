@@ -127,9 +127,10 @@ export class StrategyAi {
     for (const s of this.c.armies) {
       if (s.army.factionId !== factionId || s.status === "fighting" || s.status === "marching") continue;
       if (this.c.diplo.aidOf(s.army.id)) continue; // 援軍は、援軍の任務に従う
+      if (this.c.history?.reservedArmy(s.army.commanderId)) continue; // 歴史の遠征(呂光の西域遠征など)のために待機する軍団
       // 歴史の会戦の前:主力(大きい2軍団)は、戦場に近い自国の都市に集結する(戦争は止めない。ほかの軍団はふだんどおり)
       const stage = this.c.history?.stagingFor(factionId);
-      if (stage && this.c.armies.filter((x) => x.army.factionId === factionId).sort((x, y) => totalTroops(y.army) - totalTroops(x.army)).slice(0, 2).includes(s)) {
+      if (stage && distanceKm(s.army, stage) < 800 && this.c.armies.filter((x) => x.army.factionId === factionId && distanceKm(x.army, stage) < 800).sort((x, y) => totalTroops(y.army) - totalTroops(x.army)).slice(0, 2).includes(s)) {
         if (distanceKm(s.army, stage) > 80) {
           const route = this.c.planRoute(s.army.id, stage);
           if (route) {
@@ -154,7 +155,9 @@ export class StrategyAi {
     };
 
     // 補給:食糧・士気・疲労が悪ければ、味方の都市へ戻って休む
-    const tired = a.food < 8 || a.morale < 40 || a.fatigue > 70;
+    // 砂漠で食糧(水)が心もとなければ、早めに引き返す(遠征の中止・撤退)
+    const desertLow = !s.supplied && a.food < 18 && this.c.terrainOf(s) === "desert";
+    const tired = a.food < 8 || a.morale < 40 || a.fatigue > 70 || desertLow;
     if (tired) {
       if (!s.supplied) goTo(home.lon, home.lat);
       return;
@@ -181,6 +184,14 @@ export class StrategyAi {
       for (const city of near) {
         const dist = distanceKm(city, a);
         if (dist > p.reachKm) break;
+        // 西域の小国は、遠い中国本土へは攻め込まない(自国の都市から600km以内だけ)
+        if (mine.every((m) => m.lon < 96) && city.lon >= 96 && Math.min(...mine.map((m) => distanceKm(m, city))) > 600) continue;
+        // 兵站:補給の届かない砂漠の先の都市は、着くまでの食糧がなければ攻めない(大軍でも補給を超える遠征はしない)
+        if (city.oasis || city.lon < 96) {
+          const supplyGap = Math.min(...mine.map((m) => distanceKm(m, city))) - this.c.supplyRangeKm;
+          const daysNeeded = Math.max(0, supplyGap) / 20;
+          if (supplyGap > 0 && a.food < daysNeeded * 2.2 + 10) continue;
+        }
         const st = this.c.cityState(city);
         const owner = scenario.cityOwners[city.id];
         const guards = this.c.armies.filter((o) => o.army.factionId === owner && distanceKm(o.army, city) < 60).reduce((sum, o) => sum + this.armyPower(o), 0);
@@ -192,7 +203,10 @@ export class StrategyAi {
         const score = (value / (dist + 60)) * Math.min(ratio, 3);
         if (!best || score > best.score) best = { city, score };
       }
-      if (best && goTo(best.city.lon, best.city.lat)) return;
+      if (best && goTo(best.city.lon, best.city.lat)) {
+        if (best.city.lon < 96 && !mine.some((m) => m.lon < 96)) this.c.logistics.expeditions[a.factionId] = (this.c.logistics.expeditions[a.factionId] ?? 0) + 1;
+        return;
+      }
     }
 
     // することがなければ、補給の届く所へ戻る

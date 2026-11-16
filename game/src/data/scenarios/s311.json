@@ -152,6 +152,48 @@
    "people": "氐",
    "ruler": "楊茂搜",
    "color": "#9c5a2e"
+  },
+  {
+   "id": "shanshan",
+   "name": "鄯善",
+   "people": "鄯善",
+   "ruler": "鄯善王(名は伝わらない)",
+   "color": "#b0864a"
+  },
+  {
+   "id": "yutian",
+   "name": "于闐",
+   "people": "于闐",
+   "ruler": "于闐王(名は伝わらない)",
+   "color": "#4a9a7a"
+  },
+  {
+   "id": "shule",
+   "name": "疏勒",
+   "people": "疏勒",
+   "ruler": "疏勒王(名は伝わらない)",
+   "color": "#9a6a8a"
+  },
+  {
+   "id": "qiuci",
+   "name": "亀茲",
+   "people": "亀茲",
+   "ruler": "亀茲王(名は伝わらない)",
+   "color": "#c0a040"
+  },
+  {
+   "id": "yanqi",
+   "name": "焉耆",
+   "people": "焉耆",
+   "ruler": "焉耆王(名は伝わらない)",
+   "color": "#6a8ab0"
+  },
+  {
+   "id": "jushi",
+   "name": "車師前部",
+   "people": "車師",
+   "ruler": "車師前部王(名は伝わらない)",
+   "color": "#8a6a4a"
   }
  ],
  "defaultOwner": "jin",
@@ -209,7 +251,22 @@
   "geumseong": "silla",
   "shuofang": "tiefu",
   "tuyuhunting": "tuyuhun",
-  "chouchi": "chouchi"
+  "chouchi": "chouchi",
+  "jiaohe": "jushi",
+  "jushihou": "jushi",
+  "shanshan": "shanshan",
+  "qiemo": "shanshan",
+  "jingjue": "shanshan",
+  "yutian": "yutian",
+  "shache": "shule",
+  "shule": "shule",
+  "qiuci": "qiuci",
+  "gumo": "qiuci",
+  "wensu": "qiuci",
+  "yanqi": "yanqi",
+  "weili": "yanqi",
+  "loulan": "qianliang",
+  "yiwu": "qianliang"
  },
  "uncertainOwners": [
   "hongnong",
@@ -231,7 +288,11 @@
   "xiapi",
   "huaiyin",
   "xiangping",
-  "xuantu"
+  "xuantu",
+  "yiwu",
+  "loulan",
+  "jushihou",
+  "weili"
  ],
  "ownerNote": "洛陽が落ちた直後で、華北の多くの都市は、だれのものともはっきりしない。漢・石勒・王弥の範囲、王浚と劉琨の範囲、淮北と遼東の晋の都市は推定。",
  "cityNames": {
@@ -1014,6 +1075,30 @@
    "factionId": "jin_rui",
    "title": "書家",
    "cityId": "jiankang"
+  },
+  "shanshan_wang": {
+   "factionId": "shanshan",
+   "role": "ruler"
+  },
+  "yutian_wang": {
+   "factionId": "yutian",
+   "role": "ruler"
+  },
+  "shule_wang": {
+   "factionId": "shule",
+   "role": "ruler"
+  },
+  "qiuci_wang": {
+   "factionId": "qiuci",
+   "role": "ruler"
+  },
+  "yanqi_wang": {
+   "factionId": "yanqi",
+   "role": "ruler"
+  },
+  "jushi_wang": {
+   "factionId": "jushi",
+   "role": "ruler"
   }
  }
 }

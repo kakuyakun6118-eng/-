@@ -141,6 +141,12 @@ export interface City {
   fort?: Partial<Pick<Fortification, "wallHp" | "gateHp" | "food" | "morale">>;
   /** その都市だけの個性。規模ごとの標準の形に上書きする */
   layout?: Partial<CityLayout>;
+  /** オアシス(砂漠の中の補給地)か */
+  oasis?: boolean;
+  /** 地方の名前(西域など) */
+  region?: string;
+  /** 位置や数値の根拠・異説の注記 */
+  note?: string;
 }
 
 export interface Faction {
@@ -223,7 +229,9 @@ export interface Person {
   /** ゲームの中で生まれた・迎えた架空の人物のとき true(史実の人物と区別する) */
   fictional?: boolean;
   /** 史料の確かさ:史実確認済み・推定・伝承(架空は fictional) */
-  certainty?: "史実確認済み" | "推定" | "伝承";
+  certainty?: "史実確認済み" | "推定" | "伝承" | "不明";
+  /** 別の表記(サンスクリット名など) */
+  altName?: string;
 }
 
 /** 以前の名前(武将)。同じものを指す */
@@ -306,7 +314,22 @@ export interface BattleEvent {
   supporters?: { side: "attacker" | "defender"; armyId: string; efficiency: number }[];
   /** 歴史の重大事件の会戦(淝水の戦いなど)のとき、その事件のID */
   histId?: string;
+  /** 作戦による補正(歴史の事件の選択などで決まる) */
+  tactics?: BattleTactics;
 }
+export interface BattleTactics {
+  /** 陣営ごとの強さの倍率(連携・指揮・作戦) */
+  attacker?: number;
+  defender?: number;
+  /** 川の守りの利を消す(相手の渡河を許した) */
+  noRiverBonus?: boolean;
+  /** 退くときに崩れやすい陣営(撤退時の混乱) */
+  panic?: "attacker" | "defender";
+  /** 混乱の大きさ(0〜1。大きいほど崩れやすい) */
+  panicRisk?: number;
+  notes?: string[];
+}
+
 
 /** 戦闘の記録。イベントに残して、あとから戦歴として見られるようにする */
 export interface BattleRecord {
@@ -422,6 +445,8 @@ export interface BattleSetup {
   createdAt: { day: number; text: string };
   attacker: BattleSide;
   defender: BattleSide;
+  /** 作戦による補正 */
+  tactics?: BattleTactics;
 }
 
 /** ある年代の勢力図 */

@@ -111,6 +111,48 @@
    "ruler": "(まとまった君主はいない)",
    "color": "#7d7d7d",
    "passive": true
+  },
+  {
+   "id": "shanshan",
+   "name": "鄯善",
+   "people": "鄯善",
+   "ruler": "鄯善王(名は伝わらない)",
+   "color": "#b0864a"
+  },
+  {
+   "id": "yutian",
+   "name": "于闐",
+   "people": "于闐",
+   "ruler": "于闐王(名は伝わらない)",
+   "color": "#4a9a7a"
+  },
+  {
+   "id": "shule",
+   "name": "疏勒",
+   "people": "疏勒",
+   "ruler": "疏勒王(名は伝わらない)",
+   "color": "#9a6a8a"
+  },
+  {
+   "id": "qiuci",
+   "name": "亀茲",
+   "people": "亀茲",
+   "ruler": "亀茲王(名は伝わらない)",
+   "color": "#c0a040"
+  },
+  {
+   "id": "yanqi",
+   "name": "焉耆",
+   "people": "焉耆",
+   "ruler": "焉耆王(名は伝わらない)",
+   "color": "#6a8ab0"
+  },
+  {
+   "id": "jushi",
+   "name": "車師前部",
+   "people": "車師",
+   "ruler": "車師前部王(名は伝わらない)",
+   "color": "#8a6a4a"
   }
  ],
  "defaultOwner": "jin",
@@ -148,7 +190,22 @@
   "geumseong": "silla",
   "chouchi": "chouchi",
   "tuyuhunting": "tribes",
-  "shuofang": "tribes"
+  "shuofang": "tribes",
+  "jiaohe": "jushi",
+  "jushihou": "jushi",
+  "shanshan": "shanshan",
+  "qiemo": "shanshan",
+  "jingjue": "shanshan",
+  "yutian": "yutian",
+  "shache": "shule",
+  "shule": "shule",
+  "qiuci": "qiuci",
+  "gumo": "qiuci",
+  "wensu": "qiuci",
+  "yanqi": "yanqi",
+  "weili": "yanqi",
+  "loulan": "qianliang",
+  "yiwu": "qianliang"
  },
  "uncertainOwners": [
   "luoyang",
@@ -163,7 +220,11 @@
   "zimeng",
   "tuyuhunting",
   "shuofang",
-  "xingyang"
+  "xingyang",
+  "yiwu",
+  "loulan",
+  "jushihou",
+  "weili"
  ],
  "ownerNote": "東海王の勢力には、弟の司馬騰(并州)・司馬略(青州)と、范陽王(許昌)の土地を含めた。鄴・襄国・洛陽の所属は、この時点でははっきりしない(推定)。",
  "cityNames": {
@@ -640,6 +701,30 @@
    "factionId": "jin",
    "title": "書家",
    "cityId": "luoyang"
+  },
+  "shanshan_wang": {
+   "factionId": "shanshan",
+   "role": "ruler"
+  },
+  "yutian_wang": {
+   "factionId": "yutian",
+   "role": "ruler"
+  },
+  "shule_wang": {
+   "factionId": "shule",
+   "role": "ruler"
+  },
+  "qiuci_wang": {
+   "factionId": "qiuci",
+   "role": "ruler"
+  },
+  "yanqi_wang": {
+   "factionId": "yanqi",
+   "role": "ruler"
+  },
+  "jushi_wang": {
+   "factionId": "jushi",
+   "role": "ruler"
   }
  }
 }

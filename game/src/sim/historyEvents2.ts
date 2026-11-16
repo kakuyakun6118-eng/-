@@ -215,7 +215,12 @@ function expedition(o: Base & { att: (c: Campaign) => string | undefined; def: (
         if (nc) addGarrison(x, nc, 5000);
       }
       const db = p.def === "hold" ? h.largestArmy(def) : da;
-      // 野戦に出る軍団が無いときは、国力で決着をつける(都市の守備兵どうしの戦い)
+      // 守る側に野戦の軍団が無ければ、戦場にいちばん近い相手の都市を攻める(3Dの攻城戦と同じ)
+      if (aa && !db) {
+        const target = nearestCity(x, def, o.place);
+        if (target) return h.siege(aa, target, o.id, 700);
+      }
+      // 攻める側に軍団が無いときは、国力で決着をつける(都市の守備兵どうしの戦い)
       if (!aa || !db) {
         const aw = pw(x, att) * (p.att === "supply" ? 1.15 : 1);
         const dw = pw(x, def) * (p.def === "hold" ? 1.3 : 1);
@@ -1048,6 +1053,114 @@ export const EXTRA_EVENTS: HistEventDef[] = [
       return "拓跋珪は諸部を従え、その名は草原に広まった";
     },
   },
+  // ===== 西域 =====
+  rebellion({
+    id: "zhaozhen327", name: "戊己校尉・趙貞の反乱と高昌郡の設置", year: 327, month: 6, place: { name: "高昌", lon: 89.53, lat: 42.86 },
+    persons: ["zhao_zhen", "zhang_jun", "li_bai"], rebel: "zhao_zhen", rulerIds: ["zhang_jun", "zhang_mao"], base: ["gaochang"], capital: "gaochang", state: "高昌(趙貞)", title: "戊己校尉",
+    background: "前涼の戊己校尉・趙貞は、トルファン盆地の高昌に駐して西域諸国ににらみをきかせていたが、張駿に従わなくなった。",
+    history: "327年、張駿は趙貞を討って捕らえ、その地に高昌郡を置いた。中国の郡県制が西域に及んだ最初の例とされる。", sources: ["『晋書』張軌伝附張駿伝", "『魏書』高昌伝"],
+    cond: "趙貞が前涼にいる", winFlag: "zhaozhen_won",
+    labels: ["趙貞を討ち、高昌を郡とする", "趙貞を許して戊己校尉に留める", "趙貞を姑臧へ召し出して捕らえる"],
+    descs: ["兵を西へ送る。", "遠い西域の守りを優先する。", "兵を動かさずに除く。"],
+  }),
+  expedition({
+    id: "yangxuan345", name: "楊宣の西域遠征(焉耆の服属)", year: 345, month: 5, place: { name: "焉耆", lon: 86.57, lat: 42.03 },
+    persons: ["yang_xuan", "zhang_jun", "long_xi", "yuan_meng"],
+    background: "前涼の張駿は、西域の諸国を従えようと、将軍の楊宣に兵を授けた。焉耆王の龍熙は従わない。",
+    history: "345年ごろ、楊宣は焉耆を攻めて龍熙を降し、鄯善王元孟は女を献じて服属した。西域の諸国は前涼に朝貢した。", sources: ["『晋書』張軌伝附張駿伝", "『資治通鑑』巻97"],
+    cond: "前涼(張氏の国)と焉耆がある",
+    att: (c) => ruled(c, ["zhang_jun", "zhang_chonghua", "zhang_mao"]) ?? pick(c, "qianliang"), def: (c) => pick(c, "yanqi"), commanders: ["yang_xuan"], defCommanders: ["long_xi"], attLabel: "前涼", defLabel: "焉耆",
+    labels: { att: ["楊宣に焉耆を討たせる", "兵糧を整え、鄯善を味方にしてから進む", "遠征せず、使者で朝貢を求める"], def: ["龍熙みずから迎え撃つ", "員渠城に籠もる", "前涼に朝貢を申し出る"] },
+    onWin: (x, r) => {
+      const fixVassal = (f: string | undefined): void => {
+        if (!f || !live(x.c, f)) return;
+        x.c.setRelation(r.att!, f, "vassal");
+        x.c.diplo.overlord[f] = r.att!;
+      };
+      fixVassal(r.def);
+      fixVassal(pick(x.c, "shanshan"));
+      return "焉耆は降り、鄯善も服属した。西域の諸国は前涼に朝貢した";
+    },
+  }),
+  {
+    id: "xiyu382", name: "西域諸国の前秦入朝(鄯善王・車師前部王)", year: 382, month: 9, importance: "major", place: { name: "長安", lon: 108.87, lat: 34.31 },
+    persons: ["xiumituo", "mitian", "fu_jian", "lv_guang"],
+    background: "鄯善王の休密馱と車師前部王の弥窴が長安に入朝し、「漢の故事のように都護を置いて西域を従えてほしい。我々が案内する」と苻堅に願い出た。",
+    history: "382年9月、苻堅はこれを受け、翌383年正月、呂光に兵七万と鉄騎五千を授けて西域へ送った。", sources: ["『晋書』苻堅載記下・呂光載記", "『資治通鑑』巻104"],
+    cond: "前秦があり、鄯善か車師前部がある",
+    roles: (x) => ({ qin: qinOf(x.c) }),
+    ready: (x, r) => (!r.qin ? "前秦がない" : !live(x.c, "shanshan") && !live(x.c, "jushi") ? "鄯善も車師前部もない" : true),
+    choices: {
+      qin: [
+        { id: "send", label: "入朝を受け、呂光に西域遠征を命じる", kind: "historic", desc: "西域を服属させ、交易路を押さえる。", preview: "鄯善・車師前部が従属する。呂光が西の都市で遠征軍(4万)を編成し、亀茲へ向かう準備をする" },
+        { id: "accept", label: "入朝を受けるが、出兵はしない", kind: "alt", desc: "朝貢だけを受ける。", preview: "鄯善・車師前部との友好度+30、交易協定を結ぶ" },
+        { id: "south", label: "西域より東晋攻めを優先する", kind: "bold", desc: "大軍はすべて南へ。", preview: "東晋と戦争。西域の国々との友好度-10" },
+      ],
+    },
+    apply: (x, r, p) => {
+      const qin = r.qin!;
+      const wests = ["shanshan", "jushi"].filter((f) => live(x.c, f));
+      if (p.qin === "south") {
+        const j = jinOf(x.c);
+        if (j) x.c.setRelation(qin, j, "war");
+        for (const f of wests) x.c.diplo.addAmity(qin, f, -10);
+        return "苻堅は西域の願いを退け、東晋攻めを急いだ";
+      }
+      for (const f of wests) {
+        x.c.diplo.addAmity(qin, f, 30);
+        if (p.qin === "send") {
+          x.c.setRelation(qin, f, "vassal");
+          x.c.diplo.overlord[f] = qin;
+        } else x.c.trade.pact(qin, f);
+      }
+      if (p.qin === "send" && inF(x.c, "lv_guang", qin) && !x.c.postOf("lv_guang")) {
+        const base = x.c.cities.filter((k) => k.kind !== "pass" && owner(k.id) === qin).sort((a, b) => a.lon - b.lon)[0];
+        if (base) {
+          addGarrison(x, base.id, 40000);
+          const purse = x.c.factionStates[qin];
+          if (purse) purse.grain += 4000;
+          x.c.raiseArmy(base.id, 40000, "lv_guang");
+        }
+        x.h.flag("lvguang_sent", "1");
+      }
+      return p.qin === "send" ? "苻堅は入朝を受け、呂光に西域遠征を命じた" : "苻堅は入朝を受け、交易を結んだ";
+    },
+  },
+  {
+    ...expedition({
+      id: "qiuci384", name: "呂光の西域遠征(亀茲の攻略と鳩摩羅什)", year: 384, month: 7, place: { name: "亀茲", lon: 82.95, lat: 41.72 },
+      persons: ["lv_guang", "bai_chun", "bai_zhen", "kumarajiva", "du_jin", "jiang_fei"],
+      background: "呂光の遠征軍は高昌から焉耆を降し、亀茲の延城を囲んだ。亀茲王の白純は、獪胡など周辺の遊牧の援軍を集めて抵抗している。城中には名高い学僧・鳩摩羅什がいる。",
+      history: "384年7月、呂光は亀茲の城外で獪胡などの援軍を破り、白純は逃れた。呂光は白純の弟の白震を王に立て、鳩摩羅什を連れ帰った。西域の三十余国が降った。", sources: ["『晋書』呂光載記", "『高僧伝』鳩摩羅什伝", "『資治通鑑』巻105-106"],
+      cond: "呂光が軍を率いる国と、亀茲がある(焉耆は、遠征軍が来れば降ることが多い)",
+      att: (c) => factionOfPersons(c, ["lv_guang"]), def: (c) => pick(c, "qiuci"), commanders: ["lv_guang", "du_jin"], defCommanders: ["bai_chun"], attLabel: "呂光の国", defLabel: "亀茲",
+      labels: { att: ["亀茲の延城を囲んで決戦する", "焉耆で兵糧を整えてから進む", "遠征を切り上げて東へ戻る"], def: ["獪胡の援軍とともに決戦する", "延城に籠城する", "呂光に降る"] },
+      onWin: (x, r) => {
+        const def = r.def!;
+        const ruler = x.c.rulerOf(def);
+        if (ruler && inF(x.c, "bai_zhen", def) && ruler.id !== "bai_zhen") x.c.replaceRuler(def, ruler, P("bai_zhen")!);
+        x.c.setRelation(r.att!, def, "vassal");
+        x.c.diplo.overlord[def] = r.att!;
+        if (alive(x.c, "kumarajiva")) x.c.spoils.setFaction("kumarajiva", r.att!);
+        for (const f of ["yutian", "shule", "yanqi"]) if (live(x.c, f) && !x.c.diplo.overlord[f]) {
+          x.c.setRelation(r.att!, f, "vassal");
+          x.c.diplo.overlord[f] = r.att!;
+        }
+        x.h.flag("qiuci_conquered", "1");
+        return "亀茲は降り、白震が王に立てられた。鳩摩羅什は呂光の軍に連れられた。西域の国々も服属した";
+      },
+    }),
+    reserve: ["lv_guang"],
+  },
+  secedeEvent({
+    id: "houliang386", name: "呂光の帰還と後涼の成立", year: 386, month: 9, place: { name: "姑臧", lon: 102.63, lat: 37.93 },
+    persons: ["lv_guang", "kumarajiva", "du_jin", "liang_xi"], holder: (c) => factionOfPersons(c, ["lv_guang"]), who: "lv_guang", cities: ["guzang", "dunhuang", "jiuquan"], state: "涼(後涼)", title: "酒泉公",
+    background: "西域から戻った呂光は、苻堅の死を知った。涼州刺史の梁熙は呂光の入境を拒んでいる。",
+    history: "385年、呂光は梁熙を破って姑臧に入り、386年に苻堅の死を知ると涼州牧・酒泉公を称して自立した(後涼)。鳩摩羅什は以後十数年、涼州に留められた。", sources: ["『晋書』呂光載記"],
+    cond: "呂光が前秦にいて、前秦が淝水で敗れたか不安定",
+    readyMore: (x, r) => (x.h.flags.feishui_winner === r.f ? "前秦は淝水で勝ち、安定している(呂光は前秦の将のまま)" : (x.c.court.stability[r.f!] ?? 60) >= 45 && !x.h.flags.feishui_winner ? "前秦は安定している" : true),
+    labels: ["呂光の自立を止められない", "呂光を涼州牧として遇する", "呂光を討つ"], descs: ["前秦の力は及ばない。", "西方の守りを任せる。", "危険を除く。"],
+  }),
   // ===== その他 =====
   proclaim({
     id: "chenghan304", name: "成漢の建国(李雄の成都王)", year: 304, month: 10, place: { name: "成都", lon: 104.07, lat: 30.66 },

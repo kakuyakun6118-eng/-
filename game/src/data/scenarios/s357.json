@@ -96,6 +96,48 @@
    "people": "新羅(韓)",
    "ruler": "奈勿尼師今",
    "color": "#e6d36a"
+  },
+  {
+   "id": "shanshan",
+   "name": "鄯善",
+   "people": "鄯善",
+   "ruler": "元孟",
+   "color": "#b0864a"
+  },
+  {
+   "id": "yutian",
+   "name": "于闐",
+   "people": "于闐",
+   "ruler": "于闐王(名は伝わらない)",
+   "color": "#4a9a7a"
+  },
+  {
+   "id": "shule",
+   "name": "疏勒",
+   "people": "疏勒",
+   "ruler": "疏勒王(名は伝わらない)",
+   "color": "#9a6a8a"
+  },
+  {
+   "id": "qiuci",
+   "name": "亀茲",
+   "people": "亀茲",
+   "ruler": "亀茲王(名は伝わらない)",
+   "color": "#c0a040"
+  },
+  {
+   "id": "yanqi",
+   "name": "焉耆",
+   "people": "焉耆",
+   "ruler": "龍熙",
+   "color": "#6a8ab0"
+  },
+  {
+   "id": "jushi",
+   "name": "車師前部",
+   "people": "車師",
+   "ruler": "車師前部王(名は伝わらない)",
+   "color": "#8a6a4a"
   }
  ],
  "uncertainOwners": [
@@ -120,7 +162,11 @@
   "tuyuhunting",
   "shuofang",
   "donglai",
-  "yanci"
+  "yanci",
+  "yiwu",
+  "loulan",
+  "jushihou",
+  "weili"
  ],
  "ownerNote": "洛陽は、前年に桓温が姚襄を破って取り戻した。姚襄はそのあと北へ移り、関中の北の杏城のあたりにいたので、近くの高奴をその拠点とした(推定)。",
  "cityNames": {
@@ -668,6 +714,34 @@
    "factionId": "qianqin",
    "title": "東海王の母",
    "cityId": "changan"
+  },
+  "yuan_meng": {
+   "factionId": "shanshan",
+   "role": "ruler"
+  },
+  "yutian_wang": {
+   "factionId": "yutian",
+   "role": "ruler"
+  },
+  "shule_wang": {
+   "factionId": "shule",
+   "role": "ruler"
+  },
+  "qiuci_wang": {
+   "factionId": "qiuci",
+   "role": "ruler"
+  },
+  "long_xi": {
+   "factionId": "yanqi",
+   "role": "ruler"
+  },
+  "jushi_wang": {
+   "factionId": "jushi",
+   "role": "ruler"
+  },
+  "kumarajiva": {
+   "factionId": "qiuci",
+   "title": "亀茲の若い学僧"
   }
  },
  "cityOwners": {
@@ -748,6 +822,21 @@
   "tuyuhunting": "tuyuhun",
   "shuofang": "tiefu",
   "xuantu": "qianyan",
-  "tuhe": "qianyan"
+  "tuhe": "qianyan",
+  "jiaohe": "jushi",
+  "jushihou": "jushi",
+  "shanshan": "shanshan",
+  "qiemo": "shanshan",
+  "jingjue": "shanshan",
+  "yutian": "yutian",
+  "shache": "shule",
+  "shule": "shule",
+  "qiuci": "qiuci",
+  "gumo": "qiuci",
+  "wensu": "qiuci",
+  "yanqi": "yanqi",
+  "weili": "yanqi",
+  "loulan": "qianliang",
+  "yiwu": "qianliang"
  }
 }

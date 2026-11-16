@@ -193,6 +193,7 @@ export function createBattleSetup(
     createdAt: { ...event.createdAt },
     attacker: att,
     defender,
+    tactics: event.tactics,
   };
 }
 

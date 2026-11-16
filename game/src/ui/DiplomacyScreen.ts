@@ -13,9 +13,9 @@ export interface DiplomacyActions {
 /** 関係ごとに、選べる交渉 */
 function commandsFor(rel: string): DiploCommand[] {
   if (rel === "war") return ["ceasefire", "peace", "gift", "surrender", "vassal"];
-  if (rel === "vassal") return ["goodwill", "gift", "aid", "marriage", "war"];
-  if (rel === "alliance") return ["aid", "goodwill", "gift", "marriage", "vassal", "war"];
-  return ["goodwill", "gift", "alliance", "nonaggression", "marriage", "vassal", "surrender", "war"];
+  if (rel === "vassal") return ["goodwill", "gift", "trade", "aid", "marriage", "war"];
+  if (rel === "alliance") return ["aid", "goodwill", "gift", "trade", "marriage", "vassal", "war"];
+  return ["goodwill", "gift", "trade", "alliance", "nonaggression", "marriage", "vassal", "surrender", "war"];
 }
 
 /**

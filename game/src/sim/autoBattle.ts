@@ -73,13 +73,22 @@ const clamp = (v: number, lo: number, hi: number): number => Math.max(lo, Math.m
  */
 export function estimateWinRate(setup: BattleSetup): { attacker: number; defender: number; ratio: number; factors: string[] } {
   const siege = setup.battleType === "siege_battle";
-  const a = Math.max(1, sideStrength(setup.attacker, setup.terrain, siege));
+  let a = Math.max(1, sideStrength(setup.attacker, setup.terrain, siege));
   let d = Math.max(1, sideStrength(setup.defender, setup.terrain, siege));
   const factors: string[] = [];
   const fort = setup.defender.fortification;
+  const tac = setup.tactics;
+  if (tac) {
+    a *= tac.attacker ?? 1;
+    d *= tac.defender ?? 1;
+    for (const n of tac.notes ?? []) factors.push(n);
+    if (tac.panic) factors.push(`${tac.panic === "attacker" ? "攻撃側" : "防御側"}は退くときに崩れるおそれ(${Math.round((tac.panicRisk ?? 0.4) * 100)}%)`);
+  }
   if (siege && fort) {
     d *= wallBonus(fort.defense);
     factors.push(`城壁(防御${fort.defense})で守備側が${wallBonus(fort.defense).toFixed(1)}倍`);
+  } else if (tac?.noRiverBonus) {
+    factors.push("渡河を許したため、川の守りの利がない");
   } else {
     const bonus = terrainBonus(setup.terrain);
     d *= bonus;
@@ -112,10 +121,23 @@ export function autoResolve(setup: BattleSetup): BattleResult {
   const fort = setup.defender.fortification;
   let a = sideStrength(setup.attacker, setup.terrain, siege) * (0.85 + rand() * 0.3);
   let d = sideStrength(setup.defender, setup.terrain, siege);
+  const t = setup.tactics;
   if (siege && fort) {
     d *= wallBonus(fort.defense);
-  } else {
+  } else if (!(t?.noRiverBonus && (setup.terrain === "river" || setup.terrain === "crossing" || setup.terrain === "greatRiver"))) {
     d *= terrainBonus(setup.terrain);
+  }
+  // 作戦:連携・指揮の補正と、撤退時の混乱(退くときに陣が崩れれば、数の多い側でも大敗する)
+  if (t) {
+    a *= t.attacker ?? 1;
+    d *= t.defender ?? 1;
+    if (t.panic) {
+      const hit = rand() < (t.panicRisk ?? 0.4);
+      if (hit) {
+        if (t.panic === "attacker") a *= 0.45 + rand() * 0.2;
+        else d *= 0.45 + rand() * 0.2;
+      }
+    }
   }
   a = Math.max(1, a);
   d = Math.max(1, d);
