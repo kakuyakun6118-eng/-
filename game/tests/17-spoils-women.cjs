@@ -52,7 +52,7 @@ const path = require('path');
     out.ret = c.custodyAction('yang_xianrong', 'return'); out.yangFaction = window.__goko.campaign.spoils.custodyOf('yang_xianrong') ? 'still' : (c.personStatus('yang_xianrong') + ':' + (window.__goko.allCities && 'ok'));
     return out; });
   console.log('処置とセーブ:', JSON.stringify(acts));
-  if (acts.peopleRows < 1 || !acts.buttons.includes('旧勢力へ帰す') || acts.afterLoad.custody !== acts.savedCustody || acts.afterLoad.yang !== 'protected' || !acts.again.includes('今日はもう')) problems.push('処置またはセーブ: ' + JSON.stringify(acts));
+  if (acts.peopleRows < 1 || !acts.buttons.includes('旧勢力へ帰す') || acts.afterLoad.custody !== acts.savedCustody || acts.afterLoad.yang !== 'protected' || !acts.again.includes('最近')) problems.push('処置またはセーブ: ' + JSON.stringify(acts));
 
   // 4) 名品の装備:指揮官の能力が上がり、会戦の計算に入る。外すと戻る。保存される
   const eq = await p.evaluate(() => { const g = window.__goko, c = g.campaign; const sp = c.spoils; const t = sp.treasures.find(x => x.equip && x.effects.war);

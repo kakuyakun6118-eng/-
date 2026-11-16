@@ -1,0 +1,701 @@
+{
+ "note": "人物どうしの相性(0〜100。史料にもとづく関係だけを書く。ほかは固定のシードで作る)と、史実にもとづく忠誠の基準値。数値はゲーム上の設定、関係の有無と向きは史実。",
+ "pairs": [
+  {
+   "a": "fu_jian",
+   "b": "wang_meng",
+   "value": 98,
+   "note": "苻堅は王猛を「劉備にとっての諸葛亮」にたとえ、全面的に信任した(史実)"
+  },
+  {
+   "a": "shi_le",
+   "b": "zhang_bin",
+   "value": 96,
+   "note": "石勒は張賓を「右侯」と呼んで重んじ、その死を嘆いた(史実)"
+  },
+  {
+   "a": "sima_rui",
+   "b": "wang_dao",
+   "value": 92,
+   "note": "「王と馬、天下を共にす」と言われた君臣(史実)。のちに王敦の乱でやや疎遠になる"
+  },
+  {
+   "a": "murong_hui",
+   "b": "pei_yi",
+   "value": 86,
+   "note": "慕容廆は中原から来た裴嶷を重く用いた(史実)"
+  },
+  {
+   "a": "liu_yuan",
+   "b": "liu_xuan",
+   "value": 85,
+   "note": "劉宣は劉淵を匈奴の主に推した(史実)"
+  },
+  {
+   "a": "shi_le",
+   "b": "kong_chang",
+   "value": 85,
+   "note": "旗揚げからの将(十八騎)"
+  },
+  {
+   "a": "shi_le",
+   "b": "kui_an",
+   "value": 80,
+   "note": "旗揚げからの将(十八騎)"
+  },
+  {
+   "a": "shi_le",
+   "b": "zhi_xiong",
+   "value": 80,
+   "note": "旗揚げからの将(十八騎)"
+  },
+  {
+   "a": "shi_le",
+   "b": "tao_bao",
+   "value": 80,
+   "note": "旗揚げからの将(十八騎)"
+  },
+  {
+   "a": "li_ju",
+   "b": "guo_song",
+   "value": 88,
+   "note": "叔父と甥。ともに戦った(史実)"
+  },
+  {
+   "a": "li_ju",
+   "b": "guo_mo",
+   "value": 70,
+   "note": "互いに結んで漢軍と戦った(史実)"
+  },
+  {
+   "a": "liu_kun",
+   "b": "wen_jiao",
+   "value": 85,
+   "note": "温嶠は劉琨の甥で、その使者として建康へ来た(史実)"
+  },
+  {
+   "a": "liu_kun",
+   "b": "lu_chen",
+   "value": 85,
+   "note": "盧諶は劉琨に仕え、詩を贈りあった(史実)"
+  },
+  {
+   "a": "liu_kun",
+   "b": "duan_pidi",
+   "value": 30,
+   "note": "盟約を結んだが、318年に段匹磾は劉琨を殺した(史実)"
+  },
+  {
+   "a": "xie_an",
+   "b": "xie_xuan",
+   "value": 92,
+   "note": "叔父と甥。謝安は謝玄を推して北府を任せた(史実)"
+  },
+  {
+   "a": "xie_an",
+   "b": "xie_shi",
+   "value": 85,
+   "note": "兄弟(史実)"
+  },
+  {
+   "a": "xie_xuan",
+   "b": "liu_laozhi",
+   "value": 85,
+   "note": "謝玄が北府の兵に劉牢之を用いた(史実)"
+  },
+  {
+   "a": "huan_wen",
+   "b": "xi_chao",
+   "value": 92,
+   "note": "郗超は桓温の謀主(史実)"
+  },
+  {
+   "a": "huan_wen",
+   "b": "yin_hao",
+   "value": 8,
+   "note": "桓温と殷浩は少年時代から張り合い、殷浩の失脚は桓温の上奏による(史実)"
+  },
+  {
+   "a": "murong_ke",
+   "b": "murong_chui",
+   "value": 88,
+   "note": "兄弟。慕容恪は死に臨んで慕容垂を推した(史実)"
+  },
+  {
+   "a": "murong_chui",
+   "b": "murong_wei",
+   "value": 22,
+   "note": "慕容暐の朝廷に疎まれて前秦へ亡命した(史実。直接の敵は慕容評と可足渾氏)"
+  },
+  {
+   "a": "murong_chui",
+   "b": "murong_ping",
+   "value": 5,
+   "note": "慕容評は慕容垂の功を妬み、除こうとした(史実)"
+  },
+  {
+   "a": "murong_chui",
+   "b": "kezuhun",
+   "value": 5,
+   "note": "可足渾皇后は慕容垂とその妻を憎んだ(史実)"
+  },
+  {
+   "a": "murong_chui",
+   "b": "duan_chui",
+   "value": 85,
+   "note": "夫婦(史実)"
+  },
+  {
+   "a": "fu_jian",
+   "b": "fu_rong",
+   "value": 90,
+   "note": "兄弟。苻融は苻堅の最も信頼する弟(史実)"
+  },
+  {
+   "a": "fu_jian",
+   "b": "lv_polou",
+   "value": 85,
+   "note": "呂婆楼は苻堅に王猛を推した(史実)"
+  },
+  {
+   "a": "fu_jian",
+   "b": "quan_yi",
+   "value": 78,
+   "note": "苻堅の腹心(史実)"
+  },
+  {
+   "a": "fu_jian",
+   "b": "deng_qiang",
+   "value": 80,
+   "note": "前秦の柱石の将(史実)"
+  },
+  {
+   "a": "fu_jian",
+   "b": "fu_sheng",
+   "value": 8,
+   "note": "苻堅は苻生を廃して殺した(史実)"
+  },
+  {
+   "a": "fu_sheng",
+   "b": "dong_rong",
+   "value": 80,
+   "note": "苻生の寵臣(史実)"
+  },
+  {
+   "a": "fu_jian",
+   "b": "yao_chang",
+   "value": 30,
+   "note": "姚萇はのちに苻堅を捕らえて殺した(史実)"
+  },
+  {
+   "a": "fu_jian",
+   "b": "murong_chong",
+   "value": 15,
+   "note": "慕容沖はのちに長安を攻めた(史実)"
+  },
+  {
+   "a": "fu_jian",
+   "b": "zhu_xu",
+   "value": 35,
+   "note": "朱序は淝水で晋に内通した(史実)"
+  },
+  {
+   "a": "liu_yao",
+   "b": "shi_le",
+   "value": 8,
+   "note": "319年に決裂し、328年に洛陽で戦った(史実)"
+  },
+  {
+   "a": "liu_yao",
+   "b": "you_ziyuan",
+   "value": 75,
+   "note": "游子遠は劉曜をたびたび諫め、用いられた(史実)"
+  },
+  {
+   "a": "liu_yao",
+   "b": "yang_xianrong",
+   "value": 85,
+   "note": "羊献容は劉曜の皇后となった(史実)"
+  },
+  {
+   "a": "tao_kan",
+   "b": "wen_jiao",
+   "value": 75,
+   "note": "ともに蘇峻の乱を平らげた(史実)"
+  },
+  {
+   "a": "tao_kan",
+   "b": "yu_liang",
+   "value": 35,
+   "note": "陶侃は庾亮の失政を責めた(史実)"
+  },
+  {
+   "a": "tao_kan",
+   "b": "wang_dun",
+   "value": 20,
+   "note": "王敦は陶侃を広州へ遠ざけた(史実)"
+  },
+  {
+   "a": "li_xiong",
+   "b": "fan_changsheng",
+   "value": 90,
+   "note": "李雄は范長生を丞相として敬った(史実)"
+  },
+  {
+   "a": "zhang_gui",
+   "b": "song_pei",
+   "value": 85,
+   "note": "宋配は張軌の河西平定を支えた(史実)"
+  },
+  {
+   "a": "wang_dun",
+   "b": "sima_rui",
+   "value": 22,
+   "note": "322年に兵を挙げて建康を攻めた(史実)"
+  },
+  {
+   "a": "wang_dun",
+   "b": "liu_wei",
+   "value": 5,
+   "note": "劉隗は王氏を抑えようとし、王敦の挙兵の口実となった(史実)"
+  },
+  {
+   "a": "wang_dun",
+   "b": "diao_xie",
+   "value": 10,
+   "note": "刁協も王敦に討たれる対象とされた(史実)"
+  },
+  {
+   "a": "wang_dun",
+   "b": "zhou_yi",
+   "value": 15,
+   "note": "周顗は王敦に殺された(史実)"
+  },
+  {
+   "a": "wang_dun",
+   "b": "qian_feng",
+   "value": 85,
+   "note": "銭鳳は王敦の謀臣(史実)"
+  },
+  {
+   "a": "wang_dun",
+   "b": "shen_chong",
+   "value": 80,
+   "note": "沈充は王敦に従った(史実)"
+  },
+  {
+   "a": "shi_hu",
+   "b": "shi_hong",
+   "value": 10,
+   "note": "石虎は石弘を廃して殺した(史実)"
+  },
+  {
+   "a": "shi_hu",
+   "b": "cheng_xia",
+   "value": 5,
+   "note": "程遐は石虎を除くよう説き、のちに殺された(史実)"
+  },
+  {
+   "a": "shi_hu",
+   "b": "xu_guang",
+   "value": 15,
+   "note": "徐光も石虎に殺された(史実)"
+  },
+  {
+   "a": "shi_le",
+   "b": "shi_hu",
+   "value": 65,
+   "note": "甥。最大の功臣だが、野心を警戒された(史実)"
+  },
+  {
+   "a": "duan_pidi",
+   "b": "duan_mobo",
+   "value": 10,
+   "note": "段部の主導権を争った(史実)"
+  },
+  {
+   "a": "yu_liang",
+   "b": "su_jun",
+   "value": 5,
+   "note": "庾亮が蘇峻を召したことが、蘇峻の乱の原因となった(史実)"
+  },
+  {
+   "a": "su_jun",
+   "b": "zu_yue",
+   "value": 75,
+   "note": "ともに乱を起こした(史実)"
+  },
+  {
+   "a": "zu_ti",
+   "b": "han_qian",
+   "value": 80,
+   "note": "祖逖の配下(史実)"
+  },
+  {
+   "a": "zu_ti",
+   "b": "chen_chuan",
+   "value": 20,
+   "note": "陳川は祖逖と争い、石勒に付いた(史実)"
+  },
+  {
+   "a": "zu_ti",
+   "b": "fan_ya",
+   "value": 35,
+   "note": "祖逖は樊雅と戦ったのち降した(史実)"
+  },
+  {
+   "a": "liu_cong",
+   "b": "liu_yi",
+   "value": 15,
+   "note": "劉乂は皇太弟となったが、陥れられた(史実)"
+  },
+  {
+   "a": "jin_zhun",
+   "b": "liu_can",
+   "value": 5,
+   "note": "靳準は劉粲を殺した(史実)"
+  },
+  {
+   "a": "sima_yue",
+   "b": "gou_xi",
+   "value": 15,
+   "note": "苟晞は司馬越と対立した(史実)"
+  },
+  {
+   "a": "wang_jun",
+   "b": "liu_kun",
+   "value": 15,
+   "note": "王浚と劉琨は河北で争った(史実)"
+  },
+  {
+   "a": "wang_jun",
+   "b": "shi_le",
+   "value": 10,
+   "note": "石勒は降ると偽って王浚を捕らえた(史実)"
+  },
+  {
+   "a": "sima_lun",
+   "b": "sun_xiu",
+   "value": 85,
+   "note": "孫秀は司馬倫の腹心(史実)"
+  },
+  {
+   "a": "sima_ying",
+   "b": "lu_zhi",
+   "value": 85,
+   "note": "盧志は司馬穎の謀臣(史実)"
+  },
+  {
+   "a": "sima_yong",
+   "b": "zhang_fang",
+   "value": 72,
+   "note": "張方は司馬顒の将(史実)。のちに司馬顒に殺される"
+  },
+  {
+   "a": "sima_jiong",
+   "b": "dong_ai",
+   "value": 75,
+   "note": "董艾は司馬冏の腹心(史実)"
+  },
+  {
+   "a": "chen_an",
+   "b": "sima_bao",
+   "value": 30,
+   "note": "陳安は司馬保に背いた(史実)"
+  },
+  {
+   "a": "huan_wen",
+   "b": "sima_yu",
+   "value": 35,
+   "note": "会稽王と桓温は政争した(史実)"
+  },
+  {
+   "a": "xie_an",
+   "b": "wang_tanzhi",
+   "value": 72,
+   "note": "ともに桓温の簒奪を阻んだ(史実)"
+  },
+  {
+   "a": "xie_an",
+   "b": "huan_chong",
+   "value": 62,
+   "note": "桓沖は謝安と争わず協力した(史実)"
+  },
+  {
+   "a": "wang_dao",
+   "b": "wen_jiao",
+   "value": 75,
+   "note": "ともに東晋を支えた(史実)"
+  },
+  {
+   "a": "yu_liang",
+   "b": "wang_dao",
+   "value": 45,
+   "note": "政策で対立することがあった(史実)"
+  },
+  {
+   "a": "murong_hui",
+   "b": "murong_han",
+   "value": 80,
+   "note": "父子"
+  },
+  {
+   "a": "murong_huang",
+   "b": "murong_han",
+   "value": 30,
+   "note": "慕容皝は兄の慕容翰を恐れ、慕容翰は一時亡命した(史実)"
+  },
+  {
+   "a": "shiyijian",
+   "b": "yan_feng",
+   "value": 80,
+   "note": "燕鳳は什翼犍の長史(史実)"
+  },
+  {
+   "a": "liu_kuren",
+   "b": "tuoba_gui",
+   "value": 85,
+   "note": "劉庫仁は幼い拓跋珪を守った(史実)"
+  },
+  {
+   "a": "liu_weichen",
+   "b": "liu_kuren",
+   "value": 10,
+   "note": "劉衛辰と劉庫仁は争った(史実)"
+  }
+ ],
+ "loyalty": {
+  "zhang_bin": {
+   "base": 95,
+   "note": "石勒の第一の謀臣"
+  },
+  "wang_meng": {
+   "base": 95,
+   "note": "苻堅への忠誠で知られる"
+  },
+  "wang_dao": {
+   "base": 90,
+   "note": "東晋を支え続けた"
+  },
+  "xie_an": {
+   "base": 90,
+   "note": ""
+  },
+  "zu_ti": {
+   "base": 85,
+   "note": "北伐に生涯をささげた"
+  },
+  "tao_kan": {
+   "base": 72,
+   "note": ""
+  },
+  "wen_jiao": {
+   "base": 85,
+   "note": ""
+  },
+  "pei_yi": {
+   "base": 90,
+   "note": ""
+  },
+  "fan_changsheng": {
+   "base": 90,
+   "note": ""
+  },
+  "kong_chang": {
+   "base": 88,
+   "note": "十八騎"
+  },
+  "kui_an": {
+   "base": 85,
+   "note": "十八騎"
+  },
+  "deng_qiang": {
+   "base": 80,
+   "note": ""
+  },
+  "fu_rong": {
+   "base": 92,
+   "note": ""
+  },
+  "quan_yi": {
+   "base": 75,
+   "note": ""
+  },
+  "li_ju": {
+   "base": 85,
+   "note": "孤立しても晋に尽くした"
+  },
+  "shao_xu": {
+   "base": 90,
+   "note": "節義を守って石勒と戦い続けた"
+  },
+  "liu_kun": {
+   "base": 85,
+   "note": "晋への孤忠"
+  },
+  "you_ziyuan": {
+   "base": 85,
+   "note": ""
+  },
+  "xie_xuan": {
+   "base": 88,
+   "note": ""
+  },
+  "zhou_fang": {
+   "base": 80,
+   "note": ""
+  },
+  "song_pei": {
+   "base": 85,
+   "note": ""
+  },
+  "wang_dun": {
+   "base": 25,
+   "note": "322年に朝廷に兵を向けた(史実)"
+  },
+  "su_jun": {
+   "base": 30,
+   "note": "327年に乱を起こした(史実)"
+  },
+  "zu_yue": {
+   "base": 35,
+   "note": "蘇峻の乱に加わった(史実)"
+  },
+  "chen_an": {
+   "base": 30,
+   "note": "司馬保に背き自立した(史実)"
+  },
+  "wang_han": {
+   "base": 35,
+   "note": "王敦の乱に加わった"
+  },
+  "qian_feng": {
+   "base": 40,
+   "note": ""
+  },
+  "shen_chong": {
+   "base": 35,
+   "note": ""
+  },
+  "xu_kan": {
+   "base": 20,
+   "note": "晋と石勒の間で寝返りを繰り返した(史実)"
+  },
+  "chen_chuan": {
+   "base": 30,
+   "note": "祖逖に背き石勒に付いた(史実)"
+  },
+  "fan_ya": {
+   "base": 40,
+   "note": ""
+  },
+  "zhang_ping": {
+   "base": 35,
+   "note": ""
+  },
+  "murong_chui": {
+   "base": 50,
+   "note": "淝水の後に自立した(史実)"
+  },
+  "yao_chang": {
+   "base": 40,
+   "note": "淝水の後に自立し、苻堅を殺した(史実)"
+  },
+  "murong_chong": {
+   "base": 30,
+   "note": "淝水の後に背いた(史実)"
+  },
+  "murong_hong": {
+   "base": 30,
+   "note": "淝水の後に背いた(史実)"
+  },
+  "qifu_guoren": {
+   "base": 45,
+   "note": "淝水の後に自立した(史実)"
+  },
+  "zhai_bin": {
+   "base": 30,
+   "note": "淝水の後に背いた(史実)"
+  },
+  "lv_guang": {
+   "base": 60,
+   "note": "西域から戻って自立した(史実)"
+  },
+  "liu_weichen": {
+   "base": 30,
+   "note": "代と前秦の間で寝返りを繰り返した(史実)"
+  },
+  "liu_kuren": {
+   "base": 70,
+   "note": ""
+  },
+  "jin_zhun": {
+   "base": 20,
+   "note": "318年に劉粲を殺した(史実)"
+  },
+  "shi_hu": {
+   "base": 60,
+   "note": "石勒の死後に実権を奪った(史実)"
+  },
+  "duan_mobo": {
+   "base": 40,
+   "note": "石勒に通じた(史実)"
+  },
+  "xin_yan": {
+   "base": 30,
+   "note": "張氏に背いた(史実)"
+  },
+  "zhou_zha": {
+   "base": 40,
+   "note": ""
+  },
+  "gou_xi": {
+   "base": 45,
+   "note": ""
+  },
+  "huan_wen": {
+   "base": 50,
+   "note": "東晋の実権を握り、帝位をうかがった(史実)"
+  },
+  "sima_xun": {
+   "base": 30,
+   "note": "365年に背いた(史実)"
+  },
+  "yuan_zhen": {
+   "base": 40,
+   "note": "370年に背いた(史実)"
+  },
+  "lv_hu": {
+   "base": 30,
+   "note": "燕と晋の間で動いた(史実)"
+  },
+  "liang_shuo": {
+   "base": 30,
+   "note": "交州で自立に近かった(史実)"
+  },
+  "hua_yi": {
+   "base": 35,
+   "note": "司馬睿に従わなかった(史実)"
+  },
+  "zhao_gu": {
+   "base": 40,
+   "note": "漢から晋へ寝返った(史実)"
+  },
+  "zhang_hao": {
+   "base": 70,
+   "note": ""
+  },
+  "zhu_xu": {
+   "base": 35,
+   "note": "淝水で晋に内通した(史実)"
+  },
+  "wang_mi": {
+   "base": 50,
+   "note": ""
+  },
+  "cao_yi": {
+   "base": 40,
+   "note": ""
+  }
+ }
+}

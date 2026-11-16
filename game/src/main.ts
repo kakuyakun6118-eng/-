@@ -1,6 +1,7 @@
 // ゲームの起動。
 import "./ui/style.css";
 import { Game } from "./core/Game";
+import { affinity } from "./sim/loyalty";
 import { credits, persons, scenario } from "./data";
 
 const root = document.getElementById("app") as HTMLElement;
@@ -15,6 +16,7 @@ Game.create(root)
     (window as unknown as { __goko: Game }).__goko = game;
     // 点検用:データ(シナリオ・人物)
     (window as unknown as { __gokoData: unknown }).__gokoData = { scenario, persons };
+    (window as unknown as { __gokoAffinity: unknown }).__gokoAffinity = affinity;
     hint.textContent = "ドラッグで移動・ピンチで拡大縮小・都市や軍団をタップ";
   })
   .catch((err) => {

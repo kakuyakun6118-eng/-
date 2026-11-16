@@ -3663,3 +3663,9 @@ select:focus-visible {
 .gameover-text { margin: 0; font-size: 13px; line-height: 1.7; color: var(--kinari); }
 .gameover-buttons { display: flex; justify-content: center; gap: 10px; }
 #gameover button { min-height: 36px; padding: 4px 14px; border: 1px solid var(--gold-dim); border-radius: 2px; background: linear-gradient(180deg, #3b1e17, #21110d); color: var(--kinari); font-family: var(--font-display); font-size: 14px; cursor: pointer; }
+
+/* 忠誠 */
+.person-loyalty { margin: 2px 0 0; font-size: 12px; color: var(--kinari); }
+.person-loyalty[data-risk="mid"], .person-row[data-risk="mid"] .person-row-name { color: var(--warn); }
+.person-loyalty[data-risk="high"], .person-row[data-risk="high"] .person-row-name { color: #e2705c; }
+.person-loyalty-why { font-size: 10.5px; color: var(--muted); }

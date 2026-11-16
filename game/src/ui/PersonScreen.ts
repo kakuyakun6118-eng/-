@@ -2,6 +2,7 @@ import { factionById, persons, scenario } from "../data";
 import { fillPortrait } from "./portrait";
 import type { Person, PersonRole, PersonStatus } from "../data/types";
 import type { Campaign } from "../sim/Campaign";
+import { affinity, loyaltyBand } from "../sim/loyalty";
 
 const ROLE_LABEL: Record<PersonRole, string> = { ruler: "君主", general: "武将", strategist: "軍師", minister: "文官" };
 const STATUS_LABEL: Record<PersonStatus, string> = { active: "健在", wounded: "負傷", captured: "捕虜", dead: "死亡", protected: "保護" };
@@ -35,6 +36,13 @@ export class PersonScreen {
       this.q(sel).addEventListener("change", () => this.renderList());
     }
     this.q(".person-appoint").addEventListener("click", () => this.appoint());
+    this.q(".person-reward").addEventListener("click", () => {
+      if (!this.selectedId) return;
+      const err = this.actions.campaign().loyalty.reward(this.selectedId, 100);
+      this.actions.onAppointed();
+      this.renderList();
+      this.q(".person-message").textContent = err ?? "褒賞を与えました";
+    });
   }
 
   get visible(): boolean {
@@ -92,6 +100,12 @@ export class PersonScreen {
         const stats = document.createElement("span");
         stats.className = "person-row-stats";
         stats.textContent = STATS.map(([key, label]) => `${label[0]}${p[key]}`).join(" ");
+        // 忠誠の低い人には、印を付ける
+        const loy = campaign.loyalty.loyalty[p.id];
+        if (p.role !== "ruler" && loy !== undefined && loy < 50) {
+          row.dataset.risk = loy < 30 ? "high" : "mid";
+          name.textContent = `${p.name} ${loy < 30 ? "⚠離反の危険大" : "⚠不満"}`;
+        }
         row.append(img, name, sub, stats);
         row.addEventListener("click", () => {
           this.selectedId = p.id;
@@ -132,6 +146,24 @@ export class PersonScreen {
       }),
     );
     this.q(".person-traits").textContent = [...p.traits, p.favoredUnit ? `得意:${{ infantry: "歩兵", cavalry: "騎兵", archer: "弓兵" }[p.favoredUnit]}` : ""].filter(Boolean).join("・");
+    // 忠誠・名声・君主との相性・離反の危険と、その理由
+    const L = campaign.loyalty;
+    const ruler = L.ruler(p.factionId);
+    const loy = Math.round(L.loyalty[p.id] ?? 0);
+    const band = loyaltyBand(loy);
+    const aff = ruler && ruler.id !== p.id ? affinity(p, ruler) : null;
+    const lo = this.q(".person-loyalty");
+    lo.textContent = p.role === "ruler"
+      ? `君主・名声${Math.round(L.fame[p.id] ?? 0)}・威信${L.prestige(p.factionId)}`
+      : `忠誠${loy}(${band.label})・名声${Math.round(L.fame[p.id] ?? 0)}・君主との相性${aff?.value ?? "—"}・離反の危険:${band.risk}`;
+    lo.dataset.risk = p.role === "ruler" ? "" : loy < 30 ? "high" : loy < 50 ? "mid" : "";
+    const why = this.q(".person-loyalty-why");
+    if (p.role === "ruler") why.textContent = "";
+    else {
+      const t = L.target(p);
+      const recent = (L.log[p.id] ?? []).slice(-3).reverse().map((x) => `${x.text}${x.delta ? (x.delta > 0 ? `+${x.delta}` : x.delta) : ""}`);
+      why.textContent = `忠誠の目安${Math.round(t.value)}:${t.parts.join("・")}${aff ? `(相性:${aff.note})` : ""}${recent.length ? ` / 最近の変動:${recent.join("・")}` : ""}`;
+    }
     const items = campaign.spoils.equippedBy(p.id).map((t) => t.name);
     const extra = [
       p.gender === "female" ? "女性" : "",
@@ -161,6 +193,7 @@ export class PersonScreen {
     }
     select.replaceChildren(...options);
     this.q(".person-appoint-box").hidden = !can;
+    this.q(".person-reward").hidden = p.role === "ruler";
     this.q(".person-message").textContent = can ? "" : status !== "active" ? "この人物は、いま任命できません" : "ほかの勢力の人物は任命できません";
   }
 
