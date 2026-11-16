@@ -189,6 +189,12 @@ export const unitTypes = unitTypeList as UnitType[];
 export const persons: Person[] = built.persons;
 export const officers = persons;
 
+/** 台帳(全年代)の人物。史実の子女が生まれるときに使う */
+export function ledgerPerson(id: string): Person | undefined {
+  const p = personLedger.get(id);
+  return p ? { ...p } : undefined;
+}
+
 export function personById(id: string | undefined): Person | undefined {
   return id ? persons.find((o) => o.id === id) : undefined;
 }

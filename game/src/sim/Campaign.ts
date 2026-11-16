@@ -10,6 +10,7 @@ import { chance, setCurrentSpoils, Spoils, type CaptureRecord, type PendingCaptu
 import { affinity, isKin, LoyaltySystem } from "./loyalty";
 import { cityEcon, Economy } from "./economy";
 import { Diplomacy, type DiploCommand } from "./diplomacy";
+import { Court } from "./court";
 import { seasonOf, type CampaignSave, type DynastySave, type Relation } from "./save";
 import type { BattleResult, CommanderFate, SideResult } from "../battle/types";
 import type { Army, ArmyStatus, BattleEvent, City, CityState, Faction, Person, PersonRole, PersonStatus, UnitTypeId } from "../data/types";
@@ -117,6 +118,7 @@ export class Campaign {
       this.factionStates[f.id] = { gold: r.income.total * 3, grain: r.income.grain * 3 };
     }
     this.diplo = new Diplomacy(this);
+    this.court = new Court(this);
   }
 
   /** 勢力の、1か月の収入(支出を引く前) */
@@ -168,6 +170,7 @@ export class Campaign {
     const person = personById(personId);
     if (!person) return "人物が見つかりません";
     if (this.personStatus(personId) !== "active") return "負傷・捕虜・死亡の人物は任命できません";
+    if (target && this.court?.isMinor(person)) return `${person.name}は未成年(${this.court.age(person)}歳)のため、任命できません(15歳から)`;
     const city = target?.kind === "city" ? this.cities.find((c) => c.id === target.id) : undefined;
     const army = target?.kind === "army" || target?.kind === "deputy" ? this.stateOf(target.id) : undefined;
     if (target && !city && !army) return "任命先が見つかりません";
@@ -210,6 +213,8 @@ export class Campaign {
   readonly economy!: Economy;
   /** 外交(友好度・条約・婚姻・援軍) */
   readonly diplo!: Diplomacy;
+  /** 皇室(家系・婚姻・子女・後継者・即位) */
+  readonly court!: Court;
 
   relationOf(a: string, b: string): Relation {
     const r = this.relations[[a, b].sort().join("|")] ?? "neutral";
@@ -390,7 +395,8 @@ export class Campaign {
     const nomad = /匈奴|鮮卑|羯/.test(people);
     const cavalry = Math.round(n * (nomad ? 0.5 : 0.15));
     const archer = Math.round(n * (nomad ? 0.15 : 0.25));
-    const commander = personById(commanderId);
+    const pick = personById(commanderId);
+    const commander = pick && !this.court?.isMinor(pick) ? pick : undefined;
     const id = `army_n${this.nextArmyId++}`;
     const army: Army = {
       id, name: commander ? `${commander.name}軍` : `${city.name}の軍`, factionId: owner, commanderId: commander?.id ?? "",
@@ -463,6 +469,7 @@ export class Campaign {
       economy: this.economy.serialize(),
       loyalty: this.loyalty.serialize(),
       diplomacy: this.diplo.serialize(),
+      court: this.court.serialize(),
     });
   }
 
@@ -493,6 +500,7 @@ export class Campaign {
     this.proposals.push(...(data.proposals ?? []));
     this.nextArmyId = data.nextArmyId ?? 1;
     this.restoreFactions(data);
+    this.court.restore(data.court);
     this.spoils.restore(data.spoils);
     this.restoreRoles(data);
     this.economy.restore(data.economy);
@@ -779,6 +787,9 @@ export class Campaign {
         this.trimEvents();
         this.loyalty.monthly();
         this.diplo.monthly();
+        this.court.monthly();
+        this.checkRulers();
+        if (this.playerFactionId !== null && (d + 1) % 360 === 210) this.court.aiYearly();
       }
       this.diplo.daily();
       if (this.playerFactionId !== null) this.strategy.daily(d + 1);
@@ -1056,7 +1067,7 @@ export class Campaign {
    * 反乱・独立:忠誠の低い人物が、拠点(規模2以上の都市)と兵4,000以上を持っていれば、自立して国を建てる。
    * 史実で独立した人物なら、史実の国号と称号を使う(succession.json)。条件が足りなければ、何もしない。
    */
-  secede(personId: string): boolean {
+  secede(personId: string, why = "反乱を起こし"): boolean {
     const p = personById(personId);
     if (!p || p.role === "ruler") return false;
     const from = p.factionId;
@@ -1098,13 +1109,16 @@ export class Campaign {
     this.loyalty.addFame(personId, 12);
     this.loyalty.reevaluate(from, `${p.name}の反乱`);
     this.loyalty.noteRulerChange(from);
-    this.addNews(`${old.name}の${p.name}が${base.city.name}で反乱を起こし、「${nf.name}」を建てて${title}を称しました`);
+    this.addNews(`${old.name}の${p.name}が${base.city.name}で${why}、「${nf.name}」を建てて${title}を称しました`);
     return true;
   }
 
   /** 戦死した君主の後を継ぐ(国はそのまま) */
   private succeedRuler(factionId: string, old: Person): void {
-    const next = this.successionCandidates(factionId, old)[0];
+    // 皇位継承:史実の後継者(指名済みの皇太子)→ 正室の子 → 側室の子 → 兄弟 → 一族 → 有力な武将。
+    // 一族が誰もいなければ、これまでどおり史実の後継の表と武将の順位から選ぶ
+    const viaCourt = this.court.succeed(factionId, old);
+    const next = viaCourt ? { p: viaCourt } : this.successionCandidates(factionId, old)[0];
     const f = scenario.factions.find((x) => x.id === factionId)!;
     if (!next) {
       this.fallFaction(factionId, old, null);
@@ -1114,9 +1128,40 @@ export class Campaign {
     this.setRole(next.p.id, "ruler");
     f.ruler = next.p.name;
     this.dynasty.rulers[factionId] = next.p.name;
-    this.addNews(`${f.name}の君主${old.name}が亡くなり、${next.p.name}が後を継ぎました`);
+    this.addNews(`${f.name}の君主${old.name}が亡くなり、${next.p.name}が後を継ぎました${this.court.isMinor(next.p) ? `(${this.court.age(next.p)}歳の幼君)` : ""}`);
     this.loyalty.addFame(next.p.id, 5);
     this.loyalty.reevaluate(factionId, `君主${old.name}の死と、${next.p.name}の継承`);
+    this.loyalty.noteRulerChange(factionId);
+    this.court.resolveClaim();
+  }
+
+  /** 寿命による死(病死)。役目を解き、君主なら、次の月の調べで継承が起こる */
+  dieNaturally(personId: string): void {
+    const p = personById(personId);
+    if (!p || this.personStatus(personId) === "dead") return;
+    this.personStates[personId] = "dead";
+    for (const s of this.armies) {
+      if (s.army.commanderId === personId) s.army.commanderId = "";
+      if (s.army.deputyId === personId) delete s.army.deputyId;
+    }
+    for (const c of this.cities) if (governorIdOf(c, this.cityStates[c.id]) === personId) this.cityStates[c.id] = { ...this.cityState(c), governorId: null };
+    const i = this.spoils.custody.findIndex((x) => x.personId === personId);
+    if (i >= 0) this.spoils.custody.splice(i, 1);
+    if (p.role === "ruler" || (this.loyalty.fame[personId] ?? 0) >= 60) this.addNews(`${factionName(p.factionId)}の${p.name}が亡くなりました${p.fictional ? "" : p.died ? `(史実では${p.died}年に没)` : ""}`);
+  }
+
+  /** 簒奪:usurper が君主 old を廃して位につく(前の君主は殺される。史実の簒奪の多くと同じ) */
+  usurp(factionId: string, old: Person, usurper: Person): void {
+    const f = scenario.factions.find((x) => x.id === factionId)!;
+    this.setRole(old.id, "general");
+    this.personStates[old.id] = "dead";
+    for (const s of this.armies) if (s.army.commanderId === old.id) s.army.commanderId = "";
+    this.setRole(usurper.id, "ruler");
+    f.ruler = usurper.name;
+    this.dynasty.rulers[factionId] = usurper.name;
+    delete this.court.heirs[factionId];
+    this.loyalty.addFame(usurper.id, 5);
+    this.loyalty.reevaluate(factionId, `${usurper.name}の簒奪`);
     this.loyalty.noteRulerChange(factionId);
   }
 

@@ -48,6 +48,8 @@ export interface CampaignSave {
   proposals?: { from: string; kind: "peace" | "alliance"; day: number }[];
   /** 外交(友好度・条約・婚姻・援軍)。古いセーブには無い */
   diplomacy?: import("./diplomacy").DiplomacySave;
+  /** 皇室(家系・子女・後継者・即位)。古いセーブには無い */
+  court?: import("./court").CourtSave;
   /** 財政・官職・内政(古いセーブには無い。無ければ、官職を割り当て直す) */
   economy?: EconomySave;
   /** 忠誠度・名声(古いセーブには無い。無ければ、読み込んだ時点の状況から作り直す) */

@@ -52,7 +52,7 @@ const path = require('path');
   const r7 = await p.evaluate(() => { const c = window.__goko.campaign, L = c.loyalty, D = window.__gokoData; window.__goko.changeSettings({ playerFactionId: 'silla' });
     const ke = D.persons.find(x => x.id === 'murong_ke'); L.loyalty.murong_ke = 32; const calm = L.unrestChance(ke);
     L.noteDefeat('qianyan'); L.noteRulerChange('qianyan'); c.economy.arrears.qianyan = 3; L.loyalty.murong_ke = 32; const crisis = L.unrestChance(ke);
-    let month = 0; while (ke.factionId === 'qianyan' && month < 60) { L.loyalty.murong_ke = 32; c.economy.arrears.qianyan = 3; L.noteDefeat('qianyan'); c.day += 30; L.monthly(); month++; }
+    let month = 0; while (ke.factionId === 'qianyan' && month < 60) { L.loyalty.murong_ke = 32; c.economy.arrears.qianyan = 3; c.factionStates.qianyan.gold = -100; /* 未払い3か月 = 蓄えなし(褒賞も出せない) */ L.noteDefeat('qianyan'); c.day += 30; L.monthly(); month++; }
     return { calm: +(calm * 100).toFixed(1), crisis: +(crisis * 100).toFixed(1), why: L.crisisOf('qianyan').why.join('・'), months: month, faction: ke.factionId, counts: L.counts }; });
   console.log('7 危機と反乱:', JSON.stringify(r7));
   if (!(r7.crisis > r7.calm * 3) || r7.faction === 'qianyan') problems.push('7 危機の反乱');

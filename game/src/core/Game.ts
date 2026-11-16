@@ -19,6 +19,7 @@ import { BattlePrep } from "../ui/BattlePrep";
 import { CityLabels } from "../ui/CityLabels";
 import { InfoPanel } from "../ui/InfoPanel";
 import { DiplomacyScreen } from "../ui/DiplomacyScreen";
+import { CourtScreen } from "../ui/CourtScreen";
 import { estimateWinRate } from "../sim/autoBattle";
 import { governorIdOf } from "../sim/battle";
 import { PersonScreen } from "../ui/PersonScreen";
@@ -96,6 +97,8 @@ export class Game {
   /** 自分の国が滅びたとき、どうするか */
   private onFall: "gameover" | "continue" = "gameover";
   private personScreen!: PersonScreen;
+  /** 皇室の画面を開く(人物を渡すと、その人物の家系図) */
+  private openCourt: (personId?: string) => void = () => undefined;
   private spoilsScreen?: SpoilsScreen;
   private territoryOpacity = 1;
   /** セーブデータの保存先(動作確認のために外からも見られるようにしてある) */
@@ -308,6 +311,7 @@ export class Game {
       campaign: () => this.campaign,
       playerFactionId: () => this.playerFactionId,
       onAppointed: () => this.refreshPosts(),
+      openFamily: (id) => this.openCourt(id),
     });
     (root.querySelector("#persons-open") as HTMLElement).addEventListener("click", () => this.personScreen.open());
     // シナリオの選択(メニューから開く。はじめて開いたときは、起動時にも出す)
@@ -338,6 +342,17 @@ export class Game {
     });
     this.spoilsScreen.bindCapture((text) => this.showNotice(text));
     (root.querySelector("#spoils-open") as HTMLElement).addEventListener("click", () => this.spoilsScreen?.open());
+    // 皇室(家系・妃・子女・後継者・即位)
+    const court = new CourtScreen(root.querySelector("#court") as HTMLElement, {
+      campaign: () => this.campaign,
+      playerFactionId: () => this.playerFactionId,
+      onChanged: () => {
+        this.showTreasury();
+        this.dirty = true;
+      },
+    });
+    (root.querySelector("#court-open") as HTMLElement).addEventListener("click", () => court.open());
+    this.openCourt = (id?: string) => court.open(id);
     // 国家財政
     const finance = new FinanceScreen(root.querySelector("#finance") as HTMLElement, () => this.campaign, () => this.playerFactionId);
     (root.querySelector("#finance-open") as HTMLElement).addEventListener("click", () => finance.open());

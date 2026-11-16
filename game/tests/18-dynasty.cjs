@@ -47,13 +47,13 @@ const path = require('path');
   await p.screenshot({ path: path.join(__dirname, 'out', 'dynasty-383.png') });
   await p.close();
 
-  // 2) 317年:石勒が会戦で討たれる → 国はそのままで、後継(石虎)が君主になる
+  // 2) 317年:石勒が会戦で討たれる → 国はそのままで、世子の石弘(史実の後継者)が君主になる(Version 35から)
   p = await open('s317');
   const r2 = await p.evaluate(`(() => { const g = window.__goko, c = g.campaign; g.changeSettings({ playerFactionId: 'jin' }); const a = c.stateOf('army_shi_hu').army; a.commanderId = 'shi_le';
     (${fight})('army_zu_ti', 'army_shi_hu', 'killed'); const F = window.__gokoData.scenario.factions.find(f => f.id === 'shile');
-    return { fallen: !!F.fallen, ruler: F.ruler, shiHuRole: window.__gokoData.persons.find(x => x.id === 'shi_hu').role, audit: (${audit})() }; })()`);
+    return { fallen: !!F.fallen, ruler: F.ruler, shiHuRole: window.__gokoData.persons.find(x => x.id === 'shi_hu').role, hongRole: window.__gokoData.persons.find(x => x.id === 'shi_hong').role, audit: (${audit})() }; })()`);
   console.log('317年 石勒の戦死:', JSON.stringify(r2));
-  if (r2.fallen || r2.ruler !== '石虎' || r2.shiHuRole !== 'ruler' || r2.audit.length) problems.push('君主の戦死と後継');
+  if (r2.fallen || r2.ruler !== '石弘' || r2.hongRole !== 'ruler' || r2.audit.length) problems.push('君主の戦死と後継');
   await p.close();
 
   // 3) プレイヤーの国が滅びる:ゲームオーバー / 後継国家で続ける

@@ -191,7 +191,8 @@ export class Economy {
       salary: staff.reduce((s, p) => s + this.salaryOf(p), 0) * this.salaryLevel(factionId, inc.total),
       bureaucracy: (nomad ? 1 : 2) * Math.pow(n, 1.5),
       cities: levels * 2,
-      court: n > 0 ? (nomad ? 3 + 3 * Math.sqrt(n) : 5 + 6 * Math.sqrt(n)) : 0,
+      // 宮廷費:宮廷の規模(都市の数)と、皇室(妃・子女。皇帝は1.5倍)
+      court: (n > 0 ? (nomad ? 3 + 3 * Math.sqrt(n) : 5 + 6 * Math.sqrt(n)) : 0) + (this.c.court?.courtCost(factionId) ?? 0),
       expedition: marching * 0.01,
       total: 0,
       grain: troops / 250 + garrison / 800 + marching / 500,

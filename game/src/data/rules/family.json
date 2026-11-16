@@ -1,0 +1,588 @@
+{
+ "_note": "家系(史実)。人物IDで記録。台帳にいない親は書かない。note に根拠や注記。heirs は開始時の史実の後継者、ranks は開始時の君主の格(emperor 皇帝/king 王/duke 公/chief 族長/lord その他)",
+ "parents": {
+  "liu_he": {
+   "father": "liu_yuan"
+  },
+  "liu_cong": {
+   "father": "liu_yuan"
+  },
+  "liu_yi": {
+   "father": "liu_yuan"
+  },
+  "liu_can": {
+   "father": "liu_cong"
+  },
+  "liu_yin": {
+   "father": "liu_yao"
+  },
+  "liu_xi": {
+   "father": "liu_yao",
+   "mother": "yang_xianrong"
+  },
+  "jin_yuehua": {
+   "father": "jin_zhun"
+  },
+  "shi_hong": {
+   "father": "shi_le"
+  },
+  "shi_kan": {
+   "father": "shi_le",
+   "note": "石勒の養子(もとは田氏)",
+   "adopted": true
+  },
+  "shi_sui": {
+   "father": "shi_hu",
+   "mother": "zheng_yingtao",
+   "note": "母を鄭桜桃とする記録による"
+  },
+  "sima_shao": {
+   "father": "sima_rui"
+  },
+  "sima_yu": {
+   "father": "sima_rui",
+   "mother": "zheng_achun"
+  },
+  "sima_yan": {
+   "father": "sima_shao",
+   "mother": "yu_wenjun"
+  },
+  "sima_xingnan": {
+   "father": "sima_shao",
+   "note": "南康長公主"
+  },
+  "sima_dan": {
+   "mother": "chu_suanzi",
+   "note": "父は康帝 司馬岳(この台帳にいない)"
+  },
+  "sima_yao": {
+   "father": "sima_yu",
+   "mother": "li_lingrong"
+  },
+  "sima_daozi": {
+   "father": "sima_yu",
+   "mother": "li_lingrong"
+  },
+  "sima_bao": {
+   "father": "sima_mo"
+  },
+  "wang_xianzhi": {
+   "father": "wang_xizhi",
+   "mother": "xi_xuan"
+  },
+  "wang_biaozhi": {
+   "father": "wang_bin"
+  },
+  "wang_guobao": {
+   "father": "wang_tanzhi"
+  },
+  "xie_shang": {
+   "father": "xie_kun"
+  },
+  "xie_xuan": {
+   "father": "xie_yi"
+  },
+  "xie_daoyun": {
+   "father": "xie_yi"
+  },
+  "xie_yan": {
+   "father": "xie_an",
+   "mother": "liu_xiean"
+  },
+  "huan_wen": {
+   "father": "huan_yi"
+  },
+  "huan_huo": {
+   "father": "huan_yi"
+  },
+  "huan_chong": {
+   "father": "huan_yi"
+  },
+  "huan_xuan2": {
+   "father": "huan_wen"
+  },
+  "huan_shiqian": {
+   "father": "huan_huo"
+  },
+  "huan_shimin": {
+   "father": "huan_huo"
+  },
+  "xi_xuan": {
+   "father": "xi_jian"
+  },
+  "xi_tan": {
+   "father": "xi_jian"
+  },
+  "chu_suanzi": {
+   "father": "chu_pou"
+  },
+  "xun_guan": {
+   "father": "xun_song"
+  },
+  "xun_xian": {
+   "father": "xun_song"
+  },
+  "zhou_fu": {
+   "father": "zhou_fang"
+  },
+  "liu_qun": {
+   "father": "liu_kun"
+  },
+  "zhang_shi": {
+   "father": "zhang_gui"
+  },
+  "zhang_mao": {
+   "father": "zhang_gui"
+  },
+  "zhang_jun": {
+   "father": "zhang_shi"
+  },
+  "zhang_tianxi": {
+   "father": "zhang_jun"
+  },
+  "li_xiong": {
+   "father": "li_te"
+  },
+  "li_shou": {
+   "father": "li_xiang"
+  },
+  "li_qi": {
+   "father": "li_xiong"
+  },
+  "li_yue": {
+   "father": "li_xiong"
+  },
+  "tuoba_liuxiu": {
+   "father": "tuoba_yilu"
+  },
+  "tuoba_pugen": {
+   "father": "tuoba_yituo"
+  },
+  "tuoba_hena": {
+   "father": "tuoba_yituo",
+   "mother": "qi_shi"
+  },
+  "tuoba_gena": {
+   "father": "tuoba_yituo",
+   "mother": "qi_shi"
+  },
+  "tuoba_yihuai": {
+   "father": "tuoba_yulv"
+  },
+  "shiyijian": {
+   "father": "tuoba_yulv",
+   "mother": "wang_yulv"
+  },
+  "tuoba_shi": {
+   "father": "shiyijian"
+  },
+  "tuoba_gui": {
+   "father": "tuoba_shi"
+  },
+  "duan_jilujuan": {
+   "father": "wuwuchen"
+  },
+  "duan_pidi": {
+   "father": "wuwuchen"
+  },
+  "duan_wenyang": {
+   "father": "wuwuchen"
+  },
+  "duan_chui": {
+   "father": "duan_mobo",
+   "note": "慕容垂の妻 段氏は段末波の娘とされる"
+  },
+  "murong_huang": {
+   "father": "murong_hui"
+  },
+  "murong_han": {
+   "father": "murong_hui"
+  },
+  "murong_ren": {
+   "father": "murong_hui"
+  },
+  "murong_zhao": {
+   "father": "murong_hui"
+  },
+  "murong_ping": {
+   "father": "murong_hui"
+  },
+  "murong_jun": {
+   "father": "murong_huang"
+  },
+  "murong_ke": {
+   "father": "murong_huang"
+  },
+  "murong_chui": {
+   "father": "murong_huang"
+  },
+  "murong_de": {
+   "father": "murong_huang"
+  },
+  "murong_wei": {
+   "father": "murong_jun",
+   "mother": "kezuhun"
+  },
+  "murong_chong": {
+   "father": "murong_jun",
+   "mother": "kezuhun"
+  },
+  "murong_hong": {
+   "father": "murong_jun"
+  },
+  "murong_bao": {
+   "father": "murong_chui",
+   "mother": "duan_chui"
+  },
+  "murong_nong": {
+   "father": "murong_chui"
+  },
+  "murong_kai": {
+   "father": "murong_ke"
+  },
+  "fu_jian": {
+   "mother": "gou_taihou",
+   "note": "父は苻雄(この台帳にいない)"
+  },
+  "fu_pi": {
+   "father": "fu_jian"
+  },
+  "fu_hui": {
+   "father": "fu_jian"
+  },
+  "fu_rui": {
+   "father": "fu_jian"
+  },
+  "fu_hong2": {
+   "father": "fu_jian"
+  },
+  "lv_guang": {
+   "father": "lv_polou"
+  },
+  "yao_xiang": {
+   "father": "yao_yizhong"
+  },
+  "yao_chang": {
+   "father": "yao_yizhong"
+  },
+  "geungusu": {
+   "father": "geunchogo"
+  },
+  "liu_wuhuan": {
+   "father": "liu_hu"
+  },
+  "liu_eloutou": {
+   "father": "liu_hu"
+  },
+  "liu_xiwuqi": {
+   "father": "liu_wuhuan"
+  },
+  "liu_weichen": {
+   "father": "liu_wuhuan"
+  },
+  "tuyan": {
+   "father": "tuyuhun_khan"
+  },
+  "yang_nandi": {
+   "father": "yang_maosou"
+  },
+  "yang_jiantou": {
+   "father": "yang_maosou"
+  }
+ },
+ "siblings": [
+  [
+   "sima_yue",
+   "sima_teng",
+   "sima_lue",
+   "sima_mo"
+  ],
+  [
+   "sima_zhong",
+   "sima_ai",
+   "sima_ying"
+  ],
+  [
+   "wang_dun",
+   "wang_han"
+  ],
+  [
+   "wang_yi",
+   "wang_bin"
+  ],
+  [
+   "yu_liang",
+   "yu_bing",
+   "yu_yi",
+   "yu_wenjun"
+  ],
+  [
+   "xie_yi",
+   "xie_an",
+   "xie_wan",
+   "xie_shi"
+  ],
+  [
+   "xun_zu",
+   "xun_fan"
+  ],
+  [
+   "zu_ti",
+   "zu_yue"
+  ],
+  [
+   "lu_ji",
+   "lu_yun"
+  ],
+  [
+   "liu_kun",
+   "liu_yu"
+  ],
+  [
+   "li_te",
+   "li_liu",
+   "li_xiang"
+  ],
+  [
+   "tuoba_yilu",
+   "tuoba_yituo"
+  ],
+  [
+   "fu_jian",
+   "fu_fa",
+   "fu_rong",
+   "fu_shuang"
+  ],
+  [
+   "fu_sheng",
+   "fu_liu",
+   "fu_sou"
+  ]
+ ],
+ "marriages": [
+  [
+   "sima_zhong",
+   "yang_xianrong",
+   "primary",
+   "羊献容は恵帝の皇后。のち劉曜の皇后"
+  ],
+  [
+   "tuoba_yituo",
+   "qi_shi",
+   "primary",
+   ""
+  ]
+ ],
+ "heirs": {
+  "s300": {},
+  "s304": {},
+  "s311": {
+   "han_zhao": "liu_can"
+  },
+  "s317": {
+   "han_zhao": "liu_can",
+   "jin": "sima_shao",
+   "shile": "shi_hong",
+   "chenghan": "li_ban",
+   "murong": "murong_huang",
+   "qianliang": "zhang_mao"
+  },
+  "s319": {
+   "han_zhao": "liu_xi",
+   "jin": "sima_shao",
+   "shile": "shi_hong",
+   "chenghan": "li_ban",
+   "murong": "murong_huang",
+   "qianliang": "zhang_mao"
+  },
+  "s329": {
+   "shile": "shi_hong",
+   "jin": "sima_yu",
+   "chenghan": "li_ban",
+   "murong": "murong_huang",
+   "qianliang": "zhang_jun"
+  },
+  "s357": {
+   "qianyan": "murong_wei",
+   "dai": "tuoba_shi"
+  },
+  "s383": {
+   "qianqin": "fu_hong2",
+   "jin": "sima_daozi"
+  }
+ },
+ "heirNotes": {
+  "s317|chenghan": "李雄は甥の李班を太子とした(史実)",
+  "s383|jin": "孝武帝の太子 司馬徳宗は台帳にいないため、弟の司馬道子を仮の後継者とする(推定)",
+  "s329|jin": "成帝が幼く、ここでは叔父の司馬昱を仮の後継者とする(推定)"
+ },
+ "ranks": {
+  "s300": {
+   "jin": "emperor",
+   "ying": "king",
+   "yong": "king",
+   "jiong": "king",
+   "dai": "king",
+   "murong": "chief",
+   "duan": "duke",
+   "yuwen": "chief",
+   "goguryeo": "king",
+   "baekje": "king",
+   "silla": "king",
+   "chouchi": "duke"
+  },
+  "s304": {
+   "jin": "emperor",
+   "yue": "king",
+   "wang_jun": "lord",
+   "han_zhao": "king",
+   "chenghan": "king",
+   "qianliang": "lord",
+   "dai": "king",
+   "murong": "chief",
+   "duan": "duke",
+   "yuwen": "chief",
+   "goguryeo": "king",
+   "baekje": "king",
+   "silla": "king",
+   "chouchi": "duke"
+  },
+  "s311": {
+   "han_zhao": "emperor",
+   "shile": "lord",
+   "wangmi": "lord",
+   "jin_rui": "king",
+   "jin": "lord",
+   "wang_jun": "lord",
+   "liu_kun": "lord",
+   "sima_bao": "king",
+   "qianliang": "duke",
+   "chenghan": "emperor",
+   "du_tao": "lord",
+   "dai": "duke",
+   "duan": "duke",
+   "murong": "chief",
+   "yuwen": "chief",
+   "goguryeo": "king",
+   "baekje": "king",
+   "silla": "king",
+   "tiefu": "chief",
+   "tuyuhun": "chief",
+   "chouchi": "duke"
+  },
+  "s317": {
+   "han_zhao": "emperor",
+   "shile": "duke",
+   "jin": "king",
+   "qianliang": "duke",
+   "dai": "king",
+   "duan": "duke",
+   "murong": "duke",
+   "chenghan": "emperor",
+   "sima_bao": "king",
+   "chouchi": "duke",
+   "cao_yi": "lord",
+   "cui_bi": "lord",
+   "goguryeo": "king",
+   "baekje": "king",
+   "silla": "king",
+   "yuwen": "chief",
+   "tuyuhun": "chief",
+   "tiefu": "chief"
+  },
+  "s319": {
+   "han_zhao": "emperor",
+   "shile": "king",
+   "jin": "emperor",
+   "qianliang": "duke",
+   "dai": "king",
+   "duan": "duke",
+   "pidi": "lord",
+   "murong": "duke",
+   "chenghan": "emperor",
+   "sima_bao": "king",
+   "chouchi": "duke",
+   "cao_yi": "lord",
+   "cui_bi": "lord",
+   "goguryeo": "king",
+   "baekje": "king",
+   "silla": "king",
+   "yuwen": "chief",
+   "tuyuhun": "chief",
+   "tiefu": "chief"
+  },
+  "s329": {
+   "shile": "king",
+   "han_zhao": "lord",
+   "jin": "emperor",
+   "qianliang": "duke",
+   "chenghan": "emperor",
+   "dai": "king",
+   "duan": "duke",
+   "murong": "duke",
+   "yuwen": "chief",
+   "goguryeo": "king",
+   "baekje": "king",
+   "silla": "king",
+   "tuyuhun": "chief",
+   "tiefu": "chief",
+   "chouchi": "duke"
+  },
+  "s357": {
+   "qianqin": "emperor",
+   "qianyan": "emperor",
+   "jin": "emperor",
+   "qianliang": "duke",
+   "dai": "king",
+   "zhangping": "lord",
+   "yaoxiang": "lord",
+   "tiefu": "chief",
+   "tuyuhun": "chief",
+   "chouchi": "duke",
+   "goguryeo": "king",
+   "baekje": "king",
+   "silla": "king"
+  },
+  "s383": {
+   "qianqin": "emperor",
+   "jin": "emperor",
+   "tuyuhun": "chief",
+   "goguryeo": "king",
+   "baekje": "king",
+   "silla": "king"
+  }
+ },
+ "historicCrown": {
+  "jin": 318,
+  "shile": 330,
+  "murong": 352,
+  "qianqin": 351,
+  "qianyan": 352
+ },
+ "usurpations": [
+  {
+   "scenario": "*",
+   "faction": "han_zhao",
+   "usurper": "jin_zhun",
+   "victim": "liu_can",
+   "year": 318,
+   "note": "318年、靳準が劉粲を殺して位を奪う(靳準の乱)"
+  },
+  {
+   "scenario": "*",
+   "faction": "shile",
+   "usurper": "shi_hu",
+   "victim": "shi_hong",
+   "year": 334,
+   "note": "334年、石虎が石弘を廃して自ら立つ"
+  },
+  {
+   "scenario": "*",
+   "faction": "qianqin",
+   "usurper": "fu_jian",
+   "victim": "fu_sheng",
+   "year": 357,
+   "note": "357年、苻堅が苻生を廃して即位する"
+  }
+ ]
+}

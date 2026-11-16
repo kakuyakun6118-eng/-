@@ -52,11 +52,11 @@ const path = require('path');
     const rows = document.querySelectorAll('.person-row').length; const t0 = performance.now(); const f = document.querySelector('.persons-role'); f.value = 'minister'; f.dispatchEvent(new Event('change')); const ministers = document.querySelectorAll('.person-row').length; f.value = ''; f.dispatchEvent(new Event('change')); const renderMs = Math.round(performance.now() - t0);
     document.querySelector('.person-row[data-id="pu_hong"]').click(); const note = document.querySelector('.person-uncertain').textContent;
     const err = c.appoint('yu_liang', { kind: 'city', id: 'kuaiji' }); const s = JSON.parse(JSON.stringify(g.buildSave())); c.appoint('yu_liang', null); g.applySave(s);
-    return { rows, ministers, renderMs, note, appoint: err, afterLoad: c.postOf('yu_liang')?.label, governors: g.allCities.filter(k => c.postOf && k.governorId).length }; });
+    return { rows, added: c.court.added.length, ministers, renderMs, note, appoint: err, afterLoad: c.postOf('yu_liang')?.label, governors: g.allCities.filter(k => c.postOf && k.governorId).length }; });
   console.log('画面:', JSON.stringify(ui));
-  // 317年の一覧:台帳の200人と、名簿で置いた女性(womenRoster)
+  // 317年の一覧:台帳の200人と、名簿で置いた女性(womenRoster)と、名簿にいない幼い子女(石弘など。Version 35)
   const women317 = Object.keys(sc.womenRoster ?? {}).length;
-  if (ui.rows !== persons.length + women317) problems.push('一覧の人数が違う: ' + ui.rows);
+  if (ui.rows !== persons.length + women317 + ui.added) problems.push('一覧の人数が違う: ' + ui.rows);
   if (!ui.note || ui.afterLoad !== '会稽 太守') problems.push('注記または任命の保存が動かない');
   await page.waitForTimeout(300); await page.screenshot({ path: path.join(__dirname, 'out', 'persons.png') });
   await b.close();

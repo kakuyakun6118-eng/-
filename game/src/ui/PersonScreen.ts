@@ -20,6 +20,8 @@ export interface PersonScreenActions {
   playerFactionId: () => string | null;
   /** 任命のあと、地図の表示を合わせる */
   onAppointed: () => void;
+  /** 家系図(皇室の画面)を開く */
+  openFamily?: (personId: string) => void;
 }
 
 /** 人物の一覧と詳細。任命(太守・守将・軍団の指揮官)もここから行う */
@@ -149,6 +151,25 @@ export class PersonScreen {
       return `${other?.name ?? "?"}(${m.historic ? "史実" : "ゲーム内"}${m.husband === p.id ? `・${m.kind === "primary" ? "正室" : "側室"}` : ""})`;
     });
     this.q(".person-post").textContent = `状態:${STATUS_LABEL[status]} / 役目:${post ? post.label : "なし"}${spouses.length ? ` / 配偶者:${spouses.join("、")}` : ""}`;
+    // 家系:父・母・兄弟・子女(人物IDでつながる。史料にない親子は出さない)と、家系図の釦
+    const ct = campaign.court;
+    const names = (xs: { name: string; fictional?: boolean }[]): string => xs.map((x) => x.name + (x.fictional ? "*" : "")).join("、") || "記録なし";
+    const pa = [ct.fatherOf(p.id), ct.motherOf(p.id)].map((id) => persons.find((x) => x.id === id)).filter((x): x is Person => !!x);
+    let fam = this.root.querySelector<HTMLElement>(".person-family");
+    if (!fam) {
+      fam = document.createElement("div");
+      fam.className = "person-family";
+      this.q(".person-post").after(fam);
+    }
+    const txt = document.createElement("span");
+    const title = ct.royalTitle(p);
+    txt.textContent = `${title ? `身分:${title} / ` : ""}${ct.stageOf(p)} / 父母:${names(pa)} / 兄弟:${names(ct.siblingsOf(p.id))} / 子女:${names(ct.childrenOf(p.id))}${p.fictional ? " / 架空の人物" : ""}`;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "person-family-open";
+    btn.textContent = "家系図";
+    btn.addEventListener("click", () => this.actions.openFamily?.(p.id));
+    fam.replaceChildren(txt, btn);
     this.q(".person-stats").replaceChildren(
       ...STATS.map(([key, label]) => {
         const row = document.createElement("div");

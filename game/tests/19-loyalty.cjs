@@ -61,14 +61,14 @@ const path = require('path');
   if (!(r5.zhangBin <= 5 && r5.chenChuan > r5.zhangBin + 20 && r5.again.includes('最近'))) problems.push('5 高忠誠の捕虜');
   await p.close();
 
-  // 6) 君主の死で忠誠を見直す(317年:石勒が討たれ、石虎が継ぐ)
+  // 6) 君主の死で忠誠を見直す(317年:石勒が討たれ、世子の石弘が継ぐ)
   p = await open('s317');
   const r6 = await p.evaluate(() => { const g = window.__goko, c = g.campaign, L = c.loyalty; g.changeSettings({ playerFactionId: 'jin' });
     const before = { zhangBin: Math.round(L.loyalty.zhang_bin), chengXia: Math.round(L.loyalty.cheng_xia ?? -1) };
     c.personStates.shi_le = 'dead'; c.checkRulers();
     return { before, after: { zhangBin: Math.round(L.loyalty.zhang_bin), chengXia: Math.round(L.loyalty.cheng_xia ?? -1) }, why: (L.log.zhang_bin ?? []).map(x => x.text).join('/'), ruler: window.__gokoData.scenario.factions.find(f => f.id === 'shile').ruler }; });
   console.log('6 君主の死:', JSON.stringify(r6));
-  if (r6.ruler !== '石虎' || !r6.why.includes('継承') || r6.after.zhangBin >= r6.before.zhangBin) problems.push('6 君主の死の見直し');
+  if (r6.ruler !== '石弘' || !r6.why.includes('継承') || r6.after.zhangBin >= r6.before.zhangBin) problems.push('6 君主の死の見直し');
   await p.close();
 
   // 7) AIの褒賞・任命  8) セーブとロード  9) 古いセーブ

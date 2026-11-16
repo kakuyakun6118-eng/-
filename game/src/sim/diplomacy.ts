@@ -9,6 +9,7 @@ import { distanceKm } from "./pathfinding";
 import type { Relation } from "./save";
 import { chance } from "./spoils";
 import relationRules from "../data/rules/diplomacyStart.json";
+import familyData from "../data/rules/family.json";
 
 type RelationNote = { rel: string; basis: "史実" | "推定"; note: string; overlord?: string };
 /** そのシナリオの開始時の関係の根拠(史実/推定と、説明) */
@@ -64,6 +65,7 @@ const HISTORIC_MARRIAGES: [string, string, "primary" | "secondary"][] = [
   ["huan_wen", "sima_xingnan", "primary"], ["huan_wen", "li_shimei", "secondary"], ["xie_an", "liu_xiean", "primary"],
   ["wang_xizhi", "xi_xuan", "primary"], ["murong_jun", "kezuhun", "primary"], ["murong_chui", "duan_chui", "primary"],
   ["sima_dan", "he_fani", "primary"], ["fu_jian", "zhang_furen", "secondary"], ["sima_yu", "li_lingrong", "secondary"],
+  ...(familyData.marriages as [string, string, "primary" | "secondary", string][]).map(([h, w, k]) => [h, w, k] as [string, string, "primary" | "secondary"]),
 ];
 
 const key = (a: string, b: string): string => [a, b].sort().join("|");
@@ -167,6 +169,8 @@ export class Diplomacy {
     const year = this.c.calendar().year;
     for (const p of [h, w]) if (p.born !== null && year - p.born < 14) return `${p.name}はまだ幼い(${year - p.born}歳)`;
     if (isKin(h, w)) return "同じ一族どうしの婚姻はできません";
+    if (this.c.court?.isCloseKin(h, w)) return "近親どうしの婚姻はできません";
+    for (const p of [h, w]) if (this.c.court?.isMinor(p)) return `${p.name}は未成年です`;
     for (const p of [h, w]) if (this.c.personStatus(p.id) !== "active" || this.c.spoils.custodyOf(p.id)) return `${p.name}は、いま婚姻できる状態ではありません`;
     return null;
   }

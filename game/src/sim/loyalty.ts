@@ -101,7 +101,7 @@ export class LoyaltySystem {
   prestige(factionId: string): number {
     const cities = this.c.cities.filter((x) => x.kind !== "pass" && scenario.cityOwners[x.id] === factionId).length;
     const r = this.ruler(factionId);
-    const v = 15 + cities * 2 + this.c.spoils.factionEffects(factionId).prestige * 0.5 + (r ? this.fame[r.id] * 0.3 : 0);
+    const v = 15 + cities * 2 + this.c.spoils.factionEffects(factionId).prestige * 0.5 + (r ? this.fame[r.id] * 0.3 : 0) + (this.c.court?.rankBonus(factionId) ?? 0);
     return Math.round(Math.max(0, Math.min(100, v)));
   }
 

@@ -35,6 +35,7 @@
       <button id="diplomacy-open" type="button">外交</button>
       <button id="spoils-open" type="button">名品</button>
       <button id="finance-open" type="button">財政</button>
+      <button id="court-open" type="button">皇室</button>
       <section id="info" hidden>
         <div class="info-inner">
           <div class="info-head">
@@ -350,6 +351,17 @@
             <button class="persons-close finance-close" type="button">閉じる</button>
           </div>
           <div class="finance-body"></div>
+        </div>
+      </section>
+      <section id="court" hidden>
+        <div class="persons-inner">
+          <div class="persons-head">
+            <h2>皇室</h2>
+            <select class="court-faction" aria-label="勢力"></select>
+            <span class="court-message" role="status"></span>
+            <button class="persons-close court-close" type="button">閉じる</button>
+          </div>
+          <div class="court-body"></div>
         </div>
       </section>
       <section id="gameover" hidden>
