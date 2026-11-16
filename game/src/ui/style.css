@@ -3921,3 +3921,38 @@ select:focus-visible {
   #trade-open { top: calc(292px + env(safe-area-inset-top, 0px)); right: max(92px, env(safe-area-inset-right, 0px)); }
   #supply-open { top: calc(332px + env(safe-area-inset-top, 0px)); right: max(92px, env(safe-area-inset-right, 0px)); }
 }
+
+/* 名品の絵 */
+.treasure-thumb {
+  object-fit: cover;
+  padding: 0;
+  border-radius: 6px;
+  width: 34px;
+  height: 34px;
+}
+.spoils-row {
+  height: auto !important;
+  min-height: 40px;
+  flex-shrink: 0;
+}
+.spoils-detail-head .treasure-thumb { display: none; }
+.treasure-picture {
+  margin: 4px 0 10px;
+  padding: 0;
+  text-align: center;
+}
+.treasure-picture img {
+  width: min(100%, 300px);
+  aspect-ratio: 1;
+  object-fit: cover;
+  border: 1px solid var(--gold-dim);
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
+}
+.treasure-picture.rarity-4 img { border-color: #d6b46a; }
+.treasure-picture.rarity-5 img { border: 2px solid #e0b56a; box-shadow: 0 0 14px rgba(224, 181, 106, 0.5), 0 6px 18px rgba(0, 0, 0, 0.55); }
+.treasure-picture figcaption {
+  margin-top: 4px;
+  font-size: 10.5px;
+  color: var(--muted);
+}

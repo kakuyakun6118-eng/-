@@ -3,6 +3,7 @@ import { cityLevelOf, factionById, personById, persons } from "../data";
 import type { Campaign } from "../sim/Campaign";
 import { CATEGORY_LABEL, effectText, RARITY_LABEL, type PendingCapture, type Treasure } from "../sim/spoils";
 import { fillPortrait } from "./portrait";
+import { treasureImageOf } from "../data/treasureImages";
 
 export interface SpoilsActions {
   campaign: () => Campaign;
@@ -12,7 +13,7 @@ export interface SpoilsActions {
   onChanged: () => void;
 }
 
-/** 名品の絵の代わりの印(画像はまだ無い。種類を一字で表す仮の表示) */
+/** 名品の絵が無いときの代わりの印(種類を一字で表す仮の表示) */
 const GLYPH: Record<string, string> = { jade: "玉", jewelry: "金", arms: "武", culture: "書", court: "宝", religion: "仏" };
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls = "", text = ""): HTMLElementTagNameMap[K] {
@@ -28,9 +29,27 @@ function button(label: string, onClick: () => void, cls = ""): HTMLButtonElement
   return b;
 }
 function seal(t: Treasure): HTMLElement {
+  const src = treasureImageOf(t.id);
+  if (src) {
+    const img = el("img", `treasure-seal treasure-thumb rarity-${t.rarity}`);
+    img.src = src;
+    img.alt = t.name;
+    return img;
+  }
   const s = el("span", `treasure-seal rarity-${t.rarity}`, GLYPH[t.category] ?? "宝");
   s.title = "名品の絵はまだありません(種類を表す仮の印)";
   return s;
+}
+/** 詳細に出す大きな絵(無ければ null) */
+function picture(t: Treasure): HTMLElement | null {
+  const src = treasureImageOf(t.id);
+  if (!src) return null;
+  const fig = el("figure", `treasure-picture rarity-${t.rarity}`);
+  const img = el("img");
+  img.src = src;
+  img.alt = t.name;
+  fig.append(img, el("figcaption", "", t.historicity === "史実" || t.historicity === "伝承" ? "想像図(実物の姿は伝わらないか、現存しない)" : "想像図(同じ時代の出土品の様式にもとづく)"));
+  return fig;
 }
 function face(personId: string): HTMLImageElement {
   const img = el("img", "spoils-face");
@@ -114,14 +133,16 @@ export class SpoilsScreen {
       const owner = sp.ownerOf(t.id);
       const head = el("div", "spoils-detail-head");
       head.append(seal(t), el("h3", "", t.name));
+      const pic = picture(t);
       detail.append(
         head,
+        ...(pic ? [pic] : []),
         el("p", "spoils-meta", `${RARITY_LABEL[t.rarity - 1]}・${CATEGORY_LABEL[t.category]}(${t.kind})・${t.historicity}`),
         el("p", "", t.description),
         el("p", "spoils-history", `歴史:${t.history}`),
         el("p", "spoils-effect", `効果:${effectText(t.effects)}${t.equip ? "(人物に装備できる)" : "(勢力の収蔵品として効く)"}`),
         el("p", "spoils-meta", `持ち主:${factionById(owner ?? "")?.name ?? "なし"}${s.acquired ? `/入手:${this.actions.cityName(s.acquired.cityId)}・${s.acquired.how}・ゲーム開始から${s.acquired.day}日目` : "/開始時から"}`),
-        el("p", "spoils-note", "名品の絵はまだありません(種類を表す仮の印)。効果はゲーム上の設定です。"),
+        el("p", "spoils-note", pic ? "絵は想像図、効果はゲーム上の設定です。" : "この名品の絵はまだありません(種類を表す仮の印)。効果はゲーム上の設定です。"),
       );
       const can = !me || owner === me;
       if (can && s.cityId) detail.append(button("この名品を接収する", () => { sp.confiscate(t.id, Math.floor(this.actions.campaign().day)); this.say(`${t.name}を収蔵品に加えました`); this.actions.onChanged(); this.render(); }, "spoils-act"));
