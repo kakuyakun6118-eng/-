@@ -1,5 +1,6 @@
 // 会戦に関する計算。戦闘イベントから、会戦準備画面や3D戦闘に渡す「会戦の設定」を組み立てる。
 // ここは計算だけで、画面のことは知らない。
+import { affinity } from "./loyalty";
 import { factionMoraleBonus, withEquipment } from "./spoils";
 import { cityLevelOf, cityLevels, officerById, personById, resolveCityLayout, terrainRules } from "../data";
 import type { Army, BattleEvent, BattleSetup, BattleSide, City, CityState, Fortification, Officer, TerrainKind } from "../data/types";
@@ -82,7 +83,8 @@ export function fortificationOf(city: City, state: CityState = initialCityState(
   if (layout.palaces?.some((p) => p.fortified)) facilities.push(level >= 4 ? "宮城" : "内城");
   if (layout.citadel) facilities.push("小城");
   if (layout.terraces) facilities.push("高台");
-  const defense = city.defense ?? 50;
+  // 城郭整備の分を足す(上限100)
+  const defense = Math.min(100, (city.defense ?? 50) + (state.fortify ?? 0));
   return {
     scale: `${cityLevels[String(level)].label}(レベル${level})`,
     defense,
@@ -101,6 +103,15 @@ export function fortificationOf(city: City, state: CityState = initialCityState(
 }
 
 function armySide(role: BattleSide["role"], army: Army): BattleSide {
+  // 副将との相性:士気に±4、指揮官の統率に±3まで(能力の差を覆さない小さな補正)
+  let commander = withEquipment(officerById(army.commanderId)) ?? null;
+  const deputy = army.deputyId ? officerById(army.deputyId) ?? null : null;
+  let synergy = 0;
+  if (commander && deputy) {
+    const aff = affinity(commander, deputy).value;
+    synergy = Math.max(-4, Math.min(4, Math.round((aff - 50) / 10)));
+    commander = { ...commander, leadership: commander.leadership + Math.max(-3, Math.min(3, Math.round((aff - 50) / 15))) };
+  }
   return {
     role,
     kind: "army",
@@ -108,9 +119,11 @@ function armySide(role: BattleSide["role"], army: Army): BattleSide {
     armyId: army.id,
     cityId: null,
     name: army.name,
-    commander: withEquipment(officerById(army.commanderId)) ?? null,
+    commander,
+    deputy,
+    synergy,
     troops: { ...army.troops },
-    morale: Math.min(100, army.morale + factionMoraleBonus(army.factionId)),
+    morale: Math.max(0, Math.min(100, army.morale + factionMoraleBonus(army.factionId) + synergy)),
     fatigue: army.fatigue,
     food: army.food,
     fortification: null,
@@ -215,6 +228,9 @@ export function compareSides(setup: BattleSetup): { rows: ComparisonRow[]; notes
   const notes: string[] = [];
   const terrainNote = TERRAIN_NOTES[setup.terrain];
   notes.push(`地形は${terrainRules[setup.terrain].name}${terrainNote ? `。${terrainNote}` : ""}`);
+  for (const [side, label] of [[a, "攻撃側"], [d, "防御側"]] as const) {
+    if (side.deputy && side.commander) notes.push(`${label}の副将 ${side.deputy.name}:指揮官との相性で士気${(side.synergy ?? 0) >= 0 ? "+" : ""}${side.synergy ?? 0}`);
+  }
   if (d.fortification) {
     notes.push(`防御側は城壁に守られている(城防御 ${d.fortification.defense})`);
   }

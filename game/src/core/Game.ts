@@ -22,6 +22,8 @@ import { DiplomacyScreen } from "../ui/DiplomacyScreen";
 import { estimateWinRate } from "../sim/autoBattle";
 import { governorIdOf } from "../sim/battle";
 import { PersonScreen } from "../ui/PersonScreen";
+import { FinanceScreen } from "../ui/FinanceScreen";
+import type { DevKind } from "../sim/economy";
 import { SpoilsScreen } from "../ui/SpoilsScreen";
 import { ScenarioScreen } from "../ui/ScenarioScreen";
 import { strategyRules } from "../sim/strategy";
@@ -336,6 +338,18 @@ export class Game {
     });
     this.spoilsScreen.bindCapture((text) => this.showNotice(text));
     (root.querySelector("#spoils-open") as HTMLElement).addEventListener("click", () => this.spoilsScreen?.open());
+    // 国家財政
+    const finance = new FinanceScreen(root.querySelector("#finance") as HTMLElement, () => this.campaign, () => this.playerFactionId);
+    (root.querySelector("#finance-open") as HTMLElement).addEventListener("click", () => finance.open());
+    (root.querySelector(".info-dev") as HTMLSelectElement).addEventListener("change", (e) => {
+      const sel = e.target as HTMLSelectElement;
+      const kind = sel.value as DevKind;
+      sel.value = "";
+      if (!kind || !this.selected) return;
+      this.showNotice(this.campaign.economy.develop(this.selected.city.id, kind));
+      this.selectCity(this.selected);
+      this.showTreasury();
+    });
     if (this.campaign.spoils.pending) this.spoilsScreen.showCapture(this.campaign.spoils.pending);
     // ゲームオーバーの画面
     (root.querySelector(".gameover-load") as HTMLElement).addEventListener("click", () => void this.menu.open());
@@ -582,7 +596,8 @@ export class Game {
     const owner = scenario.cityOwners[city.id];
     if (kind === "recruit") {
       const error = this.campaign.recruit(city.id, 500);
-      this.showNotice(error ?? `${city.name}で徴兵しました(金 ${(500 / 100) * strategyRules.costs.goldPer100Troops} を使いました)`);
+      const st = this.campaign.cityState(city);
+      this.showNotice(error ?? `${city.name}で募兵しました(人口${(st.pop ?? 0).toLocaleString("ja-JP")}・治安${st.order}・民忠${st.support})`);
     } else {
       // 守備兵を残して、出せるだけ出す。指揮官は、役目のない健在の人物のうち、統率と武力の高い者
       const troops = Math.min(this.campaign.cityState(city).garrison - strategyRules.costs.minGarrison, strategyRules.costs.maxArmy);

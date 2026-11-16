@@ -1,4 +1,5 @@
 // 都市をタップしたときに、画面の下に出る情報パネル。
+import { cityEcon } from "../sim/economy";
 import { fillPortrait } from "./portrait";
 import { governorIdOf } from "../sim/battle";
 import { cityLevelOf, cityLevels, personById } from "../data";
@@ -38,6 +39,10 @@ export class InfoPanel {
    * 都市の情報。residents は滞在している人物(太守・后妃など)、treasureCount は蔵の名品の数。
    */
   show(city: City, faction: Faction | undefined, state?: CityState, uncertain = false, residents: Person[] = [], treasureCount = 0): void {
+    if (state) {
+      const e = cityEcon(city, state);
+      (this.root.querySelector(".info-econ") as HTMLElement).textContent = city.kind === "pass" ? "" : `人口${e.pop.toLocaleString("ja-JP")}・農業${e.agri}・商業${e.commerce}・治安${Math.round(e.order)}・民忠${Math.round(e.support)}${e.fortify ? `・城郭+${e.fortify}` : ""}`;
+    }
     const box = this.root.querySelector(".info-residents") as HTMLElement;
     box.replaceChildren(...residents.slice(0, 6).map((p) => {
       const chip = document.createElement("span");

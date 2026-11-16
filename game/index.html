@@ -34,6 +34,7 @@
       <button id="persons-open" type="button">人物</button>
       <button id="diplomacy-open" type="button">外交</button>
       <button id="spoils-open" type="button">名品</button>
+      <button id="finance-open" type="button">財政</button>
       <section id="info" hidden>
         <div class="info-inner">
           <div class="info-head">
@@ -51,10 +52,21 @@
             <div><dt>人口</dt><dd class="info-population"></dd></div>
             <div><dt>城防御</dt><dd class="info-defense"></dd></div>
           </dl>
+          <p class="info-econ"></p>
           <div class="info-residents"></div>
           <p class="info-description"></p>
           <div class="info-actions" hidden>
-            <button class="info-recruit" type="button">徴兵 +500</button>
+            <button class="info-recruit" type="button">募兵 +500</button>
+            <select class="info-dev" aria-label="内政">
+              <option value="">内政(金150)…</option>
+              <option value="agri">農業開発</option>
+              <option value="commerce">商業開発</option>
+              <option value="order">治安維持</option>
+              <option value="walls">城郭整備</option>
+              <option value="population">人口回復</option>
+              <option value="granary">兵糧備蓄</option>
+              <option value="talent">人材探索</option>
+            </select>
             <button class="info-raise" type="button">出陣</button>
           </div>
           <div class="info-zoom" role="group" aria-label="表示する距離">
@@ -267,6 +279,8 @@
                 <select class="person-target" aria-label="任命先"></select>
                 <button class="person-appoint" type="button">任命する</button>
                 <button class="person-reward" type="button">褒賞(金100)</button>
+                <select class="person-office" aria-label="官職"></select>
+                <button class="person-office-set" type="button">官職を授ける</button>
               </div>
               <p class="person-message" role="status"></p>
               <p class="person-note">能力値と特性は、ゲーム上の設定です(史実の評価そのものではありません)。</p>
@@ -324,6 +338,17 @@
             <button class="capture-preserve" type="button">保全する(都市を保つ。得るものは少ない)</button>
             <button class="capture-loot" type="button">略奪する(金と名品を多く得る。都市が荒れる)</button>
           </div>
+        </div>
+      </section>
+      <section id="finance" hidden>
+        <div class="persons-inner">
+          <div class="persons-head">
+            <h2>国家財政</h2>
+            <select class="finance-faction" aria-label="勢力"></select>
+            <span class="finance-message" role="status"></span>
+            <button class="persons-close finance-close" type="button">閉じる</button>
+          </div>
+          <div class="finance-body"></div>
         </div>
       </section>
       <section id="gameover" hidden>

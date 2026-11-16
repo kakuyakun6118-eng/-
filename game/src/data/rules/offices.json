@@ -1,0 +1,208 @@
+{
+ "note": "官職の制度(勢力ごとに選ぶ)。rank は等級(1が最上位)、salary は毎月の俸禄(金)、quota は定員、need は任命の条件(能力・名声・王族)。名称は各制度の代表的なもので、細かな官制の再現ではない(ゲーム上の簡略化)。",
+ "systems": {
+  "chinese": {
+   "label": "中原王朝の官制(三公・尚書・将軍・刺史)",
+   "offices": [
+    {
+     "id": "chengxiang",
+     "name": "丞相",
+     "rank": 1,
+     "salary": 50,
+     "quota": 1,
+     "need": {
+      "politics": 70
+     }
+    },
+    {
+     "id": "dajiangjun",
+     "name": "大将軍",
+     "rank": 1,
+     "salary": 50,
+     "quota": 1,
+     "need": {
+      "leadership": 75
+     }
+    },
+    {
+     "id": "taiwei",
+     "name": "太尉",
+     "rank": 2,
+     "salary": 42,
+     "quota": 1,
+     "need": {
+      "leadership": 65
+     }
+    },
+    {
+     "id": "situ",
+     "name": "司徒",
+     "rank": 2,
+     "salary": 42,
+     "quota": 1,
+     "need": {
+      "politics": 65
+     }
+    },
+    {
+     "id": "sikong",
+     "name": "司空",
+     "rank": 2,
+     "salary": 42,
+     "quota": 1,
+     "need": {
+      "politics": 60
+     }
+    },
+    {
+     "id": "taizi",
+     "name": "太子",
+     "rank": 2,
+     "salary": 38,
+     "quota": 1,
+     "need": {
+      "kin": true
+     }
+    },
+    {
+     "id": "shangshuling",
+     "name": "尚書令",
+     "rank": 3,
+     "salary": 34,
+     "quota": 1,
+     "need": {
+      "intelligence": 65
+     }
+    },
+    {
+     "id": "jiangjun",
+     "name": "将軍",
+     "rank": 4,
+     "salary": 22,
+     "quota": 6,
+     "need": {
+      "war": 60
+     }
+    },
+    {
+     "id": "cishi",
+     "name": "刺史",
+     "rank": 4,
+     "salary": 22,
+     "quota": 4,
+     "need": {
+      "politics": 50
+     }
+    },
+    {
+     "id": "canjun",
+     "name": "参軍",
+     "rank": 6,
+     "salary": 12,
+     "quota": 8,
+     "need": {}
+    }
+   ]
+  },
+  "steppe": {
+   "label": "遊牧の諸部の官制(左右の王・大将・部帥)",
+   "offices": [
+    {
+     "id": "zuoxianwang",
+     "name": "左賢王",
+     "rank": 1,
+     "salary": 42,
+     "quota": 1,
+     "need": {
+      "kin": true
+     }
+    },
+    {
+     "id": "youxianwang",
+     "name": "右賢王",
+     "rank": 2,
+     "salary": 38,
+     "quota": 1,
+     "need": {
+      "kin": true
+     }
+    },
+    {
+     "id": "dajiang",
+     "name": "大将",
+     "rank": 3,
+     "salary": 28,
+     "quota": 3,
+     "need": {
+      "war": 60
+     }
+    },
+    {
+     "id": "zhangshi",
+     "name": "長史",
+     "rank": 3,
+     "salary": 24,
+     "quota": 1,
+     "need": {
+      "intelligence": 60
+     }
+    },
+    {
+     "id": "bushuai",
+     "name": "部帥",
+     "rank": 5,
+     "salary": 14,
+     "quota": 6,
+     "need": {}
+    }
+   ]
+  },
+  "korea": {
+   "label": "朝鮮半島の諸国の官制(大臣・佐平・将軍)",
+   "offices": [
+    {
+     "id": "daxiang",
+     "name": "国相",
+     "rank": 1,
+     "salary": 36,
+     "quota": 1,
+     "need": {
+      "politics": 55
+     }
+    },
+    {
+     "id": "zuoping",
+     "name": "佐平",
+     "rank": 3,
+     "salary": 24,
+     "quota": 4,
+     "need": {}
+    },
+    {
+     "id": "kjiangjun",
+     "name": "将軍",
+     "rank": 4,
+     "salary": 18,
+     "quota": 3,
+     "need": {
+      "war": 55
+     }
+    }
+   ]
+  }
+ },
+ "factionSystem": {
+  "dai": "steppe",
+  "duan": "steppe",
+  "yuwen": "steppe",
+  "tuyuhun": "steppe",
+  "tiefu": "steppe",
+  "murong": "steppe",
+  "tribes": "steppe",
+  "goguryeo": "korea",
+  "baekje": "korea",
+  "silla": "korea"
+ },
+ "governorSalary": 12,
+ "baseSalary": 5
+}

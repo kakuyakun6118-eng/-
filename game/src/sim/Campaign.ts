@@ -7,6 +7,7 @@ import { createBattleSetup, governorIdOf, initialCityState, placeName } from "./
 import { garrisonCap, StrategyAi, strategyRules } from "./strategy";
 import { chance, setCurrentSpoils, Spoils, type CaptureRecord, type PendingCapture } from "./spoils";
 import { affinity, isKin, LoyaltySystem } from "./loyalty";
+import { cityEcon, Economy } from "./economy";
 import { seasonOf, type CampaignSave, type DynastySave, type Relation } from "./save";
 import type { BattleResult, CommanderFate, SideResult } from "../battle/types";
 import type { Army, ArmyStatus, BattleEvent, City, CityState, Faction, Person, PersonRole, PersonStatus, UnitTypeId } from "../data/types";
@@ -97,38 +98,28 @@ export class Campaign {
     for (const s of this.armies) s.supplied = this.nearFriendlyCity(s);
     this.spoils = new Spoils(cities, (id) => scenario.cityOwners[id]);
     setCurrentSpoils(this.spoils);
-    this.loyalty = new LoyaltySystem(this);
-    // 勢力の蓄え:最初は、支配する都市の3か月分の収入を持っている
+    // 勢力の蓄え:最初は、支配する都市の3か月分の収入(支出を引く前)を持っている
     for (const f of scenario.factions) this.factionStates[f.id] = { gold: 0, grain: 0 };
-    for (let i = 0; i < 3; i++) this.collectIncome();
+    this.loyalty = new LoyaltySystem(this);
+    this.economy = new Economy(this);
+    for (const f of scenario.factions) {
+      const r = this.economy.report(f.id);
+      this.factionStates[f.id] = { gold: r.income.total * 3, grain: r.income.grain * 3 };
+    }
   }
 
-  /** 勢力の、1か月の収入(支配する都市の経済力と食糧生産の合計) */
+  /** 勢力の、1か月の収入(支出を引く前) */
   incomeOf(factionId: string): { gold: number; grain: number } {
-    let gold = 0;
-    let grain = 0;
-    for (const c of this.cities) {
-      if (scenario.cityOwners[c.id] !== factionId) continue;
-      // 略奪された都市は、繁栄が戻るまで収入が減る
-      const prosperity = (this.cityStates[c.id]?.prosperity ?? 100) / 100;
-      gold += (c.economy ?? 0) * prosperity;
-      grain += (c.food ?? 0) * prosperity;
-    }
-    // 収蔵している名品の効果(収入)
-    const bonus = 1 + (this.spoils?.factionEffects(factionId).income ?? 0) / 100;
-    return { gold: Math.round(gold * bonus), grain: Math.round(grain) };
+    const r = this.economy.report(factionId);
+    return { gold: r.income.total, grain: r.income.grain };
   }
 
   /** 月に1度、各勢力に収入を入れる。軍団の兵は糧を食べる(1,000人で月に2) */
   private collectIncome(): void {
-    for (const f of scenario.factions) {
-      const state = (this.factionStates[f.id] ??= { gold: 0, grain: 0 });
-      const income = this.incomeOf(f.id);
-      const upkeep = this.armies.filter((s) => s.army.factionId === f.id).reduce((sum, s) => sum + totalTroops(s.army), 0) / 500;
-      state.gold += income.gold;
-      state.grain = Math.max(0, state.grain + income.grain - upkeep);
-    }
+    this.economy.monthly();
   }
+
+
 
   /** 人物の状態(負傷・捕虜・死亡)。健在の人物は入れない */
   readonly personStates: Record<string, PersonStatus> = {};
@@ -148,9 +139,11 @@ export class Campaign {
   }
 
   /** その人物の、いまの役目(太守・守将か、軍団の指揮官)。無ければ null */
-  postOf(personId: string): { kind: "city" | "army"; id: string; label: string } | null {
+  postOf(personId: string): { kind: "city" | "army" | "deputy"; id: string; label: string } | null {
     const army = this.armies.find((s) => s.army.commanderId === personId);
     if (army) return { kind: "army", id: army.army.id, label: `${army.army.name} 指揮官` };
+    const dep = this.armies.find((s) => s.army.deputyId === personId);
+    if (dep) return { kind: "deputy", id: dep.army.id, label: `${dep.army.name} 副将` };
     const city = this.cities.find((c) => governorIdOf(c, this.cityStates[c.id]) === personId);
     if (city) return { kind: "city", id: city.id, label: `${city.name} ${personById(personId)?.role === "ruler" ? "在城(君主)" : city.kind === "pass" ? "守将" : "太守"}` };
     return null;
@@ -160,24 +153,28 @@ export class Campaign {
    * 人物を、太守・守将か軍団の指揮官に任命する(target が null なら、任を解く)。
    * できないときは、理由を文字で返す。できたときは null。
    */
-  appoint(personId: string, target: { kind: "city" | "army"; id: string } | null): string | null {
+  appoint(personId: string, target: { kind: "city" | "army" | "deputy"; id: string } | null): string | null {
     const person = personById(personId);
     if (!person) return "人物が見つかりません";
     if (this.personStatus(personId) !== "active") return "負傷・捕虜・死亡の人物は任命できません";
     const city = target?.kind === "city" ? this.cities.find((c) => c.id === target.id) : undefined;
-    const army = target?.kind === "army" ? this.stateOf(target.id) : undefined;
+    const army = target?.kind === "army" || target?.kind === "deputy" ? this.stateOf(target.id) : undefined;
     if (target && !city && !army) return "任命先が見つかりません";
     if (city && scenario.cityOwners[city.id] !== person.factionId) return "ほかの勢力の都市には任命できません";
     if (army && army.army.factionId !== person.factionId) return "ほかの勢力の軍団には任命できません";
     if (army && army.status === "fighting") return "戦闘中の軍団の指揮官は替えられません";
     // いまの役目を解く(1人が持てる役目は1つ)
-    for (const s of this.armies) if (s.army.commanderId === personId) s.army.commanderId = "";
+    for (const s of this.armies) {
+      if (s.army.commanderId === personId) s.army.commanderId = "";
+      if (s.army.deputyId === personId) delete s.army.deputyId;
+    }
     for (const c of this.cities) {
       if (governorIdOf(c, this.cityStates[c.id]) === personId) this.cityStates[c.id] = { ...this.cityState(c), governorId: null };
     }
     if (city) this.cityStates[city.id] = { ...this.cityState(city), governorId: personId, governorFate: "healthy" };
-    if (army) army.army.commanderId = personId;
-    if (city || army) this.loyalty?.add(personId, 5, city ? `${city.name}の太守に任命` : `${army!.army.name}の指揮官に任命`);
+    if (army && target?.kind === "deputy") army.army.deputyId = personId;
+    else if (army) army.army.commanderId = personId;
+    if (city || army) this.loyalty?.add(personId, 5, city ? `${city.name}の太守に任命` : `${army!.army.name}の${target?.kind === "deputy" ? "副将" : "指揮官"}に任命`);
     return null;
   }
 
@@ -198,6 +195,8 @@ export class Campaign {
   readonly spoils!: Spoils;
   /** 忠誠度・相性・名声 */
   readonly loyalty!: LoyaltySystem;
+  /** 財政・官職・内政 */
+  readonly economy!: Economy;
 
   relationOf(a: string, b: string): Relation {
     return this.relations[[a, b].sort().join("|")] ?? "peace";
@@ -291,14 +290,35 @@ export class Campaign {
     const city = this.cities.find((c) => c.id === cityId);
     const owner = city ? scenario.cityOwners[city.id] : undefined;
     const st = owner ? this.factionStates[owner] : undefined;
-    if (!city || !st) return "都市が見つかりません";
-    const state = this.cityState(city);
-    const n = Math.floor(Math.min(troops, garrisonCap(city) - state.garrison));
-    if (n < 100) return "守備兵は、これ以上置けません";
-    const cost = (n / 100) * strategyRules.costs.goldPer100Troops;
+    if (!city || !st || !owner) return "都市が見つかりません";
+    const state = { ...this.cityState(city) };
+    const e = cityEcon(city, state);
+    if (e.order < 20) return "治安が悪く、兵が集まりません(治安20以上が必要)";
+    if (e.support < 20) return "民の心が離れていて、兵が集まりません(民忠20以上が必要)";
+    // 人口に見合う兵まで:守備兵は人口の6%まで(規模ごとの上限もある)
+    const popCap = Math.floor(e.pop * 0.06);
+    const n = Math.floor(Math.min(troops, garrisonCap(city) - state.garrison, popCap - state.garrison));
+    if (n < 100) return popCap - state.garrison < 100 ? `人口に対して兵が多すぎます(人口${e.pop.toLocaleString("ja-JP")}人では、守備兵は${popCap.toLocaleString("ja-JP")}人まで)` : "守備兵は、これ以上置けません";
+    const gov = persons.find((p) => p.id === (this.cityStates[city.id]?.governorId ?? city.governorId) && p.factionId === owner);
+    const skill = gov ? (gov.leadership + gov.politics) / 200 : 0.4;
+    const cost = (n / 100) * strategyRules.costs.goldPer100Troops * (1.15 - skill * 0.3);
+    const grain = (n / 100) * 2;
     if (st.gold < cost) return `金が足りません(必要 ${Math.ceil(cost)})`;
+    if (st.grain < grain) return `兵糧が足りません(必要 ${Math.ceil(grain)})`;
     st.gold -= cost;
-    this.cityStates[city.id] = { ...state, garrison: state.garrison + n };
+    st.grain -= grain;
+    // 90日のあいだにたくさん集めるほど、治安と民忠が下がる
+    const day = Math.floor(this.day);
+    const recent = state.recruitDay !== undefined && day - state.recruitDay < 90 ? state.recruitRecent ?? 0 : 0;
+    const total = recent + n;
+    const strain = (total / Math.max(1, e.pop)) * 100;
+    state.order = Math.max(0, e.order - Math.round(strain * 6 * (1.1 - skill)));
+    state.support = Math.max(0, e.support - Math.round(strain * 8 * (1.1 - skill)));
+    state.pop = e.pop - n;
+    state.recruitRecent = total;
+    state.recruitDay = day;
+    state.garrison += n;
+    this.cityStates[city.id] = state;
     return null;
   }
 
@@ -346,6 +366,20 @@ export class Campaign {
     return s;
   }
 
+  /** 軍団を解散して、いちばん近い自国の都市の守備兵に戻す(財政難のときの再編) */
+  disbandArmy(armyId: string): string | null {
+    const s = this.stateOf(armyId);
+    if (!s || s.status === "fighting") return "解散できません";
+    const city = this.cities.filter((c) => scenario.cityOwners[c.id] === s.army.factionId && c.kind !== "pass").sort((a, b) => distanceKm(a, s.army) - distanceKm(b, s.army))[0];
+    if (!city) return "戻る都市がありません";
+    const st = this.cityState(city);
+    this.cityStates[city.id] = { ...st, garrison: st.garrison + totalTroops(s.army) };
+    this.armies.splice(this.armies.indexOf(s), 1);
+    this.listener.onArmyRemoved(s);
+    this.addNews(`${factionName(s.army.factionId)}が${s.army.name}を解散し、兵を${city.name}に戻しました`);
+    return null;
+  }
+
   /** 補充:軍団が、そばの味方の都市の守備兵を受け取る */
   reinforce(armyId: string, cityId: string, troops: number): string | null {
     const s = this.stateOf(armyId);
@@ -389,6 +423,7 @@ export class Campaign {
       nextArmyId: this.nextArmyId,
       spoils: this.spoils.serialize(),
       dynasty: this.serializeDynasty(),
+      economy: this.economy.serialize(),
       loyalty: this.loyalty.serialize(),
     });
   }
@@ -422,6 +457,7 @@ export class Campaign {
     this.restoreFactions(data);
     this.spoils.restore(data.spoils);
     this.restoreRoles(data);
+    this.economy.restore(data.economy);
     this.loyalty.restore(data.loyalty);
     this.pendingAuto.length = 0;
     for (const k of Object.keys(this.personStates)) delete this.personStates[k];
@@ -937,6 +973,7 @@ export class Campaign {
     if (!oldRulerFree) pr += 0.08;
     if (royal) pr -= 0.3;
     if (this.atWar(holder, from)) pr -= 0.05;
+    pr += this.economy.talentBonus(holder);
     // 忠臣(忠誠85以上)は、さらに応じにくい
     if (loyal >= 85) pr *= 0.5;
     return Math.max(0.02, Math.min(0.85, pr));
@@ -1017,6 +1054,7 @@ export class Campaign {
     this.factionStates[id] = share;
     this.loyalty.addFame(personId, 12);
     this.loyalty.reevaluate(from, `${p.name}の反乱`);
+    this.loyalty.noteRulerChange(from);
     this.addNews(`${old.name}の${p.name}が${base.city.name}で反乱を起こし、「${nf.name}」を建てて${title}を称しました`);
     return true;
   }
@@ -1036,6 +1074,7 @@ export class Campaign {
     this.addNews(`${f.name}の君主${old.name}が亡くなり、${next.p.name}が後を継ぎました`);
     this.loyalty.addFame(next.p.id, 5);
     this.loyalty.reevaluate(factionId, `君主${old.name}の死と、${next.p.name}の継承`);
+    this.loyalty.noteRulerChange(factionId);
   }
 
   private setRole(personId: string, role: PersonRole): void {
@@ -1405,6 +1444,9 @@ export class Campaign {
       this.loyalty.addFame(winSide, 3 + captured.length * 4);
       this.loyalty.add(winSide, 3, "戦勝");
     }
+    // 大敗(5,000人以上の軍が壊滅・敗走):負けた国の政治が揺らぐ
+    const loseFaction = result.winner === "attacker" ? event.defenderFactionId : result.winner === "defender" ? event.attackerFactionId : null;
+    if (loseFaction && (loseResult.outcome === "annihilated" || loseResult.outcome === "routed") && totalTroops({ troops: loseResult.before } as Army) >= 5000) this.loyalty.noteDefeat(loseFaction);
     if (loseSide && (loseResult.outcome === "annihilated" || loseResult.outcome === "routed")) {
       this.loyalty.addFame(loseSide, -3);
       this.loyalty.add(loseSide, -3, "大敗");

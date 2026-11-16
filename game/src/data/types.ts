@@ -232,6 +232,8 @@ export interface Army {
   factionId: string;
   /** 指揮官(武将のID) */
   commanderId: string;
+  /** 副将(武将のID)。指揮官との相性が、士気と指揮に小さく効く */
+  deputyId?: string;
   lon: number;
   lat: number;
   /** 向き(度)。0 = 北、90 = 東、180 = 南、270 = 西 */
@@ -362,6 +364,17 @@ export interface CityState {
   prosperity?: number;
   /** 治安(0〜100) */
   order?: number;
+  /** 内政:農業・商業の開発度(0〜100)、民忠(0〜100)、いまの人口、城郭整備の上乗せ(城防御に足す) */
+  agri?: number;
+  commerce?: number;
+  support?: number;
+  pop?: number;
+  fortify?: number;
+  /** 最後に内政を行った日(同じ都市では60日に1度まで) */
+  devDay?: number;
+  /** 最近の募兵(90日のあいだの人数。多いほど治安と民忠が下がる) */
+  recruitRecent?: number;
+  recruitDay?: number;
 }
 
 /** 会戦の片方の陣営。軍団でも都市でも同じ形で扱う */
@@ -373,6 +386,9 @@ export interface BattleSide {
   cityId: string | null;
   name: string;
   commander: Officer | null;
+  /** 副将と、指揮官との相性による士気の補正(-4〜+4) */
+  deputy?: Officer | null;
+  synergy?: number;
   /** 兵種ごとの兵力(会戦開始時点の写し) */
   troops: Record<UnitTypeId, number>;
   morale: number;

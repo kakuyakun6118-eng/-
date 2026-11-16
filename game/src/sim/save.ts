@@ -3,6 +3,7 @@
 import type { Faction, PersonRole } from "../data/types";
 import type { SpoilsSave } from "./spoils";
 import type { LoyaltySave } from "./loyalty";
+import type { EconomySave } from "./economy";
 import type { CommanderFate } from "../battle/types";
 import type { Army, ArmyStatus, BattleEvent, CityState, PersonStatus } from "../data/types";
 import type { Route } from "./pathfinding";
@@ -44,6 +45,8 @@ export interface CampaignSave {
   news?: { day: number; text: string }[];
   /** プレイヤーへの外交の申し入れ(返事待ち) */
   proposals?: { from: string; kind: "peace" | "alliance"; day: number }[];
+  /** 財政・官職・内政(古いセーブには無い。無ければ、官職を割り当て直す) */
+  economy?: EconomySave;
   /** 忠誠度・名声(古いセーブには無い。無ければ、読み込んだ時点の状況から作り直す) */
   loyalty?: LoyaltySave;
   /** 後継国家・滅亡・君主の付け替え(古いセーブには無い) */

@@ -14,6 +14,8 @@ export interface LoyaltySave {
   log: Record<string, { day: number; delta: number; text: string }[]>;
   lastUnrest: Record<string, number>;
   lastGlobalUnrest: number;
+  crisis?: Record<string, { defeat?: number; ruler?: number; cities: number[] }>;
+  counts?: { rebellions: number; defections: number };
 }
 
 const PAIRS = new Map<string, { value: number; note: string }>();
@@ -62,6 +64,10 @@ export class LoyaltySystem {
   log: Record<string, { day: number; delta: number; text: string }[]> = {};
   private lastUnrest: Record<string, number> = {};
   private lastGlobalUnrest = -9999;
+  /** 政治の混乱の記録:大敗・君主の交代の日、1年前からの都市の数 */
+  crisis: Record<string, { defeat?: number; ruler?: number; cities: number[] }> = {};
+  /** 反乱・寝返りの件数(検証と画面のため) */
+  counts = { rebellions: 0, defections: 0 };
 
   constructor(private readonly c: Campaign) {
     this.init();
@@ -73,6 +79,8 @@ export class LoyaltySystem {
     this.log = {};
     this.lastUnrest = {};
     this.lastGlobalUnrest = -9999;
+    this.crisis = {};
+    this.counts = { rebellions: 0, defections: 0 };
     for (const p of persons) {
       this.fame[p.id] = this.initialFame(p);
     }
@@ -125,12 +133,21 @@ export class LoyaltySystem {
     v += (pr - 50) * 0.12;
     parts.push(`君主の威信 ${pr}`);
     v += (r.charisma - 60) * 0.12;
-    // 俸禄:金が足りなければ不満
-    const purse = this.c.factionStates[p.factionId]?.gold ?? 0;
-    const staff = persons.filter((x) => x.factionId === p.factionId).length;
-    if (purse < staff * 5) {
-      v -= 8;
-      parts.push("俸禄の不足");
+    // 官職:高いほど忠誠が上がる。名声が高いのに官職が低ければ不満
+    const office = this.c.economy?.officeOf(p.id);
+    if (office) {
+      v += (7 - office.rank) * 1.5;
+      parts.push(`官職 ${office.name}`);
+    }
+    if ((this.fame[p.id] ?? 0) >= 65 && (!office || office.rank >= 4)) {
+      v -= 6;
+      parts.push("功績に比べて官職が低い");
+    }
+    // 俸禄:未払いが続くほど不満
+    const arrears = this.c.economy?.arrearsOf(p.factionId) ?? 0;
+    if (arrears > 0) {
+      v -= Math.min(16, arrears * 4);
+      parts.push(`俸禄の未払い(${arrears}か月)`);
     }
     // 名声が君主より高い野心家は、不満を持ちやすい
     if (this.fame[p.id] > this.fame[r.id] + 15) {
@@ -184,6 +201,44 @@ export class LoyaltySystem {
     return null;
   }
 
+  noteDefeat(factionId: string): void {
+    (this.crisis[factionId] ??= { cities: [] }).defeat = Math.floor(this.c.day);
+  }
+
+  noteRulerChange(factionId: string): void {
+    (this.crisis[factionId] ??= { cities: [] }).ruler = Math.floor(this.c.day);
+  }
+
+  /** 政治の混乱の度合い(1が平時)と、その理由。反乱の起きやすさに掛かる */
+  crisisOf(factionId: string): { factor: number; why: string[] } {
+    const day = Math.floor(this.c.day);
+    const cr = this.crisis[factionId] ?? { cities: [] };
+    const why: string[] = [];
+    let f = 1;
+    const a = this.c.economy?.arrearsOf(factionId) ?? 0;
+    if (a >= 3) {
+      f += 2;
+      why.push(`俸禄の未払い${a}か月`);
+    } else if (a >= 1) {
+      f += 0.5;
+      why.push("俸禄の遅れ");
+    }
+    if (cr.defeat !== undefined && day - cr.defeat < 120) {
+      f += 1;
+      why.push("大敗の直後");
+    }
+    if (cr.ruler !== undefined && day - cr.ruler < 180) {
+      f += 1.5;
+      why.push("君主の交代の直後");
+    }
+    const now = this.c.cities.filter((x) => scenario.cityOwners[x.id] === factionId).length;
+    if (cr.cities.length >= 12 && now < cr.cities[0] * 0.7) {
+      f += 1;
+      why.push("領土の急な縮小");
+    }
+    return { factor: f, why };
+  }
+
   /** 毎月:忠誠を目安へ近づけ、AIの褒賞・任命・捕虜の登用・調略、離反の判定をする */
   monthly(): void {
     for (const p of persons) {
@@ -194,6 +249,9 @@ export class LoyaltySystem {
       if (Math.abs(step) >= 0.5) this.loyalty[p.id] = Math.max(0, Math.min(100, cur + step));
     }
     for (const f of scenario.factions) {
+      const cr = (this.crisis[f.id] ??= { cities: [] });
+      cr.cities.push(this.c.cities.filter((x) => scenario.cityOwners[x.id] === f.id).length);
+      if (cr.cities.length > 12) cr.cities.shift();
       if (f.passive || f.fallen || f.id === this.c.playerFactionId || this.c.playerFactionId === null) continue;
       this.aiCare(f.id);
     }
@@ -246,27 +304,48 @@ export class LoyaltySystem {
     const day = Math.floor(this.c.day);
     if (day - this.lastGlobalUnrest < 30) return;
     const cand = persons
-      .filter((p) => p.role !== "ruler" && (this.loyalty[p.id] ?? 100) < 30 && this.c.personStatus(p.id) === "active" && !this.c.spoils.custodyOf(p.id) && this.c.postOf(p.id))
+      .filter((p) => p.role !== "ruler" && (this.loyalty[p.id] ?? 100) < 45 && this.c.personStatus(p.id) === "active" && !this.c.spoils.custodyOf(p.id) && this.c.postOf(p.id))
       .filter((p) => !scenario.factions.find((f) => f.id === p.factionId)?.passive && day - (this.lastUnrest[p.factionId] ?? -9999) >= 180)
       .sort((a, b) => this.loyalty[a.id] - this.loyalty[b.id]);
     for (const p of cand) {
-      const r = this.ruler(p.factionId);
-      const pr = ((30 - this.loyalty[p.id]) / 100) * 0.35 * (1 - (r?.charisma ?? 60) / 220);
+      const pr = this.unrestChance(p);
       if (chance(`${day}|${p.id}|unrest`) >= pr) continue;
       this.lastGlobalUnrest = day;
       this.lastUnrest[p.factionId] = day;
       // 大きな都市と兵を握っていれば独立、そうでなければ、戦争中の隣国へ寝返る
-      if (this.c.secede(p.id)) return;
+      if (this.c.secede(p.id)) {
+        this.counts.rebellions++;
+        return;
+      }
       const to = scenario.factions
         .filter((f) => !f.passive && !f.fallen && this.c.atWar(p.factionId, f.id) && this.ruler(f.id))
         .sort((a, b) => affinity(p, this.ruler(b.id)!).value - affinity(p, this.ruler(a.id)!).value)[0];
-      if (to) this.c.defect(p.id, to.id, "不満から");
+      if (to && this.c.defect(p.id, to.id, "不満から")) this.counts.defections++;
       return;
     }
   }
 
+  /**
+   * 1か月のうちに離反する見込み。忠誠が低く(45未満)、任務についている人だけ。
+   * 君主との相性の悪さ・名声と武勇・率いる兵の多さで上がり、君主の魅力で下がる。
+   * 政治の混乱(俸禄の未払い・大敗・君主の交代・領土の急な縮小)があると、何倍にもなる。
+   */
+  unrestChance(p: Person): number {
+    const loy = this.loyalty[p.id] ?? 100;
+    if (loy >= 45 || p.role === "ruler") return 0;
+    const r = this.ruler(p.factionId);
+    let pr = ((45 - loy) / 100) * 0.12;
+    if (r && affinity(p, r).value < 35) pr *= 1.4;
+    pr *= 1 + ((this.fame[p.id] ?? 50) - 50) / 100 + Math.max(0, p.war + p.leadership - 140) / 200;
+    const army = this.c.armies.find((s) => s.army.commanderId === p.id && s.army.factionId === p.factionId);
+    if (army && army.army.troops.infantry + army.army.troops.cavalry + army.army.troops.archer >= 8000) pr *= 1.3;
+    pr *= 1 - (r?.charisma ?? 60) / 220;
+    pr *= this.crisisOf(p.factionId).factor;
+    return Math.max(0, Math.min(0.5, pr));
+  }
+
   serialize(): LoyaltySave {
-    return JSON.parse(JSON.stringify({ loyalty: this.loyalty, fame: this.fame, log: this.log, lastUnrest: this.lastUnrest, lastGlobalUnrest: this.lastGlobalUnrest })) as LoyaltySave;
+    return JSON.parse(JSON.stringify({ loyalty: this.loyalty, fame: this.fame, log: this.log, lastUnrest: this.lastUnrest, lastGlobalUnrest: this.lastGlobalUnrest, crisis: this.crisis, counts: this.counts })) as LoyaltySave;
   }
 
   /** 古いセーブ(忠誠の無いもの)は、いまの状況から作り直す */
@@ -278,5 +357,7 @@ export class LoyaltySystem {
     this.log = { ...save.log };
     this.lastUnrest = { ...save.lastUnrest };
     this.lastGlobalUnrest = save.lastGlobalUnrest ?? -9999;
+    this.crisis = { ...(save.crisis ?? {}) };
+    this.counts = { ...(save.counts ?? { rebellions: 0, defections: 0 }) };
   }
 }

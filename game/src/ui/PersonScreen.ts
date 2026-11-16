@@ -36,6 +36,13 @@ export class PersonScreen {
       this.q(sel).addEventListener("change", () => this.renderList());
     }
     this.q(".person-appoint").addEventListener("click", () => this.appoint());
+    this.q(".person-office-set").addEventListener("click", () => {
+      if (!this.selectedId) return;
+      const v = this.q<HTMLSelectElement>(".person-office").value;
+      const err = this.actions.campaign().economy.setOffice(this.selectedId, v === "none" ? null : v);
+      this.renderList();
+      this.q(".person-message").textContent = err ?? "官職を改めました";
+    });
     this.q(".person-reward").addEventListener("click", () => {
       if (!this.selectedId) return;
       const err = this.actions.campaign().loyalty.reward(this.selectedId, 100);
@@ -165,8 +172,10 @@ export class PersonScreen {
       why.textContent = `忠誠の目安${Math.round(t.value)}:${t.parts.join("・")}${aff ? `(相性:${aff.note})` : ""}${recent.length ? ` / 最近の変動:${recent.join("・")}` : ""}`;
     }
     const items = campaign.spoils.equippedBy(p.id).map((t) => t.name);
+    const office = campaign.economy.officeOf(p.id);
     const extra = [
       p.gender === "female" ? "女性" : "",
+      office ? `官職:${office.name}(俸禄${office.salary})` : p.role !== "ruler" ? "官職なし" : "",
       p.diplomacy !== undefined ? `外交${p.diplomacy}` : "",
       p.culture !== undefined ? `文化${p.culture}` : "",
       p.residence ? `滞在:${campaign.cities.find((c) => c.id === p.residence)?.name ?? ""}` : "",
@@ -184,7 +193,7 @@ export class PersonScreen {
     const options: HTMLOptionElement[] = [new Option("任命先を選ぶ", "")];
     if (can) {
       for (const s of campaign.armies) {
-        if (s.army.factionId === p.factionId) options.push(new Option(`指揮官:${s.army.name}`, `army:${s.army.id}`));
+        if (s.army.factionId === p.factionId) options.push(new Option(`指揮官:${s.army.name}`, `army:${s.army.id}`), new Option(`副将:${s.army.name}`, `deputy:${s.army.id}`));
       }
       for (const c of campaign.cities) {
         if (scenario.cityOwners[c.id] === p.factionId) options.push(new Option(`${c.kind === "pass" ? "守将" : "太守"}:${c.name}`, `city:${c.id}`));
@@ -194,6 +203,16 @@ export class PersonScreen {
     select.replaceChildren(...options);
     this.q(".person-appoint-box").hidden = !can;
     this.q(".person-reward").hidden = p.role === "ruler";
+    // 官職:この勢力の官制から選ぶ(定員と条件は、授けるときに調べる)
+    const eco = campaign.economy;
+    const sys = eco.systemOf(p.factionId);
+    const cur = eco.officeOf(p.id);
+    const sel = this.q<HTMLSelectElement>(".person-office");
+    sel.replaceChildren(new Option(cur ? `いまの官職:${cur.name}` : "官職なし", ""), ...sys.offices.map((o) => {
+      const held = persons.filter((x) => x.factionId === p.factionId && eco.offices[x.id] === o.id).length;
+      return new Option(`${o.name}(${o.rank}等・俸禄${o.salary}・${held}/${o.quota}人)`, o.id);
+    }), new Option("官職を解く", "none"));
+    sel.hidden = this.q(".person-office-set").hidden = p.role === "ruler" || !can;
     this.q(".person-message").textContent = can ? "" : status !== "active" ? "この人物は、いま任命できません" : "ほかの勢力の人物は任命できません";
   }
 
@@ -201,7 +220,7 @@ export class PersonScreen {
     const value = this.q<HTMLSelectElement>(".person-target").value;
     if (!value || !this.selectedId) return;
     const [kind, id] = value.split(":");
-    const error = this.actions.campaign().appoint(this.selectedId, value === "none" ? null : { kind: kind as "city" | "army", id });
+    const error = this.actions.campaign().appoint(this.selectedId, value === "none" ? null : { kind: kind as "city" | "army" | "deputy", id });
     this.actions.onAppointed();
     this.renderList();
     this.q(".person-message").textContent = error ?? "任命しました";

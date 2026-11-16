@@ -6,6 +6,8 @@ import type { City } from "../data/types";
 import type { ArmyState, Campaign } from "./Campaign";
 import { wallBonus } from "./autoBattle";
 import { distanceKm } from "./pathfinding";
+import { cityEcon } from "./economy";
+import { affinity } from "./loyalty";
 
 export type StrategyProfile = (typeof rules.profiles)["normal"];
 export const strategyRules = rules;
@@ -61,19 +63,50 @@ export class StrategyAi {
     const enemies = this.c.cities.filter((c) => this.c.atWar(factionId, scenario.cityOwners[c.id]));
     const front = (c: City): number => enemies.reduce((best, e) => Math.min(best, distanceKm(c, e)), 9999);
 
-    // 徴兵:敵に近い都市から、守備兵を上限の6割まで補う(1回に2都市まで。金が要る)
-    let recruited = 0;
-    for (const city of [...mine].sort((a, b) => front(a) - front(b))) {
-      if (recruited >= 2) break;
-      const want = garrisonCap(city) * 0.6 - this.c.cityState(city).garrison;
-      if (want < 100) continue;
-      if (this.c.recruit(city.id, Math.min(want, p.recruitPerTurn)) === null) recruited++;
+    // 予算:維持費と俸禄(1)(2)を先に確保する。蓄えが支出の3か月分を超えた分だけを、募兵・編成・内政に回す
+    const rep = this.c.economy.report(factionId);
+    const purse = this.c.factionStates[factionId] ?? { gold: 0, grain: 0 };
+    const reserve = rep.expense.total * 3;
+    const arrears = this.c.economy.arrearsOf(factionId);
+    // 財政難:募兵と開発を止め、未払いが2か月続けば、いちばん小さい軍団を都市に戻す
+    if (arrears >= 2) {
+      const small = this.c.armies.filter((s) => s.army.factionId === factionId && s.status !== "fighting" && s.status !== "marching").sort((x, y) => totalTroops(x.army) - totalTroops(y.army))[0];
+      if (small) this.c.disbandArmy(small.army.id);
+      return this.moveArmies(factionId, p, mine, enemies);
     }
+    const spare = purse.gold - reserve;
+    const atWar = enemies.length > 0;
+    // 募兵(4):戦争中で、蓄えに余裕があり、収支が大きく赤字でないとき。敵に近い都市から、守備兵を上限の6割まで
+    let recruited = 0;
+    if (atWar && spare > 0 && rep.net > -rep.expense.total * 0.15 && purse.grain > rep.expense.grain * 2) {
+      for (const city of [...mine].sort((a, b) => front(a) - front(b))) {
+        if (recruited >= 2) break;
+        const want = garrisonCap(city) * 0.6 - this.c.cityState(city).garrison;
+        if (want < 100) continue;
+        if (this.c.recruit(city.id, Math.min(want, p.recruitPerTurn)) === null) recruited++;
+      }
+    }
+    // 内政(5):さらに余裕があれば都市を開発する(治安が悪ければ治安、損傷があれば城郭、ほかは弱い方の産業)。
+    // 蓄えが多いほど、1回に手がける都市を増やす(最大3都市)。開発しきった都市には、城郭整備と兵糧備蓄
+    const projects = purse.gold - reserve > 3000 ? 3 : purse.gold - reserve > 1200 ? 2 : purse.gold - reserve > 400 ? 1 : 0;
+    const ready = [...mine].filter((c) => c.kind !== "pass").sort((a, b) => (b.economy ?? 0) + (b.food ?? 0) - ((a.economy ?? 0) + (a.food ?? 0)))
+      .filter((c) => { const st = this.c.cityStates[c.id]; return st?.devDay === undefined || Math.floor(this.c.day) - st.devDay >= 60; });
+    for (const target of ready.slice(0, projects)) {
+      {
+        const st = this.c.cityState(target);
+        const e = cityEcon(target, st);
+        const kind = e.order < 50 ? "order" : st.wallDamage > 0.3 ? "walls" : e.pop < (target.population ?? 0) * 0.85 ? "population" : e.commerce <= e.agri ? "commerce" : "agri";
+        const done = (kind === "agri" && e.agri >= 100) || (kind === "commerce" && e.commerce >= 100);
+        this.c.economy.develop(target.id, done ? (e.fortify < 20 ? "walls" : "granary") : kind);
+      }
+    }
+    // 軍団の維持費をまかなえないなら、新しい軍団は作らない
+    const canAffordArmy = rep.net > 120 && spare > 300;
 
     // 軍団の編成:守備兵に余裕のある都市から出す
     const armies = this.c.armies.filter((s) => s.army.factionId === factionId);
     const maxArmies = 1 + Math.floor(mine.length / 5) + p.extraArmies;
-    if (armies.length < maxArmies) {
+    if (armies.length < maxArmies && canAffordArmy) {
       const base = [...mine].filter((c) => c.kind !== "pass").sort((a, b) => this.c.cityState(b).garrison - this.c.cityState(a).garrison)[0];
       if (base) {
         const spare = this.c.cityState(base).garrison - Math.max(rules.costs.minGarrison * 2, garrisonCap(base) * 0.25);
@@ -82,11 +115,21 @@ export class StrategyAi {
           const free = persons
             .filter((x) => x.factionId === factionId && x.role !== "strategist" && x.role !== "minister" && x.role !== "ruler" && this.c.personStatus(x.id) === "active" && !this.c.postOf(x.id))
             .sort((a, b) => b.leadership + b.war - (a.leadership + a.war))[0];
-          this.c.raiseArmy(base.id, troops, free?.id);
+          const raised = this.c.raiseArmy(base.id, troops, free?.id);
+          // 副将:指揮官と相性のよい、役目のない人
+          if (typeof raised !== "string" && free) {
+            const dep = persons.filter((x) => x.factionId === factionId && x.role === "general" && x.id !== free.id && this.c.personStatus(x.id) === "active" && !this.c.postOf(x.id))
+              .sort((a, b) => affinity(free, b).value - affinity(free, a).value)[0];
+            if (dep && affinity(free, dep).value >= 55) this.c.appoint(dep.id, { kind: "deputy", id: raised.army.id });
+          }
         }
       }
     }
 
+    this.moveArmies(factionId, p, mine, enemies);
+  }
+
+  private moveArmies(factionId: string, p: StrategyProfile, mine: City[], enemies: City[]): void {
     for (const s of this.c.armies) {
       if (s.army.factionId !== factionId || s.status === "fighting" || s.status === "marching") continue;
       this.orderArmy(s, p, mine, enemies);
