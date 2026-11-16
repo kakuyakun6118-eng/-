@@ -222,6 +222,8 @@ export interface Person {
   datesUncertain?: boolean;
   /** ゲームの中で生まれた・迎えた架空の人物のとき true(史実の人物と区別する) */
   fictional?: boolean;
+  /** 史料の確かさ:史実確認済み・推定・伝承(架空は fictional) */
+  certainty?: "史実確認済み" | "推定" | "伝承";
 }
 
 /** 以前の名前(武将)。同じものを指す */

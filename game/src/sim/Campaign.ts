@@ -146,7 +146,10 @@ export class Campaign {
   /** 会戦の結果(戦死・捕虜・負傷)を、人物の状態に記録する */
   private recordFate(personId: string | undefined, fate: string | undefined): void {
     if (!personId) return;
-    if (fate === "killed") this.personStates[personId] = "dead";
+    if (fate === "killed") {
+      this.personStates[personId] = "dead";
+      this.court?.recordCause(personId, "battle", "会戦で討たれる");
+    }
     else if (fate === "captured") this.personStates[personId] = "captured";
     else if (fate === "wounded") this.personStates[personId] = "wounded";
   }
@@ -1136,7 +1139,7 @@ export class Campaign {
   }
 
   /** 寿命による死(病死)。役目を解き、君主なら、次の月の調べで継承が起こる */
-  dieNaturally(personId: string): void {
+  dieNaturally(personId: string, cause = "illness"): void {
     const p = personById(personId);
     if (!p || this.personStatus(personId) === "dead") return;
     this.personStates[personId] = "dead";
@@ -1147,7 +1150,21 @@ export class Campaign {
     for (const c of this.cities) if (governorIdOf(c, this.cityStates[c.id]) === personId) this.cityStates[c.id] = { ...this.cityState(c), governorId: null };
     const i = this.spoils.custody.findIndex((x) => x.personId === personId);
     if (i >= 0) this.spoils.custody.splice(i, 1);
-    if (p.role === "ruler" || (this.loyalty.fame[personId] ?? 0) >= 60) this.addNews(`${factionName(p.factionId)}の${p.name}が亡くなりました${p.fictional ? "" : p.died ? `(史実では${p.died}年に没)` : ""}`);
+    const label = { illness: "病死", old_age: "老衰", battle: "戦死", execution: "処刑", assassination: "暗殺", suicide: "自害", unknown: "不明" }[cause] ?? cause;
+    if (p.role === "ruler" || (this.loyalty.fame[personId] ?? 0) >= 60) this.addNews(`${factionName(p.factionId)}の${p.name}が亡くなりました(${label}${p.fictional ? "" : p.died ? `。史実では${p.died}年に没` : ""})`);
+  }
+
+  /** 廃立:君主 old を退け(生きたまま臣下に)、ほかの人物 next を君主にする */
+  replaceRuler(factionId: string, old: Person, next: Person): void {
+    const f = scenario.factions.find((x) => x.id === factionId)!;
+    this.setRole(old.id, "general");
+    this.setRole(next.id, "ruler");
+    f.ruler = next.name;
+    this.dynasty.rulers[factionId] = next.name;
+    delete this.court.heirs[factionId];
+    delete this.court.regents[factionId];
+    this.loyalty.reevaluate(factionId, `${old.name}の廃位と${next.name}の即位`);
+    this.loyalty.noteRulerChange(factionId);
   }
 
   /** 簒奪:usurper が君主 old を廃して位につく(前の君主は殺される。史実の簒奪の多くと同じ) */

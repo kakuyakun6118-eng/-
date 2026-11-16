@@ -4,6 +4,7 @@ import { factionById, persons, scenario } from "../data";
 import type { Person } from "../data/types";
 import type { Campaign } from "../sim/Campaign";
 import { fillPortrait } from "./portrait";
+import { CAUSE_LABEL, EDU_LABEL, type EduPolicy } from "../sim/court";
 
 export interface CourtActions {
   campaign: () => Campaign;
@@ -78,8 +79,13 @@ export class CourtScreen {
     fillPortrait(img, p);
     const age = c.court.age(p);
     const t = this.el("span", "court-card-text");
-    t.append(this.el("b", "", p.name + (p.fictional ? "*" : "")), this.el("small", "", [c.court.royalTitle(p) || note, age !== null ? `${age}歳` : "年齢不明", st === "dead" ? "故人" : st !== "active" ? { wounded: "負傷", captured: "捕虜", protected: "保護" }[st] ?? "" : ""].filter(Boolean).join("・")));
-    k.append(img, t);
+    const cause = c.court.causeOf(p.id);
+    t.append(this.el("b", "", p.name), this.el("small", "", [c.court.royalTitle(p) || note, age !== null ? `${age}歳` : "年齢不明", st === "dead" ? `故人${cause ? `(${CAUSE_LABEL[cause.cause]})` : ""}` : st !== "active" ? { wounded: "負傷", captured: "捕虜", protected: "保護" }[st] ?? "" : ""].filter(Boolean).join("・")));
+    // 史実の人物か、架空の人物か(伝承・推定も区別する)
+    const badge = this.el("i", "court-badge", p.fictional ? "架" : p.certainty === "伝承" ? "伝" : p.certainty === "推定" ? "推" : "史");
+    badge.dataset.kind = p.fictional ? "fiction" : p.certainty === "伝承" || p.certainty === "推定" ? "uncertain" : "history";
+    badge.title = p.fictional ? "架空の人物" : p.certainty ?? "史実の人物";
+    k.append(badge, img, t);
     k.addEventListener("click", () => {
       this.selected = p.id;
       this.render();
@@ -135,7 +141,20 @@ export class CourtScreen {
     add("側室の上限", `${ct.concubinesOf(ruler.id).length} / ${ct.maxConcubines(f)}人(威信・国力・魅力で決まる)`);
     const risk = ct.disputeRisk(f, ct.heirOf(f) ?? ruler);
     add("継承争いの危険", `${Math.round(risk.value * 100)}%${risk.parts.length ? `(${risk.parts.join("・")})` : ""}`);
+    const reg = ct.regentOf(f);
+    add("摂政", reg ? `${reg.name}(政治${reg.politics}・名声${Math.round(c.loyalty.fame[reg.id] ?? 0)}・忠誠${Math.round(c.loyalty.loyalty[reg.id] ?? 0)}) 政務の効率×${ct.adminFactor(f).toFixed(2)}` : ct.isMinor(ruler) ? "なし(政務の効率が下がっています)" : "なし(親政)");
+    const dw = ct.dowagers(f);
+    add("皇太后など", dw.length ? dw.map((d) => `${d.title} ${d.p.name}`).join("、") : "なし");
     left.append(dl);
+    // 外戚の影響力と、宮廷の勢力
+    left.append(this.el("h4", "", "外戚の影響力"));
+    const il = this.el("div", "court-meters");
+    for (const x of ct.inLaws(f)) il.append(this.meter(`${x.clan}氏`, x.influence, x.why.join("・")));
+    if (!il.children.length) il.append(this.el("p", "court-empty", "外戚はいません"));
+    left.append(il, this.el("h4", "", "宮廷の勢力"));
+    const pt = this.el("div", "court-meters");
+    for (const g of ct.courtParties(f)) pt.append(this.meter(g.name, Math.min(100, g.power), `${g.count}人・平均の忠誠${g.loyalty}`));
+    left.append(pt);
 
     left.append(this.el("h4", "", "正室・側室"));
     const wives = this.el("div", "court-cards");
@@ -168,7 +187,7 @@ export class CourtScreen {
     mid.append(row("本人", [focus]), row("配偶者", ct.spousesOf(focus.id)), row("兄弟姉妹", ct.siblingsOf(focus.id)), row("子女", ct.childrenOf(focus.id)));
     const grand = ct.childrenOf(focus.id).flatMap((k) => ct.childrenOf(k.id));
     if (grand.length) mid.append(row("孫", grand));
-    mid.append(this.el("p", "court-note", "* は架空の人物(ゲームの中で生まれた・迎えた人物)。史料にない親子は書いていません。"));
+    mid.append(this.el("p", "court-note", "札の印:史=史実の人物・推=推定・伝=伝承・架=架空の人物(ゲームの中で生まれた・迎えた人物)。史料にない親子は書いていません。"));
 
     // ---- 右:後継順位・選んだ人物・出来事 ----
     const right = this.el("div", "court-col court-right");
@@ -187,6 +206,7 @@ export class CourtScreen {
     right.append(ol);
     const sp = persons.find((x) => x.id === this.selected);
     if (sp) right.append(this.personPanel(c, sp));
+    if (sp && ct.age(sp) !== null && ct.age(sp)! < 20 && sp.factionId === f) right.append(this.eduPanel(c, sp, mine));
     right.append(this.el("h4", "", "宮廷の出来事"));
     const log = this.el("ul", "court-log");
     for (const e of [...(ct.log[f] ?? [])].reverse().slice(0, 14)) log.append(this.el("li", "", e.text));
@@ -212,11 +232,51 @@ export class CourtScreen {
     add("能力", `統${p.leadership} 武${p.war} 知${p.intelligence} 政${p.politics} 魅${p.charisma}`);
     add("忠誠", p.role === "ruler" ? "—" : `${Math.round(c.loyalty.loyalty[p.id] ?? 0)}`);
     add("名声", `${Math.round(c.loyalty.fame[p.id] ?? 0)}`);
+    add("確かさ", p.fictional ? "架空" : p.certainty ?? (p.datesUncertain || p.note ? "推定を含む" : "史実確認済み"));
+    const cause = ct.causeOf(p.id);
+    if (cause) add("死因", `${CAUSE_LABEL[cause.cause]}${cause.text ? `(${cause.text})` : ""}`);
     box.append(dl);
     if (p.id !== this.focus) box.append(this.button("この人物の家系図", () => {
       this.focus = p.id;
       this.render();
     }));
+    return box;
+  }
+
+  private meter(label: string, v: number, note: string): HTMLElement {
+    const row = this.el("div", "court-meter");
+    const bar = this.el("span", "court-meter-bar");
+    const b = this.el("b");
+    b.style.width = `${Math.max(0, Math.min(100, v))}%`;
+    b.dataset.level = v >= 70 ? "high" : v >= 40 ? "mid" : "low";
+    bar.append(b);
+    row.append(this.el("span", "court-meter-label", label), bar, this.el("em", "", String(v)), this.el("small", "", note));
+    return row;
+  }
+
+  /** 教育(20歳未満の子女):方針・担当・これまでの伸び */
+  private eduPanel(c: Campaign, p: Person, mine: boolean): HTMLElement {
+    const ct = c.court;
+    const box = this.el("div", "court-edu");
+    const e = ct.eduOf(p.id);
+    box.append(this.el("h4", "", `${p.name}の教育`));
+    const tutor = persons.find((x) => x.id === e.tutor);
+    const gain = Object.entries(e.gain).filter(([, v]) => (v ?? 0) >= 0.05).map(([k, v]) => `${{ leadership: "統", war: "武", intelligence: "知", politics: "政", charisma: "魅" }[k]}+${(v ?? 0).toFixed(1)}`).join(" ");
+    box.append(this.el("p", "court-note", `方針:${EDU_LABEL[e.policy]} / 担当:${tutor?.name ?? "宮中の師(担当なし)"} / これまでの伸び:${gain || "なし"}(1つの能力につき15まで、能力は100まで)`));
+    if (mine) {
+      const pol = this.el("select", "court-edu-policy");
+      for (const [k, v] of Object.entries(EDU_LABEL)) pol.append(new Option(v, k));
+      pol.value = e.policy;
+      const tu = this.el("select", "court-edu-tutor");
+      tu.append(new Option("担当なし", ""));
+      for (const x of persons.filter((y) => y.factionId === p.factionId && y.id !== p.id && c.personStatus(y.id) === "active" && !ct.isMinor(y)).sort((a, b) => (c.loyalty.fame[b.id] ?? 0) - (c.loyalty.fame[a.id] ?? 0)).slice(0, 25)) {
+        tu.append(new Option(`${x.name}(統${x.leadership} 武${x.war} 知${x.intelligence} 政${x.politics})`, x.id));
+      }
+      tu.value = e.tutor ?? "";
+      const d = this.el("div", "court-line");
+      d.append(pol, tu, this.button("教育を決める", () => this.act(ct.setEducation(p.id, pol.value as EduPolicy, tu.value || undefined)), "court-edu-set"));
+      box.append(d);
+    }
     return box;
   }
 
@@ -259,6 +319,14 @@ export class CourtScreen {
     const chk = ct.crownCheck(f);
     if (chk.next) {
       box.append(line(this.el("span", "", `${chk.next === "emperor" ? "皇帝" : "王"}を称する`), this.el("small", "court-note", chk.ok ? "条件を満たしています" : `条件:${chk.missing.join("・")}`), this.button("即位", () => this.act(ct.crown(f)), "court-crown")));
+    }
+    // 摂政と親政
+    if (ct.isMinor(ruler)) {
+      const rs = this.el("select", "court-regent");
+      for (const x of ct.regentCandidates(f).slice(0, 10)) rs.append(new Option(`${x.p.name}(${x.reason}・政${x.p.politics})`, x.p.id));
+      box.append(line(this.el("span", "", "摂政"), rs, this.button("任命", () => this.act(ct.appointRegent(f, rs.value)), "court-regent-set")));
+    } else if (ct.regentOf(f)) {
+      box.append(line(this.el("span", "", "親政"), this.el("small", "court-note", `${ruler.name}は成人しました`), this.button("親政を始める", () => this.act(ct.personalRule(f)), "court-personal")));
     }
     box.append(line(this.el("span", "", "宮廷の慰撫"), this.el("small", "court-note", "金1,000で皇室の安定+10"), this.button("恩賞を配る", () => this.act(ct.appease(f)))));
     return box;

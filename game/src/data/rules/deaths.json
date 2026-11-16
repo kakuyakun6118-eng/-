@@ -1,0 +1,718 @@
+{
+ "_note": "死亡原因。cause: illness 病死 / old_age 老衰 / battle 戦死 / execution 処刑 / assassination 暗殺 / suicide 自害 / unknown 不明。basis: 史実確認済み・推定・伝承。by は手を下した人物(ゲームにいて条件がそろったときだけ起こる)。書かれていない人物で没年があるものは「病死(推定)」として扱う",
+ "deaths": {
+  "liu_cong": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "liu_yuan": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "shi_le": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "shi_hu": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "sima_rui": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "sima_shao": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "sima_yan": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "sima_yue_kang": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "sima_dan": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "sima_pi": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "sima_yu": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "wang_dao": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "wang_dun": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "zu_ti": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "tao_kan": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "xi_jian": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "wen_jiao": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "yu_liang": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "yu_bing": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "yu_yi": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "murong_hui": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "murong_jun": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "murong_ke": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "murong_chui": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "wang_meng": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "xie_an": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "huan_wen": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "huan_chong": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "yao_yizhong": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "yao_chang": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "lv_guang": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "zhang_tianxi": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "zhang_chonghua": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "zhang_jun": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "zhang_mao": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "zhang_gui": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "li_xiong": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "li_shou": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "li_shi2": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "fu_jian_jian": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "fu_xiong": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "murong_ye": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "sima_yue": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "qifu_guoren": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "li_liu": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "duan_jilujuan": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "he_chong": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "cai_mo": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "xie_shang": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "wang_xizhi": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "sima_yi_fei": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "li_xiang": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "murong_huang": {
+   "cause": "unknown",
+   "basis": "史実確認済み",
+   "note": "348年、狩りの最中に落馬した傷がもとで没したとされる"
+  },
+  "wang_rong": {
+   "cause": "old_age",
+   "basis": "推定"
+  },
+  "he_xun": {
+   "cause": "old_age",
+   "basis": "推定"
+  },
+  "ji_zhan": {
+   "cause": "old_age",
+   "basis": "推定"
+  },
+  "xun_zu": {
+   "cause": "old_age",
+   "basis": "推定"
+  },
+  "xun_song": {
+   "cause": "old_age",
+   "basis": "推定"
+  },
+  "su_jun": {
+   "cause": "battle",
+   "basis": "史実確認済み",
+   "note": "328年、陶侃・温嶠の軍との戦いで落馬して討たれた"
+  },
+  "fu_rong": {
+   "cause": "battle",
+   "basis": "史実確認済み",
+   "note": "383年、淝水の戦いで戦死"
+  },
+  "fu_chang2": {
+   "cause": "battle",
+   "basis": "史実確認済み",
+   "note": "354年、桓温との戦いの傷がもとで没"
+  },
+  "fu_chong": {
+   "cause": "battle",
+   "basis": "史実確認済み",
+   "note": "394年に戦死"
+  },
+  "li_dang": {
+   "cause": "battle",
+   "basis": "史実確認済み",
+   "note": "303年に戦死"
+  },
+  "li_te": {
+   "cause": "battle",
+   "basis": "史実確認済み",
+   "note": "303年に戦死"
+  },
+  "yao_xiang": {
+   "cause": "battle",
+   "basis": "史実確認済み",
+   "note": "357年、苻堅・苻黄眉の軍に敗れて戦死"
+  },
+  "tuoba_liuxiu": {
+   "cause": "battle",
+   "basis": "史実確認済み",
+   "note": "316年に戦死"
+  },
+  "ji_shao": {
+   "cause": "battle",
+   "basis": "史実確認済み",
+   "note": "304年、恵帝をかばって戦死"
+  },
+  "fu_pi": {
+   "cause": "battle",
+   "basis": "史実確認済み",
+   "note": "386年、慕容永との戦いに敗れて戦死"
+  },
+  "liu_yao": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "shi_le",
+   "note": "329年、石勒に捕らえられ殺された"
+  },
+  "liu_xi": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "shi_hu",
+   "note": "329年、上邽が落ちて殺された"
+  },
+  "liu_yin": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "shi_hu",
+   "note": "329年に殺された"
+  },
+  "liu_kun": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "duan_pidi",
+   "note": "318年、段匹磾に殺された"
+  },
+  "zhou_yi": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "wang_dun",
+   "note": "322年、王敦に殺された"
+  },
+  "dai_yuan": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "wang_dun",
+   "note": "322年、王敦に殺された"
+  },
+  "shi_xuan": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "shi_hu",
+   "note": "348年、弟の殺害の罪で石虎に処刑された"
+  },
+  "shi_sui": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "shi_hu",
+   "note": "337年、石虎に殺された"
+  },
+  "shi_shi": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "shi_zun",
+   "note": "349年、石遵に殺された"
+  },
+  "shi_zun": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "ran_min",
+   "note": "349年、石鑑・冉閔に殺された"
+  },
+  "shi_jian2": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "ran_min",
+   "note": "350年、冉閔に殺された"
+  },
+  "ran_min": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "murong_jun",
+   "note": "352年、前燕に捕らえられ処刑された"
+  },
+  "shi_kan": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "shi_hu",
+   "note": "333年、石虎に殺された"
+  },
+  "cheng_xia": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "shi_hu",
+   "note": "333年、石虎に殺された"
+  },
+  "xu_guang": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "shi_hu",
+   "note": "333年、石虎に殺された"
+  },
+  "zu_yue": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "shi_le",
+   "note": "330年、石勒に殺された"
+  },
+  "fu_fa": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "gou_taihou",
+   "note": "357年、苟太后に死を賜った"
+  },
+  "fu_jian": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "yao_chang",
+   "note": "385年、姚萇に捕らえられ縊殺された"
+  },
+  "murong_wei": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "fu_jian",
+   "note": "384年、苻堅に殺された"
+  },
+  "tuoba_shijun": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "fu_jian",
+   "note": "376年、苻堅に処刑された"
+  },
+  "zhang_dayu": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "lv_guang",
+   "note": "386年、呂光に殺された"
+  },
+  "murong_lin": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "murong_de",
+   "note": "398年、慕容徳に殺された"
+  },
+  "sima_yuanxian": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "huan_xuan2",
+   "note": "402年、桓玄に殺された"
+  },
+  "wang_yan": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "shi_le",
+   "note": "311年、石勒に殺された"
+  },
+  "gou_xi": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "shi_le",
+   "note": "312年、石勒に殺された"
+  },
+  "guo_mo": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "tao_kan",
+   "note": "330年、陶侃に討たれた"
+  },
+  "duan_pidi": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "shi_le",
+   "note": "石勒に捕らえられ殺された"
+  },
+  "li_yue": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "li_shou",
+   "note": "338年、李寿に殺された"
+  },
+  "fu_sheng": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "fu_jian",
+   "note": "357年、苻堅に廃され殺された"
+  },
+  "shi_hong": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "shi_hu",
+   "note": "334年、石虎に廃され殺された"
+  },
+  "zhang_yaoling": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "zhang_zuo",
+   "note": "355年、張祚に殺された"
+  },
+  "liu_xie_hz": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "shi_hu",
+   "note": "329年に殺された"
+  },
+  "sima_ying": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "sima_yue",
+   "note": "306年に殺された"
+  },
+  "sima_ai": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "zhang_fang",
+   "note": "304年、張方に焼き殺された"
+  },
+  "sima_jiong": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "sima_ai",
+   "note": "302年に殺された"
+  },
+  "lu_ji": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "sima_ying",
+   "note": "303年、司馬穎に殺された"
+  },
+  "lu_yun": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "sima_ying",
+   "note": "303年、司馬穎に殺された"
+  },
+  "ma_qiu": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "fu_jian_jian",
+   "note": "350年、苻健に殺された"
+  },
+  "liu_yi": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "liu_can",
+   "note": "317年、劉粲に陥れられ殺された"
+  },
+  "liu_can": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "by": "jin_zhun",
+   "note": "318年、靳準に殺された(靳準の乱)"
+  },
+  "jin_zhun": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "by": "jin_kang",
+   "note": "318年、一族の靳康らに殺された"
+  },
+  "li_ban": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "by": "li_qi",
+   "note": "334年、李越・李期に殺された"
+  },
+  "zhang_shi": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "note": "320年、部下に殺された"
+  },
+  "zhang_zuo": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "by": "zhang_guan",
+   "note": "355年、張瓘・宋混らに殺された"
+  },
+  "zhang_xuanjing": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "note": "363年、張天錫に殺された"
+  },
+  "tuoba_yilu": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "by": "tuoba_liuxiu",
+   "note": "316年、子の六脩に殺された"
+  },
+  "tuoba_yulv": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "by": "qi_shi",
+   "note": "321年、祁氏に殺された"
+  },
+  "shiyijian": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "by": "tuoba_shijun",
+   "note": "376年、子の寔君に殺された"
+  },
+  "pu_hong": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "by": "ma_qiu",
+   "note": "350年、麻秋に毒殺された"
+  },
+  "shi_zhi": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "note": "351年、部将の劉顕に殺された"
+  },
+  "murong_chong": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "note": "386年、部下に殺された"
+  },
+  "murong_bao": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "note": "398年、蘭汗に殺された"
+  },
+  "murong_sheng": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "note": "401年、反乱で殺された"
+  },
+  "murong_xi": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "note": "407年、馮跋らに殺された"
+  },
+  "sima_yao": {
+   "cause": "assassination",
+   "basis": "伝承",
+   "note": "396年、張貴人に殺されたと伝わる"
+  },
+  "sima_daozi": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "by": "huan_xuan2",
+   "note": "403年、桓玄に毒殺された"
+  },
+  "sima_dezong": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "note": "419年、劉裕の命で殺された"
+  },
+  "sima_dewen": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "note": "421年、劉裕の命で殺された"
+  },
+  "liu_he": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "by": "liu_cong",
+   "note": "310年、劉聡に殺された"
+  },
+  "sima_yong": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "note": "307年に殺された"
+  },
+  "sima_zhong": {
+   "cause": "assassination",
+   "basis": "伝承",
+   "note": "307年、毒殺されたと伝わる(異説あり)"
+  },
+  "zhang_fang": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "note": "306年に殺された"
+  },
+  "wang_mi": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "by": "shi_le",
+   "note": "311年、石勒に謀殺された"
+  },
+  "diao_xie": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "note": "322年に殺された"
+  },
+  "zhai_bin": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "note": "384年に殺された"
+  },
+  "murong_hong": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "note": "384年、部下に殺された"
+  },
+  "li_qi": {
+   "cause": "suicide",
+   "basis": "史実確認済み",
+   "note": "338年、李寿に廃され自害した"
+  },
+  "sima_lun": {
+   "cause": "suicide",
+   "basis": "史実確認済み",
+   "note": "301年、死を賜った"
+  },
+  "huan_xuan2": {
+   "cause": "battle",
+   "basis": "史実確認済み",
+   "note": "404年、敗走中に殺された"
+  },
+  "fu_deng": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "note": "394年、姚興に捕らえられ殺された(姚興は台帳にいない)"
+  },
+  "gogugwon": {
+   "cause": "battle",
+   "basis": "史実確認済み",
+   "note": "371年、百済の平壌攻撃で戦死"
+  },
+  "gogugyang": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "chimnyu": {
+   "cause": "illness",
+   "basis": "推定"
+  },
+  "jinsa": {
+   "cause": "unknown",
+   "basis": "推定",
+   "note": "392年、狩りの行宮で没したと伝わる"
+  },
+  "asin": {
+   "cause": "illness",
+   "basis": "推定"
+  },
+  "yeyan": {
+   "cause": "illness",
+   "basis": "推定"
+  },
+  "shipi": {
+   "cause": "illness",
+   "basis": "推定"
+  }
+ }
+}

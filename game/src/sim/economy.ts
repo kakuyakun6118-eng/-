@@ -171,6 +171,12 @@ export class Economy {
       if (city.kind !== "pass") levels += cityLevelOf(city);
       cityRows.push({ id: city.id, name: city.name, gold: Math.round(commerce + tax + trade), grain: Math.round(grain) });
     }
+    // 幼君のときは、摂政の政治で政務の効率が変わる(摂政がいなければ下がる)
+    const admin = this.c.court?.adminFactor(factionId) ?? 1;
+    if (admin !== 1) {
+      inc.commerce *= admin;
+      inc.tax *= admin;
+    }
     inc.total = inc.commerce + inc.tax + inc.trade;
     const armies = this.c.armies.filter((s) => s.army.factionId === factionId);
     const troops = armies.reduce((sum, s) => sum + totalTroops(s.army), 0);

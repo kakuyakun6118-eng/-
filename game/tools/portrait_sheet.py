@@ -21,6 +21,18 @@ for e in catalog:
         b = ledger[pid]
         appear.setdefault(pid, []).append({'year': e['year'], 'faction': fac[r['factionId']], 'role': r.get('role') or b['role'], 'title': r.get('title') or b['title']})
 
+# ゲームの中で生まれる・宮廷に加わる史実の人物(Version 36):名簿には無いので、親の所属と、壮年の年で指示を作る
+FAM = json.load(open(os.path.join(os.path.dirname(D), 'rules', 'family.json'), encoding='utf-8'))
+for pid, b in ledger.items():
+    if pid in appear: continue
+    par = FAM['parents'].get(pid, {})
+    src = next((appear[x][0] for x in (par.get('father'), par.get('mother')) if x and x in appear), None)
+    if src is None:
+        src = next(({'year': e_year, 'faction': '(宮廷)'} for e_year in [None]), None)
+    year = b['died'] - 3 if b.get('died') else (b['born'] + 25 if b.get('born') else (src['year'] + 20 if src.get('year') else 380))
+    if b.get('born') and year - b['born'] > 45: year = b['born'] + 40
+    appear[pid] = [{'year': year, 'faction': src['faction'], 'role': b['role'], 'title': b['title'], 'born_in_game': True}]
+
 STYLE = ("写実的で重厚な歴史人物の肖像画(三國志14やTotal Warシリーズのような重厚さ)。油彩のような質感、落ち着いた光、暗い無地の背景。胸から上の構図で、顔がはっきり見える。正方形。"
          "1枚に1人だけを描く(何人も並べた一覧画像にしない)。顔の設計(輪郭・額・頬骨・顎・鼻・目・眉・口元・髭・肌・皺・体格・表情)に必ず従い、ほかの人物と同じ顔にしない。冠や髭や色を変えただけの使い回しは不可。"
          "4世紀の中国(西晋〜東晋・五胡十六国)の装い。明・清の官服や官帽、満洲式の辮髪、近世以降の甲冑、日本式の兜、西洋の板金鎧、現代の小物は描かない。"

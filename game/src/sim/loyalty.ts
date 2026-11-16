@@ -341,6 +341,8 @@ export class LoyaltySystem {
     if (army && army.army.troops.infantry + army.army.troops.cavalry + army.army.troops.archer >= 8000) pr *= 1.3;
     pr *= 1 - (r?.charisma ?? 60) / 220;
     pr *= this.crisisOf(p.factionId).factor;
+    // プレイヤーの国の中でだけ、難易度に応じて起こりやすくする(易しい1倍・普通1.5倍・難しい2.5倍・最高難度3.5倍)
+    if (p.factionId === this.c.playerFactionId) pr *= ({ easy: 1, normal: 1.5, hard: 2.5, veryHard: 3.5 } as Record<string, number>)[this.c.difficulty] ?? 1.5;
     return Math.max(0, Math.min(0.5, pr));
   }
 

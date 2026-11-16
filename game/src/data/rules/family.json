@@ -53,7 +53,8 @@
   },
   "sima_dan": {
    "mother": "chu_suanzi",
-   "note": "父は康帝 司馬岳(この台帳にいない)"
+   "note": "穆帝。父は康帝 司馬岳",
+   "father": "sima_yue_kang"
   },
   "sima_yao": {
    "father": "sima_yu",
@@ -242,7 +243,8 @@
   },
   "fu_jian": {
    "mother": "gou_taihou",
-   "note": "父は苻雄(この台帳にいない)"
+   "note": "母は苟太后",
+   "father": "fu_xiong"
   },
   "fu_pi": {
    "father": "fu_jian"
@@ -288,6 +290,153 @@
   },
   "yang_jiantou": {
    "father": "yang_maosou"
+  },
+  "sima_yue_kang": {
+   "father": "sima_shao",
+   "mother": "yu_wenjun"
+  },
+  "sima_pi": {
+   "father": "sima_yan"
+  },
+  "sima_yi_fei": {
+   "father": "sima_yan"
+  },
+  "sima_dezong": {
+   "father": "sima_yao"
+  },
+  "sima_dewen": {
+   "father": "sima_yao"
+  },
+  "sima_yuanxian": {
+   "father": "sima_daozi"
+  },
+  "fu_jian_jian": {
+   "father": "pu_hong"
+  },
+  "fu_xiong": {
+   "father": "pu_hong"
+  },
+  "fu_sheng": {
+   "father": "fu_jian_jian"
+  },
+  "fu_liu": {
+   "father": "fu_jian_jian"
+  },
+  "fu_sou": {
+   "father": "fu_jian_jian"
+  },
+  "fu_chang2": {
+   "father": "fu_jian_jian"
+  },
+  "fu_fa": {
+   "father": "fu_xiong"
+  },
+  "fu_rong": {
+   "father": "fu_xiong"
+  },
+  "fu_shuang": {
+   "father": "fu_xiong"
+  },
+  "fu_chong": {
+   "father": "fu_deng"
+  },
+  "shi_xuan": {
+   "father": "shi_hu"
+  },
+  "shi_shi": {
+   "father": "shi_hu"
+  },
+  "shi_jian2": {
+   "father": "shi_hu"
+  },
+  "shi_zhi": {
+   "father": "shi_hu"
+  },
+  "shi_zun": {
+   "father": "shi_hu",
+   "mother": "zheng_yingtao"
+  },
+  "ran_min": {
+   "father": "ran_zhan",
+   "note": "石虎の養孫(父の冉瞻は石虎の養子)"
+  },
+  "murong_ye": {
+   "father": "murong_jun"
+  },
+  "murong_sheng": {
+   "father": "murong_bao"
+  },
+  "murong_xi": {
+   "father": "murong_chui"
+  },
+  "murong_lin": {
+   "father": "murong_chui"
+  },
+  "zhang_chonghua": {
+   "father": "zhang_jun"
+  },
+  "zhang_zuo": {
+   "father": "zhang_jun"
+  },
+  "zhang_yaoling": {
+   "father": "zhang_chonghua"
+  },
+  "zhang_xuanjing": {
+   "father": "zhang_chonghua"
+  },
+  "zhang_dayu": {
+   "father": "zhang_tianxi"
+  },
+  "li_dang": {
+   "father": "li_te"
+  },
+  "li_ban": {
+   "father": "li_dang"
+  },
+  "li_shi2": {
+   "father": "li_shou"
+  },
+  "tuoba_shijun": {
+   "father": "shiyijian"
+  },
+  "tuoba_gu": {
+   "father": "tuoba_yulv"
+  },
+  "liu_xie_hz": {
+   "father": "liu_yao"
+  },
+  "gogugwon": {
+   "father": "eulbul"
+  },
+  "sosurim": {
+   "father": "gogugwon"
+  },
+  "gogugyang": {
+   "father": "gogugwon"
+  },
+  "gwanggaeto": {
+   "father": "gogugyang"
+  },
+  "chimnyu": {
+   "father": "geungusu"
+  },
+  "jinsa": {
+   "father": "geungusu"
+  },
+  "asin": {
+   "father": "chimnyu"
+  },
+  "yeyan": {
+   "father": "tuyan"
+  },
+  "suixi": {
+   "father": "yeyan"
+  },
+  "shilian": {
+   "father": "suixi"
+  },
+  "shipi": {
+   "father": "shilian"
   }
  },
  "siblings": [
@@ -404,17 +553,21 @@
   },
   "s357": {
    "qianyan": "murong_wei",
-   "dai": "tuoba_shi"
+   "dai": "tuoba_shi",
+   "qianliang": "zhang_tianxi"
   },
   "s383": {
    "qianqin": "fu_hong2",
-   "jin": "sima_daozi"
+   "jin": "sima_dezong",
+   "goguryeo": "gogugyang",
+   "baekje": "chimnyu"
   }
  },
  "heirNotes": {
   "s317|chenghan": "李雄は甥の李班を太子とした(史実)",
-  "s383|jin": "孝武帝の太子 司馬徳宗は台帳にいないため、弟の司馬道子を仮の後継者とする(推定)",
-  "s329|jin": "成帝が幼く、ここでは叔父の司馬昱を仮の後継者とする(推定)"
+  "s383|jin": "孝武帝の長子 司馬徳宗(のちの安帝)を後継者とする(383年は1歳。立太子は387年)",
+  "s329|jin": "成帝が幼く、ここでは叔父の司馬昱を仮の後継者とする(推定)",
+  "s383|goguryeo": "小獣林王に子がなく、弟の故国壌王が継いだ(史実)"
  },
  "ranks": {
   "s300": {
@@ -583,6 +736,121 @@
    "victim": "fu_sheng",
    "year": 357,
    "note": "357年、苻堅が苻生を廃して即位する"
+  },
+  {
+   "scenario": "*",
+   "faction": "shile",
+   "usurper": "shi_zun",
+   "victim": "shi_shi",
+   "year": 349,
+   "note": "349年、石遵が石世を廃して即位する"
+  },
+  {
+   "scenario": "*",
+   "faction": "shile",
+   "usurper": "shi_jian2",
+   "victim": "shi_zun",
+   "year": 349,
+   "note": "349年、石鑑が冉閔と結んで石遵を殺し、即位する"
+  },
+  {
+   "scenario": "*",
+   "faction": "shile",
+   "usurper": "ran_min",
+   "victim": "shi_jian2",
+   "year": 350,
+   "note": "350年、冉閔が石鑑を殺し、魏(冉魏)を建てる"
+  },
+  {
+   "scenario": "*",
+   "faction": "qianliang",
+   "usurper": "zhang_zuo",
+   "victim": "zhang_yaoling",
+   "year": 353,
+   "note": "353年、張祚が甥の張耀霊を廃して位を奪う"
+  },
+  {
+   "scenario": "*",
+   "faction": "chenghan",
+   "usurper": "li_shou",
+   "victim": "li_qi",
+   "year": 338,
+   "note": "338年、李寿が李期を廃して即位する(李期は自害)"
+  },
+  {
+   "scenario": "*",
+   "faction": "chenghan",
+   "usurper": "li_qi",
+   "victim": "li_ban",
+   "year": 334,
+   "note": "334年、李越・李期が李班を殺し、李期が即位する"
+  },
+  {
+   "scenario": "*",
+   "faction": "dai",
+   "usurper": "tuoba_shijun",
+   "victim": "shiyijian",
+   "year": 376,
+   "note": "376年、拓跋寔君が父の什翼犍を殺す"
   }
- ]
+ ],
+ "depositions": [
+  {
+   "faction": "jin",
+   "by": "huan_wen",
+   "victim": "sima_yi_fei",
+   "replacement": "sima_yu",
+   "year": 371,
+   "note": "371年、桓温が廃帝(司馬奕)を廃し、簡文帝(司馬昱)を立てる"
+  }
+ ],
+ "addRoyals": {
+  "s317": {
+   "goguryeo": [
+    "gogugwon"
+   ],
+   "tuyuhun": [
+    "yeyan"
+   ]
+  },
+  "s319": {
+   "goguryeo": [
+    "gogugwon"
+   ],
+   "tuyuhun": [
+    "yeyan"
+   ]
+  },
+  "s329": {
+   "goguryeo": [
+    "gogugwon"
+   ],
+   "shile": [
+    "shi_xuan",
+    "shi_zun",
+    "shi_jian2",
+    "shi_zhi"
+   ],
+   "tuyuhun": [
+    "yeyan"
+   ]
+  },
+  "s383": {
+   "goguryeo": [
+    "gogugyang"
+   ],
+   "baekje": [
+    "chimnyu",
+    "jinsa",
+    "asin"
+   ],
+   "silla": [
+    "silseong"
+   ],
+   "tuyuhun": [
+    "shipi"
+   ]
+  }
+ },
+ "_noteAddRoyals": "addRoyals:生年が分からないため自動では加わらないが、開始時に宮廷にいたと考えられる王族(推定)"
 }

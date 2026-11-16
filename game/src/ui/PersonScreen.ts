@@ -163,7 +163,9 @@ export class PersonScreen {
     }
     const txt = document.createElement("span");
     const title = ct.royalTitle(p);
-    txt.textContent = `${title ? `身分:${title} / ` : ""}${ct.stageOf(p)} / 父母:${names(pa)} / 兄弟:${names(ct.siblingsOf(p.id))} / 子女:${names(ct.childrenOf(p.id))}${p.fictional ? " / 架空の人物" : ""}`;
+    const cause = ct.causeOf(p.id);
+    const sure = p.fictional ? "架空の人物" : p.certainty ?? (p.datesUncertain || p.note ? "推定を含む" : "史実確認済み");
+    txt.textContent = `${title ? `身分:${title} / ` : ""}${ct.stageOf(p)} / 父母:${names(pa)} / 兄弟:${names(ct.siblingsOf(p.id))} / 子女:${names(ct.childrenOf(p.id))} / 確かさ:${sure}${cause ? ` / 死因:${{ illness: "病死", old_age: "老衰", battle: "戦死", execution: "処刑", assassination: "暗殺", suicide: "自害", unknown: "不明" }[cause.cause]}` : ""}`;
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "person-family-open";
