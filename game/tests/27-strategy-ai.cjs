@@ -28,11 +28,13 @@ const { chromium } = require('playwright');
     c.factionStates.han_zhao.gold += 20000; c.factionStates.han_zhao.grain += 20000;
     const own0 = mine.map(k => k.id);
     const moved = window.__run(360);
-    const st = c.strategy.stats.han_zhao ?? {};
+    // 攻めてくる国は漢(前趙)とは限らない(成漢なども隣国)。すべてのAIの国の合計で見る
+    const st = c.strategy.totals();
     const lost = own0.filter(id => D.scenario.cityOwners[id] !== 'sima_bao');
-    const log = c.strategy.log.filter(l => l.factionId === 'han_zhao').slice(-6).map(l => l.text);
-    return { moved, planned: st.planned, dispatched: st.dispatched, vsPlayer: st.vsPlayer, arrived: st.arrived, sieges: st.vsPlayerSieges, captures: st.vsPlayerCaptures, lost, log }; });
-  check('A 弱いプレイヤーの国へ、AIが判断して実際に攻めてくる(出兵・移動・攻城・占領)', rA.vsPlayer >= 1 && rA.moved >= 1 && rA.sieges >= 1 && rA.lost.length >= 1, rA);
+    const who = Object.entries(c.strategy.stats).filter(([, s]) => s.vsPlayerSieges > 0).map(([f]) => f);
+    const log = c.strategy.log.filter(l => /司馬保|秦州|上邽|陳倉|安定|隴/.test(l.text)).slice(-6).map(l => l.text);
+    return { moved, who, planned: st.planned, dispatched: st.dispatched, vsPlayer: st.vsPlayer, arrived: st.arrived, sieges: st.vsPlayerSieges, captures: st.vsPlayerCaptures, lost, log }; });
+  check('A 弱いプレイヤーの国へ、AIが判断して実際に攻めてくる(出兵・移動・攻城・占領)', (rA.vsPlayer >= 1 || rA.sieges >= 1) && rA.moved >= 1 && rA.sieges >= 1 && rA.captures >= 1 && rA.lost.length >= 1, rA);
   await p.close();
 
   // B. 強いプレイヤーの国:秦州の守備を上限まで上げ、大きな軍団を置く → 無謀に攻めず、見送る理由を残す

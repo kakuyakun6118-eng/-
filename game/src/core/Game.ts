@@ -1172,7 +1172,9 @@ export class Game {
     const gov = personById(governorIdOf(marker.city, this.campaign.cityStates[marker.city.id]));
     // 所在がこの都市の人(太守・在住・宮廷)。出陣中の軍団長は入れない
     const here = this.campaign.placement.peopleAt(marker.city.id).map((id) => personById(id)).filter((p): p is Person => !!p);
-    const residents = [gov, ...here.filter((p) => p !== gov)].filter((p): p is Person => !!p);
+    // 並び:太守 → 君主 → 后妃・皇族(住まいがこの都市の人)→ ほかの人(地図の札には先頭の6人まで)
+    const rank = (p: Person): number => (p.role === "ruler" ? 0 : p.residence === marker.city.id ? 1 : 2);
+    const residents = [gov, ...here.filter((p) => p !== gov).sort((a, b) => rank(a) - rank(b))].filter((p): p is Person => !!p);
     this.panel.show(marker.city, marker.faction, this.campaign.cityState(marker.city), scenario.uncertainOwners?.includes(marker.city.id) && scenario.cityOwners[marker.city.id] === initialCityOwners[marker.city.id], residents, this.campaign.spoils.inCity(marker.city.id).length);
     this.panel.setStaff(residents.length, () => this.personScreen.open(undefined, marker.city.id));
     // 徴兵と出陣は、その都市の勢力を操作できるときだけ

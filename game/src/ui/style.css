@@ -3964,9 +3964,9 @@ select:focus-visible {
 #menu-dev-panel .dev-log { margin: 0; padding-left: 1.4em; font-size: 11px; line-height: 1.45; font-family: var(--font-body); }
 
 /* 人物の所在(Version 40) */
-.info-staff { font-size: 11.5px; padding: 2px 8px; margin-right: 4px; }
+.info-staff { font-size: 11.5px; padding: 2px 8px; margin-right: 4px; min-height: 28px; }
 .person-where { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; margin: 2px 0 4px; }
-.person-where-go { font-size: 11px; padding: 1px 8px; }
+.person-where-go { font-size: 11px; padding: 1px 8px; min-height: 28px; }
 
 /* 歴史イベントの一覧(Version 40) */
 #events-open {
@@ -3993,7 +3993,7 @@ select:focus-visible {
 .ev-unmet .ev-state { color: var(--muted); }
 .ev-branched .ev-state { color: #e8b26a; }
 .ev-occurred .ev-state, .ev-past .ev-state { color: #b9c4d8; }
-.ev-fire-mini { min-height: 24px; padding: 0 8px; font-size: 11.5px; }
+.ev-fire-mini { min-height: 28px; padding: 0 8px; font-size: 11.5px; }
 .ev-detail h3 { margin: 0 0 4px; font-family: var(--font-display); color: var(--bronze); font-size: 20px; }
 .ev-detail h4 { margin: 10px 0 4px; color: var(--gold); font-size: 13px; }
 .ev-detail p { margin: 4px 0; font-size: 12.5px; line-height: 1.6; }

@@ -767,7 +767,8 @@ export class StrategyAi {
       op.status = "arrived";
       this.st(op.factionId).arrived++;
     }
-    if (op && e.battleType === "siege_battle" && e.defenderFactionId === this.c.playerFactionId && ai(e.attackerFactionId)) this.st(op.factionId).vsPlayerSieges++;
+    // プレイヤーの都市への攻城は、どの任務(攻撃・迎撃の追撃など)から起きたものでも数える
+    if (e.battleType === "siege_battle" && e.defenderFactionId === this.c.playerFactionId && ai(e.attackerFactionId)) this.st(e.attackerFactionId).vsPlayerSieges++;
   }
 
   onBattleResult(e: BattleEvent, r: BattleResult): void {
