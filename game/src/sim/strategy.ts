@@ -35,7 +35,7 @@ export interface Operation {
   id: number;
   factionId: string;
   armyId: string;
-  kind: "attack" | "support" | "intercept" | "cover" | "reserve";
+  kind: "attack" | "support" | "intercept" | "cover" | "reserve" | "blockade";
   targetCityId?: string;
   targetArmyId?: string;
   /** 主作戦(支援・援護・予備のとき) */
@@ -48,6 +48,11 @@ export interface Operation {
   commander0?: string;
   /** この作戦で行った攻城戦の数(落とせないまま3回で、攻城をあきらめる) */
   sieges?: number;
+  /** 西域への遠征の作戦か */
+  expedition?: boolean;
+  /** 包囲(兵糧攻め)を始めた日。包囲は1つの作戦で1度だけ */
+  blockadeStart?: number;
+  blockaded?: boolean;
   /** 到着してから戦いが始まらないまま過ぎた日数を数えるための日付 */
   idleSince?: number;
   vsPlayer: boolean;
@@ -80,6 +85,26 @@ export interface AiStats {
   /** 複数軍団の連携(共同攻撃・援護・予備の投入)と、首都の守りに残した回数 */
   coordinated: number;
   guards: number;
+  /** 戦略方針を変えた回数 */
+  postureChanges: number;
+  /** 膠着した戦争での和平・停戦の申し入れ、従属の要求 */
+  peaceTries: number;
+  vassalDemands: number;
+  /** 軍団の再編成(小さな軍団をまとめる)・包囲(兵糧攻め)・軍備増強 */
+  reorganized: number;
+  blockades: number;
+  buildUps: number;
+  /** 長く従えた小さな属国を、併合した数 */
+  annexed: number;
+  /** 西域への自主的な遠征:計画・従属の要求・従属・出発・到着・占領・失敗・外交での決着 */
+  westPlans: number;
+  westVassalTries: number;
+  westVassals: number;
+  westDispatched: number;
+  westArrived: number;
+  westWon: number;
+  westFailed: number;
+  westDiplomatic: number;
 }
 
 export interface AiLogEntry { day: number; date: string; factionId: string; text: string }
@@ -91,10 +116,14 @@ export interface StrategySave {
   log: AiLogEntry[];
   nextOp: number;
   failed?: Record<string, number>;
+  lastCapture?: Record<string, number>;
+  expeditions?: StrategyAi["expeditions"];
 }
 
-const emptyStats = (): AiStats => ({ planned: 0, dispatched: 0, arrived: 0, fieldBattles: 0, sieges: 0, captures: 0, retreats: 0, moves: 0, vsPlayer: 0, vsPlayerSieges: 0, vsPlayerCaptures: 0, notLaunched: {}, aborted: {}, wars: 0, coordinated: 0, guards: 0, intercepts: 0 });
+const emptyStats = (): AiStats => ({ planned: 0, dispatched: 0, arrived: 0, fieldBattles: 0, sieges: 0, captures: 0, retreats: 0, moves: 0, vsPlayer: 0, vsPlayerSieges: 0, vsPlayerCaptures: 0, notLaunched: {}, aborted: {}, wars: 0, coordinated: 0, guards: 0, intercepts: 0, postureChanges: 0, peaceTries: 0, vassalDemands: 0, reorganized: 0, blockades: 0, buildUps: 0, annexed: 0, westPlans: 0, westVassalTries: 0, westVassals: 0, westDispatched: 0, westArrived: 0, westWon: 0, westFailed: 0, westDiplomatic: 0 });
 const clamp = (v: number, lo = -1, hi = 1): number => Math.max(lo, Math.min(hi, v));
+/** 外交を好む・慎重な性格なら、優勢でも膠着した戦争をやめやすい */
+const posture_hint = (p: { diplomacy: number; caution: number }): boolean => p.diplomacy + p.caution > 0.6;
 const TERRAIN_DIFFICULTY: Record<string, number> = { highMountain: 1.8, mountain: 1.45, desert: 1.3, hill: 1.15, forest: 1.1, crossing: 1.2, river: 1.1 };
 
 export class StrategyAi {
@@ -105,6 +134,14 @@ export class StrategyAi {
   private nextOp = 1;
   /** 攻めて失敗した目標(勢力|都市 → 日)。1年は同じ目標を選ばない */
   failed: Record<string, number> = {};
+  /** 2つの国のあいだで、最後に都市が奪われた日(膠着の判断に使う) */
+  lastCapture: Record<string, number> = {};
+  /** 兵力不足で出兵を見送った回数の、前の月の値(増えていれば軍備を増強する) */
+  private shortSeen: Record<string, number> = {};
+  /** 軍備増強中の勢力(月ごとに見直す) */
+  buildUp: Record<string, boolean> = {};
+  /** 西域への遠征(勢力ごとに1つ):目標の国・都市、出す軍団、段階(集結→進軍) */
+  expeditions: Record<string, { target: string; cityId: string; gateId: string; armyId: string; since: number; state: "gather" | "march"; foodNeed: number }> = {};
 
   constructor(private readonly c: Campaign) {}
 
@@ -137,8 +174,9 @@ export class StrategyAi {
   /** 開発用のログ(同じ勢力の同じ文は、30日のうちに繰り返さない) */
   note(f: string, text: string): void {
     const day = Math.floor(this.c.day);
-    if (this.log.some((l) => l.factionId === f && l.text === text && day - l.day < 30)) return;
-    this.log.push({ day, date: this.c.dateText(), factionId: f, text: `${this.name(f)}:${text}` });
+    const line = `${this.name(f)}:${text}`;
+    if (this.log.some((l) => l.factionId === f && l.text === line && day - l.day < 30)) return;
+    this.log.push({ day, date: this.c.dateText(), factionId: f, text: line });
     if (this.log.length > 400) this.log.splice(0, this.log.length - 400);
   }
 
@@ -191,6 +229,15 @@ export class StrategyAi {
     return base;
   }
 
+  /** 生きている国か(滅亡しておらず、都市を持っている) */
+  isLive(f: string): boolean {
+    return !scenario.factions.find((x) => x.id === f)?.fallen && this.c.cities.some((c) => scenario.cityOwners[c.id] === f);
+  }
+
+  private pairKey(a: string, b: string): string {
+    return a < b ? `${a}|${b}` : `${b}|${a}`;
+  }
+
   private enemyCitiesOf(f: string): City[] {
     return this.c.cities.filter((c) => this.c.atWar(f, scenario.cityOwners[c.id]));
   }
@@ -216,7 +263,8 @@ export class StrategyAi {
     const power = this.strengthOf(f);
     const rep = this.c.economy.report(f);
     const purse = this.c.factionStates[f] ?? { gold: 0, grain: 0 };
-    const enemies = scenario.factions.filter((g) => !g.fallen && g.id !== f && this.c.atWar(f, g.id));
+    // 戦争の相手は、生きている国だけ(都市を失った国との戦争は、数えない。これが300年開始の膠着の原因だった)
+    const enemies = scenario.factions.filter((g) => g.id !== f && this.c.atWar(f, g.id) && this.isLive(g.id));
     const enemyPower = enemies.reduce((s, g) => s + this.strengthOf(g.id), 0);
     const cap = this.capitalOf(f);
     // 国境の脅威:自国の都市に近い敵の軍団の力
@@ -226,8 +274,44 @@ export class StrategyAi {
     const hungry = purse.grain < rep.expense.grain * 2;
     const weakestEnemy = enemies.map((g) => ({ g, pw: this.strengthOf(g.id) })).sort((a, b) => a.pw - b.pw)[0];
     // 同盟国・属国の動き:同盟国が戦っている相手は、共通の敵になる
-    const allies = scenario.factions.filter((g) => !g.fallen && g.id !== f && ["alliance", "vassal"].includes(this.c.relationOf(f, g.id)));
-    const share = power / Math.max(1, scenario.factions.filter((g) => !g.fallen).reduce((s, g) => s + this.strengthOf(g.id), 0));
+    const allies = scenario.factions.filter((g) => this.isLive(g.id) && g.id !== f && ["alliance", "vassal"].includes(this.c.relationOf(f, g.id)));
+    const share = power / Math.max(1, scenario.factions.filter((g) => this.isLive(g.id)).reduce((s, g) => s + this.strengthOf(g.id), 0));
+
+    // 軍備増強:前の月より「兵力不足」での見送りが増えていれば、この月は募兵と軍団の編成を増やす
+    const short = this.st(f).notLaunched["兵力不足"] ?? 0;
+    const wasBuild = this.buildUp[f];
+    this.buildUp[f] = short - (this.shortSeen[f] ?? short) >= 3 && !(rep.net < 0);
+    this.shortSeen[f] = short;
+    if (this.buildUp[f] && !wasBuild) {
+      this.st(f).buildUps++;
+      this.note(f, "兵が足りず出兵できないため、軍備を増強する(募兵と軍団の編成を増やす)");
+    }
+
+    // 膠着した戦争:3年以上戦って、どちらも都市を奪えていなければ、和平・停戦を申し入れる。ずっと小さな相手には従属を求める
+    for (const g of enemies) {
+      const age = this.c.relationAge(f, g.id);
+      const last = this.lastCapture[this.pairKey(f, g.id)] ?? -99999;
+      if (Math.min(age, day) < 1080 || day - last < 1080) continue;
+      if (chance(`${day}|${f}|${g.id}|stale`) > 0.25) continue;
+      const theirs = this.strengthOf(g.id);
+      if (g.id === this.c.playerFactionId) {
+        this.c.propose(f, "peace");
+        this.st(f).peaceTries++;
+        this.note(f, `${this.name(g.id)}との戦争が3年以上膠着したため、和平を申し入れる`);
+        continue;
+      }
+      if (power > theirs * 4) {
+        const r = this.c.diplo.act(f, g.id, "vassal");
+        this.st(f).vassalDemands++;
+        this.note(f, `膠着した${this.name(g.id)}に従属を求める(${r.ok ? "受け入れ" : "拒否"})`);
+        if (r.ok) continue;
+      }
+      if (power < theirs * 1.5 || posture_hint(pers) ) {
+        const r = this.c.diplo.act(f, g.id, chance(`${day}|${f}|${g.id}|cf`) < 0.5 ? "ceasefire" : "peace");
+        this.st(f).peaceTries++;
+        this.note(f, `${this.name(g.id)}との戦争が3年以上膠着したため、${r.ok ? "和平・停戦を結んだ" : "和平・停戦を申し入れたが断られた"}`);
+      }
+    }
 
     let posture: Posture;
     let reason: string;
@@ -238,7 +322,7 @@ export class StrategyAi {
       posture = "develop";
       reason = broke ? "財政が赤字で蓄えも乏しいため内政を優先" : "兵糧が乏しいため内政を優先";
     } else if (enemies.length && weakestEnemy && power > weakestEnemy.pw * (1.1 - 0.3 * pers.aggr)) {
-      posture = pers.unify > 0.5 && share > 0.3 ? "unify" : "invade";
+      posture = (pers.unify > 0.5 && share > 0.3) || share > 0.5 ? "unify" : "invade";
       reason = `${this.name(weakestEnemy.g.id)}より兵力で優る(${Math.round(power)}対${Math.round(weakestEnemy.pw)})ため攻勢に出る`;
     } else if (enemies.length) {
       posture = "defend";
@@ -247,7 +331,7 @@ export class StrategyAi {
       posture = "diplomacy";
       reason = `戦争をしておらず、君主の性格(${pers.label})から外交で勢力を保つ`;
     } else if (pers.aggr + pers.unify * 0.5 > 0.15 || rep.net > rep.expense.total * 0.3) {
-      posture = pers.unify > 0.5 && share > 0.3 ? "unify" : "expand";
+      posture = (pers.unify > 0.5 && share > 0.3) || share > 0.5 ? "unify" : "expand";
       reason = `財政に余裕があり(収支${Math.round(rep.net)})、勢力の拡大をねらう`;
     } else {
       posture = "develop";
@@ -255,9 +339,26 @@ export class StrategyAi {
     }
     const prev = this.posture[f];
     if (!prev || prev.posture !== posture) {
+      if (prev) this.st(f).postureChanges++;
       this.posture[f] = { posture, reason, since: day };
       this.note(f, `方針を「${POSTURE_LABEL[posture]}」にする — ${reason}`);
     } else prev.reason = reason;
+
+    this.westPlan(f, power, posture, pers, day, rep.net > 0 && purse.gold > rep.expense.total * 4);
+
+    // 属国の併合:5年以上従えた、国力が1割5分に満たない属国は、平和のうちに併合することがある(西域の小国は自治を保つので除く)
+    for (const [v, o] of Object.entries(this.c.diplo.overlord)) {
+      if (o !== f || v === this.c.playerFactionId || !this.isLive(v)) continue;
+      const vc = this.citiesOf(v);
+      if (vc.every((k) => k.lon < 96)) continue;
+      if (this.c.relationAge(f, v) < 1800 || this.strengthOf(v) > power * 0.15) continue;
+      if (chance(`${day}|${f}|${v}|annex`) > 0.08) continue;
+      const vn = this.name(v);
+      this.c.annex(v, f);
+      this.st(f).annexed++;
+      this.note(f, `長く従えてきた${vn}を併合した`);
+      this.c.addNews(`${this.name(f)}が属国の${vn}を併合しました`);
+    }
 
     // 宣戦:拡大・統一の方針で、戦う相手がいないか少ないとき、弱い隣国を選ぶ(同盟・不可侵・従属の相手は除く)
     const wars = enemies.length;
@@ -272,7 +373,7 @@ export class StrategyAi {
           const near = theirs.length ? Math.min(...theirs.map((t) => Math.min(...mine.map((m) => distanceKm(m, t))))) : 9999;
           return { g, pw: this.strengthOf(g.id), near, cities: theirs.length };
         })
-        .filter((x) => x.cities > 0 && x.near < p.reachKm * 1.2 && power >= x.pw * ratioNeed)
+        .filter((x) => x.cities > 0 && x.near < p.reachKm * (posture === "unify" ? 2 : 1.2) && power >= x.pw * ratioNeed)
         // 西域の小国は、遠い中国本土の国には仕掛けない
         .filter((x) => !(mine.every((m) => m.lon < 96) && this.citiesOf(x.g.id).every((t) => t.lon >= 96)))
         .sort((a, b) => a.pw / (power + 1) + a.near / 1000 - (b.pw / (power + 1) + b.near / 1000));
@@ -317,8 +418,9 @@ export class StrategyAi {
     const wantsArmy = atWar || posture === "expand" || posture === "unify" || posture === "defend";
     if (wantsArmy && spare > 0 && rep.net > -rep.expense.total * 0.15 && purse.grain > rep.expense.grain * 2) {
       for (const city of [...mine].sort((a, b) => front(a) - front(b))) {
-        if (recruited >= (posture === "defend" || posture === "unify" ? 3 : 2)) break;
-        const want = garrisonCap(city) * 0.6 - this.c.cityState(city).garrison;
+        const build = this.buildUp[factionId];
+        if (recruited >= (posture === "defend" || posture === "unify" ? 3 : 2) + (build ? 2 : 0)) break;
+        const want = garrisonCap(city) * (build ? 0.85 : 0.6) - this.c.cityState(city).garrison;
         if (want < 100) continue;
         if (this.c.recruit(city.id, Math.min(want, p.recruitPerTurn)) === null) recruited++;
       }
@@ -336,22 +438,25 @@ export class StrategyAi {
       this.c.economy.develop(target.id, done ? (e.fortify < 20 ? "walls" : "granary") : kind);
     }
     // 軍団の維持費をまかなえないなら、新しい軍団は作らない
-    const canAffordArmy = rep.net > 120 && spare > 300;
+    // (小国でも、収支に見合えば軍団を持てるように:支出の8%か25の、大きいほうの黒字があればよい)
+    const canAffordArmy = rep.net > Math.max(25, rep.expense.total * 0.08) && spare > 150;
 
     // 軍団の編成:守備兵に余裕のある都市から出す(侵攻・統一の方針なら、1軍団多く持つ)
     const armies = this.c.armies.filter((s) => s.army.factionId === factionId);
-    const maxArmies = 1 + Math.floor(mine.length / 5) + p.extraArmies + (posture === "unify" || posture === "invade" ? 1 : 0);
+    const maxArmies = 1 + Math.floor(mine.length / 5) + p.extraArmies + (posture === "unify" || posture === "invade" ? 1 : 0) + (this.buildUp[factionId] ? 1 : 0);
     if (armies.length < maxArmies && canAffordArmy && wantsArmy) {
       const base = [...mine].filter((c) => c.kind !== "pass").sort((a, b) => this.c.cityState(b).garrison - this.c.cityState(a).garrison)[0];
       if (base) {
         const free2 = this.c.cityState(base).garrison - Math.max(rules.costs.minGarrison * 2, garrisonCap(base) * 0.25);
         const troops = Math.min(free2, rules.costs.maxArmy);
-        if (troops >= rules.costs.minArmy) {
+        // 都市が3つ以下の小国は、1,500人から軍団を作れる(大国は3,000人から)
+        const minTroops = mine.length <= 3 ? 1500 : rules.costs.minArmy;
+        if (troops >= minTroops) {
           // 軍団長:役目のない武将のうち、統率と武力の高い人(機動戦を好む君主なら統率を重んじる)
           const free = persons
             .filter((x) => x.factionId === factionId && x.role !== "strategist" && x.role !== "minister" && x.role !== "ruler" && this.c.personStatus(x.id) === "active" && !this.c.postOf(x.id))
             .sort((a, b) => b.leadership * 1.2 + b.war - (a.leadership * 1.2 + a.war))[0];
-          const raised = this.c.raiseArmy(base.id, troops, free?.id);
+          const raised = this.c.raiseArmy(base.id, troops, free?.id, minTroops);
           if (typeof raised !== "string") {
             this.note(factionId, `${base.name}で軍団を編成(${Math.round(troops)}人、軍団長:${free?.name ?? "なし"})`);
             // 副将:指揮官と相性のよい、役目のない人
@@ -441,7 +546,27 @@ export class StrategyAi {
         op.status = "arrived";
         op.idleSince = day;
         this.st(f).arrived++;
-        this.note(f, `${s.army.name}が${city.name}に到着`);
+        if (op.expedition) this.st(f).westArrived++;
+        this.note(f, `${s.army.name}が${city.name}に到着${op.expedition ? "(西域遠征)" : ""}`);
+      }
+      // 包囲(兵糧攻め):都市のそばに留まり、城の兵糧と士気を削る。士気が落ちるか、120日たてば、もう一度攻める
+      if (op.kind === "blockade" && city) {
+        if (distanceKm(s.army, city) < 70) {
+          const cs = this.c.cityState(city);
+          const iv = this.profile().interval;
+          const food = Math.max(0, cs.food - iv * 2);
+          const garrison = food <= 0 ? Math.floor(cs.garrison * 0.97) : cs.garrison;
+          this.c.cityStates[city.id] = { ...cs, food, morale: Math.max(10, cs.morale - iv * 0.6), garrison };
+          if (cs.morale < 40 || day - (op.blockadeStart ?? day) > 120) {
+            op.kind = "attack";
+            op.sieges = 0;
+            this.note(f, `${city.name}の包囲で守りが弱った(士気${Math.round(cs.morale)}・兵糧${Math.round(cs.food)})ため、ふたたび攻める`);
+            this.goTo(s, city.lon, city.lat);
+            continue;
+          }
+        } else if (s.status === "camping" && distanceKm(s.army, city) >= 70) {
+          this.goTo(s, city.lon + (s.army.lon > city.lon ? 0.35 : -0.35), city.lat);
+        }
       }
       // 撤退の判断(性格で、粘り強さが変わる)
       const pers = this.personalityOf(this.c.rulerOf(f));
@@ -468,7 +593,7 @@ export class StrategyAi {
         continue;
       }
       // 都市の前で止まったまま、戦いが始まらない:攻城をやり直す(それでも始まらなければ作戦を終える)
-      if (city && op.arrived && s.status === "camping") {
+      if (city && op.arrived && s.status === "camping" && op.kind !== "blockade") {
         if (day - (op.idleSince ?? day) > 20) {
           this.st(f).aborted["攻城が始められない"] = (this.st(f).aborted["攻城が始められない"] ?? 0) + 1;
           this.endOp(op);
@@ -478,7 +603,7 @@ export class StrategyAi {
         continue;
       }
       // 行軍が止まってしまった(経路の途中で野営):目的地へ向かい直す
-      if (city && s.status === "camping" && !op.arrived) {
+      if (city && s.status === "camping" && !op.arrived && op.kind !== "blockade") {
         if (!this.goTo(s, city.lon, city.lat)) {
           this.st(f).aborted["経路が見つからない"] = (this.st(f).aborted["経路が見つからない"] ?? 0) + 1;
           this.endOp(op);
@@ -493,12 +618,13 @@ export class StrategyAi {
 
   private military(f: string, p: StrategyProfile, mine: City[], enemyCities: City[]): void {
     this.updateOps(f, p, mine);
+    this.handleExpedition(f);
     const posture = this.posture[f]?.posture ?? "develop";
     const pers = this.factionPersonality(f);
     const cap = this.capitalOf(f);
     const all = this.c.armies.filter((s) => s.army.factionId === f);
     const free = (): ArmyState[] =>
-      all.filter((s) => this.c.armies.includes(s) && s.status !== "fighting" && !this.opOf(s.army.id) && !this.c.diplo.aidOf(s.army.id) && !this.c.history?.reservedArmy(s.army.commanderId) && !this.c.history?.taggedArmy(s.army.id));
+      all.filter((s) => this.c.armies.includes(s) && s.status !== "fighting" && !this.opOf(s.army.id) && !this.c.diplo.aidOf(s.army.id) && !this.c.history?.reservedArmy(s.army.commanderId) && !this.c.history?.taggedArmy(s.army.id) && this.expeditions[f]?.armyId !== s.army.id);
 
     // 歴史の会戦の前:主力(大きい2軍団)は、戦場に近い自国の都市に集結する
     const stage = this.c.history?.stagingFor(f);
@@ -523,6 +649,24 @@ export class StrategyAi {
       }
       if (s.supplied && distanceKm(home, a) < 60 && totalTroops(a) < rules.costs.maxArmy * rules.costs.armyGrowth && this.c.cityState(home).garrison > garrisonCap(home) * 0.45) {
         this.c.reinforce(a.id, home.id, 1500);
+      }
+    }
+
+    // 1b) 再編成:同じ都市のそばで手の空いた小さな軍団が2つあれば、小さいほうを都市に戻し、大きいほうに兵を移す
+    {
+      const small = idle().filter((x) => x.supplied && totalTroops(x.army) < rules.costs.maxArmy * 0.6);
+      for (let i = 0; i < small.length; i++) {
+        const a1 = small[i];
+        const b1 = small.slice(i + 1).find((x) => distanceKm(x.army, a1.army) < 40);
+        if (!b1) continue;
+        const [big, little] = totalTroops(a1.army) >= totalTroops(b1.army) ? [a1, b1] : [b1, a1];
+        const n = totalTroops(little.army);
+        const city = this.homeOf(little, mine);
+        if (distanceKm(city, big.army) > 60 || this.c.disbandArmy(little.army.id) !== null) continue;
+        this.c.reinforce(big.army.id, city.id, n);
+        this.st(f).reorganized++;
+        this.note(f, `${little.army.name}を${big.army.name}に合流させ、軍団を再編成(${n}人)`);
+        break;
       }
     }
 
@@ -685,6 +829,8 @@ export class StrategyAi {
       // 価値:経済・食糧・都市の格。首都と関所は戦略上重い。統一志向なら敵の首都をいっそう重んじる
       let value = 40 + (city.economy ?? 0) + (city.food ?? 0) * 0.5 + (city.kind === "pass" ? 60 : cityLevelOf(city) * 40);
       if (city.rank === "capital") value *= posture === "unify" ? 1.8 : 1.3;
+      // 反乱で生まれた勢力(自国から独立した勢力など)は、早めに討つ
+      if (/_n\d+$/.test(owner ?? "")) value *= 1.5;
       // 戦後に保てるか:自国の都市から近いほどよい
       const sustain = 1 / (1 + nearestMine / 300);
       // 自国の守りの手薄さ:首都を守る軍団がこれだけなら、首都から遠い目標は控える
@@ -752,6 +898,151 @@ export class StrategyAi {
     }
   }
 
+  // ===== 西域への自主的な遠征(Version 40.1) =====
+  /** 補給に使える拠点:自国・同盟国・属国のオアシスと河西の都市 */
+  private westBases(f: string): City[] {
+    return this.c.cities.filter((k) => {
+      const o = scenario.cityOwners[k.id];
+      if (!o || (!k.oasis && k.lon >= 101)) return false;
+      return o === f || ["alliance", "vassal"].includes(this.c.relationOf(f, o)) || this.c.diplo.overlord[o] === f;
+    });
+  }
+
+  /**
+   * 河西(敦煌・酒泉・張掖など)を持つ国が、西域の国への遠征を考える(月に1度)。
+   * 交易路の価値・敵の兵力・オアシスでの補給の届かない区間・遠征の兵糧と兵を見比べ、
+   * まず従属を求め、断られて割に合えば、軍団を集結地(オアシス)に集め、兵糧を満たしてから出発させる。
+   */
+  private westPlan(f: string, power: number, posture: Posture, pers: Personality, day: number, rich: boolean): void {
+    const mine = this.citiesOf(f);
+    if (this.c.diplo.overlord[f] || mine.every((k) => k.lon < 96) || !mine.some((k) => k.lon < 101)) return;
+    if (this.expeditions[f]) return;
+    if (!(posture === "expand" || posture === "invade" || posture === "unify" || (posture === "develop" && rich))) return;
+    if (chance(`${day}|${f}|west`) > 0.35 + 0.3 * pers.unify + 0.2 * pers.aggr) return;
+    const bases = this.westBases(f);
+    if (!bases.length) return;
+    type W = { g: string; city: City; gate: City; gap: number; trade: number; pw: number; score: number; foodNeed: number };
+    let best: W | null = null;
+    for (const fac of scenario.factions) {
+      const g = fac.id;
+      if (g === f || g === this.c.playerFactionId || !this.isLive(g)) continue;
+      const theirs = this.citiesOf(g);
+      if (!theirs.every((k) => k.lon < 96)) continue;
+      if (["alliance", "vassal"].includes(this.c.relationOf(f, g)) || this.c.diplo.overlord[g] === f) continue;
+      // 目標の都市:補給の拠点にいちばん近い都市。集結地:その都市にいちばん近い拠点
+      let city = theirs[0];
+      let gate = bases[0];
+      let dmin = Infinity;
+      for (const t of theirs) for (const b of bases) { const d = distanceKm(b, t); if (d < dmin) { dmin = d; city = t; gate = b; } }
+      const gap = Math.max(0, dmin - this.c.supplyRangeKm);
+      if (dmin > 700) continue;
+      const trade = theirs.reduce((sum, t) => sum + this.c.trade.market(t), 0);
+      // 敵の兵力:国全体ではなく、目標の都市の守り(城壁込み)と、300km以内の敵の軍団
+      const cs = this.c.cityState(city);
+      const pw = cs.garrison * (0.55 + cs.morale / 220) * wallBonus(city.defense ?? 40) + this.c.armies.filter((o) => o.army.factionId === g && distanceKm(o.army, city) < 300).reduce((sum, o) => sum + this.armyPower(o), 0);
+      // 砂漠は歩みが遅く、食糧(水を含む)を多く使う:補給の届かない区間の日数 × 2.4 + 余裕10日
+      const foodNeed = Math.min(88, (gap / (rules.plan.marchKmPerDay * 0.85)) * 2.4 + 10);
+      const score = (trade * 8 + theirs.length * 40) / (pw / 800 + gap / 120 + 1);
+      if (!best || score > best.score) best = { g, city, gate, gap, trade, pw, score, foodNeed };
+    }
+    if (!best) return;
+    const st = this.st(f);
+    st.westPlans++;
+    const gn = this.name(best.g);
+    this.note(f, `西域経略を検討:${gn}(${best.city.name})— 交易の価値${Math.round(best.trade)}・敵の兵力${Math.round(best.pw)}・補給の届かない区間${Math.round(best.gap)}km・必要な兵糧${Math.round(best.foodNeed)}日分・集結地${best.gate.name}`);
+    // 1) まず従属を求める(国力が相手の国全体の4倍以上なら)
+    if (power > this.strengthOf(best.g) * 4) {
+      st.westVassalTries++;
+      const r = this.c.diplo.act(f, best.g, "vassal");
+      if (r.ok) {
+        st.westVassals++;
+        this.note(f, `${gn}が従属を受け入れた(戦わずに西域へ勢力を広げる)`);
+        return;
+      }
+      this.note(f, `${gn}は従属を断った`);
+    }
+    // 2) 遠征の軍団:敵の兵力の1.8倍以上の、手の空いた軍団(集結地から1,500km以内)
+    const army = this.c.armies.filter((s) => s.army.factionId === f && s.status !== "fighting" && !this.opOf(s.army.id) && !this.c.history?.taggedArmy(s.army.id) && !this.c.history?.reservedArmy(s.army.commanderId) && distanceKm(s.army, best!.gate) < 2600 && this.armyPower(s) >= best!.pw * 1.6)
+      .sort((x, y) => distanceKm(x.army, best!.gate) - distanceKm(y.army, best!.gate))[0] ?? this.raiseExpedition(f, best.gate, best.pw * 1.6);
+    if (!army) {
+      st.notLaunched["西域遠征の兵が足りない"] = (st.notLaunched["西域遠征の兵が足りない"] ?? 0) + 1;
+      // 国力では十分に勝るなら、遠征のために兵を集める(募兵と軍団の編成を増やす)
+      if (power > this.strengthOf(best.g) * 1.5 && !this.buildUp[f]) {
+        this.buildUp[f] = true;
+        this.shortSeen[f] = (st.notLaunched["兵力不足"] ?? 0) - 3;
+        st.buildUps++;
+        this.note(f, `${gn}への遠征に出せる軍団がないため、兵を集める(敵の守り${Math.round(best.pw)})`);
+      } else this.note(f, `${gn}への遠征は、出せる軍団がないため見送る`);
+      return;
+    }
+    if (!this.c.atWar(f, best.g)) {
+      const r = this.c.diplo.act(f, best.g, "war");
+      if (!r.ok) return;
+      st.wars++;
+    }
+    this.expeditions[f] = { target: best.g, cityId: best.city.id, gateId: best.gate.id, armyId: army.army.id, since: day, state: "gather", foodNeed: best.foodNeed };
+    this.note(f, `${gn}への西域遠征を決定:${army.army.name}を${best.gate.name}に集結させる`);
+  }
+
+  /** 遠征の軍団を、河西・西域の自国の都市の守備兵から編成する(足りなければ undefined) */
+  private raiseExpedition(f: string, gate: City, need: number): ArmyState | undefined {
+    const near = this.citiesOf(f).filter((k) => k.kind !== "pass" && k.lon < 104).sort((a, b) => distanceKm(a, gate) - distanceKm(b, gate));
+    for (const k of near) {
+      const spare = this.c.cityState(k).garrison - Math.max(rules.costs.minGarrison, garrisonCap(k) * 0.25);
+      const troops = Math.min(spare, rules.costs.maxArmy);
+      if (troops < Math.max(1500, need * 1.1)) continue;
+      const cmd = persons.filter((x) => x.factionId === f && x.role === "general" && this.c.personStatus(x.id) === "active" && !this.c.postOf(x.id)).sort((a, b) => b.leadership + b.war - (a.leadership + a.war))[0];
+      const r = this.c.raiseArmy(k.id, troops, cmd?.id, 1500);
+      if (typeof r === "string") continue;
+      this.note(f, `${k.name}で西域遠征の軍団を編成(${Math.round(troops)}人、軍団長:${cmd?.name ?? "なし"})`);
+      return r;
+    }
+    return undefined;
+  }
+
+  /** 遠征の進み具合を見る(集結 → 兵糧を満たして出発 → 到着・攻城 → 占領か失敗) */
+  private handleExpedition(f: string): void {
+    const e = this.expeditions[f];
+    if (!e) return;
+    const st = this.st(f);
+    const day = Math.floor(this.c.day);
+    const city = this.c.cities.find((k) => k.id === e.cityId)!;
+    const gate = this.c.cities.find((k) => k.id === e.gateId)!;
+    const s = this.c.stateOf(e.armyId);
+    const owner = scenario.cityOwners[city.id];
+    const end = (why: string): void => {
+      delete this.expeditions[f];
+      this.note(f, `西域遠征(${city.name}):${why}`);
+    };
+    if (owner === f) { st.westWon++; return end("占領した"); }
+    if (!this.c.atWar(f, e.target) || this.c.diplo.overlord[e.target] === f) { st.westDiplomatic++; return end(`${this.name(e.target)}と和平・従属で決着した`); }
+    if (!s) { st.westFailed++; return end("遠征軍を失った"); }
+    if (e.state === "gather") {
+      if (day - e.since > 360) { st.westFailed++; return end("集結が1年を過ぎたため取りやめた"); }
+      if (s.status === "fighting") return;
+      if (distanceKm(s.army, gate) > 60) {
+        if (s.status !== "marching") this.goTo(s, gate.lon, gate.lat);
+        return;
+      }
+      // 集結地で兵糧を満たしてから出発する(オアシスでの補給)
+      if (s.army.food < e.foodNeed || !s.supplied) return;
+      const route = this.c.planRoute(s.army.id, city, 3);
+      if (!route) { st.westFailed++; return end("道が見つからない"); }
+      this.c.orderMove(s.army.id, route);
+      st.moves++;
+      st.dispatched++;
+      st.westDispatched++;
+      const op = this.addOp(f, s, "attack", { targetCityId: city.id, reason: "西域遠征", expedition: true });
+      if (op.vsPlayer) st.vsPlayer++;
+      this.c.logistics.expeditions[f] = (this.c.logistics.expeditions[f] ?? 0) + 1;
+      e.state = "march";
+      this.note(f, `${s.army.name}が${gate.name}から${city.name}へ出発(兵糧${Math.round(s.army.food)}日分・西域遠征)`);
+      return;
+    }
+    // 進軍中:作戦が終わっていれば(撤退・中止)、遠征は失敗
+    if (!this.opOf(s.army.id)) { st.westFailed++; return end("遠征軍が引き返した"); }
+  }
+
   // ===== 戦闘の記録(Campaign から呼ぶ) =====
   onBattleStart(e: BattleEvent): void {
     const ai = (f: string): boolean => f !== this.c.playerFactionId;
@@ -766,6 +1057,7 @@ export class StrategyAi {
       op.arrived = true;
       op.status = "arrived";
       this.st(op.factionId).arrived++;
+      if (op.expedition) this.st(op.factionId).westArrived++;
     }
     // プレイヤーの都市への攻城は、どの任務(攻撃・迎撃の追撃など)から起きたものでも数える
     if (e.battleType === "siege_battle" && e.defenderFactionId === this.c.playerFactionId && ai(e.attackerFactionId)) this.st(e.attackerFactionId).vsPlayerSieges++;
@@ -773,8 +1065,10 @@ export class StrategyAi {
 
   onBattleResult(e: BattleEvent, r: BattleResult): void {
     const f = e.attackerFactionId;
+    if (r.siege?.captured) this.lastCapture[this.pairKey(f, e.defenderFactionId)] = Math.floor(this.c.day);
     if (f === this.c.playerFactionId) return;
     if (r.siege?.captured) {
+      this.lastCapture[this.pairKey(f, e.defenderFactionId)] = Math.floor(this.c.day);
       this.st(f).captures++;
       if (e.defenderFactionId === this.c.playerFactionId) this.st(f).vsPlayerCaptures++;
       this.note(f, `${e.location.name}を攻め落とした`);
@@ -783,6 +1077,17 @@ export class StrategyAi {
     } else if (r.winner === "defender") {
       const op = this.opOf(e.attackerArmyId);
       const s = this.c.stateOf(e.attackerArmyId);
+      // 攻城に失敗しても、兵が6割以上残り、兵糧に余裕があれば、攻め方を変えて包囲(兵糧攻め)に移る(1つの作戦で1度だけ)
+      const city = e.defenderCityId ? this.c.cities.find((k) => k.id === e.defenderCityId) : undefined;
+      if (op && s && city && e.battleType === "siege_battle" && !op.blockaded && op.status !== "retreating" && totalTroops(s.army) >= op.troops0 * 0.6 && (s.supplied || s.army.food >= 60)) {
+        op.kind = "blockade";
+        op.blockaded = true;
+        op.blockadeStart = Math.floor(this.c.day);
+        this.st(f).blockades++;
+        this.note(f, `${city.name}を力攻めで落とせないため、攻め方を変えて包囲する(兵糧攻め)`);
+        this.goTo(s, city.lon + (s.army.lon > city.lon ? 0.35 : -0.35), city.lat);
+        return;
+      }
       if (op && s && op.status !== "retreating") {
         const mine = this.citiesOf(f);
         if (mine.length) this.retreat(op, s, mine, `${e.location.name}の戦いに敗れた`, "戦いに敗れた");
@@ -792,7 +1097,7 @@ export class StrategyAi {
 
   // ===== 保存 =====
   serialize(): StrategySave {
-    return JSON.parse(JSON.stringify({ ops: this.ops, stats: this.stats, posture: this.posture, log: this.log.slice(-150), nextOp: this.nextOp, failed: this.failed })) as StrategySave;
+    return JSON.parse(JSON.stringify({ ops: this.ops, stats: this.stats, posture: this.posture, log: this.log.slice(-150), nextOp: this.nextOp, failed: this.failed, lastCapture: this.lastCapture, expeditions: this.expeditions })) as StrategySave;
   }
 
   restore(save: StrategySave | undefined): void {
@@ -802,6 +1107,8 @@ export class StrategyAi {
     this.log = [];
     this.nextOp = 1;
     this.failed = {};
+    this.lastCapture = {};
+    this.expeditions = {};
     if (!save) return;
     this.ops = (save.ops ?? []).filter((o) => this.c.stateOf(o.armyId));
     this.stats = save.stats ?? {};
@@ -810,5 +1117,7 @@ export class StrategyAi {
     this.log = save.log ?? [];
     this.nextOp = save.nextOp ?? 1;
     this.failed = { ...(save.failed ?? {}) };
+    this.lastCapture = { ...(save.lastCapture ?? {}) };
+    this.expeditions = { ...(save.expeditions ?? {}) };
   }
 }

@@ -22,6 +22,8 @@ export interface SaveMenuActions {
   /** 開発用:敵AIの判断ログと、行動の集計 */
   aiLog?(): { date: string; text: string }[];
   aiSummary?(): string;
+  /** 実機テスト用:FPSの表示を切り替える */
+  setFps?(on: boolean): void;
 }
 
 /** 難易度の札(画面に出す4段階)。効果の数字は strategyAi.json にあり、ここには名前と一言だけを書く */
@@ -45,6 +47,8 @@ export class SaveMenu {
       try { localStorage.setItem("goko-dev", on ? "1" : ""); } catch { /* 保存できなくても表示はする */ }
       this.renderDev(on);
     });
+
+    this.q<HTMLInputElement>("#menu-fps").addEventListener("change", (e) => actions.setFps?.((e.target as HTMLInputElement).checked));
 
     // 設定
     const faction = this.q<HTMLSelectElement>("#menu-faction");
@@ -148,6 +152,7 @@ export class SaveMenu {
     let dev = false;
     try { dev = localStorage.getItem("goko-dev") === "1"; } catch { /* 読めなければ隠す */ }
     this.q<HTMLInputElement>("#menu-dev").checked = dev;
+    try { this.q<HTMLInputElement>("#menu-fps").checked = localStorage.getItem("goko-fps") === "1"; } catch { /* 読めなければ切る */ }
     this.renderDev(dev);
     this.say("");
     this.root.hidden = false;

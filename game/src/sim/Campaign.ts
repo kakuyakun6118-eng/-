@@ -237,7 +237,14 @@ export class Campaign {
   /** 歴史の流れ:通常・史実重視・自由歴史(Version 40で「通常」を追加) */
   historyMode: "normal" | "historic" | "free" = "historic";
   /** 兵站の記録:補給が尽きて失った兵(国ごと)・砂漠や山での損耗 */
-  readonly logistics: { attrition: Record<string, number>; expeditions: Record<string, number> } = { attrition: {}, expeditions: {} };
+  readonly logistics: { attrition: Record<string, number>; expeditions: Record<string, number>; losses?: Record<string, Record<string, number>> } = { attrition: {}, expeditions: {}, losses: {} };
+
+  /** 兵の損失を、原因ごとに数える(報告用。同じ損失を二度数えない:会戦は会戦の結果で、消耗は日々の消耗で) */
+  addLoss(factionId: string, cause: string, n: number): void {
+    if (n <= 0) return;
+    const L = ((this.logistics.losses ??= {})[factionId] ??= {});
+    L[cause] = (L[cause] ?? 0) + n;
+  }
 
   relationOf(a: string, b: string): Relation {
     const r = this.relations[[a, b].sort().join("|")] ?? "neutral";
@@ -388,14 +395,14 @@ export class Campaign {
   }
 
   /** 出陣:都市の守備兵から、新しい軍団を作る。できないときは理由を返す */
-  raiseArmy(cityId: string, troops: number, commanderId?: string): ArmyState | string {
+  raiseArmy(cityId: string, troops: number, commanderId?: string, minTroops: number = strategyRules.costs.minArmy): ArmyState | string {
     const city = this.cities.find((c) => c.id === cityId);
     const owner = city ? scenario.cityOwners[city.id] : undefined;
     const st = owner ? this.factionStates[owner] : undefined;
     if (!city || !owner || !st) return "都市が見つかりません";
     const state = this.cityState(city);
     const n = Math.floor(troops);
-    if (n < strategyRules.costs.minArmy) return `軍団は ${strategyRules.costs.minArmy.toLocaleString("ja-JP")}人以上で編成します`;
+    if (n < minTroops) return `軍団は ${minTroops.toLocaleString("ja-JP")}人以上で編成します`;
     if (state.garrison - n < strategyRules.costs.minGarrison) return `守備兵を ${strategyRules.costs.minGarrison}人は残す必要があります`;
     const grain = (n / 100) * strategyRules.costs.grainPer100TroopsToRaise;
     if (st.grain < grain) return `糧が足りません(必要 ${Math.ceil(grain)})`;
@@ -538,6 +545,7 @@ export class Campaign {
     this.trade.restore(data.trade);
     this.logistics.attrition = { ...(data.logistics?.attrition ?? {}) };
     this.logistics.expeditions = { ...(data.logistics?.expeditions ?? {}) };
+    this.logistics.losses = JSON.parse(JSON.stringify(data.logistics?.losses ?? {}));
     this.pendingAuto.length = 0;
     for (const k of Object.keys(this.personStates)) delete this.personStates[k];
     Object.assign(this.personStates, data.personStates);
@@ -1765,6 +1773,12 @@ export class Campaign {
       const s = armyId ? this.stateOf(armyId) : undefined;
       if (!s) return null;
       const a = s.army;
+      // 損失の内訳(Version 40.1):会戦で失った兵を、敗走・撤退した側とそれ以外に分けて数える(兵糧不足の消耗とは別)
+      {
+        const lost = Math.max(0, totalTroops({ troops: r.before } as Army) - totalTroops({ troops: r.after } as Army));
+        const cause = r.outcome === "routed" || r.outcome === "retreated" || r.outcome === "annihilated" ? "会戦で敗走・撤退した側の損失" : "会戦の損失(勝ち・引き分け・持ちこたえた側)";
+        this.addLoss(a.factionId, cause, lost);
+      }
       a.troops = { ...r.after };
       a.morale = r.morale;
       a.fatigue = r.fatigue;
@@ -1907,6 +1921,11 @@ export class Campaign {
         const before = totalTroops(a);
         for (const k of Object.keys(a.troops) as UnitTypeId[]) a.troops[k] = Math.floor(a.troops[k] * (kind === "desert" ? 0.95 : 0.97));
         this.logistics.attrition[a.factionId] = (this.logistics.attrition[a.factionId] ?? 0) + before - totalTroops(a);
+        // 兵糧不足の消耗の内訳:呂光の遠征 / 砂漠 / 山岳 / それ以外。撤退中かどうかも分ける(1日に1回だけ数える)
+        const lv = a.commanderId === "lv_guang" || /西域遠征/.test(a.name);
+        const retreating = this.strategy.opOf(a.id)?.status === "retreating";
+        const where = lv ? "呂光の西域遠征(兵糧・水の不足)" : kind === "desert" ? "砂漠での兵糧・水の不足" : kind === "highMountain" || kind === "mountain" || kind === "hill" ? "山岳での兵糧不足" : "平地での兵糧不足";
+        this.addLoss(a.factionId, `${where}${retreating && !lv ? "(撤退中)" : ""}${s.supplied ? "(補給範囲内)" : ""}`, before - totalTroops(a));
       }
     } else if (a.fatigue > 75) {
       a.morale -= 2;

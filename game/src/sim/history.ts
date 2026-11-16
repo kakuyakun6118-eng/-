@@ -512,6 +512,12 @@ export class HistorySystem {
     else if (mode === "free") {
       const early = hist - now <= 15 * 12;
       out.push({ label: `自由歴史:史実(${d.year}年${d.month}月)より早い発動(15年前まで)`, ok: early, why: early ? undefined : `史実の年月まで${Math.ceil((hist - now) / 12)}年あり、早すぎる` });
+      // 早い発動では、主要人物が成人(15歳以上)していること(子どもが国を建てたりしない)
+      for (const id of d.persons.slice(0, 2)) {
+        const p = P(id);
+        const age = p?.born != null ? year - p.born : null;
+        if (age !== null && age < 15) out.push({ label: `早い発動:主要人物の${p!.name}が成人している`, ok: false, why: `${p!.name}はまだ${age}歳(史実の年には${d.year - p!.born!}歳)` });
+      }
     } else out.push({ label: `史実の年月(${d.year}年${d.month}月)に達している`, ok: false, why: `まだ${c.dateText()}。${mode === "historic" ? "史実重視" : "通常"}のモードでは、史実の年月より前には発動できない(自由歴史では早めの発動ができる)` });
     // 2) 関係国家が存在する
     for (const role of Object.keys(d.choices)) {

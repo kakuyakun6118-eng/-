@@ -705,6 +705,7 @@ export class Court {
       ?? order.find((o) => o.reason.startsWith("有力な武将") && o.p.id !== next.id && this.c.postOf(o.p.id)?.kind === "army" && (L.fame[o.p.id] ?? 0) >= 60 && (L.loyalty[o.p.id] ?? 60) < 50);
     if (claimant && chance(`${Math.floor(this.c.day)}|${f}|dispute`) < risk.value) {
       this.counts.disputes++;
+      this.c.loyalty.noteDispute(f);
       this.addStability(f, -15);
       this.c.loyalty.add(claimant.p.id, -25, `${next.name}の即位に不満(継承争い)`);
       this.note(f, `継承争い:${claimant.p.name}が${next.name}の即位を認めない(${risk.parts.join("・")})`);
@@ -1045,6 +1046,7 @@ export class Court {
       if (rival) {
         this.c.loyalty.add(rival.id, -30, `${who.name}の簒奪`);
         this.counts.disputes++;
+        this.c.loyalty.noteDispute(f.id);
         this.pendingClaim = { f: f.id, claimant: rival.id };
         this.resolveClaim();
       }

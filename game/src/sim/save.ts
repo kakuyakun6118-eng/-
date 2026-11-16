@@ -54,7 +54,7 @@ export interface CampaignSave {
   history?: import("./history").HistorySave;
   /** 交易と兵站の記録。古いセーブには無い */
   trade?: import("./trade").TradeSave;
-  logistics?: { attrition: Record<string, number>; expeditions: Record<string, number> };
+  logistics?: { attrition: Record<string, number>; expeditions: Record<string, number>; losses?: Record<string, Record<string, number>> };
   /** 戦略AIの作戦・記録(Version 40)。古いセーブには無い */
   strategy?: import("./strategy").StrategySave;
   /** 人物の所在(Version 40)。古いセーブには無い(そのときは開始時の配置から作る) */

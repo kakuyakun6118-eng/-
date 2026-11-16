@@ -41,6 +41,7 @@
       <button id="trade-open" type="button" aria-pressed="false">交易路</button>
       <button id="supply-open" type="button" aria-pressed="false">補給</button>
       <section id="overlay-panel" hidden></section>
+      <p id="fps-meter" hidden></p>
       <section id="info" hidden>
         <div class="info-inner">
           <div class="info-head">
@@ -468,6 +469,7 @@
               <label for="menu-opacity">領土の色の濃さ</label>
               <input id="menu-opacity" type="range" min="0.3" max="1.6" step="0.1" />
               <label class="dev-toggle"><input id="menu-dev" type="checkbox" /> 開発用の表示(敵AIの判断ログ)</label>
+              <label class="dev-toggle"><input id="menu-fps" type="checkbox" /> 画面のなめらかさ(FPS)を表示する(実機テスト用)</label>
               <div id="menu-dev-panel" hidden>
                 <p class="dev-summary"></p>
                 <ol class="dev-log"></ol>

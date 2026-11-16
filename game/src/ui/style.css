@@ -4007,3 +4007,7 @@ select:focus-visible {
 .ev-fire:disabled { opacity: 0.5; cursor: not-allowed; }
 .ev-why { color: #f0a08c; }
 @media (max-width: 1100px) { .ev-body { grid-template-columns: 1fr; } }
+
+/* FPSの表示(実機テスト用) */
+#fps-meter { position: absolute; left: max(16px, env(safe-area-inset-left, 0px)); top: calc(96px + env(safe-area-inset-top, 0px)); z-index: 30; margin: 0; padding: 2px 8px; background: rgba(0, 0, 0, 0.7); color: #9fe0a8; font: 12px/1.4 monospace; pointer-events: none; }
+#fps-meter[hidden] { display: none; }

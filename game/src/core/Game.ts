@@ -325,6 +325,7 @@ export class Game {
       settings: () => this.settings(),
       changeSettings: (change) => this.changeSettings(change),
       aiLog: () => this.campaign.strategy.log,
+      setFps: (on) => this.setFpsMeter(on),
       aiSummary: () => {
         const t = this.campaign.strategy.totals();
         const top = (r: Record<string, number>): string => Object.entries(r).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, v]) => `${k}${v}`).join("・") || "なし";
@@ -460,6 +461,7 @@ export class Game {
     new ResizeObserver(() => this.resize()).observe(root);
     this.resize();
     this.renderer.setAnimationLoop(() => this.frame());
+    try { if (localStorage.getItem("goko-fps") === "1") this.setFpsMeter(true); } catch { /* 読めなければ表示しない */ }
   }
 
   // ===== 領土 =====
@@ -1223,7 +1225,30 @@ export class Game {
     this.dirty = true;
   }
 
+  /** FPSの計測(実機テスト用):1秒ごとに、描いたフレームの数と、いちばん長かったフレームの時間を出す */
+  private fps = { on: false, frames: 0, since: 0, worst: 0, last: 0 };
+  setFpsMeter(on: boolean): void {
+    this.fps = { on, frames: 0, since: performance.now(), worst: 0, last: performance.now() };
+    (this.root.querySelector("#fps-meter") as HTMLElement).hidden = !on;
+    try { localStorage.setItem("goko-fps", on ? "1" : ""); } catch { /* 保存できなくても表示はする */ }
+  }
+  private tickFps(): void {
+    if (!this.fps.on) return;
+    const now = performance.now();
+    this.fps.frames++;
+    this.fps.worst = Math.max(this.fps.worst, now - this.fps.last);
+    this.fps.last = now;
+    if (now - this.fps.since >= 1000) {
+      const v = (this.fps.frames * 1000) / (now - this.fps.since);
+      (this.root.querySelector("#fps-meter") as HTMLElement).textContent = `FPS ${v.toFixed(1)}・最長フレーム ${Math.round(this.fps.worst)}ms${this.battle ? "(会戦中)" : ""}`;
+      this.fps.frames = 0;
+      this.fps.worst = 0;
+      this.fps.since = now;
+    }
+  }
+
   private frame(): void {
+    this.tickFps();
     // 領土の塗り直しの続き(1フレームに1区切り)
     this.territory.ensure();
     if (this.territoryJob) {

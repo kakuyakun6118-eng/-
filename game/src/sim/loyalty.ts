@@ -65,7 +65,7 @@ export class LoyaltySystem {
   private lastUnrest: Record<string, number> = {};
   private lastGlobalUnrest = -9999;
   /** 政治の混乱の記録:大敗・君主の交代の日、1年前からの都市の数 */
-  crisis: Record<string, { defeat?: number; ruler?: number; cities: number[] }> = {};
+  crisis: Record<string, { defeat?: number; ruler?: number; dispute?: number; cities: number[] }> = {};
   /** 反乱・寝返りの件数(検証と画面のため) */
   counts = { rebellions: 0, defections: 0 };
 
@@ -154,6 +154,37 @@ export class LoyaltySystem {
       v -= 5;
       parts.push("君主より名声が高い");
     }
+    // 国の危機(Version 40.1):大敗・君主の交代・継承争い・領土の急な縮小・国内の不安定は、忠誠そのものを下げる
+    const day = Math.floor(this.c.day);
+    const cr = this.crisis[p.factionId];
+    if (cr?.defeat !== undefined && day - cr.defeat < 180) {
+      v -= 6;
+      parts.push("大敗の直後");
+    }
+    if (cr?.ruler !== undefined && day - cr.ruler < 360) {
+      v -= isKin(p, r) ? 3 : 7;
+      parts.push("君主の交代の直後(新しい君主への不安)");
+    }
+    if (cr?.dispute !== undefined && day - cr.dispute < 360) {
+      v -= 6;
+      parts.push("継承争い");
+    }
+    const now = this.c.cities.filter((x) => scenario.cityOwners[x.id] === p.factionId).length;
+    if (cr && cr.cities.length >= 12 && now < cr.cities[0] * 0.7) {
+      v -= 6;
+      parts.push("領土の急な縮小");
+    }
+    const stab = this.c.court?.stability[p.factionId] ?? 60;
+    if (stab < 40) {
+      v -= (40 - stab) * 0.25;
+      parts.push(`国内の不安定(安定度${Math.round(stab)})`);
+    }
+    // 野心:大軍(8,000人以上)を率いる、武勇と名声のある将は、君主を軽んじやすい
+    const army = this.c.armies.find((s) => s.army.commanderId === p.id && s.army.factionId === p.factionId);
+    if (army && army.army.troops.infantry + army.army.troops.cavalry + army.army.troops.archer >= 8000 && p.war + p.leadership >= 160 && (this.fame[p.id] ?? 0) >= 60) {
+      v -= 5;
+      parts.push("野心(大軍を率いる有力な将)");
+    }
     return { value: Math.max(0, Math.min(100, v)), parts };
   }
 
@@ -205,6 +236,10 @@ export class LoyaltySystem {
     (this.crisis[factionId] ??= { cities: [] }).defeat = Math.floor(this.c.day);
   }
 
+  noteDispute(factionId: string): void {
+    (this.crisis[factionId] ??= { cities: [] }).dispute = Math.floor(this.c.day);
+  }
+
   noteRulerChange(factionId: string): void {
     (this.crisis[factionId] ??= { cities: [] }).ruler = Math.floor(this.c.day);
   }
@@ -230,6 +265,10 @@ export class LoyaltySystem {
     if (cr.ruler !== undefined && day - cr.ruler < 180) {
       f += 1.5;
       why.push("君主の交代の直後");
+    }
+    if (cr.dispute !== undefined && day - cr.dispute < 360) {
+      f += 1;
+      why.push("継承争い");
     }
     const now = this.c.cities.filter((x) => scenario.cityOwners[x.id] === factionId).length;
     if (cr.cities.length >= 12 && now < cr.cities[0] * 0.7) {
