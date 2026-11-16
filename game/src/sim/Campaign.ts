@@ -1889,7 +1889,8 @@ export class Campaign {
       a.food -= 0.5;
     }
     if (marching) {
-      a.food -= 1;
+      // 補給の届く範囲の行軍は、道中で補給を受ける(Version 40:味方の領内の長い山道で飢えないように)
+      a.food += s.supplied ? 0.5 : -1;
       a.fatigue += 3 * Math.min(2, this.grid.costAt(a.lon, a.lat) || 1);
     } else {
       a.fatigue -= 8;

@@ -90,6 +90,7 @@ export interface StrategySave {
   posture: Record<string, { posture: Posture; reason: string; since: number }>;
   log: AiLogEntry[];
   nextOp: number;
+  failed?: Record<string, number>;
 }
 
 const emptyStats = (): AiStats => ({ planned: 0, dispatched: 0, arrived: 0, fieldBattles: 0, sieges: 0, captures: 0, retreats: 0, moves: 0, vsPlayer: 0, vsPlayerSieges: 0, vsPlayerCaptures: 0, notLaunched: {}, aborted: {}, wars: 0, coordinated: 0, guards: 0, intercepts: 0 });
@@ -102,6 +103,8 @@ export class StrategyAi {
   posture: Record<string, { posture: Posture; reason: string; since: number }> = {};
   log: AiLogEntry[] = [];
   private nextOp = 1;
+  /** 攻めて失敗した目標(勢力|都市 → 日)。1年は同じ目標を選ばない */
+  failed: Record<string, number> = {};
 
   constructor(private readonly c: Campaign) {}
 
@@ -389,6 +392,7 @@ export class StrategyAi {
 
   private retreat(op: Operation, s: ArmyState, mine: City[], why: string, key = why): void {
     const home = this.homeOf(s, mine);
+    if (op.targetCityId) this.failed[`${op.factionId}|${op.targetCityId}`] = Math.floor(this.c.day);
     op.status = "retreating";
     this.st(op.factionId).retreats++;
     this.st(op.factionId).aborted[key] = (this.st(op.factionId).aborted[key] ?? 0) + 1;
@@ -445,7 +449,7 @@ export class StrategyAi {
       const lossLimit = rules.plan.retreatLoss * (1 + 0.3 * (pers.aggr + cmd.aggr) / 2 - 0.3 * (pers.caution + cmd.caution) / 2);
       const troops = totalTroops(s.army);
       const home = this.homeOf(s, mine);
-      const backDays = distanceKm(home, s.army) / rules.plan.marchKmPerDay;
+      const backDays = (distanceKm(home, s.army) * (TERRAIN_DIFFICULTY[this.c.terrainOf(s)] ?? 1) ** 2) / rules.plan.marchKmPerDay;
       const near = this.c.armies.filter((o) => this.c.atWar(f, o.army.factionId) && distanceKm(o.army, s.army) < 150);
       const relief = near.reduce((sum, o) => sum + this.armyPower(o), 0);
       const capThreat = cap ? this.c.armies.filter((o) => this.c.atWar(f, o.army.factionId) && distanceKm(o.army, cap) < 120).reduce((sum, o) => sum + this.armyPower(o), 0) : 0;
@@ -638,6 +642,9 @@ export class StrategyAi {
       // 遠さは、自国のいちばん近い都市から測る(軍団は前線へ進んでから攻める)。軍団からは、その倍まで
       const nearestMine = Math.min(...mine.map((m) => distanceKm(m, city)));
       if (nearestMine > reach || dist > reach * 2.2) { reject("目標が遠すぎる"); continue; }
+      // 最近(1年以内に)攻めて失敗した目標は、しばらく選ばない
+      const failedAt = this.failed[`${f}|${city.id}`];
+      if (failedAt !== undefined && this.c.day - failedAt < 360) { reject("最近失敗した目標"); continue; }
       // 西域の小国は、遠い中国本土へは攻め込まない(自国の都市から600km以内だけ)
       if (mine.every((m) => m.lon < 96) && city.lon >= 96 && nearestMine > 600) { reject("小国の遠征は無謀"); continue; }
       // 到着までの日数(地形の難しさで延びる)
@@ -646,7 +653,8 @@ export class StrategyAi {
       const days = (dist * difficulty) / (rules.plan.marchKmPerDay * (1 + 0.15 * cmd.mobility));
       // 兵糧:補給の届かない区間を歩く日数ぶん(往きと、包囲の日数)を持っていること
       const gap = Math.max(0, nearestMine - this.c.supplyRangeKm);
-      const foodNeed = (gap / rules.plan.marchKmPerDay) * foodMargin * 2 + rules.plan.foodReserveDays;
+      // 山地・高山・砂漠では歩みが遅いので、その分の日数で見積もる
+      const foodNeed = ((gap * difficulty * difficulty) / rules.plan.marchKmPerDay) * foodMargin * 2 + rules.plan.foodReserveDays;
       if (gap > 0 && a.food < foodNeed) { reject("兵糧不足"); continue; }
       // 守りの強さ(自動戦闘と同じ式)+ 敵の援軍の見込み
       const cs = this.c.cityState(city);
@@ -707,7 +715,11 @@ export class StrategyAi {
           const front = [...mine].filter((m) => m.kind !== "pass")
             .map((m) => ({ m, d: Math.min(...enemyCities.map((e) => distanceKm(m, e))) }))
             .sort((x, y) => x.d - y.d)[0];
-          if (front && distanceKm(front.m, a) > 120 && front.d < distanceKm(a, near[0] ?? front.m) && this.goTo(s, front.m.lon, front.m.lat)) {
+          // ただし、遠すぎる前線(900km超)へは送らない。同じ前線に集める軍団は2つまで。
+          // 中国本土の軍団を、補給の届かない西域の前線へ大移動させることはしない(大国の無謀な遠征の防止)
+          const heading = front ? this.c.armies.filter((x) => x.army.factionId === f && x !== s && distanceKm(x.army, front.m) < 120).length : 0;
+          const crossRegion = front ? (a.lon >= 96) !== (front.m.lon >= 96) : false;
+          if (front && !crossRegion && heading < 2 && distanceKm(front.m, a) > 120 && distanceKm(front.m, a) < 900 && front.d < distanceKm(a, near[0] ?? front.m) && this.goTo(s, front.m.lon, front.m.lat)) {
             this.note(f, `${a.name}を前線の${front.m.name}へ進めて集結させる(敵の都市まで${Math.round(front.d)}km)`);
             return;
           }
@@ -779,7 +791,7 @@ export class StrategyAi {
 
   // ===== 保存 =====
   serialize(): StrategySave {
-    return JSON.parse(JSON.stringify({ ops: this.ops, stats: this.stats, posture: this.posture, log: this.log.slice(-150), nextOp: this.nextOp })) as StrategySave;
+    return JSON.parse(JSON.stringify({ ops: this.ops, stats: this.stats, posture: this.posture, log: this.log.slice(-150), nextOp: this.nextOp, failed: this.failed })) as StrategySave;
   }
 
   restore(save: StrategySave | undefined): void {
@@ -788,6 +800,7 @@ export class StrategyAi {
     this.posture = {};
     this.log = [];
     this.nextOp = 1;
+    this.failed = {};
     if (!save) return;
     this.ops = (save.ops ?? []).filter((o) => this.c.stateOf(o.armyId));
     this.stats = save.stats ?? {};
@@ -795,5 +808,6 @@ export class StrategyAi {
     this.posture = save.posture ?? {};
     this.log = save.log ?? [];
     this.nextOp = save.nextOp ?? 1;
+    this.failed = { ...(save.failed ?? {}) };
   }
 }
