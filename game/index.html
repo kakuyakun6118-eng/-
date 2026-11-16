@@ -323,6 +323,16 @@
           </div>
         </div>
       </section>
+      <section id="gameover" hidden>
+        <div class="persons-inner gameover-inner">
+          <h2>国は滅びた</h2>
+          <p class="gameover-text"></p>
+          <div class="gameover-buttons">
+            <button class="gameover-load" type="button">セーブを読み込む</button>
+            <button class="gameover-scenario" type="button">シナリオを選ぶ</button>
+          </div>
+        </div>
+      </section>
       <section id="scenarios" hidden>
         <div class="persons-inner">
           <div class="persons-head">
@@ -355,6 +365,11 @@
               <label>敵の強さ(難易度)</label>
               <div id="menu-difficulty" class="difficulty-cards" role="radiogroup" aria-label="敵の強さ"></div>
               <p class="difficulty-note">資金や兵が無から増えることはありません。変わるのは、敵の判断の速さ・攻める基準・徴兵の量・軍団の数です。地形を読んだ戦略判断は、まだ実装していません。</p>
+              <label>自分の君主が捕らえられ、国が滅びたとき</label>
+              <div class="fall-choice" role="radiogroup" aria-label="国が滅びたとき">
+                <button type="button" data-value="gameover">ゲームオーバー</button>
+                <button type="button" data-value="continue">後継国家で続ける</button>
+              </div>
               <label for="menu-opacity">領土の色の濃さ</label>
               <input id="menu-opacity" type="range" min="0.3" max="1.6" step="0.1" />
               <h3>書き出しと読み込み</h3>

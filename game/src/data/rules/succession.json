@@ -1,0 +1,63 @@
+{
+ "note": "君主が捕らえられたとき、国が滅びて独立する人物の候補(史実で独立・建国・後継した人物を先に書く)。state は国号、title は称号。史実で王・公を称した人物は、その称号から始める。並びが優先の順。候補が死亡・捕虜・他勢力の所属なら、次の候補へ進む。",
+ "rules": {
+  "han_zhao": [
+   {"person": "liu_yao", "state": "趙(前趙)", "title": "皇帝", "note": "318年、靳準の乱ののち長安で即位し、国号を趙と改めた(史実)"},
+   {"person": "shi_le", "state": "趙(後趙)", "title": "趙王", "note": "319年に劉曜と決裂し、襄国で趙王を称した(史実)"},
+   {"person": "liu_can", "state": "漢", "title": "皇帝", "note": "劉聡の子。318年に帝位を継いだ(史実)"},
+   {"person": "liu_xi", "state": "趙(前趙)", "title": "皇帝", "note": "劉曜の太子(史実では329年に上邽で滅ぶ)"},
+   {"person": "liu_yin", "state": "趙(前趙)", "title": "皇帝"}
+  ],
+  "shile": [
+   {"person": "shi_hu", "state": "趙(後趙)", "title": "天王", "note": "334年に石弘を廃し、のちに天王・皇帝を称した(史実)"},
+   {"person": "shi_hong", "state": "趙(後趙)", "title": "皇帝", "note": "石勒の世子(史実で後を継いだ)"}
+  ],
+  "jin": [
+   {"person": "sima_rui", "state": "晋(東晋)", "title": "晋王", "note": "317年に晋王、318年に皇帝(史実)"},
+   {"person": "sima_bao", "state": "晋(秦州)", "title": "晋王", "note": "愍帝の死後、上邽で晋王を称した(史実)"},
+   {"person": "sima_shao", "state": "晋(東晋)", "title": "皇帝"},
+   {"person": "sima_yu", "state": "晋(東晋)", "title": "皇帝"}
+  ],
+  "jin_rui": [{"person": "sima_rui", "state": "晋(東晋)", "title": "晋王"}],
+  "qianqin": [
+   {"person": "fu_jian", "state": "秦(前秦)", "title": "天王", "note": "357年に苻生を廃して即位(史実)"},
+   {"person": "murong_chui", "state": "燕(後燕)", "title": "燕王", "note": "淝水の敗戦ののち、384年に燕王を称した(史実)"},
+   {"person": "yao_chang", "state": "秦(後秦)", "title": "秦王", "note": "384年に万年秦王を称した(史実)"},
+   {"person": "murong_chong", "state": "燕(西燕)", "title": "皇帝", "note": "385年に阿房で皇帝を称した(史実)"},
+   {"person": "lv_guang", "state": "涼(後涼)", "title": "酒泉公", "note": "386年に姑臧で自立した(史実)"},
+   {"person": "qifu_guoren", "state": "秦(西秦)", "title": "大単于", "note": "385年に自立した(史実)"},
+   {"person": "tuoba_gui", "state": "代(北魏)", "title": "代王", "note": "386年に代王に即位した(史実。開始時は12歳のため、兵を持つことは少ない)"},
+   {"person": "fu_pi", "state": "秦(前秦)", "title": "皇帝", "note": "苻堅の死後、晋陽で即位した(史実)"}
+  ],
+  "qianyan": [
+   {"person": "murong_ke", "state": "燕(前燕)", "title": "皇帝"},
+   {"person": "murong_chui", "state": "燕(後燕)", "title": "燕王"},
+   {"person": "murong_de", "state": "燕(南燕)", "title": "燕王", "note": "398年に南燕を建てた(史実)"}
+  ],
+  "murong": [
+   {"person": "murong_huang", "state": "燕(前燕)", "title": "燕王", "note": "337年に燕王を称した(史実)"},
+   {"person": "murong_han", "state": "慕容部", "title": "大人"}
+  ],
+  "chenghan": [
+   {"person": "li_ban", "state": "成", "title": "皇帝", "note": "李雄の後を継いだ(史実)"},
+   {"person": "li_shou", "state": "漢(成漢)", "title": "皇帝", "note": "338年に即位し、国号を漢と改めた(史実)"},
+   {"person": "li_qi", "state": "成", "title": "皇帝"}
+  ],
+  "qianliang": [
+   {"person": "zhang_mao", "state": "涼(前涼)", "title": "涼州牧", "note": "320年に兄の後を継いだ(史実)"},
+   {"person": "zhang_jun", "state": "涼(前涼)", "title": "涼州牧"}
+  ],
+  "dai": [
+   {"person": "tuoba_yulv", "state": "代", "title": "代王"},
+   {"person": "shiyijian", "state": "代", "title": "代王"},
+   {"person": "liu_kuren", "state": "独孤部", "title": "大人", "note": "代が滅んだのち、代の東部を治めた(史実)"}
+  ],
+  "duan": [
+   {"person": "duan_pidi", "state": "段部(幽州)", "title": "幽州刺史"},
+   {"person": "duan_mobo", "state": "段部", "title": "大人", "note": "318年に段部の長となった(史実)"},
+   {"person": "duan_liao", "state": "段部", "title": "大人"}
+  ],
+  "yaoxiang": [{"person": "yao_chang", "state": "羌(姚氏)", "title": "大単于"}],
+  "sima_bao": [{"person": "chen_an", "state": "隴上(陳安)", "title": "涼王", "note": "322年に涼王を称した(史実)"}]
+ }
+}

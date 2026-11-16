@@ -1,13 +1,14 @@
 // ゲームの進行を計算する。日付を進め、軍団の行軍・食糧・疲労・士気・敵との接触を扱う。
 // ここは計算だけで、3D表示のことは知らない。変化があったら、登録された関数で知らせる。
 import { cityLevelOf, persons, personById, resolveCityLayout, scenario, totalTroops } from "../data";
+import successionRules from "../data/rules/succession.json";
 import { autoResolve } from "./autoBattle";
 import { createBattleSetup, governorIdOf, initialCityState, placeName } from "./battle";
 import { garrisonCap, StrategyAi, strategyRules } from "./strategy";
 import { chance, setCurrentSpoils, Spoils, type CaptureRecord, type PendingCapture } from "./spoils";
-import { seasonOf, type CampaignSave, type Relation } from "./save";
+import { seasonOf, type CampaignSave, type DynastySave, type Relation } from "./save";
 import type { BattleResult, CommanderFate, SideResult } from "../battle/types";
-import type { Army, ArmyStatus, BattleEvent, City, CityState, PersonStatus, UnitTypeId } from "../data/types";
+import type { Army, ArmyStatus, BattleEvent, City, CityState, Faction, Person, PersonRole, PersonStatus, UnitTypeId } from "../data/types";
 import { distanceKm, findRoute, type Route, type RoutePoint } from "./pathfinding";
 import type { TerrainGrid } from "./TerrainGrid";
 
@@ -59,6 +60,8 @@ export interface CampaignListener {
   onCityCaptured(cityId: string, factionId: string): void;
   /** 出来事の知らせ(AIの行動や、自動で決着した戦い) */
   onNews?(text: string): void;
+  /** 国が滅びた(successors は独立した後継国家) */
+  onFactionFallen?(info: { factionId: string; successors: string[]; captor: string | null }): void;
   /** プレイヤーの勢力が都市を落とし、処置(略奪・保全)を選ぶのを待っている */
   onCapturePending?(pc: PendingCapture): void;
 }
@@ -378,6 +381,7 @@ export class Campaign {
       proposals: this.proposals,
       nextArmyId: this.nextArmyId,
       spoils: this.spoils.serialize(),
+      dynasty: this.serializeDynasty(),
     });
   }
 
@@ -407,7 +411,9 @@ export class Campaign {
     this.proposals.length = 0;
     this.proposals.push(...(data.proposals ?? []));
     this.nextArmyId = data.nextArmyId ?? 1;
+    this.restoreFactions(data);
     this.spoils.restore(data.spoils);
+    this.restoreRoles(data);
     this.pendingAuto.length = 0;
     for (const k of Object.keys(this.personStates)) delete this.personStates[k];
     Object.assign(this.personStates, data.personStates);
@@ -671,7 +677,7 @@ export class Campaign {
 
   /** 時間を進める。dt は前回からの現実の秒数 */
   update(dt: number): void {
-    if (this.speed === 0) return;
+    if (this.speed === 0 || this.gameOver) return;
     const before = Math.floor(this.day);
     const days = (Math.min(dt, 0.25) / SECONDS_PER_DAY) * this.speed;
     this.day += days;
@@ -733,6 +739,7 @@ export class Campaign {
       (id, s) => {
         this.personStates[id] = s;
       });
+    this.checkRulers();
     const names = (ids: string[]): string => ids.map((id) => personById(id)?.name ?? id).join("・");
     const items = rec.treasures.map((id) => this.spoils.treasure(id)?.name).filter(Boolean).join("・");
     this.addNews(`${factionName(pc.captor)}が${city.name}を${choice === "loot" ? "略奪" : "保全"}しました(金${rec.gold}・糧${rec.grain}${items ? `、名品:${items}` : ""}${rec.captives.length ? `、捕虜:${names(rec.captives)}` : ""}${rec.protected.length ? `、保護:${names(rec.protected)}` : ""})`);
@@ -826,6 +833,266 @@ export class Campaign {
         return `${p.name}は応じませんでした(見込み${Math.round(pr * 100)}%。日をあらためると、また持ちかけられます)`;
       }
     }
+  }
+
+
+  // ===================== 君主の捕縛・国の滅亡・独立 =====================
+
+  /** 後継国家として加わった勢力と、君主の役の付け替え(セーブに残す) */
+  private dynasty: DynastySave = { added: [], fallen: {}, roles: {}, rulers: {} };
+  private readonly initialRoles = new Map(persons.map((p) => [p.id, p.role]));
+  private readonly initialRulers = new Map(scenario.factions.map((f) => [f.id, f.ruler]));
+  /** プレイヤーの国が滅び、続ける国が無いとき true(時間は進まない) */
+  gameOver = false;
+
+  rulerOf(factionId: string): Person | undefined {
+    return persons.find((p) => p.factionId === factionId && p.role === "ruler");
+  }
+
+  isFallen(factionId: string): boolean {
+    return !!this.dynasty.fallen[factionId];
+  }
+
+  /**
+   * 君主の状態を調べる。捕らえられていれば国は滅び、条件を満たす武将が独立する。
+   * 戦死していれば、国はそのままで、後継の人物が君主になる。
+   */
+  checkRulers(): void {
+    for (const f of [...scenario.factions]) {
+      if (f.passive || this.dynasty.fallen[f.id]) continue;
+      const ruler = this.rulerOf(f.id);
+      if (!ruler) continue;
+      const st = this.personStatus(ruler.id);
+      if (st === "captured" || st === "protected") {
+        const holder = this.spoils.custodyOf(ruler.id)?.holder ?? null;
+        this.fallFaction(f.id, ruler, holder);
+      } else if (st === "dead") {
+        this.succeedRuler(f.id, ruler);
+      }
+    }
+  }
+
+  /** 候補の順位:1.史実の独立者・後継者(表の順) 2.同じ姓の一族 3.統率・魅力・武力の高い人 */
+  private successionCandidates(factionId: string, old: Person): { p: Person; rule?: SuccessionRule }[] {
+    const rules = (successionRules.rules as Record<string, SuccessionRule[]>)[factionId] ?? [];
+    const alive = persons.filter((p) => p.factionId === factionId && p.id !== old.id && this.personStatus(p.id) === "active" && !this.spoils.custodyOf(p.id) && p.role !== "minister" && p.gender !== "female");
+    const surname = old.name.slice(0, old.name.startsWith("司馬") || old.name.startsWith("慕容") || old.name.startsWith("拓跋") || old.name.startsWith("宇文") ? 2 : 1);
+    const rank = (p: Person): number => {
+      const i = rules.findIndex((r) => r.person === p.id);
+      if (i >= 0) return i;
+      if (p.name.startsWith(surname)) return 100;
+      return 200;
+    };
+    return alive
+      .map((p) => ({ p, rule: rules.find((r) => r.person === p.id) }))
+      .sort((a, b) => rank(a.p) - rank(b.p) || b.p.leadership + b.p.charisma + b.p.war / 2 - (a.p.leadership + a.p.charisma + a.p.war / 2));
+  }
+
+  /** 人物の拠点(太守をしている都市か、率いている軍団のいる場所)と、手元の兵 */
+  private powerBase(p: Person, factionId: string): { lon: number; lat: number; troops: number; city: City | null } | null {
+    const city = this.cities.find((c) => c.kind !== "pass" && scenario.cityOwners[c.id] === factionId && governorIdOf(c, this.cityStates[c.id]) === p.id && cityLevelOf(c) >= 2) ?? null;
+    const army = this.armies.find((s) => s.army.factionId === factionId && s.army.commanderId === p.id);
+    if (!city && !army) return null;
+    const at = city ?? army!.army;
+    // 軍団だけのときは、近く(80km)の自国の都市を拠点にする
+    const base = city ?? this.cities.filter((c) => c.kind !== "pass" && scenario.cityOwners[c.id] === factionId && cityLevelOf(c) >= 2 && distanceKm(c, army!.army) < 80)
+      .sort((a, b) => distanceKm(a, army!.army) - distanceKm(b, army!.army))[0] ?? null;
+    if (!base) return null;
+    const troops = (army ? totalTroops(army.army) : 0) + this.cityState(base).garrison;
+    return { lon: at.lon, lat: at.lat, troops, city: base };
+  }
+
+  /** 戦死した君主の後を継ぐ(国はそのまま) */
+  private succeedRuler(factionId: string, old: Person): void {
+    const next = this.successionCandidates(factionId, old)[0];
+    const f = scenario.factions.find((x) => x.id === factionId)!;
+    if (!next) {
+      this.fallFaction(factionId, old, null);
+      return;
+    }
+    this.setRole(old.id, "general");
+    this.setRole(next.p.id, "ruler");
+    f.ruler = next.p.name;
+    this.dynasty.rulers[factionId] = next.p.name;
+    this.addNews(`${f.name}の君主${old.name}が亡くなり、${next.p.name}が後を継ぎました`);
+  }
+
+  private setRole(personId: string, role: PersonRole): void {
+    const p = persons.find((x) => x.id === personId);
+    if (!p) return;
+    p.role = role;
+    this.dynasty.roles[personId] = role;
+  }
+
+  /**
+   * 国の滅亡。独立できる武将がいれば、その数だけ後継国家ができる(最大3つ)。
+   * 都市は近い後継国家へ、残りは君主を捕らえた勢力へ。軍団・人物・金・兵糧・名品も分ける。
+   * 同じ人物が2つの国に属することはない(人物は1つの勢力にだけ移す)。
+   */
+  fallFaction(factionId: string, old: Person, captor: string | null): void {
+    const f = scenario.factions.find((x) => x.id === factionId);
+    if (!f || this.dynasty.fallen[factionId]) return;
+    const day = Math.floor(this.day);
+    const purse = this.factionStates[factionId] ?? { gold: 0, grain: 0 };
+    // 独立の条件:拠点(規模2以上の都市)と、兵5,000以上。国を保つ蓄えがあること
+    const successors: { p: Person; rule?: SuccessionRule; base: NonNullable<ReturnType<Campaign["powerBase"]>> }[] = [];
+    if (purse.gold + purse.grain >= 200) {
+      for (const c of this.successionCandidates(factionId, old)) {
+        if (successors.length >= 3) break;
+        const base = this.powerBase(c.p, factionId);
+        if (!base || base.troops < 5000) continue;
+        if (successors.some((s) => s.base.city?.id === base.city?.id)) continue;
+        successors.push({ ...c, base });
+      }
+    }
+    // 都市を分ける:近い後継国家(600km以内)へ。どこにも近くなければ、捕らえた勢力へ
+    const myCities = this.cities.filter((c) => scenario.cityOwners[c.id] === factionId);
+    const newIds: string[] = [];
+    const palette = ["#c46a3a", "#4a8a8c", "#8c5ab4", "#b4a03c", "#5a7a3c", "#a04a6a", "#3c6aa0"];
+    for (const [i, s] of successors.entries()) {
+      const id = `${factionId}_n${this.dynasty.added.length + 1}`;
+      const title = s.rule?.title ?? "皇帝";
+      const nf: Faction = {
+        id, name: s.rule?.state ?? `${f.name.replace(/\(.*\)$/, "")}(${s.p.name})`, people: f.people, ruler: s.p.name,
+        color: palette[(this.dynasty.added.length + i) % palette.length], title, founded: { from: factionId, day },
+      };
+      this.dynasty.added.push(nf);
+      scenario.factions.push(nf);
+      newIds.push(id);
+      // 外交:もとの国の関係を受け継ぐ。捕らえた勢力とは戦争、兄弟の国どうしは和平
+      for (const g of scenario.factions) {
+        if (g.id === id || g.id === factionId) continue;
+        const r = this.relations[[factionId, g.id].sort().join("|")];
+        if (r) this.relations[[id, g.id].sort().join("|")] = r;
+      }
+      if (captor) this.setRelation(id, captor, "war");
+    }
+    for (const a of newIds) for (const b of newIds) if (a < b) this.setRelation(a, b, "peace");
+    const fallback = captor ?? newIds[0] ?? null;
+    const claim = (lon: number, lat: number): string | null => {
+      let best: string | null = null;
+      let bd = 600;
+      successors.forEach((s, i) => {
+        const d = distanceKm({ lon, lat }, s.base);
+        if (d < bd) {
+          bd = d;
+          best = newIds[i];
+        }
+      });
+      return best ?? fallback;
+    };
+    const shares: Record<string, number> = {};
+    for (const c of myCities) {
+      const to = claim(c.lon, c.lat);
+      if (!to) continue;
+      shares[to] = (shares[to] ?? 0) + 1;
+      // 太守は、移る先の勢力の人でなければ外す(あとで人物の行き先を決める)
+      scenario.cityOwners[c.id] = to;
+      this.listener.onCityCaptured(c.id, to);
+    }
+    // 人物の行き先:独立した人はその国の君主。ほかの人は、いる場所に近い国へ。行き先が無ければ、捕らえた勢力の捕虜・保護
+    successors.forEach((s, i) => {
+      this.spoils.setFaction(s.p.id, newIds[i]);
+      this.setRole(s.p.id, "ruler");
+    });
+    for (const p of persons.filter((x) => x.factionId === factionId && x.id !== old.id)) {
+      if (this.personStatus(p.id) === "dead" || this.spoils.custodyOf(p.id)) continue;
+      const where = this.whereIs(p, factionId);
+      const to = where ? claim(where.lon, where.lat) : newIds[0] ?? null;
+      if (to && newIds.includes(to)) {
+        this.spoils.setFaction(p.id, to);
+      } else if (captor) {
+        this.spoils.custody.push({ personId: p.id, kind: p.role === "general" && p.gender !== "female" ? "captive" : "protected", holder: captor, from: factionId, cityId: p.residence ?? null, day });
+        this.personStates[p.id] = p.role === "general" && p.gender !== "female" ? "captured" : "protected";
+      }
+    }
+    // 太守:新しい持ち主の人でなければ外す
+    for (const c of myCities) {
+      const gid = governorIdOf(c, this.cityStates[c.id]);
+      const g = gid ? persons.find((x) => x.id === gid) : undefined;
+      if (g && g.factionId !== scenario.cityOwners[c.id]) this.cityStates[c.id] = { ...this.cityState(c), governorId: null };
+    }
+    // 軍団:指揮官の国へ。指揮官が移らなければ近い国へ。どこにも行けなければ解散
+    for (const s of [...this.armies.filter((x) => x.army.factionId === factionId)]) {
+      const cmd = persons.find((x) => x.id === s.army.commanderId);
+      const to = cmd && cmd.factionId !== factionId && newIds.includes(cmd.factionId) ? cmd.factionId : claim(s.army.lon, s.army.lat);
+      this.listener.onArmyRemoved(s);
+      if (to && newIds.includes(to)) {
+        s.army.factionId = to;
+        if (cmd && cmd.factionId !== to) s.army.commanderId = "";
+        this.listener.onArmyAdded(s);
+      } else {
+        this.armies.splice(this.armies.indexOf(s), 1);
+      }
+    }
+    // 金・兵糧:都市の数に応じて分ける。名品と捕虜も、いちばん大きい後継国家(無ければ捕らえた勢力)へ
+    const total = Object.values(shares).reduce((a, b) => a + b, 0) || 1;
+    for (const [to, n] of Object.entries(shares)) {
+      const st = (this.factionStates[to] ??= { gold: 0, grain: 0 });
+      st.gold += Math.round(purse.gold * n / total);
+      st.grain += Math.round(purse.grain * n / total);
+    }
+    this.factionStates[factionId] = { gold: 0, grain: 0 };
+    const heir = newIds[0] ?? captor;
+    if (heir) {
+      for (const [id, s] of Object.entries(this.spoils.state)) if (!s.cityId && s.owner === factionId) Object.assign(this.spoils.state[id], { owner: heir, holderId: null });
+      for (const c of this.spoils.custody) if (c.holder === factionId) c.holder = heir;
+    }
+    this.dynasty.fallen[factionId] = { day, by: captor };
+    f.fallen = { day, by: captor };
+    // 捕らえられた君主は、君主の身分のまま(登用には応じない)
+    const names = successors.map((s, i) => `${s.p.name}が「${scenario.factions.find((x) => x.id === newIds[i])!.name}」を建て、${scenario.factions.find((x) => x.id === newIds[i])!.title}を称しました`);
+    this.addNews(`${f.name}の君主${old.name}が${captor ? `${factionName(captor)}に` : ""}捕らえられ、${f.name}は滅びました。${names.length ? names.join("。") : "独立する者はいませんでした"}`);
+    this.listener.onFactionFallen?.({ factionId, successors: newIds, captor });
+  }
+
+  /** 人物のいる場所(太守の都市・率いる軍団・滞在する都市) */
+  private whereIs(p: Person, factionId: string): { lon: number; lat: number } | null {
+    const army = this.armies.find((s) => s.army.factionId === factionId && s.army.commanderId === p.id);
+    if (army) return army.army;
+    const c = this.cities.find((x) => governorIdOf(x, this.cityStates[x.id]) === p.id) ?? this.cities.find((x) => x.id === p.residence);
+    return c ?? null;
+  }
+
+  /** セーブに残す、勢力の変化 */
+  private serializeDynasty(): DynastySave {
+    return JSON.parse(JSON.stringify({ ...this.dynasty, gameOver: this.gameOver })) as DynastySave;
+  }
+
+  /**
+   * 勢力の一覧を、セーブの時点に戻す(後継国家を加え直す)。都市の所属を戻す前に呼ぶ。
+   * 人物の所属は spoils が戻すので、ここでは君主の役と、勢力の情報だけを戻す。
+   */
+  restoreFactions(save: CampaignSave | undefined): void {
+    const d = save?.dynasty;
+    // いま加わっている後継国家を外してから、セーブにあるものを加え直す
+    for (let i = scenario.factions.length - 1; i >= 0; i--) if (scenario.factions[i].founded) scenario.factions.splice(i, 1);
+    for (const f of scenario.factions) {
+      f.ruler = this.initialRulers.get(f.id) ?? f.ruler;
+      delete f.fallen;
+    }
+    this.dynasty = { added: [], fallen: {}, roles: {}, rulers: {} };
+    if (!d) return;
+    for (const f of d.added) scenario.factions.push({ ...f });
+    for (const [id, x] of Object.entries(d.fallen)) {
+      const f = scenario.factions.find((y) => y.id === id);
+      if (f) f.fallen = x;
+    }
+    for (const [id, name] of Object.entries(d.rulers)) {
+      const f = scenario.factions.find((y) => y.id === id);
+      if (f) f.ruler = name;
+    }
+    this.dynasty = { added: d.added.map((f) => ({ ...f })), fallen: { ...d.fallen }, roles: { ...d.roles }, rulers: { ...d.rulers } };
+  }
+
+  /** 君主の役を戻す(spoils が人物の所属を戻したあとに呼ぶ) */
+  private restoreRoles(save: CampaignSave | undefined): void {
+    for (const p of persons) p.role = this.initialRoles.get(p.id) ?? p.role;
+    for (const [id, role] of Object.entries(save?.dynasty?.roles ?? {})) {
+      const p = persons.find((x) => x.id === id);
+      if (p) p.role = role;
+    }
+    this.gameOver = !!save?.dynasty?.gameOver;
   }
 
   /** 古い戦闘の記録を捨てる(長く遊ぶと、記録が増え続けてセーブが大きくなるため)。新しい60件と、決着していないものは残す */
@@ -1054,6 +1321,8 @@ export class Campaign {
       this.cityStates[city.id] = state;
     }
 
+    // 君主が捕らえられたり、討たれたりしていないか
+    this.checkRulers();
     // 敗れた軍団は、勝者から離れる方向へ後退する
     const loser = result.winner === "attacker" ? defender : result.winner === "defender" ? attacker : null;
     const winner = result.winner === "attacker" ? attacker : result.winner === "defender" ? defender : null;
@@ -1113,6 +1382,13 @@ export class Campaign {
 
 /** 開始の月から決まる、年初からの日数(3月開始なら60) */
 const START_OFFSET = ((scenario.startMonth ?? 3) - 1) * 30;
+
+interface SuccessionRule {
+  person: string;
+  state?: string;
+  title?: string;
+  note?: string;
+}
 
 function factionName(id: string): string {
   return scenario.factions.find((f) => f.id === id)?.name ?? "不明の勢力";

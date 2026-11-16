@@ -151,6 +151,12 @@ export interface Faction {
   color: string;
   /** 自分からは動かない勢力(まとまった国を持たない人々など)。戦略AIは動かさない */
   passive?: boolean;
+  /** 君主の称号(皇帝・王・公など)。後継国家のときに入る */
+  title?: string;
+  /** 後継国家:もとの国と、独立した日(ゲーム開始からの日数) */
+  founded?: { from: string; day: number };
+  /** 滅亡した日 */
+  fallen?: { day: number; by: string | null };
 }
 
 export type UnitTypeId = "infantry" | "cavalry" | "archer";

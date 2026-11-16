@@ -91,6 +91,8 @@ export class Game {
   private rate = 1;
   /** 操作する勢力(null なら制限なし) */
   private playerFactionId: string | null = null;
+  /** 自分の国が滅びたとき、どうするか */
+  private onFall: "gameover" | "continue" = "gameover";
   private personScreen!: PersonScreen;
   private spoilsScreen?: SpoilsScreen;
   private territoryOpacity = 1;
@@ -167,7 +169,7 @@ export class Game {
     this.roadsFailed = roads.failed;
 
     // 領土:都市の所属から計算し、地形に重ねて表示する
-    this.territory = new Territory(this.grid, scenario.factions.map((f) => f.id));
+    this.territory = new Territory(this.grid);
     this.territoryTexture = new TerritoryTexture(this.grid);
     terrains[0].setTerritoryTexture(this.territoryTexture.texture, this.territoryTexture.width);
     this.refreshTerritory();
@@ -202,6 +204,7 @@ export class Game {
       onBattleEvent: (event) => this.showBattleEvent(event),
       onDayChanged: () => this.onDayChanged(),
       onCityCaptured: (cityId, factionId) => this.setCityOwner(cityId, factionId),
+      onFactionFallen: (info) => this.onFactionFallen(info),
       onCapturePending: (pc) => {
         this.spoilsScreen?.showCapture(pc);
         this.syncSpeedButton();
@@ -334,6 +337,12 @@ export class Game {
     this.spoilsScreen.bindCapture((text) => this.showNotice(text));
     (root.querySelector("#spoils-open") as HTMLElement).addEventListener("click", () => this.spoilsScreen?.open());
     if (this.campaign.spoils.pending) this.spoilsScreen.showCapture(this.campaign.spoils.pending);
+    // ゲームオーバーの画面
+    (root.querySelector(".gameover-load") as HTMLElement).addEventListener("click", () => void this.menu.open());
+    (root.querySelector(".gameover-scenario") as HTMLElement).addEventListener("click", () => {
+      (root.querySelector("#gameover") as HTMLElement).hidden = true;
+      scenarios.open();
+    });
     // 都市での徴兵と出陣
     (root.querySelector(".info-recruit") as HTMLElement).addEventListener("click", () => this.cityAction("recruit"));
     (root.querySelector(".info-raise") as HTMLElement).addEventListener("click", () => this.cityAction("raise"));
@@ -539,6 +548,32 @@ export class Game {
     el.textContent = `金 ${Math.round(st.gold).toLocaleString("ja-JP")}(+${income.gold}) 糧 ${Math.round(st.grain).toLocaleString("ja-JP")}(+${income.grain})`;
   }
 
+  /** 国が滅びたとき:自分の国なら、設定に応じてゲームオーバーか、後継国家で続ける */
+  private onFactionFallen(info: { factionId: string; successors: string[]; captor: string | null }): void {
+    this.refreshPosts();
+    if (this.playerFactionId !== info.factionId) return;
+    const name = factionById(info.factionId)?.name ?? "";
+    if (this.onFall === "continue" && info.successors.length > 0) {
+      const next = info.successors[0];
+      this.changeSettings({ playerFactionId: next });
+      const f = factionById(next);
+      this.campaign.speed = 0;
+      this.syncSpeedButton();
+      this.showNotice(`${name}は滅びました。後継国家「${f?.name}」の${f?.ruler}として続けます(時間を止めています)`);
+      return;
+    }
+    this.campaign.gameOver = true;
+    this.campaign.speed = 0;
+    this.syncSpeedButton();
+    this.showGameOver(`${name}の君主が${info.captor ? `${factionById(info.captor)?.name ?? ""}に` : ""}捕らえられ、国は滅びました。${info.successors.length ? `後継国家:${info.successors.map((id) => factionById(id)?.name).join("・")}(設定で「後継国家で続ける」を選ぶと、こちらで続けられます)` : "独立して後を継ぐ国はありませんでした。"}`);
+  }
+
+  private showGameOver(text: string): void {
+    const box = this.root.querySelector("#gameover") as HTMLElement;
+    (box.querySelector(".gameover-text") as HTMLElement).textContent = text;
+    box.hidden = false;
+  }
+
   /** 都市での徴兵(金を払って守備兵を増やす)と、出陣(守備兵から軍団を作る) */
   private cityAction(kind: "recruit" | "raise"): void {
     const marker = this.selected;
@@ -552,7 +587,7 @@ export class Game {
       // 守備兵を残して、出せるだけ出す。指揮官は、役目のない健在の人物のうち、統率と武力の高い者
       const troops = Math.min(this.campaign.cityState(city).garrison - strategyRules.costs.minGarrison, strategyRules.costs.maxArmy);
       const free = persons
-        .filter((p) => p.factionId === owner && p.role !== "strategist" && p.role !== "minister" && this.campaign.personStatus(p.id) === "active" && !this.campaign.postOf(p.id))
+        .filter((p) => p.factionId === owner && p.role !== "strategist" && p.role !== "minister" && p.role !== "ruler" && this.campaign.personStatus(p.id) === "active" && !this.campaign.postOf(p.id))
         .sort((a, b) => b.leadership + b.war - (a.leadership + a.war))[0];
       const result = this.campaign.raiseArmy(city.id, troops, free?.id);
       this.showNotice(typeof result === "string" ? result : `${result.army.name}(${troops.toLocaleString("ja-JP")}人)が${city.name}から出陣しました`);
@@ -578,11 +613,13 @@ export class Game {
       territoryVisible: this.territoryVisible,
       territoryOpacity: this.territoryOpacity,
       speed: this.rate,
+      onFall: this.onFall,
     };
   }
 
   private changeSettings(change: Partial<GameSettings>): void {
     if (change.playerFactionId !== undefined) this.playerFactionId = change.playerFactionId;
+    if (change.onFall) this.onFall = change.onFall;
     // 画面で選べるのは4段階。古いセーブの「非常に易しい」は「易しい」として扱う
     if (change.difficulty) this.difficulty = change.difficulty === "veryEasy" ? "easy" : change.difficulty;
     // 戦略AIは、操作勢力を選んでいるあいだだけ動く(選んだ勢力以外が自動で動く)
@@ -649,6 +686,9 @@ export class Game {
     (this.root.querySelector("#event") as HTMLElement).hidden = true;
     this.clearSelection();
 
+    // 後継国家を加え直す(都市の所属を戻す前に、その勢力がいるように)
+    this.campaign.restoreFactions(data.campaign);
+    (this.root.querySelector("#gameover") as HTMLElement).hidden = true;
     // 都市の所属を戻す。変わった都市は、旗とラベルの色を付け替える
     for (const c of this.allCities) {
       // セーブに無い都市(あとから追加された都市)は、シナリオ開始時の所属にする
@@ -665,6 +705,7 @@ export class Game {
     if (this.campaign.spoils.pending) this.spoilsScreen?.showCapture(this.campaign.spoils.pending);
     this.refreshTerritory();
     this.changeSettings(data.settings);
+    if (this.campaign.gameOver) this.showGameOver("保存した時点で、国はすでに滅びていました。");
     this.lastAutosaveDay = this.campaign.day;
     this.lastFrame = performance.now();
     this.onDayChanged();

@@ -246,7 +246,8 @@ export class Spoils {
       if (p.factionId !== from || p.residence !== city.id || statusOf(p.id) !== "active") continue;
       if (people.some((x) => x.personId === p.id)) continue;
       // 滞在していた人:武将は捕虜に、それ以外(后妃・文人など)は保護する
-      people.push({ personId: p.id, kind: p.role === "general" && p.gender !== "female" ? "captive" : "protected" });
+      // 君主と武将は捕虜に、それ以外(后妃・文人など)は保護する
+      people.push({ personId: p.id, kind: (p.role === "general" || p.role === "ruler") && p.gender !== "female" ? "captive" : "protected" });
     }
     const treasures: string[] = [];
     const evacuated: string[] = [];

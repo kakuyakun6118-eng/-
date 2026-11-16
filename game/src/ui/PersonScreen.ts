@@ -42,6 +42,10 @@ export class PersonScreen {
   }
 
   open(personId?: string): void {
+    const sel = this.q<HTMLSelectElement>(".persons-faction");
+    const keep = sel.value;
+    sel.replaceChildren(new Option("すべての勢力", ""), ...scenario.factions.map((f) => new Option(f.name + (f.fallen ? "(滅亡)" : ""), f.id)));
+    sel.value = keep;
     const player = this.actions.playerFactionId();
     if (player) this.q<HTMLSelectElement>(".persons-faction").value = player;
     this.root.hidden = false;

@@ -1,7 +1,7 @@
 // ゲームの起動。
 import "./ui/style.css";
 import { Game } from "./core/Game";
-import { credits, scenario } from "./data";
+import { credits, persons, scenario } from "./data";
 
 const root = document.getElementById("app") as HTMLElement;
 (root.querySelector(".scenario") as HTMLElement).textContent = `西暦${scenario.year}年 ${scenario.name}`;
@@ -13,6 +13,8 @@ Game.create(root)
   .then((game) => {
     // 動作確認用:ブラウザの開発者ツールから __goko.focus(経度, 緯度, 距離) で移動できる
     (window as unknown as { __goko: Game }).__goko = game;
+    // 点検用:データ(シナリオ・人物)
+    (window as unknown as { __gokoData: unknown }).__gokoData = { scenario, persons };
     hint.textContent = "ドラッグで移動・ピンチで拡大縮小・都市や軍団をタップ";
   })
   .catch((err) => {

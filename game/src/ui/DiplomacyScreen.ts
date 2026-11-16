@@ -62,7 +62,7 @@ export class DiplomacyScreen {
       name.textContent = f.name;
       const info = document.createElement("span");
       info.className = "diplomacy-info";
-      info.textContent = cities === 0 ? "滅亡(都市なし)" : `都市${cities}・兵${Math.round(c.strengthOf(f.id) / 1000)}千`;
+      info.textContent = f.fallen ? "滅亡" : cities === 0 ? "都市なし" : `都市${cities}・兵${Math.round(c.strengthOf(f.id) / 1000)}千${f.founded ? `・${f.title ?? ""}(${scenario.factions.find((x) => x.id === f.founded!.from)?.name ?? ""}から独立)` : ""}`;
       const state = document.createElement("span");
       state.className = "diplomacy-state";
       state.dataset.relation = relation ?? "";

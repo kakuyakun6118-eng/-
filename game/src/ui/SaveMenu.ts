@@ -69,6 +69,12 @@ export class SaveMenu {
         return card;
       }),
     );
+    for (const b of this.root.querySelectorAll<HTMLElement>(".fall-choice button")) {
+      b.addEventListener("click", () => {
+        actions.changeSettings({ onFall: b.dataset.value as GameSettings["onFall"] });
+        this.syncFall(b.dataset.value as GameSettings["onFall"]);
+      });
+    }
     const opacity = this.q<HTMLInputElement>("#menu-opacity");
     opacity.addEventListener("input", () => actions.changeSettings({ territoryOpacity: Number(opacity.value) }));
 
@@ -120,10 +126,15 @@ export class SaveMenu {
     const s = this.actions.settings();
     this.q<HTMLSelectElement>("#menu-faction").value = s.playerFactionId ?? "";
     this.syncDifficulty(s.difficulty);
+    this.syncFall(s.onFall ?? "gameover");
     this.q<HTMLInputElement>("#menu-opacity").value = String(s.territoryOpacity);
     this.say("");
     this.root.hidden = false;
     await this.refresh();
+  }
+
+  private syncFall(value: GameSettings["onFall"]): void {
+    for (const b of this.root.querySelectorAll<HTMLElement>(".fall-choice button")) b.setAttribute("aria-pressed", String(b.dataset.value === value));
   }
 
   /** 選んでいる難易度の札に、朱印と金の枠を付ける(古いセーブの「非常に易しい」は「易しい」として示す) */

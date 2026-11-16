@@ -80,7 +80,7 @@ export class StrategyAi {
         const troops = Math.min(spare, rules.costs.maxArmy);
         if (troops >= rules.costs.minArmy) {
           const free = persons
-            .filter((x) => x.factionId === factionId && x.role !== "strategist" && x.role !== "minister" && this.c.personStatus(x.id) === "active" && !this.c.postOf(x.id))
+            .filter((x) => x.factionId === factionId && x.role !== "strategist" && x.role !== "minister" && x.role !== "ruler" && this.c.personStatus(x.id) === "active" && !this.c.postOf(x.id))
             .sort((a, b) => b.leadership + b.war - (a.leadership + a.war))[0];
           this.c.raiseArmy(base.id, troops, free?.id);
         }

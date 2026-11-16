@@ -1,5 +1,6 @@
 // セーブデータの形と、バージョンの管理。
 // 形を変えたら SAVE_VERSION を上げ、migrateSave に古い版からの変換を書き足す。
+import type { Faction, PersonRole } from "../data/types";
 import type { SpoilsSave } from "./spoils";
 import type { CommanderFate } from "../battle/types";
 import type { Army, ArmyStatus, BattleEvent, CityState, PersonStatus } from "../data/types";
@@ -42,6 +43,8 @@ export interface CampaignSave {
   news?: { day: number; text: string }[];
   /** プレイヤーへの外交の申し入れ(返事待ち) */
   proposals?: { from: string; kind: "peace" | "alliance"; day: number }[];
+  /** 後継国家・滅亡・君主の付け替え(古いセーブには無い) */
+  dynasty?: DynastySave;
   /** 名品・捕虜・保護・陥落の記録(古いセーブには無い) */
   spoils?: SpoilsSave;
   /** 次に作る軍団の番号 */
@@ -57,6 +60,8 @@ export interface GameSettings {
   territoryOpacity: number;
   /** 時間の進む速さ(停止していないときの倍率) */
   speed: number;
+  /** 自分の国が滅びたとき:ゲームオーバーにするか、独立した後継国家で続けるか(古いセーブには無い) */
+  onFall?: "gameover" | "continue";
 }
 
 /** 都市1つ分の保存内容(所属と、いまの状態をまとめたもの) */
@@ -108,4 +113,13 @@ export function migrateSave(raw: unknown): SaveData {
   data.campaign.factionStates ??= {};
   data.version = SAVE_VERSION;
   return data as SaveData;
+}
+
+/** 国の滅亡と独立の記録 */
+export interface DynastySave {
+  added: Faction[];
+  fallen: Record<string, { day: number; by: string | null }>;
+  roles: Record<string, PersonRole>;
+  rulers: Record<string, string>;
+  gameOver?: boolean;
 }

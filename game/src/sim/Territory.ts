@@ -2,7 +2,7 @@
 // 支配している都市から「進軍のしやすさ」で周囲へ広がり、いちばん早く届く都市の勢力が
 // その土地を支配する、と考える。山脈や大河は通りにくいので、自然に境界になる。
 // 軍団の位置は関係しない。都市の所属が変わったときにだけ計算し直す。
-import { cityLevelOf } from "../data";
+import { cityLevelOf, scenario } from "../data";
 import type { City } from "../data/types";
 import { MinHeap } from "./pathfinding";
 import type { TerrainGrid } from "./TerrainGrid";
@@ -17,7 +17,12 @@ export class Territory {
   /** 各マスを支配する勢力の番号(factionIds の何番目か + 1。0 は空白地) */
   readonly owners: Uint8Array;
 
-  constructor(private readonly grid: TerrainGrid, readonly factionIds: string[]) {
+  /** 勢力の並び(シナリオの勢力の一覧。後継国家が加わると伸びる) */
+  get factionIds(): string[] {
+    return scenario.factions.map((f) => f.id);
+  }
+
+  constructor(private readonly grid: TerrainGrid, _factionIds?: string[]) {
     this.owners = new Uint8Array(grid.cols * grid.rows);
   }
 
