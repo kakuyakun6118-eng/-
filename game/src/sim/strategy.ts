@@ -46,6 +46,8 @@ export interface Operation {
   arrived: boolean;
   /** 出発のときの指揮官(指揮官を失ったかを見るため) */
   commander0?: string;
+  /** この作戦で行った攻城戦の数(落とせないまま3回で、攻城をあきらめる) */
+  sieges?: number;
   /** 到着してから戦いが始まらないまま過ぎた日数を数えるための日付 */
   idleSince?: number;
   vsPlayer: boolean;
@@ -63,6 +65,8 @@ export interface AiStats {
   retreats: number;
   /** 軍団の移動命令の数 */
   moves: number;
+  /** 迎撃・援護の出動(都市を攻める出兵とは別に数える) */
+  intercepts: number;
   /** プレイヤーの国家への侵攻(出兵)・攻城・占領 */
   vsPlayer: number;
   vsPlayerSieges: number;
@@ -88,7 +92,7 @@ export interface StrategySave {
   nextOp: number;
 }
 
-const emptyStats = (): AiStats => ({ planned: 0, dispatched: 0, arrived: 0, fieldBattles: 0, sieges: 0, captures: 0, retreats: 0, moves: 0, vsPlayer: 0, vsPlayerSieges: 0, vsPlayerCaptures: 0, notLaunched: {}, aborted: {}, wars: 0, coordinated: 0, guards: 0 });
+const emptyStats = (): AiStats => ({ planned: 0, dispatched: 0, arrived: 0, fieldBattles: 0, sieges: 0, captures: 0, retreats: 0, moves: 0, vsPlayer: 0, vsPlayerSieges: 0, vsPlayerCaptures: 0, notLaunched: {}, aborted: {}, wars: 0, coordinated: 0, guards: 0, intercepts: 0 });
 const clamp = (v: number, lo = -1, hi = 1): number => Math.max(lo, Math.min(hi, v));
 const TERRAIN_DIFFICULTY: Record<string, number> = { highMountain: 1.8, mountain: 1.45, desert: 1.3, hill: 1.15, forest: 1.1, crossing: 1.2, river: 1.1 };
 
@@ -454,6 +458,7 @@ export class StrategyAi {
       else if (cap && capThreat > this.c.cityState(cap).garrison * 1.2 && distanceKm(cap, s.army) > 150 && op.kind !== "intercept") [why, key] = [`首都${cap.name}に敵が迫った`, "首都への敵侵攻"];
       else if ((this.c.court.stability[f] ?? 60) < 15) [why, key] = ["国内で反乱の恐れが高まった", "国内の反乱"];
       else if (day - op.startDay > 300) [why, key] = ["作戦が長引いた", "作戦の長期化"];
+      else if ((op.sieges ?? 0) >= 3) [why, key] = [`${city?.name ?? "目標"}の攻城を3度試みても落とせない`, "攻城の失敗が続いた"];
       if (why) {
         this.retreat(op, s, mine, why, key);
         continue;
@@ -525,6 +530,7 @@ export class StrategyAi {
         .sort((x, y) => distanceKm(x.army, t.army) - distanceKm(y.army, t.army))[0];
       if (cand && this.goTo(cand, t.army.lon, t.army.lat)) {
         this.addOp(f, cand, "intercept", { targetArmyId: t.army.id, reason: `${t.army.name}が国境に接近` });
+        this.st(f).intercepts++;
         this.note(f, `${cand.army.name}を、接近する${this.name(t.army.factionId)}の${t.army.name}の迎撃に向ける`);
       }
     }
@@ -554,6 +560,7 @@ export class StrategyAi {
       if (!helper) continue;
       if (foe && this.goTo(helper, foe.army.lon, foe.army.lat)) {
         this.addOp(f, helper, "cover", { targetArmyId: foe.army.id, leadId: op.id, reason: "主力への敵の援軍を阻む" });
+        this.st(f).intercepts++;
         this.st(f).coordinated++;
         this.note(f, `${helper.army.name}が、主力(${lead.army.name})に迫る${foe.army.name}を迎え撃つ(援護)`);
       } else if (weak && op.targetCityId) {
@@ -561,6 +568,7 @@ export class StrategyAi {
         if (this.goTo(helper, city.lon, city.lat)) {
           this.addOp(f, helper, "reserve", { targetCityId: city.id, leadId: op.id, reason: "損耗した主力に予備を投入" });
           this.st(f).coordinated++;
+          this.st(f).dispatched++;
           this.note(f, `主力が損耗したため、予備の${helper.army.name}を${city.name}へ投入`);
         }
       }
@@ -614,15 +622,16 @@ export class StrategyAi {
     const a = s.army;
     const st = this.st(f);
     const cmd = this.personalityOf(persons.find((x) => x.id === a.commanderId));
-    const reach = p.reachKm * (1 + 0.25 * Math.max(pers.mobility, cmd.mobility)) * (posture === "unify" ? 1.2 : 1);
-    const attackRatio = p.attackRatio * (1 - 0.15 * pers.aggr + 0.12 * pers.caution) * (posture === "defend" || posture === "develop" || posture === "diplomacy" ? 1.6 : 1);
+    const reach = p.reachKm * (1 + 0.25 * Math.max(pers.mobility, cmd.mobility)) * (posture === "unify" ? 1.35 : posture === "invade" ? 1.15 : 1);
+    const attackRatio = p.attackRatio * (1 - 0.15 * pers.aggr + 0.12 * pers.caution) * (posture === "defend" || posture === "develop" || posture === "diplomacy" ? 1.6 : posture === "invade" || posture === "unify" ? 0.9 : 1);
     const foodMargin = rules.plan.foodMargin * (1 + 0.3 * pers.logistics);
     const cap = this.capitalOf(f);
     const power = this.armyPower(s);
     const reasons: Record<string, number> = {};
     const reject = (r: string): void => void (reasons[r] = (reasons[r] ?? 0) + 1);
-    type Cand = { city: City; score: number; ratio: number; days: number; need: number; why: string; partner?: ArmyState };
+    type Cand = { city: City; score: number; ratio: number; days: number; need: number; why: string; partner?: ArmyState; partner2?: ArmyState };
     let best: Cand | null = null;
+    let shortOf: { city: City; need: number } | null = null;
     const near = [...enemyCities].sort((x, y) => Math.min(distanceKm(x, a), ...mine.map((m) => distanceKm(m, x))) - Math.min(distanceKm(y, a), ...mine.map((m) => distanceKm(m, y)))).slice(0, rules.plan.maxTargets);
     for (const city of near) {
       const dist = distanceKm(city, a);
@@ -643,15 +652,27 @@ export class StrategyAi {
       const cs = this.c.cityState(city);
       const owner = scenario.cityOwners[city.id];
       const guards = this.c.armies.filter((o) => o.army.factionId === owner && distanceKm(o.army, city) < 60).reduce((sum, o) => sum + this.armyPower(o), 0);
-      const relief = this.c.armies.filter((o) => o.army.factionId === owner && distanceKm(o.army, city) >= 60 && distanceKm(o.army, city) < rules.plan.reliefKm).reduce((sum, o) => sum + this.armyPower(o), 0);
-      const defense = cs.garrison * (0.55 + cs.morale / 220) * wallBonus(city.defense ?? 40) + guards + relief * 0.5;
+      // 援軍の見込み:手の空いている(戦っていない・ほかへ出ていない)敵の軍団だけを、距離で割り引いて数える
+      const relief = this.c.armies.filter((o) => o.army.factionId === owner && o.status !== "fighting" && o.status !== "marching" && distanceKm(o.army, city) >= 60 && distanceKm(o.army, city) < rules.plan.reliefKm)
+        .reduce((sum, o) => sum + this.armyPower(o) * (1 - distanceKm(o.army, city) / rules.plan.reliefKm), 0);
+      const defense = cs.garrison * (0.55 + cs.morale / 220) * wallBonus(city.defense ?? 40) + guards + relief * 0.4;
       let ratio = power / Math.max(1, defense);
       let partner: ArmyState | undefined;
-      // 1軍団で足りなければ、近くの手の空いた軍団と共同で攻める
+      let partner2: ArmyState | undefined;
+      // 1軍団で足りなければ、近くの手の空いた軍団(2つまで)と共同で攻める
       if (ratio < attackRatio) {
-        partner = partners.filter((x) => this.ready(x) && distanceKm(x.army, city) < reach && !this.opOf(x.army.id)).sort((x, y) => distanceKm(x.army, city) - distanceKm(y.army, city))[0];
+        const near2 = partners.filter((x) => this.ready(x) && distanceKm(x.army, city) < reach && !this.opOf(x.army.id)).sort((x, y) => distanceKm(x.army, city) - distanceKm(y.army, city));
+        partner = near2[0];
         if (partner) ratio = (power + this.armyPower(partner)) / Math.max(1, defense);
-        if (ratio < attackRatio) { reject(relief > guards + 1 ? "敵の援軍が見込まれる" : "兵力不足"); continue; }
+        if (ratio < attackRatio && near2[1] && posture !== "defend") {
+          partner2 = near2[1];
+          ratio = (power + this.armyPower(partner) + this.armyPower(partner2)) / Math.max(1, defense);
+        }
+        if (ratio < attackRatio) {
+          if (!best) shortOf = { city, need: defense * attackRatio - power };
+          reject(relief > guards + 1 ? "敵の援軍が見込まれる" : "兵力不足");
+          continue;
+        }
       }
       // 価値:経済・食糧・都市の格。首都と関所は戦略上重い。統一志向なら敵の首都をいっそう重んじる
       let value = 40 + (city.economy ?? 0) + (city.food ?? 0) * 0.5 + (city.kind === "pass" ? 60 : cityLevelOf(city) * 40);
@@ -662,9 +683,21 @@ export class StrategyAi {
       const exposure = cap && this.c.armies.filter((x) => x.army.factionId === f).length <= 1 && distanceKm(cap, city) > 300 ? 0.6 : 1;
       const score = (value * Math.min(ratio, 3) * sustain * exposure) / (days + 5) / difficulty;
       const why = `${city.name}(${this.name(owner)})の守りが${ratio >= 2.5 ? "薄い" : "崩せる"}ため攻撃目標に設定(勝算${ratio.toFixed(1)}倍・到着約${Math.round(days)}日${partner ? `・${partner.army.name}と共同` : ""}${relief > 0 ? "・援軍の見込みあり" : ""})`;
-      if (!best || score > best.score) best = { city, score, ratio, days, need: defense * attackRatio, why, partner };
+      if (!best || score > best.score) best = { city, score, ratio, days, need: defense * attackRatio, why, partner, partner2 };
     }
     if (!best) {
+      // 兵が足りないだけなら、そばの自国の都市で兵を集めてから攻める(守備兵の余りを軍団に加える)
+      if (shortOf && s.supplied && (posture === "invade" || posture === "unify" || posture === "expand")) {
+        const home = this.homeOf(s, mine);
+        const spare = this.c.cityState(home).garrison - Math.max(rules.costs.minGarrison * 2, garrisonCap(home) * 0.3);
+        if (distanceKm(home, a) < 60 && spare >= 1000 && totalTroops(a) < rules.costs.maxArmy * rules.costs.armyGrowth) {
+          const n = Math.min(spare, shortOf.need * 1.2, 6000);
+          if (this.c.reinforce(a.id, home.id, n) === null) {
+            this.note(f, `${shortOf.city.name}を攻める兵が足りないため、${home.name}で${a.name}に${Math.round(n)}人を加える`);
+            return;
+          }
+        }
+      }
       // 見送りの理由を記録する(いちばん多い理由)
       const top = Object.entries(reasons).sort((x, y) => y[1] - x[1])[0];
       if (top) {
@@ -697,11 +730,13 @@ export class StrategyAi {
     if (op.vsPlayer) st.vsPlayer++;
     if (best.city.lon < 96 && !mine.some((m) => m.lon < 96)) this.c.logistics.expeditions[f] = (this.c.logistics.expeditions[f] ?? 0) + 1;
     this.note(f, `${a.name}(${a.commanderId ? persons.find((x) => x.id === a.commanderId)?.name : "指揮官なし"})を出兵 — ${best.why}`);
-    if (best.partner && this.goTo(best.partner, best.city.lon, best.city.lat)) {
-      this.addOp(f, best.partner, "support", { targetCityId: best.city.id, leadId: op.id, reason: "共同攻撃" });
-      st.dispatched++;
-      st.coordinated++;
-      if (op.vsPlayer) st.vsPlayer++;
+    for (const pt of [best.partner, best.partner2]) {
+      if (pt && this.goTo(pt, best.city.lon, best.city.lat)) {
+        this.addOp(f, pt, "support", { targetCityId: best.city.id, leadId: op.id, reason: "共同攻撃" });
+        st.dispatched++;
+        st.coordinated++;
+        if (op.vsPlayer) st.vsPlayer++;
+      }
     }
   }
 
@@ -714,7 +749,8 @@ export class StrategyAi {
       else this.st(f).fieldBattles++;
     }
     const op = this.opOf(e.attackerArmyId);
-    if (op && e.battleType === "siege_battle" && !op.arrived) {
+    if (op && e.battleType === "siege_battle") op.sieges = (op.sieges ?? 0) + 1;
+    if (op && op.targetCityId && e.battleType === "siege_battle" && !op.arrived) {
       op.arrived = true;
       op.status = "arrived";
       this.st(op.factionId).arrived++;
