@@ -20,6 +20,7 @@ import { CityLabels } from "../ui/CityLabels";
 import { InfoPanel } from "../ui/InfoPanel";
 import { DiplomacyScreen } from "../ui/DiplomacyScreen";
 import { CourtScreen } from "../ui/CourtScreen";
+import { HistoryEventScreen, TimelineScreen } from "../ui/HistoryScreen";
 import { estimateWinRate } from "../sim/autoBattle";
 import { governorIdOf } from "../sim/battle";
 import { PersonScreen } from "../ui/PersonScreen";
@@ -353,6 +354,21 @@ export class Game {
     });
     (root.querySelector("#court-open") as HTMLElement).addEventListener("click", () => court.open());
     this.openCourt = (id?: string) => court.open(id);
+    // 歴史の重大事件と年表
+    const histScreen = new HistoryEventScreen(root.querySelector("#history-event") as HTMLElement, {
+      campaign: () => this.campaign,
+      playerFactionId: () => this.playerFactionId,
+      focus: (lon, lat) => this.focus(lon, lat, 6),
+      onChanged: () => {
+        this.showTreasury();
+        this.refreshPosts();
+        this.dirty = true;
+      },
+    });
+    this.campaign.history.onPrompt = () => histScreen.showNext();
+    histScreen.showNext();
+    const timeline = new TimelineScreen(root.querySelector("#timeline") as HTMLElement, () => this.campaign);
+    (root.querySelector("#timeline-open") as HTMLElement).addEventListener("click", () => timeline.open());
     // 国家財政
     const finance = new FinanceScreen(root.querySelector("#finance") as HTMLElement, () => this.campaign, () => this.playerFactionId);
     (root.querySelector("#finance-open") as HTMLElement).addEventListener("click", () => finance.open());

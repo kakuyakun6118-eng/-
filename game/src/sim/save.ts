@@ -50,6 +50,8 @@ export interface CampaignSave {
   diplomacy?: import("./diplomacy").DiplomacySave;
   /** 皇室(家系・子女・後継者・即位)。古いセーブには無い */
   court?: import("./court").CourtSave;
+  /** 歴史の重大事件と年表。古いセーブには無い */
+  history?: import("./history").HistorySave;
   /** 財政・官職・内政(古いセーブには無い。無ければ、官職を割り当て直す) */
   economy?: EconomySave;
   /** 忠誠度・名声(古いセーブには無い。無ければ、読み込んだ時点の状況から作り直す) */

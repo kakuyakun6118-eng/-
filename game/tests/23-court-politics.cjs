@@ -32,7 +32,7 @@ const path = require('path');
   p = await open('s329');
   const r3 = await p.evaluate(() => { const g = window.__goko, c = g.campaign, ct = c.court; g.changeSettings({ playerFactionId: 'silla' });
     const heir0 = ct.heirOf('shile')?.name; c.dieNaturally('shi_le'); c.checkRulers(); const after = c.rulerOf('shile')?.name;
-    c.day = Math.max(c.day, (334 - 329) * 360 + 30); let tries = 0; while (c.rulerOf('shile')?.id === 'shi_hong' && tries++ < 120) { c.day += 30; ct.usurp(334); }
+    c.day = Math.max(c.day, (334 - 329) * 360 + 30); let tries = 0; /* Version 37から、石虎の簒奪は歴史の事件(334年)が扱う */ const h = c.history, d = h.def('shihu334'); const roles = d.roles(h.ctx()); d.apply(h.ctx(), roles, { shi: 'yield' }); ct.usurp(334);
     const order = ct.successionOrder('shile').slice(0, 4).map(o => `${o.p.name}:${o.reason}`);
     return { heir0, after, now: c.rulerOf('shile')?.name, tries, hongCause: ct.causeOf('shi_hong')?.cause, order }; });
   check('3 後趙の石氏の継承', r3.heir0 === '石弘' && r3.after === '石弘' && r3.now === '石虎' && r3.hongCause === 'execution' && r3.order.some(o => /石宣|石遵|石鑑|石祗/.test(o) && o.includes('の子')), r3);

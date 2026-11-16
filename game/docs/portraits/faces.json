@@ -15,7 +15,7 @@
   "mark"
  ],
  "min_distance": 6,
- "count": 487,
+ "count": 489,
  "faces": {
   "asin": {
    "outline": "卵形の顔",
@@ -4276,6 +4276,21 @@
    "mark": "目尻に深い笑いじわ",
    "beard": "先を細く整えた口髭と顎髭"
   },
+  "sima_chi": {
+   "outline": "面長",
+   "forehead": "生え際の後退した高い額",
+   "cheekbone": "こけた頬",
+   "jaw": "割れた顎",
+   "nose": "短く上向きの鼻",
+   "eyes": "奥まった目",
+   "brows": "濃くつながりかけた眉",
+   "mouth": "口角の下がった口",
+   "skin": "赤らんだ肌",
+   "build": "厚い胸板",
+   "expression": "人なつこい表情",
+   "mark": "目尻に深い笑いじわ",
+   "beard": "髭をきれいに剃っている"
+  },
   "sima_dan": {
    "outline": "逆三角形の顔",
    "forehead": "丸く張り出した額",
@@ -4531,6 +4546,21 @@
    "expression": "威厳のある無表情",
    "mark": "頬にほくろ",
    "beard": "短く刈った無精髭"
+  },
+  "sima_ye": {
+   "outline": "えらの張った幅広の顔",
+   "forehead": "丸く張り出した額",
+   "cheekbone": "ふっくらした頬",
+   "jaw": "長くしゃくれた顎",
+   "nose": "短く上向きの鼻",
+   "eyes": "大きく丸い目",
+   "brows": "濃くつながりかけた眉",
+   "mouth": "厚い唇",
+   "skin": "あばたの残る肌",
+   "build": "厚い胸板",
+   "expression": "疲れのにじむ表情",
+   "mark": "額に古い刀傷",
+   "beard": "短く整えた顎髭"
   },
   "sima_yi_fei": {
    "outline": "下ぶくれの顔",

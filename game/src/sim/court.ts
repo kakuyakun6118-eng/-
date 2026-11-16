@@ -30,7 +30,7 @@ interface FamilyFile {
 
 export type DeathCause = "illness" | "old_age" | "battle" | "execution" | "assassination" | "suicide" | "unknown";
 export const CAUSE_LABEL: Record<DeathCause, string> = { illness: "病死", old_age: "老衰", battle: "戦死", execution: "処刑", assassination: "暗殺", suicide: "自害", unknown: "不明" };
-type DeathRecord = { cause: DeathCause; basis: string; by?: string; note?: string };
+type DeathRecord = { cause: DeathCause; basis: string; by?: string; note?: string; month?: number };
 const DEATHS = (deathData as unknown as { deaths: Record<string, DeathRecord> }).deaths;
 /** 史実の死因(書かれていなければ、没年のある人は病死・推定) */
 export function historicDeath(p: Person): DeathRecord | null {
@@ -675,6 +675,7 @@ export class Court {
     }
     const t = chk.next === "emperor" ? "皇帝に即位" : "王を称";
     this.note(f, `${r?.name ?? ""}が${t}する`);
+    this.c.history?.log("crown", `${fac.name}の${r?.name ?? ""}が${t}する`);
     this.c.addNews(`${fac.name}の${r?.name ?? "君主"}が${t}しました`);
     return `${r?.name ?? "君主"}が${t}しました(威信と名声が上がり、ほかの皇帝の国との関係が悪くなりました)`;
   }
@@ -864,7 +865,8 @@ export class Court {
       const h = historicDeath(p);
       let cause: DeathCause | null = null;
       if (p.died !== null && p.died >= scenario.year && h && ["illness", "old_age", "unknown"].includes(h.cause)) {
-        if (year > p.died || (year === p.died && month >= 1 + Math.floor(chance(p.id + "|dm") * 12))) cause = h.cause;
+        // 亡くなる月:史料で分かる人はその月(劉聡7月・石勒7月など)、ほかは人物ごとに決まる月
+        if (year > p.died || (year === p.died && month >= (h.month ?? 1 + Math.floor(chance(p.id + "|dm") * 12)))) cause = h.cause;
       } else if (p.died !== null && p.died >= scenario.year && year > p.died) {
         const age = b !== null ? year - b : 50 + (year - p.died);
         const annual = age < 40 ? 0.01 : age < 50 ? 0.02 : age < 60 ? 0.04 : age < 70 ? 0.08 : age < 80 ? 0.15 : 0.3;
@@ -908,6 +910,8 @@ export class Court {
       if (!d.by || !["execution", "assassination", "suicide"].includes(d.cause)) continue;
       const v = persons.find((x) => x.id === id);
       if (!v || v.died === null || year < v.died || year > v.died + 3 || this.c.personStatus(id) === "dead") continue;
+      // まだ起きていない歴史の事件の主役(靳準など)は、その事件より先には死なせない
+      if (this.c.history?.awaitsPerson(id)) continue;
       const by = persons.find((x) => x.id === d.by);
       if (!by || this.c.personStatus(by.id) !== "active" || this.c.spoils.custodyOf(by.id)) continue;
       const held = this.c.spoils.custodyOf(id)?.holder === by.factionId;
@@ -1006,6 +1010,8 @@ export class Court {
       const hist = FAMILY.usurpations.find((u) => u.faction === f.id && u.victim === r.id && year >= u.year);
       let who: Person | undefined;
       let note = "";
+      // 歴史の重大事件で扱う簒奪(靳準・石虎・苻堅・冉閔)は、ここでは起こさない(二重に起こさない)
+      if (hist && this.c.history?.coveredUsurpers.has(hist.usurper)) continue;
       if (hist) {
         const u = persons.find((p) => p.id === hist.usurper && p.factionId === f.id && this.c.personStatus(p.id) === "active" && !this.c.spoils.custodyOf(p.id) && !this.isMinor(p));
         // 簒奪は、血縁の順位ではなく力で起こる:軍団を持つか、名声が君主を上回るほど起こりやすい

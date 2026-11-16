@@ -304,6 +304,8 @@ export interface BattleEvent {
   record?: BattleRecord;
   /** 近くにいて加勢した、同盟国・援軍の軍団(共同作戦)。efficiency は連携の度合い(0.5〜1) */
   supporters?: { side: "attacker" | "defender"; armyId: string; efficiency: number }[];
+  /** 歴史の重大事件の会戦(淝水の戦いなど)のとき、その事件のID */
+  histId?: string;
 }
 
 /** 戦闘の記録。イベントに残して、あとから戦歴として見られるようにする */

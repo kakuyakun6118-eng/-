@@ -5642,6 +5642,46 @@
    "people": "鮮卑",
    "certainty": "推定",
    "note": "生没年は史料により異同あり"
+  },
+  {
+   "id": "sima_chi",
+   "name": "司馬熾",
+   "reading": "しばし",
+   "born": 284,
+   "died": 313,
+   "factionId": "",
+   "role": "general",
+   "title": "懐帝",
+   "leadership": 40,
+   "war": 30,
+   "intelligence": 66,
+   "politics": 60,
+   "charisma": 62,
+   "traits": [],
+   "favoredUnit": null,
+   "bio": "武帝の子。307年に即位(懐帝)。311年、永嘉の乱で洛陽が落ち、漢に捕らえられた。313年に平陽で殺された。",
+   "people": "漢",
+   "certainty": "史実確認済み"
+  },
+  {
+   "id": "sima_ye",
+   "name": "司馬鄴",
+   "reading": "しばぎょう",
+   "born": 300,
+   "died": 318,
+   "factionId": "",
+   "role": "general",
+   "title": "愍帝",
+   "leadership": 30,
+   "war": 25,
+   "intelligence": 55,
+   "politics": 50,
+   "charisma": 58,
+   "traits": [],
+   "favoredUnit": null,
+   "bio": "武帝の孫。313年に長安で即位(愍帝)。316年に劉曜に降り、西晋は滅んだ。318年に平陽で殺された。",
+   "people": "漢",
+   "certainty": "史実確認済み"
   }
  ]
 }

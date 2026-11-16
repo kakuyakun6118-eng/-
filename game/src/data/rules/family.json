@@ -506,6 +506,12 @@
    "fu_sheng",
    "fu_liu",
    "fu_sou"
+  ],
+  [
+   "sima_zhong",
+   "sima_ai",
+   "sima_ying",
+   "sima_chi"
   ]
  ],
  "marriages": [
@@ -849,6 +855,17 @@
    ],
    "tuyuhun": [
     "shipi"
+   ]
+  },
+  "s300": {
+   "jin": [
+    "sima_chi"
+   ]
+  },
+  "s304": {
+   "jin": [
+    "sima_chi",
+    "sima_ye"
    ]
   }
  },

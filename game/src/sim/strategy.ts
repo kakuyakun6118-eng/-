@@ -54,7 +54,7 @@ export class StrategyAi {
   private act(factionId: string, p: StrategyProfile): void {
     const mine = this.citiesOf(factionId);
     if (mine.length === 0) return;
-    const enemies = this.c.cities.filter((c) => this.c.atWar(factionId, scenario.cityOwners[c.id]));
+    const enemies = this.c.cities.filter((c) => this.c.atWar(factionId, scenario.cityOwners[c.id]) && !this.c.history?.restrained(factionId, scenario.cityOwners[c.id]));
     const front = (c: City): number => enemies.reduce((best, e) => Math.min(best, distanceKm(c, e)), 9999);
 
     // 予算:維持費と俸禄(1)(2)を先に確保する。蓄えが支出の3か月分を超えた分だけを、募兵・編成・内政に回す
@@ -156,7 +156,7 @@ export class StrategyAi {
 
     // 迎撃:味方の都市に近づいた敵の軍団へ向かう(勝てそうなときだけ)
     const threats = this.c.armies
-      .filter((o) => this.c.atWar(a.factionId, o.army.factionId) && mine.some((c) => distanceKm(c, o.army) < p.defendKm))
+      .filter((o) => this.c.atWar(a.factionId, o.army.factionId) && !this.c.history?.restrained(a.factionId, o.army.factionId) && mine.some((c) => distanceKm(c, o.army) < p.defendKm))
       .sort((x, y) => distanceKm(x.army, a) - distanceKm(y.army, a));
     for (const t of threats) {
       if (distanceKm(t.army, a) > p.reachKm) break;

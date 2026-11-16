@@ -11,6 +11,7 @@ import { affinity, isKin, LoyaltySystem } from "./loyalty";
 import { cityEcon, Economy } from "./economy";
 import { Diplomacy, type DiploCommand } from "./diplomacy";
 import { Court } from "./court";
+import { HistorySystem } from "./history";
 import { seasonOf, type CampaignSave, type DynastySave, type Relation } from "./save";
 import type { BattleResult, CommanderFate, SideResult } from "../battle/types";
 import type { Army, ArmyStatus, BattleEvent, City, CityState, Faction, Person, PersonRole, PersonStatus, UnitTypeId } from "../data/types";
@@ -119,6 +120,7 @@ export class Campaign {
     }
     this.diplo = new Diplomacy(this);
     this.court = new Court(this);
+    this.history = new HistorySystem(this);
   }
 
   /** 勢力の、1か月の収入(支出を引く前) */
@@ -218,6 +220,8 @@ export class Campaign {
   readonly diplo!: Diplomacy;
   /** 皇室(家系・婚姻・子女・後継者・即位) */
   readonly court!: Court;
+  /** 歴史の重大事件と年表 */
+  readonly history!: HistorySystem;
 
   relationOf(a: string, b: string): Relation {
     const r = this.relations[[a, b].sort().join("|")] ?? "neutral";
@@ -473,6 +477,7 @@ export class Campaign {
       loyalty: this.loyalty.serialize(),
       diplomacy: this.diplo.serialize(),
       court: this.court.serialize(),
+      history: this.history.serialize(),
     });
   }
 
@@ -509,6 +514,7 @@ export class Campaign {
     this.economy.restore(data.economy);
     this.loyalty.restore(data.loyalty);
     this.diplo.restore(data.diplomacy);
+    this.history.restore(data.history);
     this.pendingAuto.length = 0;
     for (const k of Object.keys(this.personStates)) delete this.personStates[k];
     Object.assign(this.personStates, data.personStates);
@@ -792,6 +798,7 @@ export class Campaign {
         this.diplo.monthly();
         this.court.monthly();
         this.checkRulers();
+        this.history.monthly();
         if (this.playerFactionId !== null && (d + 1) % 360 === 210) this.court.aiYearly();
       }
       this.diplo.daily();
@@ -1113,6 +1120,7 @@ export class Campaign {
     this.loyalty.reevaluate(from, `${p.name}の反乱`);
     this.loyalty.noteRulerChange(from);
     this.addNews(`${old.name}の${p.name}が${base.city.name}で${why}、「${nf.name}」を建てて${title}を称しました`);
+    this.history?.log("state", `${p.name}が${base.city.name}で${why}「${nf.name}」を建てた`);
     return true;
   }
 
@@ -1136,6 +1144,7 @@ export class Campaign {
     this.loyalty.reevaluate(factionId, `君主${old.name}の死と、${next.p.name}の継承`);
     this.loyalty.noteRulerChange(factionId);
     this.court.resolveClaim();
+    this.history?.log("ruler", `${f.name}:${old.name}の死去により${next.p.name}が即位`);
   }
 
   /** 寿命による死(病死)。役目を解き、君主なら、次の月の調べで継承が起こる */
@@ -1152,6 +1161,74 @@ export class Campaign {
     if (i >= 0) this.spoils.custody.splice(i, 1);
     const label = { illness: "病死", old_age: "老衰", battle: "戦死", execution: "処刑", assassination: "暗殺", suicide: "自害", unknown: "不明" }[cause] ?? cause;
     if (p.role === "ruler" || (this.loyalty.fame[personId] ?? 0) >= 60) this.addNews(`${factionName(p.factionId)}の${p.name}が亡くなりました(${label}${p.fictional ? "" : p.died ? `。史実では${p.died}年に没` : ""})`);
+  }
+
+  /** 都市の持ち主を変える(歴史の事件などで使う。太守は外す) */
+  transferCity(cityId: string, to: string): void {
+    const city = this.cities.find((c) => c.id === cityId);
+    if (!city) return;
+    scenario.cityOwners[cityId] = to;
+    const g = personById(governorIdOf(city, this.cityStates[cityId]) ?? undefined);
+    if (g && g.factionId !== to) this.cityStates[cityId] = { ...this.cityState(city), governorId: null };
+    this.listener.onCityCaptured(cityId, to);
+  }
+
+  /** 指定の都市で国を建てる(史実の建国。都市はその人物の国のものであること)。新しい国のIDを返す */
+  foundState(personId: string, cityId: string, state: string, title: string): string | undefined {
+    const p = personById(personId);
+    const city = this.cities.find((c) => c.id === cityId);
+    // 都市は、その人物の国のものか、プレイヤーではないほかの国のもの(史実の蜂起の地。例:劉淵の離石)
+    const prevOwner = scenario.cityOwners[cityId];
+    if (!p || !city || p.role === "ruler" || !prevOwner || (prevOwner !== p.factionId && prevOwner === this.playerFactionId)) return undefined;
+    const from = p.factionId;
+    const old = scenario.factions.find((f) => f.id === from)!;
+    const id = `${from}_n${this.dynasty.added.length + 1}`;
+    const nf: Faction = {
+      id, name: state, people: p.people ?? old.people, ruler: p.name,
+      color: ["#c46a3a", "#4a8a8c", "#8c5ab4", "#b4a03c", "#5a7a3c", "#a04a6a", "#3c6aa0"][this.dynasty.added.length % 7], title, founded: { from, day: Math.floor(this.day) },
+    };
+    this.dynasty.added.push(nf);
+    scenario.factions.push(nf);
+    for (const g of scenario.factions) {
+      if (g.id === id || g.id === from) continue;
+      const r = this.relations[[from, g.id].sort().join("|")];
+      if (r) this.relations[[id, g.id].sort().join("|")] = r;
+    }
+    this.setRelation(id, from, "war");
+    if (prevOwner !== from) this.setRelation(id, prevOwner, "war");
+    this.spoils.setFaction(personId, id);
+    this.setRole(personId, "ruler");
+    this.transferCity(cityId, id);
+    const st = this.cityState(city);
+    this.cityStates[cityId] = { ...st, garrison: Math.max(st.garrison, 6000), governorId: personId };
+    const army = this.armies.find((s) => s.army.factionId === from && s.army.commanderId === personId);
+    if (army) {
+      this.listener.onArmyRemoved(army);
+      army.army.factionId = id;
+      this.listener.onArmyAdded(army);
+    }
+    const purse = this.factionStates[from] ?? { gold: 0, grain: 0 };
+    const share = { gold: Math.round(purse.gold * 0.1), grain: Math.round(purse.grain * 0.1) };
+    purse.gold -= share.gold;
+    purse.grain -= share.grain;
+    this.factionStates[id] = share;
+    this.court.ranks[id] = /皇帝|天王/.test(title) ? "emperor" : /王/.test(title) ? "king" : /公/.test(title) ? "duke" : "lord";
+    this.court.stability[id] = 55;
+    this.loyalty.addFame(personId, 12);
+    this.loyalty.reevaluate(from, `${p.name}の自立`);
+    this.history?.log("state", `${p.name}が${city.name}で「${state}」を建て、${title}を称した`);
+    this.addNews(`${old.name}の${p.name}が${city.name}で「${state}」を建て、${title}を称しました`);
+    return id;
+  }
+
+  /** 決めた2つの軍団で会戦を始める(歴史の事件の会戦) */
+  startEventAt(att: ArmyState, def: ArmyState, histId: string): BattleEvent | null {
+    const n = this.events.length;
+    this.startEvent(att, "field_battle", def, null);
+    const ev = this.events.length > n ? this.events[this.events.length - 1] : null;
+    if (ev) ev.histId = histId;
+    this.resolveAutoBattles();
+    return ev;
   }
 
   /** 廃立:君主 old を退け(生きたまま臣下に)、ほかの人物 next を君主にする */
@@ -1179,6 +1256,7 @@ export class Campaign {
     delete this.court.heirs[factionId];
     this.loyalty.addFame(usurper.id, 5);
     this.loyalty.reevaluate(factionId, `${usurper.name}の簒奪`);
+    this.history?.log("ruler", `${f.name}:${usurper.name}が${old.name}を廃して位を奪う(簒奪)`);
     this.loyalty.noteRulerChange(factionId);
   }
 
@@ -1325,6 +1403,7 @@ export class Campaign {
     const names = successors.map((s, i) => `${s.p.name}が「${scenario.factions.find((x) => x.id === newIds[i])!.name}」を建て、${scenario.factions.find((x) => x.id === newIds[i])!.title}を称しました`);
     this.addNews(`${f.name}の君主${old.name}が${captor ? `${factionName(captor)}に` : ""}捕らえられ、${f.name}は滅びました。${names.length ? names.join("。") : "独立する者はいませんでした"}`);
     this.listener.onFactionFallen?.({ factionId, successors: newIds, captor });
+    this.history?.log("fall", `${f.name}が滅亡${captor ? `(${factionName(captor)}が君主${old.name}を捕らえる)` : ""}${newIds.length ? `。後継:${newIds.map((i) => factionName(i)).join("・")}` : ""}`);
   }
 
   /** 人物のいる場所(太守の都市・率いる軍団・滞在する都市) */
@@ -1586,6 +1665,7 @@ export class Campaign {
     const event = this.eventOf(result.battleId);
     if (!event || event.status === "completed") return;
     this.splitSupporters(event, result);
+    this.history?.onBattle(event, result);
     event.status = "completed";
     event.record = {
       winner: result.winner,

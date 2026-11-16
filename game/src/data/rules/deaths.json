@@ -3,31 +3,38 @@
  "deaths": {
   "liu_cong": {
    "cause": "illness",
-   "basis": "史実確認済み"
+   "basis": "史実確認済み",
+   "month": 7
   },
   "liu_yuan": {
    "cause": "illness",
-   "basis": "史実確認済み"
+   "basis": "史実確認済み",
+   "month": 6
   },
   "shi_le": {
    "cause": "illness",
-   "basis": "史実確認済み"
+   "basis": "史実確認済み",
+   "month": 7
   },
   "shi_hu": {
    "cause": "illness",
-   "basis": "史実確認済み"
+   "basis": "史実確認済み",
+   "month": 4
   },
   "sima_rui": {
    "cause": "illness",
-   "basis": "史実確認済み"
+   "basis": "史実確認済み",
+   "month": 11
   },
   "sima_shao": {
    "cause": "illness",
-   "basis": "史実確認済み"
+   "basis": "史実確認済み",
+   "month": 8
   },
   "sima_yan": {
    "cause": "illness",
-   "basis": "史実確認済み"
+   "basis": "史実確認済み",
+   "month": 6
   },
   "sima_yue_kang": {
    "cause": "illness",
@@ -87,27 +94,33 @@
   },
   "murong_jun": {
    "cause": "illness",
-   "basis": "史実確認済み"
+   "basis": "史実確認済み",
+   "month": 1
   },
   "murong_ke": {
    "cause": "illness",
-   "basis": "史実確認済み"
+   "basis": "史実確認済み",
+   "month": 5
   },
   "murong_chui": {
    "cause": "illness",
-   "basis": "史実確認済み"
+   "basis": "史実確認済み",
+   "month": 4
   },
   "wang_meng": {
    "cause": "illness",
-   "basis": "史実確認済み"
+   "basis": "史実確認済み",
+   "month": 7
   },
   "xie_an": {
    "cause": "illness",
-   "basis": "史実確認済み"
+   "basis": "史実確認済み",
+   "month": 8
   },
   "huan_wen": {
    "cause": "illness",
-   "basis": "史実確認済み"
+   "basis": "史実確認済み",
+   "month": 7
   },
   "huan_chong": {
    "cause": "illness",
@@ -119,7 +132,8 @@
   },
   "yao_chang": {
    "cause": "illness",
-   "basis": "史実確認済み"
+   "basis": "史実確認済み",
+   "month": 12
   },
   "lv_guang": {
    "cause": "illness",
@@ -159,7 +173,8 @@
   },
   "fu_jian_jian": {
    "cause": "illness",
-   "basis": "史実確認済み"
+   "basis": "史実確認済み",
+   "month": 6
   },
   "fu_xiong": {
    "cause": "illness",
@@ -212,7 +227,8 @@
   "murong_huang": {
    "cause": "unknown",
    "basis": "史実確認済み",
-   "note": "348年、狩りの最中に落馬した傷がもとで没したとされる"
+   "note": "348年、狩りの最中に落馬した傷がもとで没したとされる",
+   "month": 9
   },
   "wang_rong": {
    "cause": "old_age",
@@ -713,6 +729,18 @@
   "shipi": {
    "cause": "illness",
    "basis": "推定"
+  },
+  "sima_chi": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "liu_cong",
+   "note": "313年、平陽で劉聡に殺された"
+  },
+  "sima_ye": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "liu_cong",
+   "note": "318年、平陽で劉聡に殺された"
   }
  }
 }
