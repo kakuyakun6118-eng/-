@@ -2,6 +2,7 @@
 // - 相性:史料にある関係は relations.json の値。ほかは、2人のIDから決まる固定の値(同じ一族・同じ民族なら少し高い)。
 // - 忠誠度:君主への忠誠(0〜100)。毎月、目安の値に少しずつ近づき、出来事で上下する。
 // - 名声:人物の評判(0〜100)。戦い・攻略・外交・建国で上下する。君主の威信(勢力の値)とは別に持つ。
+import { distanceKm } from "./pathfinding";
 import { persons, scenario } from "../data";
 import rel from "../data/rules/relations.json";
 import type { Person } from "../data/types";
@@ -178,6 +179,16 @@ export class LoyaltySystem {
     if (stab < 40) {
       v -= (40 - stab) * 0.25;
       parts.push(`国内の不安定(安定度${Math.round(stab)})`);
+    }
+    // 大国の統治の難しさ:都市が30を超える国では、都から800km以上離れた任地の太守・将は、都の目が届かず自立心を持ちやすい
+    const post = this.c.postOf(p.id);
+    if (now > 30 && post) {
+      const cap = this.c.strategy.capitalOf(p.factionId);
+      const at = post.kind === "city" ? this.c.cities.find((k) => k.id === post.id) : this.c.armies.find((s) => s.army.id === post.id)?.army;
+      if (cap && at && distanceKm(cap, at) > 800) {
+        v -= Math.min(10, (now - 30) * 0.12 + 3);
+        parts.push("都から遠い任地(大国の統治の難しさ)");
+      }
     }
     // 野心:大軍(8,000人以上)を率いる、武勇と名声のある将は、君主を軽んじやすい
     const army = this.c.armies.find((s) => s.army.commanderId === p.id && s.army.factionId === p.factionId);

@@ -140,6 +140,8 @@ export class StrategyAi {
   private shortSeen: Record<string, number> = {};
   /** 軍備増強中の勢力(月ごとに見直す) */
   buildUp: Record<string, boolean> = {};
+  /** 軍団を編成した日(できたばかりの軍団を、すぐ再編成でまとめないため) */
+  raised: Record<string, number> = {};
   /** 西域への遠征(勢力ごとに1つ):目標の国・都市、出す軍団、段階(集結→進軍) */
   expeditions: Record<string, { target: string; cityId: string; gateId: string; armyId: string; since: number; state: "gather" | "march"; foodNeed: number }> = {};
 
@@ -446,7 +448,11 @@ export class StrategyAi {
     const maxArmies = 1 + Math.floor(mine.length / 5) + p.extraArmies + (posture === "unify" || posture === "invade" ? 1 : 0) + (this.buildUp[factionId] ? 1 : 0);
     if (armies.length < maxArmies && canAffordArmy && wantsArmy) {
       const base = [...mine].filter((c) => c.kind !== "pass").sort((a, b) => this.c.cityState(b).garrison - this.c.cityState(a).garrison)[0];
-      if (base) {
+      // そばに手の空いた軍団があれば、新しく作らず、その軍団に兵を足す(編成してすぐ合流させる無駄をしない)
+      const idleNear = base ? armies.find((x) => x.status !== "fighting" && x.status !== "marching" && !this.opOf(x.army.id) && distanceKm(x.army, base) < 60) : undefined;
+      if (base && idleNear) {
+        if (totalTroops(idleNear.army) < rules.costs.maxArmy * rules.costs.armyGrowth && this.c.cityState(base).garrison > garrisonCap(base) * 0.45) this.c.reinforce(idleNear.army.id, base.id, 1500);
+      } else if (base) {
         const free2 = this.c.cityState(base).garrison - Math.max(rules.costs.minGarrison * 2, garrisonCap(base) * 0.25);
         const troops = Math.min(free2, rules.costs.maxArmy);
         // 都市が3つ以下の小国は、1,500人から軍団を作れる(大国は3,000人から)
@@ -458,6 +464,7 @@ export class StrategyAi {
             .sort((a, b) => b.leadership * 1.2 + b.war - (a.leadership * 1.2 + a.war))[0];
           const raised = this.c.raiseArmy(base.id, troops, free?.id, minTroops);
           if (typeof raised !== "string") {
+            this.raised[raised.army.id] = Math.floor(this.c.day);
             this.note(factionId, `${base.name}で軍団を編成(${Math.round(troops)}人、軍団長:${free?.name ?? "なし"})`);
             // 副将:指揮官と相性のよい、役目のない人
             if (free) {
@@ -654,7 +661,7 @@ export class StrategyAi {
 
     // 1b) 再編成:同じ都市のそばで手の空いた小さな軍団が2つあれば、小さいほうを都市に戻し、大きいほうに兵を移す
     {
-      const small = idle().filter((x) => x.supplied && totalTroops(x.army) < rules.costs.maxArmy * 0.6);
+      const small = idle().filter((x) => x.supplied && totalTroops(x.army) < rules.costs.maxArmy * 0.6 && Math.floor(this.c.day) - (this.raised[x.army.id] ?? -999) > 90);
       for (let i = 0; i < small.length; i++) {
         const a1 = small[i];
         const b1 = small.slice(i + 1).find((x) => distanceKm(x.army, a1.army) < 40);
