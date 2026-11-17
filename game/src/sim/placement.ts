@@ -115,6 +115,15 @@ export class Placement {
         .sort((x, y) => Math.hypot(x.lon - army.army.lon, x.lat - army.army.lat) - Math.hypot(y.lon - army.army.lon, y.lat - army.army.lat))[0];
       return { kind: away ? "moving" : "army", armyId: army.army.id, cityId: base?.id, label: `${army.army.name}の${role}${away ? (army.status === "fighting" ? "(交戦中)" : "(出陣中)") : base ? `(${base.name}に駐屯)` : "(野営)"}`, certainty: this.startArmies.get(army.army.id) === army.army.commanderId ? certainty : "ゲーム中の任命", source: cur?.source, note: cur?.note };
     }
+    // 史料で「軍中にある」とされる人(石勒の軍の張賓など):その軍団があり、ほかの役目がなければ、従軍として示す
+    const cur0 = this.curated()[personId];
+    if (cur0?.kind === "army" && cur0.army && !this.c.postOf(personId)) {
+      const host = this.c.stateOf(cur0.army);
+      if (host && host.army.factionId === p.factionId) {
+        const away = host.status === "marching" || host.status === "fighting";
+        return { kind: away ? "moving" : "army", armyId: host.army.id, label: `${host.army.name}に従軍${away ? "(出陣中)" : ""}`, certainty: cur0.certainty, source: cur0.source, note: cur0.note };
+      }
+    }
     // 太守・守将
     const post = this.c.postOf(personId);
     if (post?.kind === "city") {
@@ -129,7 +138,9 @@ export class Placement {
     if (!h || (owner !== p.factionId && !["alliance", "vassal"].includes(this.c.relationOf(owner ?? "", p.factionId)))) {
       const cap = this.c.strategy.capitalOf(p.factionId);
       if (!cap) return { kind: "unknown", label: "所在不明(所属国家に都市がない)", certainty: "不明" };
-      h = this.homes[personId] = { cityId: cap.id, kind: "court", certainty: h ? "ゲーム中の任命" : "ゲーム上の推定配置", note: h ? "拠点を失い、都へ移った" : "所属国家の都(宮廷)に置く" };
+      // ゲームの開始時(まだ1日も進んでいない)なら、史料の所在の都市がその国のものでないだけなので、推定として都に置く
+      const atStart = this.c.day < 1;
+      h = this.homes[personId] = { cityId: cap.id, kind: "court", certainty: atStart ? (h ? "推定" : "ゲーム上の推定配置") : h ? "ゲーム中の任命" : "ゲーム上の推定配置", note: atStart && h ? `史料の所在(${this.city(h.cityId)?.name ?? ""})がこの国の都市でないため、都に置く` : h ? "拠点を失い、都へ移った" : "所属国家の都(宮廷)に置く" };
     }
     const city = this.city(h.cityId)!;
     const capital = this.c.strategy.capitalOf(p.factionId)?.id === city.id;
