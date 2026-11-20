@@ -4175,3 +4175,6 @@ select:focus-visible {
 .menu-bgm { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
 .menu-bgm input[type="range"] { flex: 1 1 160px; }
 #menu-bgm-state { font-size: 11px; color: var(--muted); }
+#app { --safe-top: env(safe-area-inset-top, 0px); }
+#clock.narrow { font-size: 11px; gap: 4px; padding-left: 8px; }
+#clock.narrow #clock-treasury { font-size: 10px; }

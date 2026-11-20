@@ -752,6 +752,7 @@ export class Game {
     (this.root.querySelector("#event-text") as HTMLElement).textContent =
       `${kind}:${setup.name}。${setup.attacker.name}が${setup.defender.name}と対峙しました(攻撃側の勝率の目安 ${Math.round(estimateWinRate(setup).attacker * 100)}%)。時間を止めています`;
     (this.root.querySelector("#event") as HTMLElement).hidden = false;
+    this.layoutTopBar();
     this.syncSpeedButton();
     this.dirty = true;
   }
@@ -1087,6 +1088,7 @@ export class Game {
     (this.root.querySelector("#event-open") as HTMLElement).hidden = true;
     (this.root.querySelector("#event-text") as HTMLElement).textContent = text;
     (this.root.querySelector("#event") as HTMLElement).hidden = false;
+    this.layoutTopBar();
   }
 
   /** 会戦を終えて戦略マップに戻る。結果を軍団へ書き戻し、イベントを決着済みにする */
@@ -1109,6 +1111,7 @@ export class Game {
       (this.root.querySelector("#event-text") as HTMLElement).textContent =
         `${setup.name}:${winner}。損害は ${setup.attacker.name} ${result.attackerLosses.toLocaleString("ja-JP")}人、${setup.defender.name} ${result.defenderLosses.toLocaleString("ja-JP")}人`;
       (this.root.querySelector("#event") as HTMLElement).hidden = false;
+    this.layoutTopBar();
     }
     this.dirty = true;
   }
@@ -1391,7 +1394,77 @@ export class Game {
     };
   }
 
+  /**
+   * 上の帯の配置(Version 42):右の釦の列と左の題字を測り、日付の帯と知らせを、そのあいだの空きに置く。
+   * 空きが足りなければ、日付の帯は題字の下へ、知らせは日付の帯の下へ下げる(右の釦の列とは重ならない)。
+   */
+  layoutTopBar(): void {
+    const root = this.root;
+    const rect = root.getBoundingClientRect();
+    // 画面の拡大(ブラウザのズーム)があっても、CSSの長さで測る
+    const k = rect.width > 0 ? root.offsetWidth / rect.width : 1;
+    const R = (el: Element): { left: number; right: number; top: number; bottom: number; width: number; height: number } => {
+      const b = el.getBoundingClientRect();
+      return { left: (b.left - rect.left) * k, right: (b.right - rect.left) * k, top: (b.top - rect.top) * k, bottom: (b.bottom - rect.top) * k, width: b.width * k, height: b.height * k };
+    };
+    const W = root.offsetWidth;
+    const ids = ["credits-open", "territory-toggle", "menu-open", "persons-open", "diplomacy-open", "spoils-open", "finance-open", "court-open", "timeline-open", "events-open", "trade-open", "supply-open"];
+    let railLeft = W;
+    for (const id of ids) {
+      const el = root.querySelector<HTMLElement>(`#${id}`);
+      if (!el || el.offsetParent === null) continue;
+      railLeft = Math.min(railLeft, R(el).left);
+    }
+    const title = root.querySelector<HTMLElement>(".title");
+    const tr = title && title.offsetParent !== null ? R(title) : null;
+    const titleRight = tr && tr.width > 0 ? tr.right : 0;
+    const titleBottom = tr && tr.height > 0 ? tr.bottom : 0;
+    const clock = root.querySelector<HTMLElement>("#clock");
+    const ev = root.querySelector<HTMLElement>("#event");
+    if (!clock || !ev) return;
+    const gap = 10;
+    const safeTop = parseFloat(getComputedStyle(root).getPropertyValue("--safe-top")) || 0;
+    const safeLeft = 16;
+    clock.style.transform = "none";
+    clock.style.maxWidth = "";
+    clock.style.flexWrap = "";
+    clock.classList.remove("narrow");
+    let cw = clock.offsetWidth;
+    let clockBottom: number;
+    if (cw <= railLeft - titleRight - gap * 2) {
+      // 題字と釦の列のあいだに収まる:その空きの真ん中寄りに置く
+      const left = Math.max(titleRight + gap, Math.min((W - cw) / 2, railLeft - gap - cw));
+      clock.style.left = `${left}px`;
+      clock.style.top = `${12 + safeTop}px`;
+      clockBottom = 12 + safeTop + clock.offsetHeight;
+    } else {
+      // 収まらない:題字の下へ。釦の列にかかるなら、文字を縮め、それでも足りなければ2段に折り返す
+      clock.style.left = `${safeLeft}px`;
+      clock.style.top = `${titleBottom + 6}px`;
+      const room = railLeft - gap - safeLeft;
+      if (cw > room) {
+        clock.classList.add("narrow");
+        cw = clock.offsetWidth;
+        if (cw > room) {
+          clock.style.maxWidth = `${Math.max(140, room)}px`;
+          clock.style.flexWrap = "wrap";
+        }
+      }
+      clockBottom = titleBottom + 6 + clock.offsetHeight;
+    }
+    // 知らせ:題字の右に十分な空きがあればそこへ、なければ題字と日付の帯の下へ。どちらも釦の列の手前まで(最大560px)
+    const besideTitle = railLeft - gap - (titleRight + gap) >= 320;
+    const left0 = besideTitle ? titleRight + gap : safeLeft;
+    const top0 = besideTitle ? clockBottom + 8 : Math.max(clockBottom, titleBottom) + 8;
+    const w = Math.max(140, Math.min(560, railLeft - gap - left0));
+    ev.style.transform = "none";
+    ev.style.width = `${w}px`;
+    ev.style.left = `${Math.max(left0, Math.min((W - w) / 2, railLeft - gap - w))}px`;
+    ev.style.top = `${top0}px`;
+  }
+
   private resize(): void {
+    this.layoutTopBar();
     this.width = Math.max(1, this.root.clientWidth);
     this.height = Math.max(1, this.root.clientHeight);
     this.renderer.setSize(this.width, this.height, false);
@@ -1442,7 +1515,11 @@ export class Game {
 
   private frame(): void {
     this.tickFps();
-    if (++this.bgmTick % 30 === 0) this.bgm.play(this.bgmScene());
+    if (++this.bgmTick % 30 === 0) {
+      this.bgm.play(this.bgmScene());
+      // 日付や金の桁が増えると帯の幅が変わるので、ときどき置き直す
+      if (this.bgmTick % 120 === 0) this.layoutTopBar();
+    }
     // 領土の塗り直しの続き(1フレームに1区切り)
     this.territory.ensure();
     if (this.territoryJob) {
