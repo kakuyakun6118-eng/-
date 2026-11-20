@@ -127,6 +127,8 @@ function createTerrainTextures(field: FieldMap): { shape: THREE.DataTexture; cov
   const wet = new Float32Array(n * n);
   const water = new Float32Array(n * n);
   const shrub = new Float32Array(n * n);
+  const road = new Float32Array(n * n);
+  const ford = new Float32Array(n * n);
   for (let j = 0; j < n; j++) {
     for (let i = 0; i < n; i++) {
       const [x, z] = at(i, j);
@@ -138,6 +140,8 @@ function createTerrainTextures(field: FieldMap): { shape: THREE.DataTexture; cov
       wet[k] = c === COVER.wetland ? 1 : 0;
       shrub[k] = c === COVER.shrub ? 1 : 0;
       water[k] = field.waterAt(x, z); // 0 = 陸、0.5 = 浅瀬、1 = 深い水
+      road[k] = field.onRoad(x, z) ? 1 : 0;
+      ford[k] = field.onFord(x, z) ? 1 : 0;
     }
   }
   const forestB = blur(forest, n, 1);
@@ -145,6 +149,8 @@ function createTerrainTextures(field: FieldMap): { shape: THREE.DataTexture; cov
   const wetB = blur(wet, n, 2);
   const shrubB = blur(shrub, n, 2);
   const waterB = blur(water, n, 1);
+  const roadB = blur(road, n, 1);
+  const fordB = blur(ford, n, 1);
 
   const info = field.info;
   const span = Math.max(1, info.maxMeters - info.minMeters);
@@ -171,7 +177,9 @@ function createTerrainTextures(field: FieldMap): { shape: THREE.DataTexture; cov
       cover[k * 4 + 3] = waterB[k] * 255;
       aux[k * 4] = Math.max(0, Math.min(1, (field.metersAt(x, z) - info.minMeters) / span)) * 255;
       aux[k * 4 + 1] = shrubB[k] * 255;
-      aux[k * 4 + 3] = 255;
+      // 道(青の成分)と浅瀬(不透明度の成分:浅瀬ほど小さい)。Version 42
+      aux[k * 4 + 2] = roadB[k] * 255;
+      aux[k * 4 + 3] = 255 - fordB[k] * 200;
     }
   }
   return { shape: dataTexture(shape, n), cover: dataTexture(cover, n), aux: dataTexture(aux, n) };
@@ -235,6 +243,10 @@ const GROUND_COLOR = /* glsl */ `
   float gStrata = texture2D( tNoise, vec2( gq.x * 0.02, vGroundPos.y * 0.31 ) ).r;
   vec3 gRockCol = mix( uRock, uRockDark, nFine.r * 0.6 + gStrata * 0.4 ) * ( 0.82 + 0.3 * nGrain );
   gCol = mix( gCol, gRockCol, gRockAmt );
+  // --- 道:踏み固められた土の帯(轍の筋が少し見える)。Version 42 ---
+  float gRoad = smoothstep( 0.25, 0.6, gAux.b ) * ( 1.0 - gForest * 0.5 );
+  vec3 gRoadCol = mix( uSoil * 1.05, uSand * 0.9, 0.45 ) * ( 0.86 + 0.14 * nFine.r + 0.1 * smoothstep( 0.4, 0.6, nGrain ) );
+  gCol = mix( gCol, gRoadCol, gRoad * 0.85 );
   // --- 尾根は少し明るく、谷筋は少し暗くして、地形の形を読み取りやすくする ---
   gCol *= 0.72 + 0.56 * gShape.a;
 
@@ -258,6 +270,9 @@ const GROUND_COLOR = /* glsl */ `
     vec3 gBed = mix( uSand, uSoil, nMid ) * 0.55;
     vec3 gWaterCol = mix( mix( gBed, vec3( 0.26, 0.4, 0.36 ), 0.55 ), vec3( 0.09, 0.22, 0.27 ), gDepth );
     gWaterCol += gRip.r * 0.035;
+    // 浅瀬(渡し場):川底の砂礫が透けて見える、明るく浅い水
+    float gFordAmt = smoothstep( 0.1, 0.5, 1.0 - gAux.a );
+    gWaterCol = mix( gWaterCol, mix( uSand * 0.85, vec3( 0.42, 0.52, 0.46 ), 0.45 ) + gRip.r * 0.05, gFordAmt * 0.8 );
     gCol = mix( gCol, gWaterCol, gWaterAmt );
     gNormalW = mix( gNormalW, vec3( gRip.r * 0.22, 1.0, gRip.g * 0.22 ), gWaterAmt );
   }
@@ -414,6 +429,7 @@ export class Battlefield {
     this.group.add(new THREE.Mesh(far, new THREE.MeshLambertMaterial({ vertexColors: true })));
 
     this.plantTrees(land);
+    this.markFords();
 
     // ----- 空:地平線は白っぽく、天頂へ向かって青くなる -----
     const sky = new THREE.Mesh(
@@ -459,6 +475,33 @@ export class Battlefield {
    * 木を立てる。樹林の土地被覆には密に、低木の被覆には茂みを置く。
    * それ以外の所にも、設定に応じてまばらに木立を置く(水辺には少し多めに)。
    */
+  /** 浅瀬(渡し場)の目印:両岸の杭(Version 42)。遠くからも渡れる所が分かるように */
+  private markFords(): void {
+    const field = this.field;
+    const spots: { x: number; z: number }[] = [];
+    for (const f of field.fords) {
+      for (let a = 0; a < 16; a++) {
+        const ang = (a / 16) * Math.PI * 2;
+        for (const r of [16, 22, 28]) {
+          const x = f.x + Math.cos(ang) * r, z = f.z + Math.sin(ang) * r;
+          // 浅瀬の縁の、陸か浅い水の所に立てる
+          if (field.waterAt(x, z) < 1 && field.onFord(x - Math.cos(ang) * 6, z - Math.sin(ang) * 6)) {
+            spots.push({ x, z });
+            break;
+          }
+        }
+      }
+    }
+    if (!spots.length) return;
+    const mesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.22, 0.3, 2.6, 5), new THREE.MeshLambertMaterial({ color: 0x6b4a2a }), spots.length);
+    const m = new THREE.Matrix4();
+    spots.forEach((p, i) => {
+      m.makeTranslation(p.x, field.heightAt(p.x, p.z) + 1.0, p.z);
+      mesh.setMatrixAt(i, m);
+    });
+    this.group.add(mesh);
+  }
+
   private plantTrees(land: Landscape): void {
     const field = this.field;
     const lists: Record<TreeKind, number[]> = { broadleafA: [], broadleafB: [], poplar: [], pine: [], shrub: [] };

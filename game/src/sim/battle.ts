@@ -1,6 +1,7 @@
 // 会戦に関する計算。戦闘イベントから、会戦準備画面や3D戦闘に渡す「会戦の設定」を組み立てる。
 // ここは計算だけで、画面のことは知らない。
 import { affinity } from "./loyalty";
+import { reliefArrivalSeconds, reliefMorale } from "./relief";
 import { factionMoraleBonus, withEquipment } from "./spoils";
 import { cityLevelOf, cityLevels, officerById, personById, resolveCityLayout, terrainRules } from "../data";
 import type { Army, BattleEvent, BattleSetup, BattleSide, City, CityState, Fortification, Officer, TerrainKind } from "../data/types";
@@ -181,7 +182,7 @@ export function createBattleSetup(
       if (n <= 0) continue;
       for (const k of ["infantry", "cavalry", "archer"] as const) side.troops[k] += a.troops[k];
       (side.supporters ??= []).push({ armyId: a.id, name: a.name, factionId: a.factionId, troops: n, efficiency: sup.efficiency,
-        relief: { by: { ...a.troops }, morale: Math.round(a.morale * sup.efficiency), arriveSec: Math.min(150, Math.max(20, Math.round((sup.km ?? 40) * 1.5))), commander: a.commanderId || null } });
+        relief: { by: { ...a.troops }, morale: reliefMorale(a.morale, sup.efficiency, a.food, a.fatigue), arriveSec: sup.arriveSec ?? reliefArrivalSeconds(sup.km ?? 40), commander: a.commanderId || null } });
       continue;
     }
     if (!a || side.kind !== "army") continue;

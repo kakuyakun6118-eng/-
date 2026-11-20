@@ -295,6 +295,8 @@ export type BattleStatus = "pending" | "preparing" | "in_progress" | "completed"
 /** 戦闘イベント。敵と接触したときに作られ、会戦準備画面や会戦の入口になる */
 export interface BattleEvent {
   battleId: string;
+  /** AIどうしの攻城戦の包囲(Version 42):この日に決着する。それまでは包囲が続く */
+  autoSiegeUntil?: number;
   battleType: BattleType;
   attackerArmyId: string;
   /** 野戦のときの相手の軍団(攻城戦では null) */
@@ -311,7 +313,9 @@ export interface BattleEvent {
   /** 決着したあとの記録(勝敗と損害) */
   record?: BattleRecord;
   /** 近くにいて加勢した、同盟国・援軍の軍団(共同作戦)。efficiency は連携の度合い(0.5〜1) */
-  supporters?: { side: "attacker" | "defender"; armyId: string; efficiency: number; relief?: boolean; km?: number }[];
+  supporters?: { side: "attacker" | "defender"; armyId: string; efficiency: number; relief?: boolean; km?: number; arriveSec?: number }[];
+  /** 救援に向かおうとして、道を阻まれた軍団(Version 42) */
+  reliefBlocked?: { armyId: string; by: string }[];
   /** 歴史の重大事件の会戦(淝水の戦いなど)のとき、その事件のID */
   histId?: string;
   /** 作戦による補正(歴史の事件の選択などで決まる) */
@@ -343,6 +347,8 @@ export interface BattleRecord {
   siege?: SiegeOutcome;
   /** 攻城戦の救援軍(Version 41):軍団ごとの、戦いのあとの兵力と士気(3Dの攻城戦のときだけ入る) */
   relief?: Record<string, { after: Record<UnitTypeId, number>; morale: number }>;
+  /** 救援軍のうち、着いて戦いに加わった軍団(自動の攻城戦で入る) */
+  reliefJoined?: string[];
 }
 
 /** 攻城戦の結末 */

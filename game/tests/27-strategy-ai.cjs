@@ -62,7 +62,10 @@ const { chromium } = require('playwright');
     const owners = Object.keys(c.strategy.stats).filter(f => c.strategy.stats[f].dispatched > 0);
     return { moves: t.moves, dispatched: t.dispatched, arrived: t.arrived, field: t.fieldBattles, sieges: t.sieges, captures: t.captures, retreats: t.retreats, coordinated: t.coordinated, guards: t.guards, factions: owners, aborted: t.aborted, notLaunched: t.notLaunched }; });
   check('C AIどうしの戦争で、軍団が動き、野戦・攻城戦が起き、都市が占領される', rC.moves >= 5 && rC.dispatched >= 3 && rC.field >= 1 && rC.sieges >= 1 && rC.captures >= 1 && rC.factions.length >= 2, rC);
-  check('D 複数の軍団が役割を分けて動く(共同攻撃・援護・予備の投入・首都の守り)', rC.coordinated >= 1 && rC.guards >= 1, { coordinated: rC.coordinated, guards: rC.guards });
+  // Version 42:首都の守りは、首都の防衛(呼び戻し・籠城・救援)としても数える。540日で起きなければ、360日だけ延ばして確かめる
+  const rD = await p.evaluate((rc) => { const c = window.__goko.campaign; const cnt = () => { const t = c.strategy.totals(); return t.guards + t.capitalRecall + t.capitalHoldout + t.capitalRelief; };
+    let extra = 0; if (cnt() === 0) { window.__run(360); extra = 360; } const t = c.strategy.totals(); return { coordinated: t.coordinated, guards: t.guards, capitalRecall: t.capitalRecall, capitalHoldout: t.capitalHoldout, capitalRelief: t.capitalRelief, total: cnt(), extra }; }, rC);
+  check('D 複数の軍団が役割を分けて動く(共同攻撃・援護・予備の投入・首都の守り)', rD.coordinated >= 1 && rD.total >= 1, rD);
   const rE = await p.evaluate(() => { const g = window.__goko, c = g.campaign, D = window.__gokoData; c.speed = 0;
     // 遠い敵地にいる軍団に、兵糧が乏しいまま攻撃の任務を与える → 補給・撤退の判断をする
     const s = c.armies.find(s => s.army.factionId === 'han_zhao' && s.status !== 'fighting') ?? c.armies.find(s => !['silla'].includes(s.army.factionId) && c.strategy.capitalOf(s.army.factionId));

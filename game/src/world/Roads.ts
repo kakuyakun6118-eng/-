@@ -16,6 +16,8 @@ export class Roads {
   count = 0;
   /** 引けなかった道(都市ID-都市ID)。点検用 */
   readonly failed: string[] = [];
+  /** 道すじの点の列(会戦の戦場に道を描くのに使う。Version 42) */
+  lines: RoutePoint[][] = [];
 
   constructor(links: string[][], places: City[], grid: TerrainGrid, heightAt: (lon: number, lat: number) => number) {
     const lines: RoutePoint[][] = [];
@@ -29,6 +31,7 @@ export class Roads {
       else this.failed.push(`${a}-${b}`);
     }
     this.count = lines.length;
+    this.lines = lines;
     for (const line of lines) for (const p of line) grid.markRoad(p.lon, p.lat, ROAD_FACTOR);
 
     // 道を、地面に沿った細い帯として描く

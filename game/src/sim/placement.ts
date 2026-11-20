@@ -27,10 +27,13 @@ export interface PersonLocation {
 interface Home { cityId: string; kind: "city" | "court"; certainty: LocationCertainty; source?: string; note?: string }
 type Curated = { kind: "city" | "court" | "army"; at?: string; army?: string; certainty: LocationCertainty; source?: string; note?: string };
 
-export interface PlacementSave { homes: Record<string, Home> }
+/** 人物の移動(Version 42:君主の退避など)。道に沿って日数をかけて進み、途中で敵に捕まることもある */
+export interface Travel { from: string; to: string; points: { lon: number; lat: number }[]; km: number; startDay: number; days: number; why: string }
+export interface PlacementSave { homes: Record<string, Home>; travels?: Record<string, Travel> }
 
 export class Placement {
   homes: Record<string, Home> = {};
+  travels: Record<string, Travel> = {};
   /** シナリオ開始時の軍団と指揮官(史実の配置か、ゲーム中の任命かを見分けるため) */
   private startArmies = new Map<string, string>();
 
@@ -90,6 +93,57 @@ export class Placement {
     this.homes[personId] = { cityId, kind, certainty: "ゲーム中の任命", note };
   }
 
+  /** 移動を始める(道のりの点の列と長さ。1日におよそ kmPerDay 進む) */
+  startTravel(personId: string, from: string, to: string, points: { lon: number; lat: number }[], km: number, why: string, kmPerDay = 35): void {
+    this.travels[personId] = { from, to, points, km, startDay: Math.floor(this.c.day), days: Math.max(1, Math.ceil(km / kmPerDay)), why };
+  }
+
+  /** 移動中の人物の、いまの位置 */
+  positionOf(personId: string): { lon: number; lat: number } | null {
+    const t = this.travels[personId];
+    if (!t || t.points.length < 1) return null;
+    const f = Math.max(0, Math.min(1, (this.c.day - t.startDay) / t.days));
+    const i = Math.min(t.points.length - 1, Math.floor(f * (t.points.length - 1)));
+    return t.points[i];
+  }
+
+  /** 毎日:着いた人は行き先の都市へ。行き先を失ったら、残る自国の都市へ向け直す。返り値は、着いた・捕まった人 */
+  tickTravel(): { arrived: string[]; caught: { id: string; by: string }[] } {
+    const out = { arrived: [] as string[], caught: [] as { id: string; by: string }[] };
+    for (const [id, t] of Object.entries(this.travels)) {
+      const p = personById(id);
+      if (!p || this.c.personStatus(id) !== "active") {
+        delete this.travels[id];
+        continue;
+      }
+      // 行き先を失った(落城・離反):いまいる所から、別の自国の都市へ向け直す
+      if (scenario.cityOwners[t.to] !== p.factionId) {
+        const here = this.positionOf(id) ?? this.city(t.from)!;
+        const next = this.c.cities.filter((k) => k.kind !== "pass" && k.id !== t.to && scenario.cityOwners[k.id] === p.factionId)
+          .sort((a, b) => Math.hypot(a.lon - here.lon, a.lat - here.lat) - Math.hypot(b.lon - here.lon, b.lat - here.lat))[0];
+        const path = next ? this.c.pathBetween(here, next) : null;
+        if (next && path) {
+          this.travels[id] = { from: t.from, to: next.id, points: path.points, km: path.km, startDay: Math.floor(this.c.day), days: Math.max(1, Math.ceil(path.km / 35)), why: `${t.why}(行き先を失い、${next.name}へ向け直す)` };
+        } else delete this.travels[id];
+        continue;
+      }
+      if (this.c.day >= t.startDay + t.days) {
+        delete this.travels[id];
+        if (scenario.cityOwners[t.to] === p.factionId) {
+          this.homes[id] = { cityId: t.to, kind: "court", certainty: "ゲーム中の任命", note: t.why };
+          out.arrived.push(id);
+        }
+        continue;
+      }
+      // 道中で敵の軍団のすぐそば(25km以内)を通ると、捕まるおそれがある(1日ごとに4割)
+      const pos = this.positionOf(id);
+      if (!pos) continue;
+      const foe = this.c.armies.find((s) => this.c.atWar(s.army.factionId, p.factionId) && Math.hypot((s.army.lon - pos.lon) * 85, (s.army.lat - pos.lat) * 111) < 25);
+      if (foe) out.caught.push({ id, by: foe.army.factionId });
+    }
+    return out;
+  }
+
   /** いまの所在 */
   locationOf(personId: string): PersonLocation {
     const p = personById(personId);
@@ -102,6 +156,12 @@ export class Placement {
       const cap = holder ? this.c.strategy.capitalOf(holder) : undefined;
       const hn = scenario.factions.find((f) => f.id === holder)?.name ?? "";
       return { kind: "captive", cityId: cap?.id, label: `${hn}の${status === "protected" ? "保護下" : "捕虜"}${cap ? `(${cap.name})` : ""}`, certainty: "ゲーム中の任命" };
+    }
+    // 移動中(退避など。Version 42)
+    const tr = this.travels[personId];
+    if (tr && status === "active") {
+      const to = this.city(tr.to);
+      return { kind: "moving", label: `${to?.name ?? ""}へ移動中(${tr.why})`, certainty: "ゲーム中の任命", note: tr.why };
     }
     // 軍団:出陣中(行軍・戦闘)なら、都市には常駐していない
     const army = this.c.armies.find((s) => s.army.commanderId === personId || s.army.deputyId === personId);
@@ -157,12 +217,13 @@ export class Placement {
   }
 
   serialize(): PlacementSave {
-    return { homes: JSON.parse(JSON.stringify(this.homes)) as Record<string, Home> };
+    return { homes: JSON.parse(JSON.stringify(this.homes)) as Record<string, Home>, travels: JSON.parse(JSON.stringify(this.travels)) as Record<string, Travel> };
   }
 
   restore(save: PlacementSave | undefined): void {
     if (!save) return this.init();
     this.homes = { ...save.homes };
+    this.travels = JSON.parse(JSON.stringify(save.travels ?? {})) as Record<string, Travel>;
     // 古いセーブや、あとから加わった人物は、初めの配置で補う
     const keep = this.homes;
     this.init();

@@ -91,7 +91,17 @@ export function effectText(e: TreasureEffects): string {
 const PERSON_KEYS = ["politics", "intelligence", "charisma", "leadership", "war"] as const;
 
 /** 日付と名前から決まる乱数(同じ状況なら同じ結果になる。日や都市が違えば変わる) */
-export function chance(seed: string): number {
+/** ゲーム全体の乱数の種(Version 42)。空なら、これまでと同じ乱数になる。同じ種なら、同じ展開になる */
+let gameSeed = "";
+export function setGameSeed(s: string): void {
+  gameSeed = s;
+}
+export function getGameSeed(): string {
+  return gameSeed;
+}
+
+export function chance(seed0: string): number {
+  const seed = gameSeed ? `${gameSeed}#${seed0}` : seed0;
   let a = 2166136261;
   for (let i = 0; i < seed.length; i++) a = Math.imul(a ^ seed.charCodeAt(i), 16777619);
   a = Math.imul(a ^ (a >>> 15), a | 1);

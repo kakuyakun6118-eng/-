@@ -3,7 +3,7 @@
 import type { BattleSetup } from "../data/types";
 import { BattleAi, type Difficulty } from "./ai";
 import { FIELD, formations, setFormation, shapeUnit, unitClasses, type Deployment } from "./deploy";
-import type { FieldMap } from "./fieldData";
+import { COVER, type FieldMap } from "./fieldData";
 import type { Siege } from "./siege";
 import { SiegeAi } from "./siegeAi";
 import { buildResult } from "./result";
@@ -378,6 +378,11 @@ export class BattleSim {
       let speed = u.running ? cls.run : cls.walk;
       if (water > 0) speed *= water >= 1 ? 0.45 : 0.7;
       if (forest) speed *= cls.category === "cavalry" ? 0.55 : 0.8;
+      // 地表(Version 42):道の上は速く、湿地はぬかるんで遅い(騎兵ほど)。低木の茂みも少し遅い
+      const cov = this.field.coverAt(u.x, u.z);
+      if (water === 0 && this.field.onRoad(u.x, u.z)) speed *= 1.15;
+      else if (cov === COVER.wetland) speed *= cavalry ? 0.6 : 0.75;
+      else if (cov === COVER.shrub) speed *= 0.92;
       speed *= 1 - 0.3 * (u.fatigue / 100);
       speed *= formations[u.formation].speed;
       const backing = u.order.kind === "move" && u.order.keepFacing === true && !fleeing;
@@ -515,6 +520,9 @@ export class BattleSim {
     const flank = this.flankFactor(attacker, defender);
     let power = cls.charge * formations[attacker.formation].charge;
     if (this.field.inForest(defender.x, defender.z)) power *= 0.4; // 森では勢いが付かない
+    // 水の中・湿地では勢いが付かない。渡河中の敵(水の中)に突っ込まれると、陣が乱れていて崩れやすい(Version 42)
+    if (this.field.waterAt(attacker.x, attacker.z) > 0 || this.field.coverAt(attacker.x, attacker.z) === COVER.wetland) power *= 0.5;
+    if (this.field.waterAt(defender.x, defender.z) > 0) power *= 1.3;
     if (this.field.slopeAt(defender.x, defender.z) > 0.2) power *= 0.5; // 斜面でも勢いが付かない
     if (this.field.heightAt(attacker.x, attacker.z) < this.field.heightAt(defender.x, defender.z) - 1.5) power *= 0.7;
     // 槍兵は、正面からの騎兵の突撃を受け止める
@@ -577,6 +585,7 @@ export class BattleSim {
         if (cls.category === "cavalry" && ecls.category === "archer") mult *= 1.4;
         if (cls.category === "cavalry" && this.field.inForest(u.x, u.z)) mult *= 0.65;
         if (this.field.waterAt(u.x, u.z) > 0) mult *= 0.75; // 川の中では陣形が乱れる
+        if (this.field.waterAt(e.x, e.z) > 0 && this.field.waterAt(u.x, u.z) === 0) mult *= 1.2; // 岸から、渡河中の敵を討つ(Version 42)
         const dh = this.field.heightAt(u.x, u.z) - this.field.heightAt(e.x, e.z);
         if (dh > 1.5) mult *= 1.15; // 高所から攻め下ろす
         else if (dh < -1.5) mult *= 0.88;
@@ -636,6 +645,8 @@ export class BattleSim {
     if (this.field.heightAt(u.x, u.z) > this.field.heightAt(target.x, target.z) + 1.5) hit *= 1.15;
     // 地形(Version 41):林の中の的は木に守られる。高い所から低い所へは、高低差が大きいほど遠くまでよく届く
     if (this.field.inForest(target.x, target.z)) hit *= 0.7;
+    else if (this.field.coverAt(target.x, target.z) === COVER.shrub) hit *= 0.85; // 低木の茂みも、少し身を隠せる
+    if (this.field.waterAt(target.x, target.z) > 0) hit *= 1.15; // 渡河中は、盾を構えにくい
     const drop = this.field.heightAt(u.x, u.z) + u.elevation - (this.field.heightAt(target.x, target.z) + target.elevation);
     if (drop < -4) hit *= 0.85; // 見上げて射る
     const flight = 0.6 + d / 45;

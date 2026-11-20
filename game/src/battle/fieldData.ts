@@ -98,6 +98,139 @@ export class FieldMap {
     private readonly coarse: HeightField,
   ) {}
 
+  /** 緯度経度が、戦場のどの位置 (x, z) にあたるか(toLonLat の逆) */
+  fromLonLat(lon: number, lat: number): { x: number; z: number } {
+    const cos = Math.cos(this.bearing);
+    const sin = Math.sin(this.bearing);
+    const east = (lon - this.lon) * METERS_PER_DEGREE * Math.cos((this.lat * Math.PI) / 180);
+    const north = (lat - this.lat) * METERS_PER_DEGREE;
+    return { x: (east * cos - north * sin) / METERS_PER_UNIT, z: (-east * sin - north * cos) / METERS_PER_UNIT };
+  }
+
+  /** 道(Version 42):1 なら道の上 */
+  readonly road = new Uint8Array(N * N);
+  /** 浅瀬(渡し場。Version 42):1 なら、深い川を渡れる浅瀬 */
+  readonly ford = new Uint8Array(N * N);
+  /** 戦場にある浅瀬の場所と名前(史料の渡しなら名前つき) */
+  fords: { x: number; z: number; name?: string }[] = [];
+
+  /**
+   * 道と浅瀬を戦場に入れる(Version 42)。道は戦略マップの道すじ、浅瀬は史料の渡し(crossings)の地点と、
+   * 道が川を渡る所。戦場に深い川があるのに渡れる所がなければ、川幅のいちばん狭い所を浅瀬にする(2か所まで)。
+   */
+  addFeatures(roads: { lon: number; lat: number }[][], crossings: { name: string; lon: number; lat: number }[]): void {
+    const mark = (cx: number, cz: number, r: number, f: (k: number) => void): void => {
+      const i0 = Math.round((cx + VIEW_HALF) / CELL), j0 = Math.round((cz + VIEW_HALF) / CELL), rr = Math.ceil(r / CELL);
+      for (let dj = -rr; dj <= rr; dj++) for (let di = -rr; di <= rr; di++) {
+        const i = i0 + di, j = j0 + dj;
+        if (i < 0 || j < 0 || i >= N || j >= N || Math.hypot(di, dj) * CELL > r) continue;
+        f(j * N + i);
+      }
+    };
+    /**
+     * 浅瀬:その点から、川幅のいちばん狭い向き(16方向から選ぶ)に、岸から岸までの帯(幅約14 = 約170m)を浅くする。
+     * 岸まで遠すぎる(800超)大河では、点のまわりだけを浅くする(中州の浅瀬)。
+     */
+    const makeFord = (x: number, z: number, r: number, name?: string): void => {
+      let best: { dx: number; dz: number; a: number; b: number } | null = null;
+      for (let k = 0; k < 16; k++) {
+        const ang = (k / 16) * Math.PI;
+        const dx = Math.cos(ang), dz = Math.sin(ang);
+        const run = (sgn: number): number => {
+          for (let t = 0; t < 800; t += 2) if (this.waterAt(x + dx * t * sgn, z + dz * t * sgn) === 0) return t;
+          return 9999;
+        };
+        const a = run(1), b = run(-1);
+        if (a + b < 1600 && (!best || a + b < best.a + best.b)) best = { dx, dz, a, b };
+      }
+      let any = false;
+      const carve = (k: number): void => {
+        if (this.water[k] === 2) { this.water[k] = 1; this.ford[k] = 1; any = true; }
+        else if (this.water[k] === 1) this.ford[k] = 1;
+      };
+      if (best) for (let t = -best.b - 4; t <= best.a + 4; t += 2) mark(x + best.dx * t, z + best.dz * t, Math.max(7, r * 0.5), carve);
+      else mark(x, z, r, carve);
+      if (any && !this.fords.some((f) => Math.hypot(f.x - x, f.z - z) < 60)) this.fords.push({ x, z, name });
+    };
+    const inside = (p: { x: number; z: number }, pad = 40): boolean => Math.abs(p.x) <= VIEW_HALF + pad && Math.abs(p.z) <= VIEW_HALF + pad;
+    // 道:点と点のあいだを2ずつ進んで、幅約3(約36m)の帯にする。道が深い川にかかる所は浅瀬(渡し)。
+    // 川岸に沿って道が続く所で浅瀬だらけにならないよう、川にかかる点を150の範囲でまとめ、3か所までにする
+    const wetHits: { x: number; z: number; n: number; x0: number; z0: number }[] = [];
+    for (const line of roads) {
+      const pts = line.map((p) => this.fromLonLat(p.lon, p.lat));
+      for (let n = 1; n < pts.length; n++) {
+        const a = pts[n - 1], b = pts[n];
+        if (!inside(a, 400) && !inside(b, 400)) continue;
+        const len = Math.hypot(b.x - a.x, b.z - a.z);
+        for (let t = 0; t <= len; t += 2) {
+          const x = a.x + ((b.x - a.x) * t) / len, z = a.z + ((b.z - a.z) * t) / len;
+          if (!inside({ x, z }, 0)) continue;
+          let wet = false;
+          mark(x, z, 3, (k) => { if (this.water[k] === 2) wet = true; else if (this.water[k] === 0) this.road[k] = 1; });
+          if (wet) {
+            const h = wetHits.find((q) => Math.hypot(q.x / q.n - x, q.z / q.n - z) < 150);
+            if (h) { h.x += x; h.z += z; h.n++; } else wetHits.push({ x, z, n: 1, x0: x, z0: z });
+          }
+        }
+      }
+    }
+    // 道が短く川に触れるだけの所(まとまりの小さい所)を先に:川を横切る渡しほど、触れる点は少ない
+    for (const h of wetHits.sort((a, b) => a.n - b.n).slice(0, 3)) makeFord(h.x0, h.z0, 12);
+    // 史料の渡し
+    for (const c of crossings) {
+      const p = this.fromLonLat(c.lon, c.lat);
+      if (!inside(p, 0)) continue;
+      // 渡しの点に近い深い水を探して、そこを浅瀬にする
+      let best: { x: number; z: number } | null = null, bd = 80;
+      for (let dz = -80; dz <= 80; dz += 4) for (let dx = -80; dx <= 80; dx += 4) {
+        if (this.waterAt(p.x + dx, p.z + dz) < 1) continue;
+        const d = Math.hypot(dx, dz);
+        if (d < bd) { bd = d; best = { x: p.x + dx, z: p.z + dz }; }
+      }
+      if (best) makeFord(best.x, best.z, 14, c.name);
+    }
+    // 渡れる所のない深い川:川幅のいちばん狭い所を、浅瀬にする(2か所まで)
+    const deep: { x: number; z: number; w: number }[] = [];
+    for (let j = 0; j < N; j += 6) for (let i = 0; i < N; i += 6) {
+      if (this.water[j * N + i] !== 2) continue;
+      let w = 999;
+      for (const [di, dj] of [[1, 0], [0, 1], [1, 1], [1, -1]]) {
+        let n = 1;
+        for (const s of [1, -1]) for (let t = 1; t < 60; t++) {
+          const x = i + di * t * s, y = j + dj * t * s;
+          if (x < 0 || y < 0 || x >= N || y >= N || this.water[y * N + x] === 0) break;
+          n++;
+        }
+        w = Math.min(w, n * CELL * Math.hypot(di, dj));
+      }
+      deep.push({ x: i * CELL - VIEW_HALF, z: j * CELL - VIEW_HALF, w });
+    }
+    // 部隊を動かせる戦場の中に、深い川があって浅瀬がないときだけ、川幅の狭い所に作る
+    const inField = (f: { x: number; z: number }): boolean => Math.abs(f.x) <= FIELD.width / 2 + 20 && Math.abs(f.z) <= FIELD.depth / 2 + 20;
+    if (deep.length && !this.fords.some(inField)) {
+      deep.sort((a, b) => a.w - b.w);
+      const picked: { x: number; z: number }[] = [];
+      for (const d of deep) {
+        if (picked.length >= 2) break;
+        if (picked.some((p) => Math.hypot(p.x - d.x, p.z - d.z) < 200)) continue;
+        // 部隊を動かせる戦場の中(少し外まで)を選ぶ
+        if (Math.abs(d.x) > FIELD.width / 2 + 20 || Math.abs(d.z) > FIELD.depth / 2 + 20) continue;
+        picked.push(d);
+        makeFord(d.x, d.z, Math.min(30, d.w * 0.6 + 8));
+      }
+    }
+  }
+
+  /** 道の上か */
+  onRoad(x: number, z: number): boolean {
+    return this.road[this.index(x, z)] === 1;
+  }
+
+  /** 浅瀬(渡し場)か */
+  onFord(x: number, z: number): boolean {
+    return this.ford[this.index(x, z)] === 1;
+  }
+
   /** 戦場の位置 (x, z) が、実際のどの緯度経度にあたるか */
   toLonLat(x: number, z: number): { lon: number; lat: number } {
     const cos = Math.cos(this.bearing);

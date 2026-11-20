@@ -10,7 +10,7 @@ import { BattleSim } from "./BattleSim";
 import { BattleView } from "./BattleView";
 import { deploy, FIELD, formations, unitClasses } from "./deploy";
 import { createSiegeLayout, deploySiege, Siege } from "./siege";
-import { SiegeModel } from "./siegeView";
+import { castleStyleOf, SiegeModel } from "./siegeView";
 import { factionById, resolveCityLayout, scenario } from "../data";
 import type { City } from "../data/types";
 import { FieldMap } from "./fieldData";
@@ -28,6 +28,11 @@ export interface BattleOptions {
   timeOfDay: TimeOfDay;
   /** 攻城戦で攻められる都市(野戦では省く) */
   city?: City;
+  /** 戦略マップの道すじと、史料の渡し(戦場に道と浅瀬を入れる。Version 42) */
+  roads?: { lon: number; lat: number }[][];
+  crossings?: { name: string; lon: number; lat: number }[];
+  /** 首都の都市(城の瓦を金色にする) */
+  capitalIds?: string[];
 }
 
 export class BattleScreen {
@@ -72,6 +77,7 @@ export class BattleScreen {
   ) {
     const playerSide = options.playerSide;
     this.field = field;
+    this.field.addFeatures(options.roads ?? [], options.crossings ?? []);
     // 攻城戦:都市の設計図から城の配置を決め、敷地を整地してから、守備隊と攻城兵器を並べる
     let siege: Siege | null = null;
     if (options.city && setup.defender.fortification) {
@@ -87,7 +93,9 @@ export class BattleScreen {
     this.view = new BattleView(this.sim);
     this.scene.add(this.view.group);
     if (siege) {
-      this.siegeModel = new SiegeModel(siege, this.field, factionById(setup.defender.factionId)?.color ?? "#d8d2c4");
+      // 城郭の様式は地域で変える(西域・北辺・中原・江南)。首都は金の瓦(Version 42)
+      const capital = !!options.city && options.capitalIds?.includes(options.city.id);
+      this.siegeModel = new SiegeModel(siege, this.field, factionById(setup.defender.factionId)?.color ?? "#d8d2c4", castleStyleOf(options.city), capital);
       this.scene.add(this.siegeModel.group);
     }
     this.camera = new BattleCamera(this.field);
@@ -197,7 +205,7 @@ export class BattleScreen {
       },
     });
     this.hud.setTerrainInfo(
-      `${this.field.info.label}・標高 ${this.field.info.minMeters}〜${this.field.info.maxMeters}m・景観設定 ${this.battlefield.landscape.name}・${this.battlefield.time.name}`,
+      `${this.field.info.label}・標高 ${this.field.info.minMeters}〜${this.field.info.maxMeters}m・景観設定 ${this.battlefield.landscape.name}・${this.battlefield.time.name}${this.field.fords.length ? `・浅瀬${this.field.fords.length}か所${this.field.fords.some((f) => f.name) ? `(${this.field.fords.filter((f) => f.name).map((f) => f.name).join("・")})` : ""}` : ""}${this.field.road.some((v) => v === 1) ? "・道あり" : ""}`,
       this.field.info.source === "coarse",
     );
     this.refreshHud();

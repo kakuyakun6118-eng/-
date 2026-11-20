@@ -3,7 +3,7 @@
 // - 忠誠度:君主への忠誠(0〜100)。毎月、目安の値に少しずつ近づき、出来事で上下する。
 // - 名声:人物の評判(0〜100)。戦い・攻略・外交・建国で上下する。君主の威信(勢力の値)とは別に持つ。
 import { distanceKm } from "./pathfinding";
-import { persons, scenario } from "../data";
+import { initialCityOwners, persons, scenario } from "../data";
 import rel from "../data/rules/relations.json";
 import type { Person } from "../data/types";
 import type { Campaign } from "./Campaign";
@@ -183,11 +183,19 @@ export class LoyaltySystem {
     // 大国の統治の難しさ:都市が30を超える国では、都から800km以上離れた任地の太守・将は、都の目が届かず自立心を持ちやすい
     const post = this.c.postOf(p.id);
     if (now > 30 && post) {
+      // 広すぎる領土(Version 42):国が大きいほど、任地の者は都の目が届かないと感じる
+      v -= Math.min(8, (now - 30) * 0.1);
+      parts.push("広すぎる領土");
       const cap = this.c.strategy.capitalOf(p.factionId);
       const at = post.kind === "city" ? this.c.cities.find((k) => k.id === post.id) : this.c.armies.find((s) => s.army.id === post.id)?.army;
-      if (cap && at && distanceKm(cap, at) > 800) {
+      if (cap && at && distanceKm(cap, at) > 500) {
         v -= Math.min(10, (now - 30) * 0.12 + 3);
         parts.push("都から遠い任地(大国の統治の難しさ)");
+      }
+      // 新しく従えた地(シナリオ開始時に自国の都市でなかった所)の太守は、地元の支えが薄い
+      if (post.kind === "city" && initialCityOwners[post.id] !== p.factionId) {
+        v -= 3;
+        parts.push("新しく従えた地の任地");
       }
     }
     // 野心:大軍(8,000人以上)を率いる、武勇と名声のある将は、君主を軽んじやすい
@@ -238,7 +246,11 @@ export class LoyaltySystem {
     const purse = this.c.factionStates[p.factionId];
     if (!purse || purse.gold < gold) return `金が足りません(必要 ${gold})`;
     purse.gold -= gold;
-    const up = Math.min(12, gold / 12) * (this.loyalty[p.id] > 80 ? 0.3 : 1);
+    // 1年のうちに褒賞を重ねるほど、効き目は薄れる(Version 42:領土の広さや遠い任地のような根の深い不満は、
+    // 褒賞を繰り返しても消えきらない)。直近1年の褒賞の回数 n に対して、1/(1+n)
+    const day = Math.floor(this.c.day);
+    const n = (this.log[p.id] ?? []).filter((e) => e.text.startsWith("褒賞") && day - e.day < 360).length;
+    const up = (Math.min(12, gold / 12) * (this.loyalty[p.id] > 80 ? 0.3 : 1)) / (1 + n);
     this.add(personId, up, `褒賞(金${gold})`);
     return null;
   }

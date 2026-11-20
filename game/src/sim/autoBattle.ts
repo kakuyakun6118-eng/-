@@ -2,6 +2,7 @@
 // 兵力・兵種・地形・士気・疲労・指揮官の能力・城の防御から強さを出し、損害と勝敗を決める。
 import type { BattleResult, CommanderFate, SideResult } from "../battle/types";
 import type { BattleSetup, BattleSide, TerrainKind, UnitTypeId } from "../data/types";
+import { reliefArrivalDays } from "./relief";
 
 const TYPES: UnitTypeId[] = ["infantry", "cavalry", "archer"];
 
@@ -143,31 +144,7 @@ export function autoResolve(setup: BattleSetup): BattleResult {
   d = Math.max(1, d);
   const ratio = a / d;
 
-  if (siege) {
-    const days = clamp(Math.round(14 / ratio), 5, 60);
-    // 落とせるのは、強さで上回り、囲み続けるだけの食糧があるとき
-    const captured = ratio >= 1 && setup.attacker.food >= days * 0.5;
-    const attacker = sideResult(setup.attacker, captured ? clamp(0.22 / ratio, 0.05, 0.3) : clamp(0.18 + 0.1 * rand(), 0.15, 0.3), captured, false, rand, false);
-    const defender = sideResult(setup.defender, captured ? 0.7 : clamp(0.15 * ratio, 0.03, 0.3), !captured, false, rand, true);
-    if (!captured) attacker.outcome = "retreated";
-    return {
-      battleId: setup.battleId,
-      winner: captured ? "attacker" : "defender",
-      reason: captured ? "captured" : "retreated",
-      durationSeconds: 0,
-      attackerLosses: total(attacker.before) - total(attacker.after),
-      defenderLosses: total(defender.before) - total(defender.after),
-      siege: {
-        cityId: setup.defender.cityId ?? "",
-        captured,
-        days,
-        wallDamage: clamp(0.15 * ratio, 0, 0.6),
-        gateDamage: clamp(0.25 * ratio, 0, 0.9),
-        foodLeft: Math.max(0, setup.defender.food - days),
-      },
-      sides: { attacker, defender },
-    };
-  }
+  if (siege) return resolveSiege(setup, a, d, rand);
 
   const adv = Math.max(ratio, 1 / ratio);
   const draw = adv < 1.05;
@@ -184,5 +161,80 @@ export function autoResolve(setup: BattleSetup): BattleResult {
     attackerLosses: total(attacker.before) - total(attacker.after),
     defenderLosses: total(defender.before) - total(defender.after),
     sides: { attacker, defender },
+  };
+}
+
+/**
+ * 自動の攻城戦(Version 42:救援軍の到着を、手動の攻城戦と同じ決まりで扱う)。
+ * まず守備兵だけで、落城(または包囲の失敗)までの日数を見積もる。救援軍は、着いた日から守りに加わり、
+ * 残りの日数を、強さの比で延ばす(または縮める)。落城より遅く着く救援軍は、加わらず、兵も失わない。
+ */
+function resolveSiege(setup: BattleSetup, a: number, dAll: number, rand: () => number): BattleResult {
+  const fort = setup.defender.fortification;
+  const wall = fort ? wallBonus(fort.defense) : 1;
+  const relief = (setup.defender.supporters ?? []).filter((x) => x.relief);
+  // 守備兵だけの強さ(救援軍の兵を除く)
+  const garrison: BattleSide = { ...setup.defender, troops: { ...setup.defender.troops }, supporters: [] };
+  for (const r of relief) for (const k of TYPES) garrison.troops[k] = Math.max(0, garrison.troops[k] - r.relief!.by[k]);
+  const strOf = (side: BattleSide): number => sideStrength(side, setup.terrain, true);
+  const t = setup.tactics;
+  let dGar = strOf(garrison) * wall * (t?.defender ?? 1);
+  void dAll;
+  dGar = Math.max(1, dGar);
+  let ratio = a / dGar;
+  let days = clamp(14 / ratio, 5, 60);
+  const joined: typeof relief = [];
+  for (const r of [...relief].sort((x, y) => x.relief!.arriveSec - y.relief!.arriveSec)) {
+    const at = reliefArrivalDays(r.relief!.arriveSec);
+    if (at >= days) continue; // 着く前に決着する
+    const side: BattleSide = { ...setup.defender, kind: "army", troops: { ...r.relief!.by }, morale: r.relief!.morale, commander: null, fortification: null, supporters: [] };
+    // 城外から攻め手の背後を突くので、城壁の利は受けない
+    const add = strOf(side);
+    const before = ratio;
+    dGar += add;
+    ratio = a / dGar;
+    days = at + (days - at) * (before / ratio);
+    joined.push(r);
+  }
+  const daysR = clamp(Math.round(days), 5, 90);
+  const captured = ratio >= 1 && setup.attacker.food >= daysR * 0.5;
+  const attacker = sideResult(setup.attacker, captured ? clamp(0.22 / ratio, 0.05, 0.3) : clamp(0.18 + 0.1 * rand(), 0.15, 0.3), captured, false, rand, false);
+  const defLoss = captured ? 0.7 : clamp(0.15 * ratio, 0.03, 0.3);
+  const gres = sideResult(garrison, defLoss, !captured, false, rand, true);
+  // 救援軍の結果:加わった軍は守りと同じ割合(落城なら城外にいるので半分)で失い、加わらなかった軍は失わない
+  const reliefOut: NonNullable<BattleResult["relief"]> = {};
+  const before = { ...gres.before };
+  const after = { ...gres.after };
+  for (const r of relief) {
+    const by = r.relief!.by;
+    const rate = joined.includes(r) ? (captured ? defLoss * 0.5 : defLoss) : 0;
+    const out: Record<UnitTypeId, number> = { infantry: 0, cavalry: 0, archer: 0 };
+    for (const k of TYPES) {
+      out[k] = Math.max(0, Math.round(by[k] * (1 - rate)));
+      before[k] += by[k];
+      after[k] += out[k];
+    }
+    reliefOut[r.armyId] = { after: out, morale: joined.includes(r) ? Math.max(5, Math.min(100, r.relief!.morale + (captured ? -20 : 10))) : r.relief!.morale };
+  }
+  const defender: SideResult = { ...gres, before, after };
+  if (!captured) attacker.outcome = "retreated";
+  return {
+    battleId: setup.battleId,
+    winner: captured ? "attacker" : "defender",
+    reason: captured ? "captured" : "retreated",
+    durationSeconds: 0,
+    attackerLosses: total(attacker.before) - total(attacker.after),
+    defenderLosses: total(defender.before) - total(defender.after),
+    siege: {
+      cityId: setup.defender.cityId ?? "",
+      captured,
+      days: daysR,
+      wallDamage: clamp(0.15 * ratio, 0, 0.6),
+      gateDamage: clamp(0.25 * ratio, 0, 0.9),
+      foodLeft: Math.max(0, setup.defender.food - daysR),
+    },
+    sides: { attacker, defender },
+    relief: Object.keys(reliefOut).length ? reliefOut : undefined,
+    reliefJoined: joined.map((x) => x.armyId),
   };
 }

@@ -607,6 +607,7 @@ export class Diplomacy {
         for (const g of alive) {
           if (g.id === me || ["war", "alliance", "nonaggression", "vassal"].includes(this.c.relationOf(me, g.id)) || this.c.relationAge(me, g.id) < 720) continue;
           if (!this.neighbors(me, g.id) || myPower < this.power(g.id) * warRatio) continue;
+          if (this.c.strategy.interestIn(me, g.id) < 0.3) continue; // 戦略的な関心の外(Version 42)
           if (rnd("war" + g.id) >= aggression * (this.amityOf(me, g.id) < 0 ? 1.5 : 0.7)) continue;
           // 小さな隣国には、まず従属を求める
           if (myPower > this.power(g.id) * 4 && g.id !== this.c.playerFactionId && rnd("vs" + g.id) < 0.5 && this.act(me, g.id, "vassal", { envoyId: envoy }).ok) break;

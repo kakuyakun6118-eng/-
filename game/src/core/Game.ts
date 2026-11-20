@@ -118,6 +118,8 @@ export class Game {
   private bgmTick = 0;
   /** 起動してから、操作する勢力(または観賞・編集モード)を選んだか */
   private factionChosen = false;
+  /** 戦略マップの道すじ(会戦の戦場に道を描く。Version 42) */
+  private roadLines: { lon: number; lat: number }[][] = [];
   /** 首都の表示を作り直す必要があるか(都市の持ち主が変わったとき) */
   private capitalsStale = true;
   private readonly overlayRoutes: RouteLine[] = [];
@@ -198,6 +200,7 @@ export class Game {
     this.scene.add(roads.group);
     this.roadCount = roads.count;
     this.roadsFailed = roads.failed;
+    this.roadLines = roads.lines;
 
     // 領土:都市の所属から計算し、地形に重ねて表示する
     this.territory = new Territory(this.grid);
@@ -1065,7 +1068,7 @@ export class Game {
     // 会戦地点の実地形を読み込んでから、戦場へ移る。プレイヤーは、自分が動かした軍団(攻撃側)を指揮する
     BattleScreen.create(
       this.renderer, this.root.querySelector("#battle-hud") as HTMLElement, setup, this.terrains[0].field, bearing,
-      { playerSide, difficulty: this.difficulty, timeOfDay, city }, (result) => this.finishBattle(result),
+      { playerSide, difficulty: this.difficulty, timeOfDay, city, roads: this.roadLines, crossings: this.terrains[0].region.crossings, capitalIds: Object.values(this.campaign.capitals).map((c) => c.cityId) }, (result) => this.finishBattle(result),
     )
       .then((battle) => {
         this.root.classList.add("in-battle");

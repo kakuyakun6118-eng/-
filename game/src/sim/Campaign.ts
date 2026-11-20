@@ -8,7 +8,7 @@ import { createBattleSetup, governorIdOf, initialCityState, placeName } from "./
 import { garrisonCap, StrategyAi, strategyRules } from "./strategy";
 import { Placement } from "./placement";
 import capitalData from "../data/scenarios/capitals.json";
-import { chance, setCurrentSpoils, Spoils, type CaptureRecord, type PendingCapture } from "./spoils";
+import { chance, getGameSeed, setCurrentSpoils, setGameSeed, Spoils, type CaptureRecord, type PendingCapture } from "./spoils";
 import { affinity, isKin, LoyaltySystem } from "./loyalty";
 import { cityEcon, Economy } from "./economy";
 import { Diplomacy, type DiploCommand } from "./diplomacy";
@@ -19,6 +19,7 @@ import { seasonOf, type CampaignSave, type DynastySave, type Relation } from "./
 import type { BattleResult, CommanderFate, SideResult } from "../battle/types";
 import type { Army, ArmyStatus, BattleEvent, City, CityState, Faction, Person, PersonRole, PersonStatus, UnitTypeId } from "../data/types";
 import { distanceKm, findRoute, type Route, type RoutePoint } from "./pathfinding";
+import { reliefArrivalSeconds } from "./relief";
 import type { TerrainGrid } from "./TerrainGrid";
 
 /** 1日が現実の何秒か(速さ1のとき) */
@@ -165,6 +166,42 @@ export class Campaign {
     if (c && scenario.cityOwners[c.cityId] === f) return this.cities.find((x) => x.id === c.cityId);
     if (!this.cities.some((x) => x.kind !== "pass" && scenario.cityOwners[x.id] === f)) return undefined;
     return this.ensureCapital(f, c ? "前の首都を失い、残る都市を暫定の首都とした" : "主な政治拠点を暫定の首都とする");
+  }
+
+  /**
+   * 新しく建った国の蓄え(Version 42):元の国から分けた分が、その国の収入の3か月分(シナリオ開始時と同じ決まり)に
+   * 足りなければ、拠点の地元の蔵の分として、そこまで補う。建国してすぐ給与を払えず軍が崩れるのを防ぐ。
+   */
+  seedTreasury(id: string): void {
+    const st = (this.factionStates[id] ??= { gold: 0, grain: 0 });
+    const r = this.economy.report(id);
+    st.gold = Math.max(st.gold, Math.round(r.income.total * 3));
+    st.grain = Math.max(st.grain, Math.round(r.income.grain * 3));
+  }
+
+  /** 2点のあいだの、通れる地形の道のり(人物の移動用。Version 42) */
+  pathBetween(from: { lon: number; lat: number }, to: { lon: number; lat: number }): Route | null {
+    return findRoute(this.grid, from, to);
+  }
+
+  /** 人物の移動の1日分:着いた・捕まった(捕まった君主は、国の滅亡の処理へ) */
+  private tickTravels(): void {
+    const r = this.placement.tickTravel();
+    for (const id of r.arrived) {
+      const p = personById(id);
+      const t = p ? this.cities.find((c) => c.id === this.placement.homes[id]?.cityId) : undefined;
+      if (p && t) this.addNews(`${p.name}が${t.name}に着きました`);
+    }
+    for (const { id, by } of r.caught) {
+      const p = personById(id);
+      if (!p || chance(`${id}|${Math.floor(this.day)}|intercept`) >= 0.4) continue;
+      delete this.placement.travels[id];
+      this.personStates[id] = "captured";
+      this.spoils.addCaptive(id, by, p.factionId, Math.floor(this.day));
+      this.addNews(`${p.name}は移動の途中で${factionName(by)}の軍に捕らえられました`);
+      this.strategy.noteCaught?.(p.factionId);
+      if (p.role === "ruler") this.checkRulers();
+    }
   }
 
   /** 首都か */
@@ -661,6 +698,7 @@ export class Campaign {
       placement: this.placement.serialize(),
       capitals: this.capitals,
       capitalLog: this.capitalLog,
+      seed: getGameSeed() || undefined,
     });
   }
 
@@ -677,7 +715,7 @@ export class Campaign {
     this.events.push(...data.events);
     // 開いていた会戦は、開始前(保留)に戻す。決着済みのものは、そのまま決着済みとして残る
     for (const e of this.events) {
-      if (e.status === "preparing" || e.status === "in_progress") e.status = "pending";
+      if ((e.status === "preparing" || e.status === "in_progress") && e.autoSiegeUntil === undefined) e.status = "pending";
     }
     for (const k of Object.keys(this.cityStates)) delete this.cityStates[k];
     Object.assign(this.cityStates, data.cityStates);
@@ -741,6 +779,7 @@ export class Campaign {
     if (data.capitals) this.capitals = JSON.parse(JSON.stringify(data.capitals));
     else this.initCapitals();
     this.capitalLog = JSON.parse(JSON.stringify(data.capitalLog ?? []));
+    setGameSeed(data.seed ?? "");
   }
 
   /** 都市の、いまの状態(まだ戦いを受けていなければ、最初の状態) */
@@ -1094,6 +1133,8 @@ export class Campaign {
     }
     for (let d = before; d < Math.floor(this.day); d++) {
       for (const s of this.armies) this.dailyUpkeep(s);
+      this.tickTravels();
+      this.tickAutoSieges();
       this.repairCities();
       if ((d + 1) % 30 === 0) {
         this.trade.monthly();
@@ -1423,6 +1464,7 @@ export class Campaign {
     purse.gold -= share.gold;
     purse.grain -= share.grain;
     this.factionStates[id] = share;
+    this.seedTreasury(id);
     this.loyalty.addFame(personId, 12);
     this.loyalty.reevaluate(from, `${p.name}の反乱`);
     this.loyalty.noteRulerChange(from);
@@ -1528,6 +1570,7 @@ export class Campaign {
     purse.gold -= share.gold;
     purse.grain -= share.grain;
     this.factionStates[id] = share;
+    this.seedTreasury(id);
     this.court.ranks[id] = /皇帝|天王/.test(title) ? "emperor" : /王/.test(title) ? "king" : /公/.test(title) ? "duke" : "lord";
     this.court.stability[id] = 55;
     this.loyalty.addFame(personId, 12);
@@ -1733,6 +1776,7 @@ export class Campaign {
       scattered += Math.max(0, g - capG);
     }
     if (scattered > 0) this.dynasty.scattered = (this.dynasty.scattered ?? 0) + scattered;
+    for (const id of newIds) this.seedTreasury(id);
     this.factionStates[factionId] = { gold: 0, grain: 0 };
     const heir = newIds[0] ?? captor;
     if (heir) {
@@ -1815,6 +1859,14 @@ export class Campaign {
         event.status = "cancelled";
         continue;
       }
+      // 攻城戦は、戦略マップの上で包囲の日数をかけて決着する(Version 42)。見積もりの日数のあいだ、包囲が続く
+      if (event.battleType === "siege_battle" && event.autoSiegeUntil === undefined) {
+        const est = autoResolve(setup);
+        event.autoSiegeUntil = Math.floor(this.day) + Math.max(3, Math.min(60, est.siege?.days ?? 7));
+        event.status = "in_progress";
+        this.addNews(`${setup.attacker.name}が${event.location.name}を包囲しました(落とすまで約${event.autoSiegeUntil - Math.floor(this.day)}日の見込み)`);
+        continue;
+      }
       const result = autoResolve(setup);
       const attackerName = setup.attacker.name;
       const defenderName = setup.defender.name;
@@ -1829,6 +1881,29 @@ export class Campaign {
       }
     }
 
+  }
+
+  /** 包囲の日数が過ぎた自動の攻城戦を、いまの状態(着いた救援軍を含む)で決着させる(Version 42) */
+  private tickAutoSieges(): void {
+    const day = Math.floor(this.day);
+    for (const ev of this.events.filter((e) => e.autoSiegeUntil !== undefined && e.status === "in_progress")) {
+      const att = this.stateOf(ev.attackerArmyId);
+      // 攻める側の軍団が消えた・持ち主が変わった・戦争でなくなった:包囲は解ける
+      const owner = ev.defenderCityId ? scenario.cityOwners[ev.defenderCityId] : undefined;
+      if (!att || !owner || owner !== ev.defenderFactionId || !this.atWar(att.army.factionId, owner)) {
+        ev.status = "cancelled";
+        if (att) this.setStatus(att, "camping");
+        for (const sup of ev.supporters ?? []) {
+          const s = this.stateOf(sup.armyId);
+          if (s && s.status === "fighting") this.setStatus(s, "camping");
+        }
+        continue;
+      }
+      if (day < ev.autoSiegeUntil!) continue;
+      ev.status = "pending";
+      this.pendingAuto.push(ev);
+    }
+    if (this.pendingAuto.length) this.resolveAutoBattles();
   }
 
   /** 行軍中の軍団を、経路に沿って進める */
@@ -1960,7 +2035,17 @@ export class Campaign {
         const ally = ["alliance", "vassal"].includes(this.relationOf(o.army.factionId, event.defenderFactionId));
         if ((!own && !ally) || !this.hostileTo(o.army, event.attackerFactionId)) continue;
         const efficiency = own ? 1 : 0.8;
-        (event.supporters ??= []).push({ side: "defender", armyId: o.army.id, efficiency, relief: true, km: Math.round(km) });
+        // 到着の時刻と妨害(Version 42:手動・自動の攻城戦で同じ決まり)。道は地形を考えた経路で測る
+        const path = findRoute(this.grid, { lon: o.army.lon, lat: o.army.lat }, city);
+        const effort = path ? path.effort[path.effort.length - 1] : km * 1.3;
+        const blocker = path ? this.armies.find((x) => x.army.id !== attacker.army.id && this.hostileTo(x.army, event.defenderFactionId) && x.army.factionId !== event.defenderFactionId
+          && path.points.some((pt) => distanceKm(pt, city) > 30 && distanceKm(pt, x.army) < 20)) : undefined;
+        if (blocker) {
+          this.addNews(`${o.army.name}は${city.name}の救援に向かおうとしましたが、${blocker.army.name}に道を阻まれました`);
+          (event.reliefBlocked ??= []).push({ armyId: o.army.id, by: blocker.army.id });
+          continue;
+        }
+        (event.supporters ??= []).push({ side: "defender", armyId: o.army.id, efficiency, relief: true, km: Math.round(km), arriveSec: reliefArrivalSeconds(effort) });
         used.add(o.army.id);
         o.route = null;
         this.setStatus(o, "fighting");
