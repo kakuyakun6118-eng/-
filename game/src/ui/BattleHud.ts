@@ -6,6 +6,11 @@ import type { BattleResult, BattleUnit, CommanderFate, SideId, SideResult, UnitS
 
 export interface BattleHudActions {
   onSelect(unitId: string): void;
+  /** 攻城戦で守る側の命令(Version 41) */
+  onWallDown?(): void;
+  onToThreat?(): void;
+  onDefendGate?(): void;
+  onDefendWall?(): void;
   onHold(): void;
   onPursue(): void;
   onRetreatUnit(): void;
@@ -83,6 +88,22 @@ export class BattleHud {
     on(".hud-pause", actions.onPause);
     on(".hud-speed", actions.onSpeed);
     on(".hud-leave", actions.onLeave);
+    // 攻城戦で守る側だけの命令(Version 41)
+    const siegeDef = !!sim.siege && sim.playerSide === "defender";
+    for (const b of root.querySelectorAll<HTMLElement>(".siege-def")) b.hidden = !siegeDef;
+    on(".hud-wall-down", () => actions.onWallDown?.());
+    on(".hud-to-threat", () => actions.onToThreat?.());
+    on(".hud-def-gate", () => actions.onDefendGate?.());
+    on(".hud-def-wall", () => actions.onDefendWall?.());
+    // 部隊一覧と地形の説明は、たたんで戦場を広く見られる(Version 41)。小さい画面では、地形の説明は数秒で自動でたたむ
+    root.classList.remove("panels-collapsed", "terrain-collapsed");
+    on(".hud-panels", () => {
+      const off = root.classList.toggle("panels-collapsed");
+      this.q(".hud-panels").setAttribute("aria-pressed", String(!off));
+    });
+    this.q(".hud-panels").setAttribute("aria-pressed", "true");
+    (this.q(".hud-terrain") as HTMLElement).onclick = () => root.classList.toggle("terrain-collapsed");
+    if (window.innerHeight <= 500) window.setTimeout(() => root.classList.add("terrain-collapsed"), 8000);
 
     this.q(".hud-name").textContent = sim.setup.name;
     for (const side of ["attacker", "defender"] as SideId[]) {
@@ -169,7 +190,8 @@ export class BattleHud {
     }
     for (const u of sim.units) {
       const chip = this.chips.get(u.id)!;
-      chip.men.textContent = u.state === "gone" || u.escaped ? "—" : fmt(u.men);
+      const waiting = u.arriveAt !== undefined && u.arriveAt > this.sim.time;
+      chip.men.textContent = u.state === "gone" || u.escaped ? "—" : waiting ? `到着まで${Math.ceil(u.arriveAt! - this.sim.time)}秒` : fmt(u.men);
       chip.bar.style.width = `${u.morale}%`;
       chip.root.dataset.state = u.escaped ? "gone" : u.state;
       chip.root.classList.toggle("selected", selectedIds.includes(u.id));

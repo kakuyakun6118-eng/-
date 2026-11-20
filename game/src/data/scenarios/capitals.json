@@ -1,0 +1,901 @@
+{
+ "note": "各シナリオ開始時の国家の首都(Version 41)。certainty:確認=史料に都とある/推定=前後の事情からの推定や、史料に定まった都がなく主な拠点を暫定の首都とするもの。ここにない国(後継国家・独立した国など)は、建国した都市か、いちばん格の高い都市を首都とする(推定)。",
+ "scenarios": {
+  "s300": {
+   "shanshan": {
+    "city": "shanshan",
+    "certainty": "確認",
+    "note": "扜泥城(『漢書』西域伝)"
+   },
+   "yutian": {
+    "city": "yutian",
+    "certainty": "確認",
+    "note": "西城"
+   },
+   "shule": {
+    "city": "shule",
+    "certainty": "確認",
+    "note": "疏勒城"
+   },
+   "qiuci": {
+    "city": "qiuci",
+    "certainty": "確認",
+    "note": "延城"
+   },
+   "yanqi": {
+    "city": "yanqi",
+    "certainty": "確認",
+    "note": "員渠城"
+   },
+   "jushi": {
+    "city": "jiaohe",
+    "certainty": "確認",
+    "note": "交河城"
+   },
+   "silla": {
+    "city": "geumseong",
+    "certainty": "確認",
+    "note": "金城(慶州)"
+   },
+   "baekje": {
+    "city": "hanseong",
+    "certainty": "推定",
+    "note": "漢城(慰礼城)"
+   },
+   "chouchi": {
+    "city": "chouchi",
+    "certainty": "確認",
+    "note": "仇池山"
+   },
+   "yuwen": {
+    "city": "zimeng",
+    "certainty": "推定",
+    "note": "紫蒙川"
+   },
+   "tuyuhun": {
+    "city": "tuyuhunting",
+    "certainty": "推定",
+    "note": "吐谷渾の王帳(暫定の首都)"
+   },
+   "tiefu": {
+    "city": "shuofang",
+    "certainty": "推定",
+    "note": "朔方(暫定の首都)"
+   },
+   "jin": {
+    "city": "luoyang",
+    "certainty": "確認",
+    "note": "晋の都"
+   },
+   "ying": {
+    "city": "ye",
+    "certainty": "確認",
+    "note": "成都王 司馬穎は鄴に鎮した"
+   },
+   "yong": {
+    "city": "changan",
+    "certainty": "確認",
+    "note": "河間王 司馬顒は長安に鎮した"
+   },
+   "jiong": {
+    "city": "xuchang",
+    "certainty": "確認",
+    "note": "斉王 司馬冏は許昌に鎮した"
+   },
+   "dai": {
+    "city": "shengle",
+    "certainty": "推定",
+    "note": "盛楽"
+   },
+   "murong": {
+    "city": "jicheng",
+    "certainty": "確認",
+    "note": "大棘城(294年に移る)"
+   },
+   "duan": {
+    "city": "lingzhi",
+    "certainty": "推定",
+    "note": "令支"
+   },
+   "goguryeo": {
+    "city": "wandu",
+    "certainty": "推定",
+    "note": "丸都(国内城の近く)"
+   },
+   "tribes": {
+    "city": "shuofang",
+    "certainty": "推定",
+    "note": "諸部族の主な拠点(暫定の首都)"
+   }
+  },
+  "s304": {
+   "shanshan": {
+    "city": "shanshan",
+    "certainty": "確認",
+    "note": "扜泥城(『漢書』西域伝)"
+   },
+   "yutian": {
+    "city": "yutian",
+    "certainty": "確認",
+    "note": "西城"
+   },
+   "shule": {
+    "city": "shule",
+    "certainty": "確認",
+    "note": "疏勒城"
+   },
+   "qiuci": {
+    "city": "qiuci",
+    "certainty": "確認",
+    "note": "延城"
+   },
+   "yanqi": {
+    "city": "yanqi",
+    "certainty": "確認",
+    "note": "員渠城"
+   },
+   "jushi": {
+    "city": "jiaohe",
+    "certainty": "確認",
+    "note": "交河城"
+   },
+   "silla": {
+    "city": "geumseong",
+    "certainty": "確認",
+    "note": "金城(慶州)"
+   },
+   "baekje": {
+    "city": "hanseong",
+    "certainty": "推定",
+    "note": "漢城(慰礼城)"
+   },
+   "chouchi": {
+    "city": "chouchi",
+    "certainty": "確認",
+    "note": "仇池山"
+   },
+   "yuwen": {
+    "city": "zimeng",
+    "certainty": "推定",
+    "note": "紫蒙川"
+   },
+   "tuyuhun": {
+    "city": "tuyuhunting",
+    "certainty": "推定",
+    "note": "吐谷渾の王帳(暫定の首都)"
+   },
+   "tiefu": {
+    "city": "shuofang",
+    "certainty": "推定",
+    "note": "朔方(暫定の首都)"
+   },
+   "jin": {
+    "city": "changan",
+    "certainty": "確認",
+    "note": "304年11月、恵帝は河間王 司馬顒のいる長安へ移された"
+   },
+   "yue": {
+    "city": "xiapi",
+    "certainty": "推定",
+    "note": "東海王 司馬越の本拠(東海国)に近い下邳"
+   },
+   "wang_jun": {
+    "city": "ji",
+    "certainty": "確認",
+    "note": "薊(幽州)"
+   },
+   "han_zhao": {
+    "city": "lishi",
+    "certainty": "確認",
+    "note": "左国城(離石)"
+   },
+   "chenghan": {
+    "city": "chengdu",
+    "certainty": "確認",
+    "note": "成都"
+   },
+   "qianliang": {
+    "city": "guzang",
+    "certainty": "確認",
+    "note": "姑臧"
+   },
+   "dai": {
+    "city": "shengle",
+    "certainty": "推定",
+    "note": "盛楽"
+   },
+   "murong": {
+    "city": "jicheng",
+    "certainty": "確認",
+    "note": "大棘城"
+   },
+   "duan": {
+    "city": "lingzhi",
+    "certainty": "推定",
+    "note": "令支"
+   },
+   "goguryeo": {
+    "city": "wandu",
+    "certainty": "推定",
+    "note": "丸都"
+   },
+   "tribes": {
+    "city": "shuofang",
+    "certainty": "推定",
+    "note": "暫定の首都"
+   }
+  },
+  "s311": {
+   "shanshan": {
+    "city": "shanshan",
+    "certainty": "確認",
+    "note": "扜泥城(『漢書』西域伝)"
+   },
+   "yutian": {
+    "city": "yutian",
+    "certainty": "確認",
+    "note": "西城"
+   },
+   "shule": {
+    "city": "shule",
+    "certainty": "確認",
+    "note": "疏勒城"
+   },
+   "qiuci": {
+    "city": "qiuci",
+    "certainty": "確認",
+    "note": "延城"
+   },
+   "yanqi": {
+    "city": "yanqi",
+    "certainty": "確認",
+    "note": "員渠城"
+   },
+   "jushi": {
+    "city": "jiaohe",
+    "certainty": "確認",
+    "note": "交河城"
+   },
+   "silla": {
+    "city": "geumseong",
+    "certainty": "確認",
+    "note": "金城(慶州)"
+   },
+   "baekje": {
+    "city": "hanseong",
+    "certainty": "推定",
+    "note": "漢城(慰礼城)"
+   },
+   "chouchi": {
+    "city": "chouchi",
+    "certainty": "確認",
+    "note": "仇池山"
+   },
+   "yuwen": {
+    "city": "zimeng",
+    "certainty": "推定",
+    "note": "紫蒙川"
+   },
+   "tuyuhun": {
+    "city": "tuyuhunting",
+    "certainty": "推定",
+    "note": "吐谷渾の王帳(暫定の首都)"
+   },
+   "tiefu": {
+    "city": "shuofang",
+    "certainty": "推定",
+    "note": "朔方(暫定の首都)"
+   },
+   "han_zhao": {
+    "city": "pingyang",
+    "certainty": "確認",
+    "note": "平陽(310年から)"
+   },
+   "shile": {
+    "city": "xuchang",
+    "certainty": "推定",
+    "note": "石勒にはまだ定まった都がない(暫定の首都)"
+   },
+   "wangmi": {
+    "city": "junyi",
+    "certainty": "推定",
+    "note": "暫定の首都"
+   },
+   "jin_rui": {
+    "city": "jiankang",
+    "certainty": "確認",
+    "note": "建鄴"
+   },
+   "jin": {
+    "city": "xiangyang",
+    "certainty": "推定",
+    "note": "皇帝不在の晋の諸州(暫定の首都)"
+   },
+   "wang_jun": {
+    "city": "ji",
+    "certainty": "確認",
+    "note": "薊"
+   },
+   "liu_kun": {
+    "city": "jinyang",
+    "certainty": "確認",
+    "note": "晋陽(并州)"
+   },
+   "sima_bao": {
+    "city": "changan",
+    "certainty": "確認",
+    "note": "南陽王 司馬模は長安に鎮した"
+   },
+   "qianliang": {
+    "city": "guzang",
+    "certainty": "確認",
+    "note": "姑臧"
+   },
+   "chenghan": {
+    "city": "chengdu",
+    "certainty": "確認",
+    "note": "成都"
+   },
+   "du_tao": {
+    "city": "changsha",
+    "certainty": "確認",
+    "note": "長沙"
+   },
+   "dai": {
+    "city": "shengle",
+    "certainty": "推定",
+    "note": "盛楽"
+   },
+   "duan": {
+    "city": "lingzhi",
+    "certainty": "推定",
+    "note": "令支"
+   },
+   "murong": {
+    "city": "jicheng",
+    "certainty": "確認",
+    "note": "大棘城"
+   },
+   "goguryeo": {
+    "city": "wandu",
+    "certainty": "推定",
+    "note": "丸都"
+   }
+  },
+  "s317": {
+   "shanshan": {
+    "city": "shanshan",
+    "certainty": "確認",
+    "note": "扜泥城(『漢書』西域伝)"
+   },
+   "yutian": {
+    "city": "yutian",
+    "certainty": "確認",
+    "note": "西城"
+   },
+   "shule": {
+    "city": "shule",
+    "certainty": "確認",
+    "note": "疏勒城"
+   },
+   "qiuci": {
+    "city": "qiuci",
+    "certainty": "確認",
+    "note": "延城"
+   },
+   "yanqi": {
+    "city": "yanqi",
+    "certainty": "確認",
+    "note": "員渠城"
+   },
+   "jushi": {
+    "city": "jiaohe",
+    "certainty": "確認",
+    "note": "交河城"
+   },
+   "silla": {
+    "city": "geumseong",
+    "certainty": "確認",
+    "note": "金城(慶州)"
+   },
+   "baekje": {
+    "city": "hanseong",
+    "certainty": "推定",
+    "note": "漢城(慰礼城)"
+   },
+   "chouchi": {
+    "city": "chouchi",
+    "certainty": "確認",
+    "note": "仇池山"
+   },
+   "yuwen": {
+    "city": "zimeng",
+    "certainty": "推定",
+    "note": "紫蒙川"
+   },
+   "tuyuhun": {
+    "city": "tuyuhunting",
+    "certainty": "推定",
+    "note": "吐谷渾の王帳(暫定の首都)"
+   },
+   "tiefu": {
+    "city": "shuofang",
+    "certainty": "推定",
+    "note": "朔方(暫定の首都)"
+   },
+   "han_zhao": {
+    "city": "pingyang",
+    "certainty": "確認",
+    "note": "平陽"
+   },
+   "shile": {
+    "city": "xiangguo",
+    "certainty": "確認",
+    "note": "襄国(312年から)"
+   },
+   "jin": {
+    "city": "jiankang",
+    "certainty": "確認",
+    "note": "建康"
+   },
+   "qianliang": {
+    "city": "guzang",
+    "certainty": "確認",
+    "note": "姑臧"
+   },
+   "dai": {
+    "city": "shengle",
+    "certainty": "推定",
+    "note": "盛楽"
+   },
+   "duan": {
+    "city": "lingzhi",
+    "certainty": "確認",
+    "note": "令支"
+   },
+   "murong": {
+    "city": "jicheng",
+    "certainty": "確認",
+    "note": "大棘城"
+   },
+   "chenghan": {
+    "city": "chengdu",
+    "certainty": "確認",
+    "note": "成都"
+   },
+   "sima_bao": {
+    "city": "shanggui",
+    "certainty": "確認",
+    "note": "上邽"
+   },
+   "cao_yi": {
+    "city": "guanggu",
+    "certainty": "確認",
+    "note": "広固"
+   },
+   "cui_bi": {
+    "city": "xiangping",
+    "certainty": "推定",
+    "note": "平州(襄平)"
+   },
+   "goguryeo": {
+    "city": "wandu",
+    "certainty": "推定",
+    "note": "丸都"
+   }
+  },
+  "s319": {
+   "shanshan": {
+    "city": "shanshan",
+    "certainty": "確認",
+    "note": "扜泥城(『漢書』西域伝)"
+   },
+   "yutian": {
+    "city": "yutian",
+    "certainty": "確認",
+    "note": "西城"
+   },
+   "shule": {
+    "city": "shule",
+    "certainty": "確認",
+    "note": "疏勒城"
+   },
+   "qiuci": {
+    "city": "qiuci",
+    "certainty": "確認",
+    "note": "延城"
+   },
+   "yanqi": {
+    "city": "yanqi",
+    "certainty": "確認",
+    "note": "員渠城"
+   },
+   "jushi": {
+    "city": "jiaohe",
+    "certainty": "確認",
+    "note": "交河城"
+   },
+   "silla": {
+    "city": "geumseong",
+    "certainty": "確認",
+    "note": "金城(慶州)"
+   },
+   "baekje": {
+    "city": "hanseong",
+    "certainty": "推定",
+    "note": "漢城(慰礼城)"
+   },
+   "chouchi": {
+    "city": "chouchi",
+    "certainty": "確認",
+    "note": "仇池山"
+   },
+   "yuwen": {
+    "city": "zimeng",
+    "certainty": "推定",
+    "note": "紫蒙川"
+   },
+   "tuyuhun": {
+    "city": "tuyuhunting",
+    "certainty": "推定",
+    "note": "吐谷渾の王帳(暫定の首都)"
+   },
+   "tiefu": {
+    "city": "shuofang",
+    "certainty": "推定",
+    "note": "朔方(暫定の首都)"
+   },
+   "han_zhao": {
+    "city": "changan",
+    "certainty": "確認",
+    "note": "319年、劉曜は長安を都とした"
+   },
+   "shile": {
+    "city": "xiangguo",
+    "certainty": "確認",
+    "note": "襄国"
+   },
+   "jin": {
+    "city": "jiankang",
+    "certainty": "確認",
+    "note": "建康"
+   },
+   "qianliang": {
+    "city": "guzang",
+    "certainty": "確認",
+    "note": "姑臧"
+   },
+   "dai": {
+    "city": "shengle",
+    "certainty": "推定",
+    "note": "盛楽"
+   },
+   "duan": {
+    "city": "lingzhi",
+    "certainty": "確認",
+    "note": "令支"
+   },
+   "pidi": {
+    "city": "ji",
+    "certainty": "推定",
+    "note": "段匹磾は318年ごろ厭次へ移ったが、ゲームでは薊を拠点とする(暫定)"
+   },
+   "murong": {
+    "city": "jicheng",
+    "certainty": "確認",
+    "note": "大棘城"
+   },
+   "chenghan": {
+    "city": "chengdu",
+    "certainty": "確認",
+    "note": "成都"
+   },
+   "sima_bao": {
+    "city": "shanggui",
+    "certainty": "確認",
+    "note": "上邽"
+   },
+   "cao_yi": {
+    "city": "guanggu",
+    "certainty": "確認",
+    "note": "広固"
+   },
+   "cui_bi": {
+    "city": "xiangping",
+    "certainty": "推定",
+    "note": "襄平"
+   },
+   "goguryeo": {
+    "city": "wandu",
+    "certainty": "推定",
+    "note": "丸都"
+   }
+  },
+  "s329": {
+   "shanshan": {
+    "city": "shanshan",
+    "certainty": "確認",
+    "note": "扜泥城(『漢書』西域伝)"
+   },
+   "yutian": {
+    "city": "yutian",
+    "certainty": "確認",
+    "note": "西城"
+   },
+   "shule": {
+    "city": "shule",
+    "certainty": "確認",
+    "note": "疏勒城"
+   },
+   "qiuci": {
+    "city": "qiuci",
+    "certainty": "確認",
+    "note": "延城"
+   },
+   "yanqi": {
+    "city": "yanqi",
+    "certainty": "確認",
+    "note": "員渠城"
+   },
+   "jushi": {
+    "city": "jiaohe",
+    "certainty": "確認",
+    "note": "交河城"
+   },
+   "silla": {
+    "city": "geumseong",
+    "certainty": "確認",
+    "note": "金城(慶州)"
+   },
+   "baekje": {
+    "city": "hanseong",
+    "certainty": "推定",
+    "note": "漢城(慰礼城)"
+   },
+   "chouchi": {
+    "city": "chouchi",
+    "certainty": "確認",
+    "note": "仇池山"
+   },
+   "yuwen": {
+    "city": "zimeng",
+    "certainty": "推定",
+    "note": "紫蒙川"
+   },
+   "tuyuhun": {
+    "city": "tuyuhunting",
+    "certainty": "推定",
+    "note": "吐谷渾の王帳(暫定の首都)"
+   },
+   "tiefu": {
+    "city": "shuofang",
+    "certainty": "推定",
+    "note": "朔方(暫定の首都)"
+   },
+   "shile": {
+    "city": "xiangguo",
+    "certainty": "確認",
+    "note": "襄国(鄴への遷都は335年)"
+   },
+   "han_zhao": {
+    "city": "shanggui",
+    "certainty": "確認",
+    "note": "前趙の残党は上邽に拠った"
+   },
+   "jin": {
+    "city": "jiankang",
+    "certainty": "確認",
+    "note": "建康"
+   },
+   "qianliang": {
+    "city": "guzang",
+    "certainty": "確認",
+    "note": "姑臧"
+   },
+   "chenghan": {
+    "city": "chengdu",
+    "certainty": "確認",
+    "note": "成都"
+   },
+   "dai": {
+    "city": "shengle",
+    "certainty": "推定",
+    "note": "盛楽"
+   },
+   "duan": {
+    "city": "lingzhi",
+    "certainty": "確認",
+    "note": "令支"
+   },
+   "murong": {
+    "city": "jicheng",
+    "certainty": "確認",
+    "note": "大棘城"
+   },
+   "goguryeo": {
+    "city": "wandu",
+    "certainty": "推定",
+    "note": "丸都"
+   }
+  },
+  "s357": {
+   "shanshan": {
+    "city": "shanshan",
+    "certainty": "確認",
+    "note": "扜泥城(『漢書』西域伝)"
+   },
+   "yutian": {
+    "city": "yutian",
+    "certainty": "確認",
+    "note": "西城"
+   },
+   "shule": {
+    "city": "shule",
+    "certainty": "確認",
+    "note": "疏勒城"
+   },
+   "qiuci": {
+    "city": "qiuci",
+    "certainty": "確認",
+    "note": "延城"
+   },
+   "yanqi": {
+    "city": "yanqi",
+    "certainty": "確認",
+    "note": "員渠城"
+   },
+   "jushi": {
+    "city": "jiaohe",
+    "certainty": "確認",
+    "note": "交河城"
+   },
+   "silla": {
+    "city": "geumseong",
+    "certainty": "確認",
+    "note": "金城(慶州)"
+   },
+   "baekje": {
+    "city": "hanseong",
+    "certainty": "推定",
+    "note": "漢城(慰礼城)"
+   },
+   "chouchi": {
+    "city": "chouchi",
+    "certainty": "確認",
+    "note": "仇池山"
+   },
+   "yuwen": {
+    "city": "zimeng",
+    "certainty": "推定",
+    "note": "紫蒙川"
+   },
+   "tuyuhun": {
+    "city": "tuyuhunting",
+    "certainty": "推定",
+    "note": "吐谷渾の王帳(暫定の首都)"
+   },
+   "tiefu": {
+    "city": "shuofang",
+    "certainty": "推定",
+    "note": "朔方(暫定の首都)"
+   },
+   "qianqin": {
+    "city": "changan",
+    "certainty": "確認",
+    "note": "長安"
+   },
+   "qianyan": {
+    "city": "ji",
+    "certainty": "確認",
+    "note": "薊(350年から。鄴への遷都は357年11月)"
+   },
+   "jin": {
+    "city": "jiankang",
+    "certainty": "確認",
+    "note": "建康"
+   },
+   "qianliang": {
+    "city": "guzang",
+    "certainty": "確認",
+    "note": "姑臧"
+   },
+   "dai": {
+    "city": "shengle",
+    "certainty": "推定",
+    "note": "盛楽"
+   },
+   "zhangping": {
+    "city": "jinyang",
+    "certainty": "推定",
+    "note": "并州の張平の拠点(暫定)"
+   },
+   "yaoxiang": {
+    "city": "gaonu",
+    "certainty": "推定",
+    "note": "姚襄の拠点(暫定)"
+   },
+   "goguryeo": {
+    "city": "pyongyang",
+    "certainty": "推定",
+    "note": "342年の丸都の陥落ののち、平壌の東の黄城に移ったとされる"
+   }
+  },
+  "s383": {
+   "shanshan": {
+    "city": "shanshan",
+    "certainty": "確認",
+    "note": "扜泥城(『漢書』西域伝)"
+   },
+   "yutian": {
+    "city": "yutian",
+    "certainty": "確認",
+    "note": "西城"
+   },
+   "shule": {
+    "city": "shule",
+    "certainty": "確認",
+    "note": "疏勒城"
+   },
+   "qiuci": {
+    "city": "qiuci",
+    "certainty": "確認",
+    "note": "延城"
+   },
+   "yanqi": {
+    "city": "yanqi",
+    "certainty": "確認",
+    "note": "員渠城"
+   },
+   "jushi": {
+    "city": "jiaohe",
+    "certainty": "確認",
+    "note": "交河城"
+   },
+   "silla": {
+    "city": "geumseong",
+    "certainty": "確認",
+    "note": "金城(慶州)"
+   },
+   "baekje": {
+    "city": "hanseong",
+    "certainty": "推定",
+    "note": "漢城(慰礼城)"
+   },
+   "chouchi": {
+    "city": "chouchi",
+    "certainty": "確認",
+    "note": "仇池山"
+   },
+   "yuwen": {
+    "city": "zimeng",
+    "certainty": "推定",
+    "note": "紫蒙川"
+   },
+   "tuyuhun": {
+    "city": "tuyuhunting",
+    "certainty": "推定",
+    "note": "吐谷渾の王帳(暫定の首都)"
+   },
+   "tiefu": {
+    "city": "shuofang",
+    "certainty": "推定",
+    "note": "朔方(暫定の首都)"
+   },
+   "qianqin": {
+    "city": "changan",
+    "certainty": "確認",
+    "note": "長安"
+   },
+   "jin": {
+    "city": "jiankang",
+    "certainty": "確認",
+    "note": "建康"
+   },
+   "goguryeo": {
+    "city": "wandu",
+    "certainty": "推定",
+    "note": "国内城(丸都の近く)"
+   }
+  }
+ }
+}

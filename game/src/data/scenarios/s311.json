@@ -39,7 +39,7 @@
    "name": "晋の諸州(皇帝不在)",
    "people": "漢",
    "ruler": "荀藩",
-   "color": "#9bbfe8"
+   "color": "#c9c7a5"
   },
   {
    "id": "wang_jun",
@@ -67,7 +67,7 @@
    "name": "涼州(張軌)",
    "people": "漢",
    "ruler": "張軌",
-   "color": "#c9a046"
+   "color": "#8e7cc0"
   },
   {
    "id": "chenghan",
@@ -95,7 +95,7 @@
    "name": "段部",
    "people": "鮮卑",
    "ruler": "段疾陸眷",
-   "color": "#a3a044"
+   "color": "#819045"
   },
   {
    "id": "murong",
@@ -109,7 +109,7 @@
    "name": "宇文部",
    "people": "鮮卑(匈奴系とも)",
    "ruler": "宇文莫圭",
-   "color": "#5d6fc4"
+   "color": "#454f90"
   },
   {
    "id": "goguryeo",
@@ -123,77 +123,77 @@
    "name": "百済",
    "people": "百済(韓・扶余系)",
    "ruler": "比流王",
-   "color": "#3d8f7a"
+   "color": "#b947c1"
   },
   {
    "id": "silla",
    "name": "新羅",
    "people": "新羅(韓)",
    "ruler": "訖解尼師今",
-   "color": "#e6d36a"
+   "color": "#6dcea1"
   },
   {
    "id": "tiefu",
    "name": "鉄弗部",
    "people": "匈奴",
    "ruler": "劉虎",
-   "color": "#6b7684"
+   "color": "#456d90"
   },
   {
    "id": "tuyuhun",
    "name": "吐谷渾",
    "people": "鮮卑",
    "ruler": "吐谷渾",
-   "color": "#8a8a4a"
+   "color": "#904581"
   },
   {
    "id": "chouchi",
    "name": "仇池",
    "people": "氐",
    "ruler": "楊茂搜",
-   "color": "#9c5a2e"
+   "color": "#905945"
   },
   {
    "id": "shanshan",
    "name": "鄯善",
    "people": "鄯善",
    "ruler": "鄯善王(名は伝わらない)",
-   "color": "#b0864a"
+   "color": "#907745"
   },
   {
    "id": "yutian",
    "name": "于闐",
    "people": "于闐",
    "ruler": "于闐王(名は伝わらない)",
-   "color": "#4a9a7a"
+   "color": "#ce6d6d"
   },
   {
    "id": "shule",
    "name": "疏勒",
    "people": "疏勒",
    "ruler": "疏勒王(名は伝わらない)",
-   "color": "#9a6a8a"
+   "color": "#c07c97"
   },
   {
    "id": "qiuci",
    "name": "亀茲",
    "people": "亀茲",
    "ruler": "亀茲王(名は伝わらない)",
-   "color": "#c0a040"
+   "color": "#47c147"
   },
   {
    "id": "yanqi",
    "name": "焉耆",
    "people": "焉耆",
    "ruler": "焉耆王(名は伝わらない)",
-   "color": "#6a8ab0"
+   "color": "#599eaf"
   },
   {
    "id": "jushi",
    "name": "車師前部",
    "people": "車師",
    "ruler": "車師前部王(名は伝わらない)",
-   "color": "#8a6a4a"
+   "color": "#c08e7c"
   }
  ],
  "defaultOwner": "jin",

@@ -38,7 +38,7 @@ export class InfoPanel {
   /**
    * 都市の情報。residents は滞在している人物(太守・后妃など)、treasureCount は蔵の名品の数。
    */
-  show(city: City, faction: Faction | undefined, state?: CityState, uncertain = false, residents: Person[] = [], treasureCount = 0): void {
+  show(city: City, faction: Faction | undefined, state?: CityState, uncertain = false, residents: Person[] = [], treasureCount = 0, capital?: { certainty: string; note: string }): void {
     if (state) {
       const e = cityEcon(city, state);
       (this.root.querySelector(".info-econ") as HTMLElement).textContent = city.kind === "pass" ? "" : `人口${e.pop.toLocaleString("ja-JP")}・農業${e.agri}・商業${e.commerce}・治安${Math.round(e.order)}・民忠${Math.round(e.support)}${e.fortify ? `・城郭+${e.fortify}` : ""}`;
@@ -71,6 +71,9 @@ export class InfoPanel {
     this.chip.style.background = faction ? faction.color : "#9a9a9a";
     this.faction.textContent = (faction ? faction.name : "所属なし") + (uncertain ? "(推定)" : "");
     this.detail.textContent = faction ? `${faction.people} ・ 君主 ${faction.ruler}` : "";
+    // 首都(Version 41)
+    this.root.classList.toggle("is-capital", !!capital);
+    if (capital) this.detail.textContent += ` ・ 首都(${capital.certainty}${capital.note ? `:${capital.note}` : ""})`;
     const governor = personById(governorIdOf(city, state));
     const extra = [
       `守備兵 ${(state?.garrison ?? city.garrison ?? 0).toLocaleString("ja-JP")}`,

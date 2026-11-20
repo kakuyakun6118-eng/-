@@ -42,6 +42,8 @@ export class BattleSim {
   readonly menPerFigure: number;
   /** 見た目用の出来事。表示側が読んだら空にする */
   fx: BattleFx[] = [];
+  /** 戦況の知らせ(救援軍の到着など。Version 41)。表示側が読んだら空にする */
+  notices: string[] = [];
   /** 決着したら入る */
   result: BattleResult | null = null;
   private readonly commanders: Record<SideId, Commander>;
@@ -109,6 +111,7 @@ export class BattleSim {
 
   /** その部隊が、まだ命令を受けて戦える状態か */
   isActive(u: BattleUnit): boolean {
+    if (u.arriveAt !== undefined && u.arriveAt > this.time) return false; // 救援軍は、着くまで戦場にいない
     return u.state !== "gone" && u.state !== "routing" && !u.escaped && u.men > 0;
   }
 
@@ -255,12 +258,18 @@ export class BattleSim {
     }
     for (const u of this.units) {
       if (u.state === "gone" || u.escaped) continue;
+      if (u.arriveAt !== undefined && u.arriveAt > this.time) continue; // まだ着いていない救援軍
+      if (u.arriveAt !== undefined && u.arriveAt <= this.time && !u.arrivalNoticed) {
+        u.arrivalNoticed = true;
+        this.notices.push(`${u.name}が戦場に着きました`);
+      }
       this.move(u, dt);
     }
     this.separate();
     this.findEngagements();
     for (const u of this.units) {
       if (u.state === "gone" || u.escaped) continue;
+      if (u.arriveAt !== undefined && u.arriveAt > this.time) continue;
       this.fight(u, dt);
     }
     this.landVolleys();
@@ -625,6 +634,10 @@ export class BattleSim {
     }
     if (c.active) hit *= 1 + c.intelligence / 400; // 知略:射撃の統制
     if (this.field.heightAt(u.x, u.z) > this.field.heightAt(target.x, target.z) + 1.5) hit *= 1.15;
+    // 地形(Version 41):林の中の的は木に守られる。高い所から低い所へは、高低差が大きいほど遠くまでよく届く
+    if (this.field.inForest(target.x, target.z)) hit *= 0.7;
+    const drop = this.field.heightAt(u.x, u.z) + u.elevation - (this.field.heightAt(target.x, target.z) + target.elevation);
+    if (drop < -4) hit *= 0.85; // 見上げて射る
     const flight = 0.6 + d / 45;
     this.volleys.push({ at: this.time + flight, targetId: target.id, casualties: u.men * hit });
     this.fx.push({

@@ -156,6 +156,34 @@ export class BattleScreen {
         this.refreshHud();
       },
       onRetreatAll: () => this.hud.confirmRetreat(() => this.sim.retreatAll(playerSide)),
+      // 攻城戦で守る側(Version 41)
+      onWallDown: () => {
+        let n = 0;
+        for (const u of this.selectedUnits()) if (this.siege?.descend(u)) n++;
+        this.hud.toast(n ? "城壁から城内へ降りる" : "城壁の上の部隊を選んでください");
+        this.refreshHud();
+      },
+      onToThreat: () => {
+        const seg = this.siege?.threatSegment(this.sim);
+        if (!seg || !this.siege) return this.hud.toast("いま攻められている所はありません");
+        const units = this.selectedUnits();
+        if (!units.length) return this.hud.toast("部隊を選んでください");
+        units.forEach((u, i) => this.siege!.sendTo(this.sim, u, seg, i, units.length));
+        this.hud.toast(`${seg.kind === "gate" ? "城門" : "城壁"}(${this.siege.segmentName(seg)})の守りへ`);
+        this.refreshHud();
+      },
+      onDefendGate: () => {
+        if (!this.siege) return;
+        const n = this.siege.defendGates(this.sim);
+        this.hud.toast(`城門を固める:${n}部隊を城門の内側へ`);
+        this.refreshHud();
+      },
+      onDefendWall: () => {
+        if (!this.siege) return;
+        const n = this.siege.spreadOnWalls(this.sim);
+        this.hud.toast(`城壁に散る:${n}部隊を城壁の上と後ろへ`);
+        this.refreshHud();
+      },
       onPause: () => {
         this.paused = !this.paused;
         this.hud.setPaused(this.paused);
@@ -264,6 +292,14 @@ export class BattleScreen {
       this.hud.toast(seg.kind === "gate" ? "城門を攻める" : "城壁を攻める");
       return;
     }
+    // 攻城戦:守る側が自分の城壁・城門をタップしたら、選んだ部隊をそこへ上げる(騎兵は内側に控える。Version 41)
+    const own = this.siege && this.sim.playerSide === "defender" && mine.length > 0 && (!hit || hit.side === "defender" && hit.elevation > 0) ? this.siege.segmentAt(point.x, point.z) : null;
+    if (own && this.siege) {
+      mine.forEach((u, i) => this.siege!.sendTo(this.sim, u, own, i, mine.length));
+      this.hud.toast(`${own.kind === "gate" ? "城門" : "城壁"}に上がって守る(騎兵は内側に控える)`);
+      this.refreshHud();
+      return;
+    }
     if (hit && hit.side === this.sim.playerSide) {
       this.tapOwnUnit(hit.id);
       return;
@@ -295,6 +331,11 @@ export class BattleScreen {
 
   // ===== 毎フレーム =====
 
+  /** 攻城戦か(音楽の場面を選ぶため) */
+  get isSiege(): boolean {
+    return !!this.siege;
+  }
+
   /** dt は前回からの現実の秒数 */
   update(dt: number): void {
     // 処理が遅れたコマでも、戦闘の計算は決まった刻みで進める(一度に進める時間に上限を付ける)
@@ -306,6 +347,8 @@ export class BattleScreen {
         this.hud.toast(fx.side === this.sim.playerSide ? "自軍の本陣が崩れた! 全軍が動揺している" : "敵の本陣が崩れた! 敵軍が動揺している");
       }
     }
+    for (const n of this.sim.notices) this.hud.toast(n);
+    this.sim.notices.length = 0;
     // 壊滅・退場した部隊は、選択から外す
     this.selectedIds = this.selectedIds.filter((id) => {
       const u = this.sim.unit(id);

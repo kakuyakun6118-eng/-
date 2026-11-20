@@ -7,6 +7,7 @@ import { autoResolve } from "./autoBattle";
 import { createBattleSetup, governorIdOf, initialCityState, placeName } from "./battle";
 import { garrisonCap, StrategyAi, strategyRules } from "./strategy";
 import { Placement } from "./placement";
+import capitalData from "../data/scenarios/capitals.json";
 import { chance, setCurrentSpoils, Spoils, type CaptureRecord, type PendingCapture } from "./spoils";
 import { affinity, isKin, LoyaltySystem } from "./loyalty";
 import { cityEcon, Economy } from "./economy";
@@ -30,6 +31,8 @@ const CONTACT_RANGE = 0.42;
 const SUPPLY_RANGE_KM = 80;
 /** 食糧の備蓄の上限(日数) */
 const FOOD_CAP = 90;
+/** 首都の陥落の確率(ゲーム上の初期設定値。史実の確率ではない) */
+export const capitalRules = { captureRate: 0.8, fallRate: 0.9 };
 
 export type SupplyState = "good" | "low" | "out";
 
@@ -60,6 +63,10 @@ export interface CampaignListener {
   onBattleEvent(event: BattleEvent): void;
   /** 日付が変わった */
   onDayChanged(day: number): void;
+  /** 首都が変わった(遷都・建国) */
+  onCapitalChanged?(factionId: string, cityId: string): void;
+  /** 歴史の事件の結果、戦略マップが変わった(Version 41) */
+  onEventChanges?(eventId: string, diff: import("./eventDiff").EventDiff): void;
   /** 軍団が壊滅して、地図から消えた */
   onArmyRemoved(state: ArmyState): void;
   /** 軍団が加わった(セーブデータの読み込みで、消えていた軍団が戻ったとき) */
@@ -97,7 +104,7 @@ export class Campaign {
     private readonly grid: TerrainGrid,
     armies: Army[],
     readonly cities: City[],
-    private readonly listener: CampaignListener,
+    readonly listener: CampaignListener,
   ) {
     // 元のデータを書き換えないよう、写しを取って使う
     this.armies = armies.map((a) => ({
@@ -124,7 +131,148 @@ export class Campaign {
     this.court = new Court(this);
     this.history = new HistorySystem(this);
     this.trade = new TradeSystem(this);
+    this.initCapitals();
     this.placement.init(true);
+  }
+
+  // ===== 首都(Version 41) =====
+  /** シナリオの首都の表から、首都を決める。表にない国は、いちばん格の高い都市(推定) */
+  initCapitals(): void {
+    this.capitals = {};
+    const table = (capitalData.scenarios as Record<string, Record<string, { city: string; certainty: string; note: string }>>)[scenario.id] ?? {};
+    for (const f of scenario.factions) {
+      const t = table[f.id];
+      if (t && scenario.cityOwners[t.city] === f.id) this.capitals[f.id] = { cityId: t.city, certainty: t.certainty, note: t.note };
+      else this.ensureCapital(f.id, t ? `表の首都(${this.cities.find((c) => c.id === t.city)?.name ?? t.city})をこの国が持たないため、主な都市を暫定の首都とする` : "主な政治拠点を暫定の首都とする");
+    }
+  }
+
+  /** 首都が無い・失われた国に、いちばん格の高い(同じなら守備兵の多い)都市を首都として決める */
+  private ensureCapital(f: string, note: string): City | undefined {
+    const mine = this.cities.filter((c) => c.kind !== "pass" && scenario.cityOwners[c.id] === f);
+    if (!mine.length) {
+      delete this.capitals[f];
+      return undefined;
+    }
+    const best = [...mine].sort((a, b) => (b.rank === "capital" ? 10 : 0) + cityLevelOf(b) - ((a.rank === "capital" ? 10 : 0) + cityLevelOf(a)) || this.cityState(b).garrison - this.cityState(a).garrison)[0];
+    this.capitals[f] = { cityId: best.id, certainty: "推定", note };
+    return best;
+  }
+
+  /** その国の首都(都市)。首都を失っていれば、残る都市から決め直す */
+  capitalCityOf(f: string): City | undefined {
+    const c = this.capitals[f];
+    if (c && scenario.cityOwners[c.cityId] === f) return this.cities.find((x) => x.id === c.cityId);
+    if (!this.cities.some((x) => x.kind !== "pass" && scenario.cityOwners[x.id] === f)) return undefined;
+    return this.ensureCapital(f, c ? "前の首都を失い、残る都市を暫定の首都とした" : "主な政治拠点を暫定の首都とする");
+  }
+
+  /** 首都か */
+  isCapital(cityId: string): boolean {
+    const o = scenario.cityOwners[cityId];
+    return !!o && this.capitals[o]?.cityId === cityId;
+  }
+
+  /** 遷都 */
+  moveCapital(f: string, cityId: string, why: string): void {
+    const city = this.cities.find((c) => c.id === cityId);
+    if (!city || scenario.cityOwners[cityId] !== f) return;
+    const prev = this.capitals[f]?.cityId;
+    this.capitals[f] = { cityId, certainty: "ゲーム中の遷都", note: why };
+    if (prev !== cityId) {
+      this.addNews(`${factionName(f)}が${city.name}へ遷都しました(${why})`);
+      this.history?.log("state", `${factionName(f)}が${city.name}へ遷都(${why})`);
+      this.listener.onCapitalChanged?.(f, cityId);
+    }
+  }
+
+  /**
+   * 首都の陥落(攻城戦で落ちたとき)。君主が首都にいれば、80%で捕虜、20%で脱出。
+   * 捕虜になれば90%で滅亡、10%で後継者が即位して存続(後継者と残る都市があるときだけ)。
+   * 君主が首都にいなければ、陥落だけでは捕らえない(遷都する)。判定は会戦ごとに決まる乱数で、1度だけ行う。
+   */
+  private capitalFallen(def: string, city: City, captor: string, battleId: string, governorId: string | null | undefined): { rulerCaptured: boolean; rulerEscaped: boolean; rulerId?: string } {
+    const ruler = this.rulerOf(def);
+    if (!ruler || this.capitalLog.some((l) => l.battleId === battleId)) return { rulerCaptured: false, rulerEscaped: false };
+    const loc = this.placement.locationOf(ruler.id);
+    // 首都にいるか:いまの所在で決める(太守を兼ねていても、出陣中なら首都にはいない。首都に駐屯する軍団の中なら、いる)
+    void governorId;
+    const here = (loc.kind === "city" || loc.kind === "court" || loc.kind === "army") && loc.cityId === city.id;
+    const rule = capitalRules;
+    const entry = { day: Math.floor(this.day), date: this.dateText(), factionId: def, cityId: city.id, captor, rulerId: ruler.id, rulerAtCapital: here, captured: false, escaped: false, fell: false, survived: false, battleId };
+    this.capitalLog.push(entry);
+    this.capitalFallPending = battleId;
+    if (this.capitalLog.length > 200) this.capitalLog.splice(0, this.capitalLog.length - 200);
+    if (!here) return { rulerCaptured: false, rulerEscaped: false, rulerId: ruler.id };
+    if (chance(`${battleId}|capital|capture`) < rule.captureRate) {
+      entry.captured = true;
+      return { rulerCaptured: true, rulerEscaped: false, rulerId: ruler.id };
+    }
+    entry.escaped = true;
+    return { rulerCaptured: false, rulerEscaped: true, rulerId: ruler.id };
+  }
+
+  /** 首都の陥落のあとの処理(都市の持ち主が変わったあと):遷都・脱出・存続の判定 */
+  private capitalAftermath(def: string, battleId: string): void {
+    this.capitalFallPending = null;
+    const entry = this.capitalLog.find((l) => l.battleId === battleId);
+    if (!entry || entry.factionId !== def) return;
+    const ruler = entry.rulerId ? personById(entry.rulerId) : undefined;
+    const remaining = this.cities.filter((c) => c.kind !== "pass" && scenario.cityOwners[c.id] === def);
+    const lost = this.cities.find((c) => c.id === entry.cityId)!;
+    const pickCapital = (): City | undefined => [...remaining].sort((a, b) => cityLevelOf(b) * 1000 - distanceKm(b, lost) / 10 - (cityLevelOf(a) * 1000 - distanceKm(a, lost) / 10))[0];
+    if (!entry.captured && !remaining.length && ruler) {
+      // 最後の都市を失った:君主は落ち延びたが、国を保つ都市がない。国は滅びる(君主は捕らえられていない)
+      entry.fell = true;
+      this.addNews(`${factionName(def)}の君主${ruler.name}は${lost.name}から落ち延びましたが、国を保つ都市はもうありません`);
+      this.fallFaction(def, ruler, null);
+      return;
+    }
+    if (!entry.captured) {
+      // 君主は首都にいなかったか、脱出した:残る都市へ遷都する(君主のいる都市があればそこへ)
+      const at = ruler ? this.placement.locationOf(ruler.id) : undefined;
+      const atCity = at?.cityId && scenario.cityOwners[at.cityId] === def ? this.cities.find((c) => c.id === at.cityId) : undefined;
+      const next = entry.escaped ? pickCapital() : atCity ?? pickCapital();
+      if (next) {
+        if (entry.escaped && ruler) this.placement.moveTo(ruler.id, next.id, "court", `${lost.name}の陥落から脱出`);
+        this.moveCapital(def, next.id, `${lost.name}の陥落`);
+        entry.newCapital = next.id;
+      }
+      this.court.addStability(def, entry.escaped ? -20 : -12);
+      this.loyalty.noteDefeat(def);
+      if (entry.escaped && ruler) {
+        this.addNews(`${factionName(def)}の君主${ruler.name}は、${lost.name}の陥落から脱出しました`);
+        // 有力な将の離反の見込み:忠誠を下げる(離反するかは、忠誠の仕組みで決まる)
+        for (const p of persons.filter((x) => x.factionId === def && x.role !== "ruler" && this.postOf(x.id))) this.loyalty.add(p.id, -6, `${lost.name}の陥落と君主の逃亡`);
+      }
+      return;
+    }
+    // 捕虜:90%で滅亡、10%で存続(後継者と残る都市があるときだけ)
+    const stay = chance(`${battleId}|capital|survive`) >= capitalRules.fallRate;
+    const heir = ruler && remaining.length ? this.successionCandidates(def, ruler).map((x) => x.p).find((p) => this.personStatus(p.id) === "active" && !this.spoils.custodyOf(p.id) && !this.court.isMinor(p)) : undefined;
+    if (!stay || !heir || !ruler) {
+      entry.fell = true;
+      return; // 滅亡は、すぐあとの checkRulers(君主の捕縛 → fallFaction)が一度だけ行う
+    }
+    entry.survived = true;
+    entry.newRuler = heir.id;
+    this.replaceRuler(def, ruler, heir);
+    const next = pickCapital();
+    if (next) {
+      this.moveCapital(def, next.id, `${lost.name}の陥落と君主${ruler.name}の捕縛`);
+      this.placement.moveTo(heir.id, next.id, "court", "新しい君主として即位");
+      entry.newCapital = next.id;
+    }
+    this.court.addStability(def, -35);
+    this.loyalty.noteDefeat(def);
+    for (const p of persons.filter((x) => x.factionId === def && x.role !== "ruler")) this.loyalty.add(p.id, -12, `君主${ruler.name}の捕縛`);
+    // 残る軍団:忠誠の低い指揮官は、捕らえた国に降る
+    for (const a of this.armies.filter((x) => x.army.factionId === def)) {
+      const cmd = a.army.commanderId;
+      if (cmd && (this.loyalty.loyalty[cmd] ?? 60) < 35 && chance(`${battleId}|${cmd}|surrender`) < 0.5) this.defect(cmd, entry.captor, `君主${ruler.name}の捕縛ののち降る`);
+    }
+    this.addNews(`${factionName(def)}の君主${ruler.name}は捕らえられましたが、${heir.name}が即位し、国は${next ? `${next.name}に都を移して` : ""}存続しました`);
+    this.history?.log("ruler", `${factionName(def)}:君主${ruler.name}が捕らえられ、${heir.name}が即位して国は存続`);
   }
 
   /** 勢力の、1か月の収入(支出を引く前) */
@@ -219,6 +367,12 @@ export class Campaign {
   readonly strategy = new StrategyAi(this);
   /** 人物の所在(Version 40) */
   readonly placement = new Placement(this);
+  /** 国家の首都(Version 41):勢力 → 都市・確かさ・由来 */
+  capitals: Record<string, { cityId: string; certainty: string; note: string }> = {};
+  /** 首都の陥落の記録(捕縛・滅亡・存続の判定は1回の陥落につき1度だけ。セーブにも残る) */
+  /** 攻城での首都の陥落を処理している最中(都市の移転で、二重に遷都しないように) */
+  private capitalFallPending: string | null = null;
+  capitalLog: { day: number; date: string; factionId: string; cityId: string; captor: string; rulerId?: string; rulerAtCapital: boolean; captured: boolean; escaped: boolean; fell: boolean; survived: boolean; newRuler?: string; newCapital?: string; battleId: string }[] = [];
   /** 名品・捕虜・保護・陥落の記録 */
   readonly spoils!: Spoils;
   /** 忠誠度・相性・名声 */
@@ -505,6 +659,8 @@ export class Campaign {
       logistics: this.logistics,
       strategy: this.strategy.serialize(),
       placement: this.placement.serialize(),
+      capitals: this.capitals,
+      capitalLog: this.capitalLog,
     });
   }
 
@@ -582,6 +738,9 @@ export class Campaign {
     // 戦略AIの作戦は、軍団を戻したあとで(いない軍団の作戦は捨てる)
     this.strategy.restore(data.strategy);
     this.placement.restore(data.placement);
+    if (data.capitals) this.capitals = JSON.parse(JSON.stringify(data.capitals));
+    else this.initCapitals();
+    this.capitalLog = JSON.parse(JSON.stringify(data.capitalLog ?? []));
   }
 
   /** 都市の、いまの状態(まだ戦いを受けていなければ、最初の状態) */
@@ -769,6 +928,86 @@ export class Campaign {
         route.intent = { lon: target.lon, lat: target.lat };
         return route;
       }
+    }
+    return null;
+  }
+
+  /**
+   * 指やマウスで描いた線から、経路を作る(Version 41)。描いた線を経由点に分け、経由点どうしを
+   * 通れる地形の最短経路(川・山・関所・敵の拠点を考える)でつなぐ。通れない経由点は飛ばす。最後の点は目的地。
+   */
+  planRouteVia(armyId: string, waypoints: RoutePoint[]): Route | null {
+    const s = this.stateOf(armyId);
+    if (!s || !waypoints.length) return null;
+    const closed = this.closedFor(s.army);
+    let from: RoutePoint = { lon: s.army.lon, lat: s.army.lat };
+    const out: Route = { points: [], km: 0, effort: [] };
+    const last = waypoints.length - 1;
+    for (let i = 0; i <= last; i++) {
+      let seg: Route | null = null;
+      if (i === last) {
+        for (const spot of this.freeSpots(waypoints[i], s).slice(0, 12)) {
+          seg = findRoute(this.grid, from, spot, closed);
+          if (seg && seg.points.length >= 2) break;
+          seg = null;
+        }
+        if (!seg) return out.points.length >= 2 ? { ...out, intent: out.points[out.points.length - 1] } : null;
+      } else seg = findRoute(this.grid, from, waypoints[i], closed);
+      if (!seg || seg.points.length < 2) continue;
+      const base = out.effort.length ? out.effort[out.effort.length - 1] : 0;
+      const skip = out.points.length ? 1 : 0;
+      for (let k = skip; k < seg.points.length; k++) {
+        out.points.push(seg.points[k]);
+        out.effort.push(base + seg.effort[k] - seg.effort[0]);
+      }
+      out.km += seg.km;
+      from = seg.points[seg.points.length - 1];
+    }
+    if (out.points.length < 2) return null;
+    out.intent = { ...waypoints[last] };
+    return out;
+  }
+
+  /**
+   * 経路の食糧の見積もり(Version 41)。行軍の日ごとの消費(dailyUpkeep と同じ式:補給の届く所では+0.5、
+   * 届かない所では-1、砂漠の補給なしは-1.2、冬の高山は-0.5)を、経路に沿って足し合わせる。
+   */
+  estimateRoute(armyId: string, route: Route): { days: number; foodUse: number; foodLeft: number; unsuppliedDays: number } {
+    const s = this.stateOf(armyId);
+    const days = s ? Math.max(1, Math.ceil(this.daysFor(s, route))) : 0;
+    if (!s) return { days, foodUse: 0, foodLeft: 0, unsuppliedDays: 0 };
+    const total = route.effort[route.effort.length - 1] || 1;
+    const month = this.calendar().month;
+    let food = s.army.food;
+    let use = 0;
+    let unsupplied = 0;
+    for (let d = 0; d < days; d++) {
+      const e = (total * (d + 0.5)) / days;
+      let k = route.effort.findIndex((x) => x >= e);
+      if (k < 1) k = Math.max(1, k === -1 ? route.points.length - 1 : 1);
+      const a = route.points[k - 1], b = route.points[k];
+      const t = route.effort[k] > route.effort[k - 1] ? (e - route.effort[k - 1]) / (route.effort[k] - route.effort[k - 1]) : 0;
+      const pt = { lon: a.lon + (b.lon - a.lon) * t, lat: a.lat + (b.lat - a.lat) * t };
+      const supplied = this.nearFriendlyCity({ ...s, army: { ...s.army, lon: pt.lon, lat: pt.lat } });
+      const kind = this.grid.kindAt(pt.lon, pt.lat);
+      let delta = supplied ? 0.5 : -1;
+      if (!supplied && kind === "desert") delta -= 1.2;
+      if (kind === "highMountain" && (month >= 11 || month <= 2)) delta -= 0.5;
+      if (!supplied) unsupplied++;
+      if (delta < 0) use -= delta;
+      food = Math.max(0, Math.min(FOOD_CAP, food + delta));
+    }
+    return { days, foodUse: Math.round(use), foodLeft: Math.round(food), unsuppliedDays: unsupplied };
+  }
+
+  /** 退却:いちばん近い自国の都市へ(Version 41) */
+  planRetreat(armyId: string): Route | null {
+    const s = this.stateOf(armyId);
+    if (!s) return null;
+    const mine = this.cities.filter((c) => scenario.cityOwners[c.id] === s.army.factionId).sort((a, b) => distanceKm(a, s.army) - distanceKm(b, s.army));
+    for (const c of mine.slice(0, 4)) {
+      const r = this.planRoute(armyId, { lon: c.lon, lat: c.lat });
+      if (r) return r;
     }
     return null;
   }
@@ -1172,6 +1411,7 @@ export class Campaign {
     this.setRole(personId, "ruler");
     scenario.cityOwners[base.city.id] = id;
     this.listener.onCityCaptured(base.city.id, id);
+    this.capitals[id] = { cityId: base.city.id, certainty: "ゲーム中の建国", note: `${p.name}が${base.city.name}で自立` };
     const army = this.armies.find((s) => s.army.factionId === from && s.army.commanderId === personId);
     if (army) {
       this.listener.onArmyRemoved(army);
@@ -1234,10 +1474,18 @@ export class Campaign {
   transferCity(cityId: string, to: string): void {
     const city = this.cities.find((c) => c.id === cityId);
     if (!city) return;
+    const prev = scenario.cityOwners[cityId];
+    const wasCapital = !!prev && this.capitals[prev]?.cityId === cityId;
     scenario.cityOwners[cityId] = to;
     const g = personById(governorIdOf(city, this.cityStates[cityId]) ?? undefined);
     if (g && g.factionId !== to) this.cityStates[cityId] = { ...this.cityState(city), governorId: null };
     this.listener.onCityCaptured(cityId, to);
+    // 首都を事件や割譲で失った国は、残る都市へ都を移す(Version 41:歴史の事件と首都を結びつける)
+    if (wasCapital && prev && prev !== to && !this.capitalFallPending) {
+      const next = this.cities.filter((c) => c.kind !== "pass" && scenario.cityOwners[c.id] === prev).sort((a, b) => cityLevelOf(b) - cityLevelOf(a) || distanceKm(a, city) - distanceKm(b, city))[0];
+      if (next) this.moveCapital(prev, next.id, `${city.name}を失ったため`);
+      else delete this.capitals[prev];
+    }
   }
 
   /** 指定の都市で国を建てる(史実の建国。都市はその人物の国のものであること)。新しい国のIDを返す */
@@ -1266,6 +1514,7 @@ export class Campaign {
     this.spoils.setFaction(personId, id);
     this.setRole(personId, "ruler");
     this.transferCity(cityId, id);
+    this.capitals[id] = { cityId, certainty: "ゲーム中の建国", note: `${p.name}が${city.name}で${state}を建てる` };
     const st = this.cityState(city);
     this.cityStates[cityId] = { ...st, garrison: Math.max(st.garrison, 6000), governorId: personId };
     const army = this.armies.find((s) => s.army.factionId === from && s.army.commanderId === personId);
@@ -1374,8 +1623,7 @@ export class Campaign {
         successors.push({ ...c, base });
       }
     }
-    // 都市を分ける:近い後継国家(600km以内)へ。どこにも近くなければ、捕らえた勢力へ
-    const myCities = this.cities.filter((c) => scenario.cityOwners[c.id] === factionId);
+    // 都市を分ける:近い後継国家(600km以内)へ。どこにも近くなければ、捕らえた勢力か近くの国へ
     const newIds: string[] = [];
     const palette = ["#c46a3a", "#4a8a8c", "#8c5ab4", "#b4a03c", "#5a7a3c", "#a04a6a", "#3c6aa0"];
     for (const [i, s] of successors.entries()) {
@@ -1397,6 +1645,7 @@ export class Campaign {
       if (captor) this.setRelation(id, captor, "war");
     }
     for (const a of newIds) for (const b of newIds) if (a < b) this.setRelation(a, b, "neutral");
+    const myCities = this.cities.filter((c) => scenario.cityOwners[c.id] === factionId);
     const fallback = captor ?? newIds[0] ?? null;
     const claim = (lon: number, lat: number): string | null => {
       let best: string | null = null;
@@ -1408,7 +1657,13 @@ export class Campaign {
           best = newIds[i];
         }
       });
-      return best ?? fallback;
+      if (best) return best;
+      // 遠い都市は、無条件に捕らえた勢力のものにしない(Version 41):捕らえた勢力の都市が400km以内に無ければ、
+      // 近くの国(400km以内)へ降る。どこも無ければ、捕らえた勢力へ降る
+      const near = (g: string): number => Math.min(Infinity, ...this.cities.filter((k) => scenario.cityOwners[k.id] === g && !myCities.includes(k)).map((k) => distanceKm({ lon, lat }, k)));
+      if (fallback && near(fallback) <= 400) return fallback;
+      const other = scenario.factions.filter((g) => g.id !== factionId && !g.fallen && !this.dynasty.fallen[g.id] && g.id !== this.playerFactionId).map((g) => ({ g: g.id, d: near(g.id) })).filter((x) => x.d <= 400).sort((a, b) => a.d - b.d)[0];
+      return other?.g ?? fallback;
     };
     const shares: Record<string, number> = {};
     for (const c of myCities) {
@@ -1421,6 +1676,7 @@ export class Campaign {
     }
     // 人物の行き先:独立した人はその国の君主。ほかの人は、いる場所に近い国へ。行き先が無ければ、捕らえた勢力の捕虜・保護
     successors.forEach((s, i) => {
+      if (s.base.city && scenario.cityOwners[s.base.city.id] === newIds[i]) this.capitals[newIds[i]] = { cityId: s.base.city.id, certainty: "ゲーム中の建国", note: `${f.name}の滅亡ののち、${s.p.name}が${s.base.city.name}で自立` };
       this.spoils.setFaction(s.p.id, newIds[i]);
       this.setRole(s.p.id, "ruler");
       this.loyalty.addFame(s.p.id, 15 + ((s.rule?.title ?? "皇帝") === "皇帝" ? 5 : 0));
@@ -1693,8 +1949,25 @@ export class Campaign {
       ["defender", defender, event.defenderFactionId, event.attackerFactionId],
     ];
     const used = new Set([attacker.army.id, defender?.army.id]);
+    // 攻城戦の救援軍(Version 41):包囲された都市の近く(約0.8度)にいる、守る側の国と同盟国の手の空いた軍団が、城の救援に加わる
+    if (!defender && event.defenderCityId) {
+      const city = this.cities.find((c) => c.id === event.defenderCityId);
+      for (const o of this.armies) {
+        if (!city || used.has(o.army.id) || o.status === "fighting" || totalTroops(o.army) <= 0) continue;
+        const km = distanceKm(o.army, city);
+        if (km > 80) continue;
+        const own = o.army.factionId === event.defenderFactionId;
+        const ally = ["alliance", "vassal"].includes(this.relationOf(o.army.factionId, event.defenderFactionId));
+        if ((!own && !ally) || !this.hostileTo(o.army, event.attackerFactionId)) continue;
+        const efficiency = own ? 1 : 0.8;
+        (event.supporters ??= []).push({ side: "defender", armyId: o.army.id, efficiency, relief: true, km: Math.round(km) });
+        used.add(o.army.id);
+        o.route = null;
+        this.setStatus(o, "fighting");
+      }
+    }
     for (const [side, main, mine, foe] of sides) {
-      if (!main) continue; // 都市の守りには、加勢を入れない(守備兵の計算を分けないため)
+      if (!main) continue; // 都市の守りへの加勢は、上の救援軍として扱う
       const lead = persons.find((p) => p.id === main.army.commanderId);
       for (const o of this.armies) {
         if (used.has(o.army.id) || o.status === "fighting" || totalTroops(o.army) <= 0) continue;
@@ -1725,14 +1998,16 @@ export class Campaign {
       const r = result.sides[sup.side];
       if (!s || !r) continue;
       const after = { ...s.army.troops };
+      // 3Dの攻城戦の救援軍は、部隊ごとの結果を使う。自動戦闘や野戦の加勢は、陣営の損害の割合で分ける
+      const exact = sup.relief ? result.relief?.[sup.armyId] : undefined;
       for (const k of ["infantry", "cavalry", "archer"] as const) {
         const rate = r.before[k] > 0 ? r.after[k] / r.before[k] : 1;
-        after[k] = Math.max(0, Math.min(s.army.troops[k], Math.round(s.army.troops[k] * rate)));
+        after[k] = Math.max(0, Math.min(s.army.troops[k], exact ? exact.after[k] : Math.round(s.army.troops[k] * rate)));
         r.before[k] = Math.max(0, r.before[k] - s.army.troops[k]);
         r.after[k] = Math.max(0, r.after[k] - after[k]);
       }
       s.army.troops = after;
-      s.army.morale = r.morale;
+      s.army.morale = exact ? exact.morale : r.morale;
       s.army.fatigue = r.fatigue;
       s.route = null;
       if (totalTroops(s.army) <= 0) {
@@ -1840,24 +2115,35 @@ export class Campaign {
         order: prev.order,
       };
       const governorId = governorIdOf(city, prev);
-      this.recordFate(governorId, d.commander);
+      // 首都の陥落:君主の捕縛・脱出の判定(君主が太守を兼ねていても、この判定で決める)
+      const def = event.defenderFactionId;
+      const cap = result.siege.captured && this.isCapital(city.id) && scenario.cityOwners[city.id] === def ? this.capitalFallen(def, city, event.attackerFactionId, event.battleId, governorId) : null;
+      const rulerGov = !!cap?.rulerId && governorId === cap.rulerId;
+      if (!rulerGov) this.recordFate(governorId, d.commander);
       if (d.commander === "killed" || d.commander === "captured") state.governorId = null;
+      if (cap?.rulerCaptured && !rulerGov && cap.rulerId) {
+        this.recordFate(cap.rulerId, "captured");
+        this.spoils.addCaptive(cap.rulerId, event.attackerFactionId, def, Math.floor(this.day));
+      }
       if (result.siege.captured) {
         // 落城:攻撃側の勢力のものになる。守備隊は、仮に攻撃側の兵から1,000人を置いたものとする(軍団の兵力は減らさない)
         state.garrison = 1000;
         state.morale = 60;
-        this.recordFate(governorId, d.commander === "killed" ? "killed" : "captured");
+        // 太守の運命(君主が太守のときは、首都の陥落の判定に従う:捕虜か脱出)
+        const govFate = rulerGov ? (cap!.rulerCaptured ? "captured" : "escaped") : d.commander === "killed" ? "killed" : "captured";
+        if (govFate !== "escaped") this.recordFate(governorId, govFate);
         state.governorFate = "healthy"; // 新しい持ち主のもとでは、太守はまだいない
         state.governorId = null;
         // 名声と忠誠:攻め落とした指揮官は名声が上がり、都市を失った側の人々は忠誠が下がる
         if (ca) this.loyalty.addFame(ca, 5);
         for (const p of persons.filter((x) => x.factionId === event.defenderFactionId && x.role !== "ruler")) this.loyalty.add(p.id, -2, `${city.name}の喪失`);
         // 戦利品:その場にいた人物と、蔵の名品を調べる(持ち主が変わる前に)
-        const pc = this.spoils.onCityCaptured(city, event.attackerFactionId, event.defenderFactionId, governorId, d.commander === "killed" ? "killed" : "captured",
+        const pc = this.spoils.onCityCaptured(city, event.attackerFactionId, event.defenderFactionId, govFate === "escaped" ? undefined : governorId ?? undefined, govFate === "escaped" ? "captured" : govFate,
           Math.max(result.siege.wallDamage, result.siege.gateDamage), Math.floor(this.day), (id) => this.personStatus(id));
         this.cityStates[city.id] = state;
         this.listener.onCityCaptured(city.id, event.attackerFactionId);
         this.handleCapture(pc);
+        if (cap) this.capitalAftermath(def, event.battleId);
       } else if (attacker) {
         // 攻め落とせなかった軍団は、都市から離れる方向へ退く
         const dx = attacker.army.lon - city.lon;
@@ -1916,7 +2202,8 @@ export class Campaign {
 
     if (a.food <= 0) {
       a.morale -= 5;
-      if (a.morale < 35 || kind === "desert") {
+      // 補給の届く範囲では、兵糧が尽きても兵は飢えて逃げない(冬の高山の行軍で、補給と消費が釣り合ったときなど)
+      if ((a.morale < 35 || kind === "desert") && !s.supplied) {
         // 食糧が尽きたまま士気が下がると、兵が逃げ出す。砂漠では、渇きで士気に関係なく兵を失う
         const before = totalTroops(a);
         for (const k of Object.keys(a.troops) as UnitTypeId[]) a.troops[k] = Math.floor(a.troops[k] * (kind === "desert" ? 0.95 : 0.97));

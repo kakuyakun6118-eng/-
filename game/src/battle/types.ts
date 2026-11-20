@@ -93,6 +93,12 @@ export interface BattleUnit {
   facing: number;
   /** 地面からの高さ(城壁の上にいる部隊だけ 0 より大きい) */
   elevation: number;
+  /** 救援軍(Version 41):戦場に着く時刻(秒)と、もとの軍団 */
+  arriveAt?: number;
+  reliefOf?: string;
+  /** 城壁へ上がる途中(Version 41):上がる城壁・城門の区画 */
+  manSeg?: string;
+  arrivalNoticed?: boolean;
   formation: FormationId;
   /** 待機中に向いていたい方角(「向きを変える」命令で入る) */
   faceTo: number | null;

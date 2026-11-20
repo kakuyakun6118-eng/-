@@ -166,7 +166,9 @@ export class BattleView {
       const cls = unitClasses[u.classId];
       const color = this.colors.get(u.id)!;
       // 攻城兵器は、1台を1つの形で描く
-      const want = u.state === "gone" || u.escaped ? 0 : cls.engine ? 1 : Math.max(1, Math.ceil(u.men / sim.menPerFigure));
+      // まだ着いていない救援軍は描かない(Version 41)
+      const waiting = u.arriveAt !== undefined && u.arriveAt > sim.time;
+      const want = u.state === "gone" || u.escaped || waiting ? 0 : cls.engine ? 1 : Math.max(1, Math.ceil(u.men / sim.menPerFigure));
       let list = this.figures.get(u.id);
       if (!list) {
         list = [];
@@ -175,7 +177,7 @@ export class BattleView {
       // 兵士が減ったら、後ろの列から消して、その場に倒れた兵を残す
       while (list.length > want) {
         const f = list.pop()!;
-        if (!u.escaped) this.addFallen(f.x, f.z, u.facing + f.phase);
+        if (!u.escaped && !waiting) this.addFallen(f.x, f.z, u.facing + f.phase);
       }
       const cos = Math.cos(u.facing);
       const sin = Math.sin(u.facing);

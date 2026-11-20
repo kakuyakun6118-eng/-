@@ -59,6 +59,9 @@ export interface CampaignSave {
   strategy?: import("./strategy").StrategySave;
   /** 人物の所在(Version 40)。古いセーブには無い(そのときは開始時の配置から作る) */
   placement?: import("./placement").PlacementSave;
+  /** 首都と、首都の陥落の記録(Version 41)。古いセーブには無い(そのときはシナリオの表から作る) */
+  capitals?: Record<string, { cityId: string; certainty: string; note: string }>;
+  capitalLog?: import("./Campaign").Campaign["capitalLog"];
   /** 財政・官職・内政(古いセーブには無い。無ければ、官職を割り当て直す) */
   economy?: EconomySave;
   /** 忠誠度・名声(古いセーブには無い。無ければ、読み込んだ時点の状況から作り直す) */

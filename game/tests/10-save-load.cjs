@@ -77,6 +77,7 @@ const open = async () => {
   await p.evaluate(() => { const g = window.__goko; g.campaign.speed = 0; document.querySelector('#event').hidden = true; });
   await p.locator('#menu-open').tap(); await p.waitForTimeout(600);
   await p.locator('#menu-faction').selectOption('jin');
+  await p.locator('.menu-faction-yes').tap(); await p.waitForTimeout(200); // Version 41:勢力の変更は確かめてから
   await p.locator('#menu-opacity').evaluate((el) => { el.value = '1.5'; el.dispatchEvent(new Event('input', { bubbles: true })); });
   await p.locator('.menu-slot', { hasText: 'セーブ1' }).locator('button', { hasText: 'セーブ' }).tap(); await p.waitForTimeout(700);
   console.log('4 メニュー:', await p.evaluate(() => JSON.stringify({ msg: document.querySelector('#menu-message').textContent, storage: document.querySelector('#menu-storage').textContent, slot1: document.querySelectorAll('.menu-slot')[1].innerText.replace(/\s+/g, ' '), auto: document.querySelectorAll('.menu-slot')[0].innerText.replace(/\s+/g, ' ').slice(0, 60) })));

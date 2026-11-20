@@ -18,6 +18,10 @@ export class CityModel {
   private readonly tiers: THREE.Group[];
   /** 選択したときに、城壁に沿って淡く光る枠 */
   private readonly glow: THREE.Mesh;
+  /** 首都の淡い金の光(地面の輪と、遠くからも見える金の印) */
+  private capitalHalo: THREE.Group | null = null;
+  private readonly fw: number;
+  private readonly fd: number;
 
   constructor(blueprint: CityBlueprint) {
     this.radius = blueprint.radius;
@@ -28,6 +32,8 @@ export class CityModel {
 
     // 城壁のすぐ外側をなぞる、四角い光の枠
     const [fw, fd] = blueprint.footprint;
+    this.fw = fw;
+    this.fd = fd;
     const band = 0.14;
     const shape = new THREE.Shape()
       .moveTo(-fw / 2 - band, -fd / 2 - band)
@@ -54,6 +60,39 @@ export class CityModel {
     this.setSelected(false);
   }
 
+  /** 首都の印(Version 41):足もとの淡い金の輪と、都市の上の金の菱形(遠くでだけ見せる) */
+  setCapital(on: boolean): void {
+    if (!on) {
+      if (this.capitalHalo) this.group.remove(this.capitalHalo);
+      this.capitalHalo = null;
+      return;
+    }
+    if (this.capitalHalo) return;
+    const g = new THREE.Group();
+    const r = Math.max(this.fw, this.fd) * 0.72;
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(r, r * 1.12, 48).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ color: 0xe8c25a, transparent: true, opacity: 0.32, blending: THREE.AdditiveBlending, depthWrite: false }),
+    );
+    ring.position.y = 0.01;
+    g.add(ring);
+    // 遠くからも首都と分かる金の印(縮小した広域表示でだけ出す)
+    const gem = new THREE.Mesh(
+      new THREE.OctahedronGeometry(Math.max(this.fw, this.fd) * 0.16),
+      new THREE.MeshBasicMaterial({ color: 0xe8c25a, transparent: true, opacity: 0.9 }),
+    );
+    gem.position.y = this.height + Math.max(this.fw, this.fd) * 0.32;
+    gem.scale.y = 1.5;
+    gem.name = "capital-gem";
+    g.add(gem);
+    this.capitalHalo = g;
+    this.group.add(g);
+  }
+
+  get isCapital(): boolean {
+    return !!this.capitalHalo;
+  }
+
   /** 選択中かどうかで、光の枠と城門の幟を出し入れする */
   setSelected(selected: boolean): void {
     this.glow.visible = selected;
@@ -66,5 +105,7 @@ export class CityModel {
     this.tiers[1].visible = distance < MID_DISTANCE;
     this.tiers[2].visible = near;
     this.tiers[3].visible = !near; // 遠いときは、民家の代わりに屋根色の面を出す
+    const gem = this.capitalHalo?.getObjectByName("capital-gem");
+    if (gem) gem.visible = distance > MID_DISTANCE * 0.8;
   }
 }

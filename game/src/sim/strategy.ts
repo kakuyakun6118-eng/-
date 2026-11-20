@@ -101,6 +101,11 @@ export interface AiStats {
   westVassalTries: number;
   westVassals: number;
   westDispatched: number;
+  /** 首都(Version 41):敵の首都への出兵・自国の首都の守り・首都の救援・遷都 */
+  capitalAttacks: number;
+  capitalGuards: number;
+  capitalRelief: number;
+  capitalMoves: number;
   westArrived: number;
   westWon: number;
   westFailed: number;
@@ -118,9 +123,10 @@ export interface StrategySave {
   failed?: Record<string, number>;
   lastCapture?: Record<string, number>;
   expeditions?: StrategyAi["expeditions"];
+  capitalMoved?: Record<string, number>;
 }
 
-const emptyStats = (): AiStats => ({ planned: 0, dispatched: 0, arrived: 0, fieldBattles: 0, sieges: 0, captures: 0, retreats: 0, moves: 0, vsPlayer: 0, vsPlayerSieges: 0, vsPlayerCaptures: 0, notLaunched: {}, aborted: {}, wars: 0, coordinated: 0, guards: 0, intercepts: 0, postureChanges: 0, peaceTries: 0, vassalDemands: 0, reorganized: 0, blockades: 0, buildUps: 0, annexed: 0, westPlans: 0, westVassalTries: 0, westVassals: 0, westDispatched: 0, westArrived: 0, westWon: 0, westFailed: 0, westDiplomatic: 0 });
+const emptyStats = (): AiStats => ({ planned: 0, dispatched: 0, arrived: 0, fieldBattles: 0, sieges: 0, captures: 0, retreats: 0, moves: 0, vsPlayer: 0, vsPlayerSieges: 0, vsPlayerCaptures: 0, notLaunched: {}, aborted: {}, wars: 0, coordinated: 0, guards: 0, intercepts: 0, postureChanges: 0, peaceTries: 0, vassalDemands: 0, reorganized: 0, blockades: 0, buildUps: 0, annexed: 0, westPlans: 0, westVassalTries: 0, westVassals: 0, westDispatched: 0, westArrived: 0, westWon: 0, westFailed: 0, westDiplomatic: 0, capitalAttacks: 0, capitalGuards: 0, capitalRelief: 0, capitalMoves: 0 });
 const clamp = (v: number, lo = -1, hi = 1): number => Math.max(lo, Math.min(hi, v));
 /** 外交を好む・慎重な性格なら、優勢でも膠着した戦争をやめやすい */
 const posture_hint = (p: { diplomacy: number; caution: number }): boolean => p.diplomacy + p.caution > 0.6;
@@ -134,6 +140,8 @@ export class StrategyAi {
   private nextOp = 1;
   /** 攻めて失敗した目標(勢力|都市 → 日)。1年は同じ目標を選ばない */
   failed: Record<string, number> = {};
+  /** 遷都した日(勢力ごと。1年に1度まで) */
+  capitalMoved: Record<string, number> = {};
   /** 2つの国のあいだで、最後に都市が奪われた日(膠着の判断に使う) */
   lastCapture: Record<string, number> = {};
   /** 兵力不足で出兵を見送った回数の、前の月の値(増えていれば軍備を増強する) */
@@ -198,6 +206,8 @@ export class StrategyAi {
 
   /** 首都(いちばん格の高い自国の都市) */
   capitalOf(f: string): City | undefined {
+    const cap = this.c.capitalCityOf?.(f);
+    if (cap) return cap;
     return this.citiesOf(f).filter((c) => c.kind !== "pass").sort((a, b) => (b.rank === "capital" ? 10 : 0) + cityLevelOf(b) - ((a.rank === "capital" ? 10 : 0) + cityLevelOf(a)))[0];
   }
 
@@ -698,7 +708,46 @@ export class StrategyAi {
         guard = idle().sort((x, y) => distanceKm(x.army, cap) - distanceKm(y.army, cap))[0];
         if (guard) {
           this.st(f).guards++;
+          this.st(f).capitalGuards++;
           if (distanceKm(guard.army, cap) > 60 && this.goTo(guard, cap.lon, cap.lat)) this.note(f, `${guard.army.name}を首都${cap.name}の守りに戻す`);
+        }
+      }
+    }
+    // 3b) 首都の救援(Version 41):首都が包囲されている(敵の軍団が首都のすぐそばにいる)なら、
+    // 勝算が低めでも、手の空いた近くの軍団を救援に向ける。救えそうになく、ほかに大きな都市があれば遷都する
+    if (cap) {
+      const besiegers = this.c.armies.filter((o) => this.c.atWar(f, o.army.factionId) && distanceKm(o.army, cap) < 60);
+      if (besiegers.length) {
+        const foe = besiegers.reduce((sum, o) => sum + this.armyPower(o), 0);
+        const cs = this.c.cityState(cap);
+        const held = cs.garrison * (0.55 + cs.morale / 220) * wallBonus(cap.defense ?? 40);
+        let sent = 0;
+        for (const r of idle().filter((x) => x !== guard && this.ready(x) && distanceKm(x.army, cap) < p.reachKm * 1.3).sort((x, y) => distanceKm(x.army, cap) - distanceKm(y.army, cap))) {
+          if (this.ops.some((o) => o.factionId === f && o.targetArmyId === besiegers[0].army.id)) break;
+          if (sent + held >= foe * 1.1) break;
+          if (this.goTo(r, besiegers[0].army.lon, besiegers[0].army.lat)) {
+            this.addOp(f, r, "intercept", { targetArmyId: besiegers[0].army.id, reason: `首都${cap.name}の救援` });
+            this.st(f).capitalRelief++;
+            this.st(f).intercepts++;
+            sent += this.armyPower(r);
+            this.note(f, `${r.army.name}を、包囲された首都${cap.name}の救援に向ける`);
+          }
+        }
+        // 救援を合わせても守れない見込みなら、首都から離れた大きな都市へ遷都する(1年に1度まで)
+        const lastMove = this.capitalMoved[f] ?? -9999;
+        if (sent + held < foe * 0.6 && this.c.day - lastMove > 360) {
+          const alt = mine.filter((m) => m.id !== cap.id && m.kind !== "pass" && cityLevelOf(m) >= Math.max(2, cityLevelOf(cap) - 1) && distanceKm(m, cap) > 200 && !this.c.armies.some((o) => this.c.atWar(f, o.army.factionId) && distanceKm(o.army, m) < 150))
+            .sort((x, y) => cityLevelOf(y) - cityLevelOf(x) || distanceKm(y, cap) - distanceKm(x, cap))[0];
+          const ruler = this.c.rulerOf(f);
+          if (alt && ruler) {
+            this.capitalMoved[f] = this.c.day;
+            this.c.moveCapital(f, alt.id, `${cap.name}が包囲され、守りきれない見込みのため`);
+            // 君主と宮廷が新しい都へ移る(遷都)
+            const loc = this.c.placement.locationOf(ruler.id);
+            if (loc.cityId === cap.id && (loc.kind === "court" || loc.kind === "city") && this.c.postOf(ruler.id)?.id !== cap.id) this.c.placement.moveTo(ruler.id, alt.id, "court", `${alt.name}への遷都`);
+            this.st(f).capitalMoves++;
+            this.note(f, `首都${cap.name}が包囲され救えない見込みのため、${alt.name}へ遷都`);
+          }
         }
       }
     }
@@ -835,14 +884,26 @@ export class StrategyAi {
       }
       // 価値:経済・食糧・都市の格。首都と関所は戦略上重い。統一志向なら敵の首都をいっそう重んじる
       let value = 40 + (city.economy ?? 0) + (city.food ?? 0) * 0.5 + (city.kind === "pass" ? 60 : cityLevelOf(city) * 40);
-      if (city.rank === "capital") value *= posture === "unify" ? 1.8 : 1.3;
+      // 首都(Version 41):国家の首都はいっそう重い(落とせば君主を捕らえ、国を滅ぼせる見込みがある)
+      const enemyCapital = this.c.isCapital?.(city.id);
+      // 重みは国の大きさに比べる:都市が1つ2つの小国の首都を、大国の首都と同じには重んじない(遠くの小国への無謀な遠征を防ぐ)
+      if (enemyCapital) {
+        const size = Math.min(1, Math.max(0, (this.citiesOf(owner ?? "").filter((k) => k.kind !== "pass").length - 1) / 4));
+        value *= 1 + (posture === "unify" ? 1.2 : 0.6) * size;
+        const r = this.c.rulerOf(owner ?? "");
+        if (size > 0 && r && this.c.placement.locationOf(r.id).cityId === city.id) value *= 1 + 0.15 * size;
+      } else if (city.rank === "capital") value *= posture === "unify" ? 1.4 : 1.15;
       // 反乱で生まれた勢力(自国から独立した勢力など)は、早めに討つ
       if (/_n\d+$/.test(owner ?? "")) value *= 1.5;
       // 戦後に保てるか:自国の都市から近いほどよい
       const sustain = 1 / (1 + nearestMine / 300);
       // 自国の守りの手薄さ:首都を守る軍団がこれだけなら、首都から遠い目標は控える
       const exposure = cap && this.c.armies.filter((x) => x.army.factionId === f).length <= 1 && distanceKm(cap, city) > 300 ? 0.6 : 1;
-      const score = (value * Math.min(ratio, 3) * sustain * exposure) / (days + 5) / difficulty;
+      // 首都の守りを空にしない(Version 41):この軍団が首都の唯一の守りで、敵が首都に迫っているなら、遠い目標は大きく控える
+      const capGuards = cap ? this.c.armies.filter((x) => x.army.factionId === f && x !== s && distanceKm(x.army, cap) < rules.plan.homeGuardKm).length : 1;
+      const capDanger = cap ? this.c.armies.some((o) => this.c.atWar(f, o.army.factionId) && distanceKm(o.army, cap) < rules.plan.homeGuardKm * 1.5) : false;
+      const reserve = cap && capGuards === 0 && capDanger && distanceKm(cap, a) < rules.plan.homeGuardKm && distanceKm(cap, city) > 250 ? 0.4 : 1;
+      const score = (value * Math.min(ratio, 3) * sustain * exposure * reserve) / (days + 5) / difficulty;
       const why = `${city.name}(${this.name(owner)})の守りが${ratio >= 2.5 ? "薄い" : "崩せる"}ため攻撃目標に設定(勝算${ratio.toFixed(1)}倍・到着約${Math.round(days)}日${partner ? `・${partner.army.name}と共同` : ""}${relief > 0 ? "・援軍の見込みあり" : ""})`;
       if (!best || score > best.score) best = { city, score, ratio, days, need: defense * attackRatio, why, partner, partner2 };
     }
@@ -892,6 +953,7 @@ export class StrategyAi {
     st.moves++;
     st.dispatched++;
     const op = this.addOp(f, s, "attack", { targetCityId: best.city.id, reason: best.why });
+    if (this.c.isCapital?.(best.city.id)) st.capitalAttacks++;
     if (op.vsPlayer) st.vsPlayer++;
     if (best.city.lon < 96 && !mine.some((m) => m.lon < 96)) this.c.logistics.expeditions[f] = (this.c.logistics.expeditions[f] ?? 0) + 1;
     this.note(f, `${a.name}(${a.commanderId ? persons.find((x) => x.id === a.commanderId)?.name : "指揮官なし"})を出兵 — ${best.why}`);
@@ -1104,7 +1166,7 @@ export class StrategyAi {
 
   // ===== 保存 =====
   serialize(): StrategySave {
-    return JSON.parse(JSON.stringify({ ops: this.ops, stats: this.stats, posture: this.posture, log: this.log.slice(-150), nextOp: this.nextOp, failed: this.failed, lastCapture: this.lastCapture, expeditions: this.expeditions })) as StrategySave;
+    return JSON.parse(JSON.stringify({ ops: this.ops, stats: this.stats, posture: this.posture, log: this.log.slice(-150), nextOp: this.nextOp, failed: this.failed, lastCapture: this.lastCapture, expeditions: this.expeditions, capitalMoved: this.capitalMoved })) as StrategySave;
   }
 
   restore(save: StrategySave | undefined): void {
@@ -1114,6 +1176,7 @@ export class StrategyAi {
     this.log = [];
     this.nextOp = 1;
     this.failed = {};
+    this.capitalMoved = {};
     this.lastCapture = {};
     this.expeditions = {};
     if (!save) return;
@@ -1124,6 +1187,7 @@ export class StrategyAi {
     this.log = save.log ?? [];
     this.nextOp = save.nextOp ?? 1;
     this.failed = { ...(save.failed ?? {}) };
+    this.capitalMoved = { ...(save.capitalMoved ?? {}) };
     this.lastCapture = { ...(save.lastCapture ?? {}) };
     this.expeditions = { ...(save.expeditions ?? {}) };
   }

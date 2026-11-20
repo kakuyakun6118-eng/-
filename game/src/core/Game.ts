@@ -29,6 +29,9 @@ import { FinanceScreen } from "../ui/FinanceScreen";
 import type { DevKind } from "../sim/economy";
 import { SpoilsScreen } from "../ui/SpoilsScreen";
 import { ScenarioScreen } from "../ui/ScenarioScreen";
+import { FactionSelect } from "../ui/FactionSelect";
+import { Highlights } from "../world/Highlights";
+import { Bgm, BGM_LABEL, type BgmScene } from "../audio/Bgm";
 import { strategyRules } from "../sim/strategy";
 import { AUTO_SLOT, SaveMenu } from "../ui/SaveMenu";
 import { SaveStore } from "./saveStore";
@@ -92,6 +95,9 @@ export class Game {
   private mode: ArmyPanelMode = "info";
   /** 確認中の経路(「確定」を押すと、この経路で行軍を始める) */
   private pendingRoute: Route | null = null;
+  private input!: InputController;
+  /** 描いている経路の点(Version 41) */
+  private drawPts: { lon: number; lat: number }[] = [];
   /** 時間の進む倍率(停止していないときの値) */
   private rate = 1;
   /** 操作する勢力(null なら制限なし) */
@@ -104,6 +110,16 @@ export class Game {
   private readonly histMarks = new THREE.Group();
   /** 交易路・補給範囲の表示 */
   private readonly overlayGroup = new THREE.Group();
+  /** 地図の上の強調(勢力の選択・イベントの変化) */
+  private highlights!: Highlights;
+  private factionSelect!: FactionSelect;
+  /** 場面ごとの音楽(Version 41) */
+  readonly bgm = new Bgm();
+  private bgmTick = 0;
+  /** 起動してから、操作する勢力(または観賞・編集モード)を選んだか */
+  private factionChosen = false;
+  /** 首都の表示を作り直す必要があるか(都市の持ち主が変わったとき) */
+  private capitalsStale = true;
   private readonly overlayRoutes: RouteLine[] = [];
   private overlayMode: "trade" | "supply" | null = null;
   private histHeight: (lon: number, lat: number) => number = () => 0;
@@ -216,6 +232,8 @@ export class Game {
     }
     this.overlayGroup.visible = false;
     this.scene.add(this.overlayGroup);
+    this.highlights = new Highlights(heightAt);
+    this.scene.add(this.highlights.group);
     this.histMarks.visible = false;
     this.scene.add(this.histMarks);
     this.armyLabels = new ArmyLabels(root.querySelector("#labels") as HTMLElement);
@@ -232,6 +250,15 @@ export class Game {
       onDayChanged: () => this.onDayChanged(),
       onCityCaptured: (cityId, factionId) => this.setCityOwner(cityId, factionId),
       onFactionFallen: (info) => this.onFactionFallen(info),
+      onCapitalChanged: () => (this.capitalsStale = true),
+      // 歴史の事件で変わった所を、地図の上でしばらく光らせる(得たものは金、失ったもの・戦いは朱)
+      onEventChanges: (_id, diff) => {
+        for (const ch of diff.changes) {
+          if (ch.lon === undefined || ch.lat === undefined) continue;
+          this.highlights.add(ch.lon, ch.lat, ch.tone === "loss" ? "#d4634e" : ch.tone === "gain" ? "#e8c25a" : "#efe6d0", 25, ch.kind === "state" || ch.kind === "capital" ? 2.4 : 1.6);
+        }
+        this.dirty = true;
+      },
       onCapturePending: (pc) => {
         this.spoilsScreen?.showCapture(pc);
         this.syncSpeedButton();
@@ -290,6 +317,24 @@ export class Game {
         }
         this.setMode("pick", "移動先を地図の上でタップしてください");
       },
+      onDraw: () => {
+        const owner = this.selectedArmy?.state.army.factionId;
+        if (this.playerFactionId && owner !== this.playerFactionId) {
+          this.showNotice(`${factionById(owner ?? "")?.name ?? "この勢力"}の軍団には命令できません(操作勢力:${factionById(this.playerFactionId)?.name})`);
+          return;
+        }
+        this.setMode("draw", "地図の上を指(マウス)でなぞって、進む道を描いてください。2本指で地図を動かせます");
+      },
+      onRetreat: () => {
+        const s = this.selectedArmy?.state;
+        if (!s) return;
+        if (this.playerFactionId && s.army.factionId !== this.playerFactionId) return this.showNotice("ほかの勢力の軍団には命令できません");
+        const route = this.campaign.planRetreat(s.army.id);
+        if (!route) return this.showNotice("退却できる自国の都市への道が見つかりません");
+        this.pendingRoute = route;
+        this.route.show(route);
+        this.setMode("confirm", `退却:${this.routeSummary(s.army.id, route)}`);
+      },
       onConfirm: () => this.confirmMove(),
       onCancel: () => this.cancelMove(),
       onHalt: () => this.selectedArmy && this.campaign.halt(this.selectedArmy.state.army.id),
@@ -326,6 +371,13 @@ export class Game {
       changeSettings: (change) => this.changeSettings(change),
       aiLog: () => this.campaign.strategy.log,
       setFps: (on) => this.setFpsMeter(on),
+      openFactionSelect: () => this.openFactionSelect("change"),
+      bgm: {
+        state: () => this.bgm.state,
+        setVolume: (v) => this.bgm.setVolume(v),
+        setMuted: (m) => this.bgm.setMuted(m),
+        label: (scene) => (scene ? BGM_LABEL[scene as BgmScene] ?? scene : "なし"),
+      },
       aiSummary: () => {
         const t = this.campaign.strategy.totals();
         const top = (r: Record<string, number>): string => Object.entries(r).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, v]) => `${k}${v}`).join("・") || "なし";
@@ -350,13 +402,35 @@ export class Game {
     });
     (root.querySelector("#persons-open") as HTMLElement).addEventListener("click", () => this.personScreen.open());
     // シナリオの選択(メニューから開く。はじめて開いたときは、起動時にも出す)
-    const scenarios = new ScenarioScreen(root.querySelector("#scenarios") as HTMLElement);
+    // 閉じたとき、まだ操作する勢力を選んでいなければ(起動したばかり)、勢力の選択へ進む
+    const scenarios = new ScenarioScreen(root.querySelector("#scenarios") as HTMLElement, () => {
+      if (!this.factionChosen && !navigator.webdriver) this.openFactionSelect("start");
+    });
     (root.querySelector("#scenarios-open") as HTMLElement).addEventListener("click", () => {
       this.menu.close();
       scenarios.open();
     });
+    // 勢力の選択(シナリオを選んだあと、操作する勢力を選んでから始める。Version 41)
+    this.factionSelect = new FactionSelect(root.querySelector("#faction-select") as HTMLElement, {
+      campaign: () => this.campaign,
+      current: () => this.playerFactionId,
+      preview: (id) => this.previewFaction(id),
+      onChoose: (id) => {
+        this.factionChosen = true;
+        const fallen = this.campaign.gameOver;
+        this.campaign.gameOver = false;
+        (root.querySelector("#gameover") as HTMLElement).hidden = true;
+        this.changeSettings({ playerFactionId: id });
+        this.showNotice(id ? `${factionById(id)?.name}を操作します${fallen ? "(滅びた国から移りました)" : ""}。時間は止まっています。右上の再生で進めます` : "観賞・編集モードです(すべての国をAIが動かします)");
+        if (id) {
+          const cap = this.campaign.capitalCityOf(id);
+          if (cap) this.glideTo(new THREE.Vector3(toWorld(cap.lon, cap.lat).x, 0, toWorld(cap.lon, cap.lat).z), 24);
+        }
+      },
+    });
     // 自動テスト(navigator.webdriver)のときは、起動時には出さない
     if (!/[#&]s=/.test(location.hash) && !navigator.webdriver) scenarios.open();
+    else if (!navigator.webdriver) this.openFactionSelect("start");
     // 外交と情勢
     const diplomacy = new DiplomacyScreen(root.querySelector("#diplomacy") as HTMLElement, {
       campaign: () => this.campaign,
@@ -429,6 +503,7 @@ export class Game {
     if (this.campaign.spoils.pending) this.spoilsScreen.showCapture(this.campaign.spoils.pending);
     // ゲームオーバーの画面
     (root.querySelector(".gameover-load") as HTMLElement).addEventListener("click", () => void this.menu.open());
+    (root.querySelector(".gameover-faction") as HTMLElement).addEventListener("click", () => this.openFactionSelect("fallen"));
     (root.querySelector(".gameover-scenario") as HTMLElement).addEventListener("click", () => {
       (root.querySelector("#gameover") as HTMLElement).hidden = true;
       scenarios.open();
@@ -441,7 +516,8 @@ export class Game {
       (root.querySelector("#event") as HTMLElement).hidden = true;
     });
 
-    new InputController(canvas, {
+    this.input = new InputController(canvas, {
+      onDraw: (phase, x, y) => this.onDraw(phase, x, y),
       onPan: (fx, fy, tx, ty) => {
         if (this.battle) return this.battle.onPan(fx, fy, tx, ty);
         this.glide = null; // 手で動かしたら、自動の移動はやめる
@@ -489,6 +565,7 @@ export class Game {
     scenario.cityOwners[cityId] = factionId;
     const marker = this.cities.setFaction(cityId, factionById(factionId));
     if (marker) this.labels.refresh(marker);
+    this.capitalsStale = true;
     // 領土の計算は重いので、次の描画のときに1度だけ行う(国が滅びて都市がまとめて移るとき、何十回も計算しない)
     this.territory.markStale(() => this.refreshTerritory(true));
     this.dirty = true;
@@ -512,8 +589,7 @@ export class Game {
       }
       this.pendingRoute = route;
       this.route.show(route);
-      const days = Math.max(1, Math.ceil(this.campaign.daysFor(state, route)));
-      this.setMode("confirm", `距離 ${Math.round(route.km)}km・到着まで約${days}日`);
+      this.setMode("confirm", this.routeSummary(state.army.id, route));
       return;
     }
     const army = this.pickArmy(x, y);
@@ -526,8 +602,66 @@ export class Game {
     else this.clearSelection();
   }
 
+  /** 経路の一行の要約:距離・日数・食糧(Version 41) */
+  private routeSummary(armyId: string, route: Route): string {
+    const est = this.campaign.estimateRoute(armyId, route);
+    const s = this.campaign.stateOf(armyId);
+    const warn = est.foodLeft <= 0 ? "・途中で食糧が尽きる見込み" : est.foodLeft < 15 ? "・到着時の食糧が少ない" : "";
+    return `距離 ${Math.round(route.km)}km・到着まで約${est.days}日・食糧の消費 約${est.foodUse}日分(手持ち${Math.round(s?.army.food ?? 0)}→到着時 約${est.foodLeft})${est.unsuppliedDays ? `・補給の届かない日 約${est.unsuppliedDays}日` : ""}${warn}`;
+  }
+
+  /** 経路を描く(Version 41):なぞった線を集め、指を離したら、通れる地形に沿った経路にする */
+  private onDraw(phase: "start" | "move" | "end" | "cancel", x: number, y: number): void {
+    const s = this.selectedArmy?.state;
+    if (!s || this.mode !== "draw") return;
+    if (phase === "cancel") {
+      this.drawPts = [];
+      this.route.hide();
+      this.dirty = true;
+      return;
+    }
+    const g = this.pickGround(x, y);
+    if (g) {
+      const lastPt = this.drawPts[this.drawPts.length - 1];
+      if (!lastPt || Math.hypot(g.lon - lastPt.lon, g.lat - lastPt.lat) > 0.02) this.drawPts.push(g);
+    }
+    if (phase === "start") this.drawPts = g ? [g] : [];
+    if (phase !== "end") {
+      // 描いている途中の線(そのままの形)
+      const pts = [{ lon: s.army.lon, lat: s.army.lat }, ...this.drawPts];
+      if (pts.length >= 2) {
+        const effort = [0];
+        for (let i = 1; i < pts.length; i++) effort.push(effort[i - 1] + Math.hypot(pts[i].lon - pts[i - 1].lon, pts[i].lat - pts[i - 1].lat));
+        this.route.show({ points: pts, km: 0, effort });
+        this.dirty = true;
+      }
+      return;
+    }
+    // 指を離した:経由点にまとめる(約25kmごと、最大24点)
+    const way: { lon: number; lat: number }[] = [];
+    for (const p of this.drawPts) {
+      const prev = way[way.length - 1] ?? { lon: s.army.lon, lat: s.army.lat };
+      if (Math.hypot(p.lon - prev.lon, p.lat - prev.lat) >= 0.25) way.push(p);
+    }
+    const end = this.drawPts[this.drawPts.length - 1];
+    if (end && (!way.length || way[way.length - 1] !== end)) way.push(end);
+    while (way.length > 24) way.splice(1, way.length - 24 > 1 ? 2 : 1);
+    this.drawPts = [];
+    const route = way.length ? this.campaign.planRouteVia(s.army.id, way) : null;
+    if (!route) {
+      this.pendingRoute = null;
+      this.route.hide();
+      this.setMode("draw", "描いた道では進めません。もう一度なぞってください");
+      return;
+    }
+    this.pendingRoute = route;
+    this.route.show(route);
+    this.setMode("confirm", `描いた道に沿う経路(通れない所は迂回):${this.routeSummary(s.army.id, route)}`);
+  }
+
   private setMode(mode: ArmyPanelMode, message = ""): void {
     this.mode = mode;
+    if (this.input) this.input.drawMode = mode === "draw";
     this.armyPanel.setMode(mode, message);
     this.dirty = true;
   }
@@ -659,6 +793,43 @@ export class Game {
     this.campaign.speed = 0;
     this.syncSpeedButton();
     this.showGameOver(`${name}の君主が${info.captor ? `${factionById(info.captor)?.name ?? ""}に` : ""}捕らえられ、国は滅びました。${info.successors.length ? `後継国家:${info.successors.map((id) => factionById(id)?.name).join("・")}(設定で「後継国家で続ける」を選ぶと、こちらで続けられます)` : "独立して後を継ぐ国はありませんでした。"}`);
+  }
+
+  /** 首都の表示(金の屋根・光・冠)を、いまの首都に合わせる(Version 41) */
+  refreshCapitals(): void {
+    for (const f of scenario.factions) if (!f.fallen) this.campaign.capitalCityOf(f.id);
+    for (const m of this.cities.setCapitals((id) => this.campaign.isCapital(id))) this.labels.refresh(m);
+    this.dirty = true;
+  }
+
+  /** 勢力の選択を開く(時間を止める) */
+  openFactionSelect(mode: "start" | "change" | "fallen"): void {
+    this.campaign.speed = 0;
+    this.syncSpeedButton();
+    this.factionSelect.open(mode);
+  }
+
+  /** 勢力の選択で:その国の都市を光らせ、首都へ寄る */
+  private previewFaction(id: string | null): void {
+    this.highlights.clear();
+    this.dirty = true;
+    if (!id) return;
+    const f = factionById(id);
+    const cap = this.campaign.capitalCityOf(id);
+    // 領土の広がりが入るように、首都を中心に引く。輪の大きさは、引いた距離に合わせる
+    const w = cap ? toWorld(cap.lon, cap.lat) : undefined;
+    const spread = w ? Math.max(0, ...this.campaign.cities.filter((c) => scenario.cityOwners[c.id] === id).map((c) => { const v = toWorld(c.lon, c.lat); return Math.hypot(v.x - w.x, v.z - w.z); })) : 0;
+    const dist = Math.min(170, Math.max(30, spread * 2.4));
+    const k = Math.max(1, dist / 45);
+    for (const c of this.campaign.cities) {
+      if (c.kind === "pass" || scenario.cityOwners[c.id] !== id) continue;
+      this.highlights.add(c.lon, c.lat, c.id === cap?.id ? "#e8c25a" : f?.color ?? "#e8c25a", 0, (c.id === cap?.id ? 2.6 : 1.5) * k);
+    }
+    if (w) {
+      // 横長の小さな画面(スマートフォンの横向き)では、一覧が右にあるので、領土が左に見えるようにずらす
+      const shift = window.innerHeight <= 500 ? dist * 0.32 : 0;
+      this.glideTo(new THREE.Vector3(w.x + shift, 0, w.z), dist);
+    }
   }
 
   private showGameOver(text: string): void {
@@ -796,11 +967,15 @@ export class Game {
       if (marker) this.labels.refresh(marker);
     }
     this.campaign.restore(data.campaign);
+    this.capitalsStale = true;
     // 処置を待っていた陥落があれば、その画面に戻す
     (this.root.querySelector("#capture") as HTMLElement).hidden = true;
     if (this.campaign.spoils.pending) this.spoilsScreen?.showCapture(this.campaign.spoils.pending);
     this.refreshTerritory();
     this.changeSettings(data.settings);
+    // セーブを読み込んだら、そのセーブの勢力で続ける(勢力の選択は閉じる)
+    this.factionChosen = true;
+    if (this.factionSelect?.visible) this.factionSelect.close();
     if (this.campaign.gameOver) this.showGameOver("保存した時点で、国はすでに滅びていました。");
     this.lastAutosaveDay = this.campaign.day;
     this.lastFrame = performance.now();
@@ -1177,7 +1352,7 @@ export class Game {
     // 並び:太守 → 君主 → 后妃・皇族(住まいがこの都市の人)→ ほかの人(地図の札には先頭の6人まで)
     const rank = (p: Person): number => (p.role === "ruler" ? 0 : p.residence === marker.city.id ? 1 : 2);
     const residents = [gov, ...here.filter((p) => p !== gov).sort((a, b) => rank(a) - rank(b))].filter((p): p is Person => !!p);
-    this.panel.show(marker.city, marker.faction, this.campaign.cityState(marker.city), scenario.uncertainOwners?.includes(marker.city.id) && scenario.cityOwners[marker.city.id] === initialCityOwners[marker.city.id], residents, this.campaign.spoils.inCity(marker.city.id).length);
+    this.panel.show(marker.city, marker.faction, this.campaign.cityState(marker.city), scenario.uncertainOwners?.includes(marker.city.id) && scenario.cityOwners[marker.city.id] === initialCityOwners[marker.city.id], residents, this.campaign.spoils.inCity(marker.city.id).length, this.campaign.isCapital(marker.city.id) ? this.campaign.capitals[scenario.cityOwners[marker.city.id]] : undefined);
     this.panel.setStaff(residents.length, () => this.personScreen.open(undefined, marker.city.id));
     // 徴兵と出陣は、その都市の勢力を操作できるときだけ
     const owner = scenario.cityOwners[marker.city.id];
@@ -1247,8 +1422,27 @@ export class Game {
     }
   }
 
+  /** いまの場面の音楽を選ぶ(画面の状態を、30コマに1度調べる) */
+  private bgmScene(): BgmScene {
+    const shown = (sel: string): boolean => !(this.root.querySelector(sel) as HTMLElement | null)?.hidden;
+    if (this.battle) {
+      const res = this.root.querySelector(".hud-result") as HTMLElement | null;
+      if (res && !res.hidden) {
+        const o = (this.root.querySelector(".hud-result-title") as HTMLElement | null)?.dataset.outcome;
+        if (o === "win") return "victory";
+        if (o === "lose") return "defeat";
+      }
+      return this.battle.isSiege ? "siege" : "field";
+    }
+    if (shown("#gameover")) return "defeat";
+    if (shown("#scenarios") || (this.factionSelect?.visible && !this.factionChosen)) return "title";
+    if (shown("#diplomacy") || shown("#court") || shown("#persons")) return "court";
+    return "map";
+  }
+
   private frame(): void {
     this.tickFps();
+    if (++this.bgmTick % 30 === 0) this.bgm.play(this.bgmScene());
     // 領土の塗り直しの続き(1フレームに1区切り)
     this.territory.ensure();
     if (this.territoryJob) {
@@ -1266,6 +1460,11 @@ export class Game {
     }
     // ゲームの時間を進める
     this.campaign.update(dt);
+    if (this.highlights.update()) this.dirty = true;
+    if (this.capitalsStale) {
+      this.capitalsStale = false;
+      this.refreshCapitals();
+    }
 
     if (this.glide) {
       const t = Math.min(1, (performance.now() - this.glide.start) / GLIDE_MS);

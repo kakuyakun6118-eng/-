@@ -24,6 +24,29 @@ export interface CityMarker {
   maxScale: number;
   /** 名前ラベルを出す位置(都市の奥側、北の城壁の上) */
   labelAnchor: THREE.Vector3;
+  /** 国家の首都か(Version 41:金色の屋根と淡い光で示す) */
+  capital?: boolean;
+}
+
+/**
+ * 首都の装い(Version 41)。宮殿・城門の楼閣(遠くからも見える部品)の瓦を、金の釉薬の瓦にする。
+ * 西域のオアシス都市は瓦屋根でなく土の建物が多いので、宮殿の壁と城門だけを金で縁取る(光は控えめ)。
+ */
+function capitalize(bp: ReturnType<typeof buildCity>, city: City): ReturnType<typeof buildCity> {
+  const oasis = !!city.oasis;
+  for (const p of bp.parts) {
+    if (p.tier > 1) continue;
+    if (!oasis && p.surface === "tile") p.color = "#c99a35";
+    else if (oasis && p.surface === "body" && (p.color === "#9a5140" || p.color === "#7d6b4d")) p.color = "#b8903e";
+  }
+  return bp;
+}
+
+function makeModel(city: City, faction: Faction | undefined, capital: boolean): CityModel {
+  const bp = buildCity(resolveCityLayout(city), city.id, faction ? faction.color : "#d8d2c4");
+  const model = new CityModel(capital ? capitalize(bp, city) : bp);
+  if (capital) model.setCapital(true);
+  return model;
 }
 
 export class Cities {
@@ -34,7 +57,7 @@ export class Cities {
   /** 都市を1つ追加する。heightAt は、ある地点(緯度経度)の地面の高さを返す関数 */
   add(city: City, faction: Faction | undefined, heightAt: (lon: number, lat: number) => number): void {
     const { x, z } = toWorld(city.lon, city.lat);
-    const model = new CityModel(buildCity(resolveCityLayout(city), city.id, faction ? faction.color : "#d8d2c4"));
+    const model = makeModel(city, faction, false);
     // 足もとの地面は Terrain が平らにならしてあるので、そのまま少しだけ浮かせて置く
     model.group.position.set(x, heightAt(city.lon, city.lat) + 0.015, z);
     this.group.add(model.group);
@@ -51,21 +74,34 @@ export class Cities {
   }
 
   /** 都市の所属勢力が変わったとき(占領など)に、旗の色を新しい勢力のものに作り替える */
-  setFaction(cityId: string, faction: Faction | undefined): CityMarker | undefined {
+  setFaction(cityId: string, faction: Faction | undefined, capital?: boolean): CityMarker | undefined {
     const m = this.markers.find((k) => k.city.id === cityId);
     if (!m) return undefined;
+    if (capital !== undefined) m.capital = capital;
     const position = m.group.position.clone();
     this.group.remove(m.group);
     m.group.traverse((o) => {
       if (o instanceof THREE.InstancedMesh) o.dispose();
     });
-    m.model = new CityModel(buildCity(resolveCityLayout(m.city), m.city.id, faction ? faction.color : "#d8d2c4"));
+    m.model = makeModel(m.city, faction, !!m.capital);
     m.model.group.position.copy(position);
     m.model.setSelected(m === this.selected);
     m.group = m.model.group;
     m.faction = faction;
     this.group.add(m.group);
     return m;
+  }
+
+  /** 首都の印を付け外しする(変わった都市だけ作り直す)。変わった都市の一覧を返す */
+  setCapitals(isCapital: (cityId: string) => boolean): CityMarker[] {
+    const changed: CityMarker[] = [];
+    for (const m of this.markers) {
+      const cap = m.city.kind !== "pass" && isCapital(m.city.id);
+      if (cap === !!m.capital) continue;
+      this.setFaction(m.city.id, m.faction, cap);
+      changed.push(m);
+    }
+    return changed;
   }
 
   /** カメラの距離に合わせて、大きさと細かさを調整する */

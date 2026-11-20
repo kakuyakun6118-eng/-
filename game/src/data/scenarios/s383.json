@@ -25,7 +25,7 @@
    "name": "吐谷渾",
    "people": "鮮卑",
    "ruler": "視連",
-   "color": "#8a8a4a"
+   "color": "#904581"
   },
   {
    "id": "goguryeo",
@@ -39,56 +39,56 @@
    "name": "百済",
    "people": "百済(韓・扶余系)",
    "ruler": "近仇首王",
-   "color": "#3d8f7a"
+   "color": "#b947c1"
   },
   {
    "id": "silla",
    "name": "新羅",
    "people": "新羅(韓)",
    "ruler": "奈勿尼師今",
-   "color": "#e6d36a"
+   "color": "#6dcea1"
   },
   {
    "id": "shanshan",
    "name": "鄯善",
    "people": "鄯善",
    "ruler": "休密馱",
-   "color": "#b0864a"
+   "color": "#907745"
   },
   {
    "id": "yutian",
    "name": "于闐",
    "people": "于闐",
    "ruler": "于闐王(名は伝わらない)",
-   "color": "#4a9a7a"
+   "color": "#ce6d6d"
   },
   {
    "id": "shule",
    "name": "疏勒",
    "people": "疏勒",
    "ruler": "疏勒王(名は伝わらない)",
-   "color": "#9a6a8a"
+   "color": "#c07c97"
   },
   {
    "id": "qiuci",
    "name": "亀茲",
    "people": "亀茲",
    "ruler": "白純",
-   "color": "#c0a040"
+   "color": "#47c147"
   },
   {
    "id": "yanqi",
    "name": "焉耆",
    "people": "焉耆",
    "ruler": "泥流",
-   "color": "#6a8ab0"
+   "color": "#599eaf"
   },
   {
    "id": "jushi",
    "name": "車師前部",
    "people": "車師",
    "ruler": "弥窴",
-   "color": "#8a6a4a"
+   "color": "#c08e7c"
   }
  ],
  "uncertainOwners": [

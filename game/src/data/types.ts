@@ -311,7 +311,7 @@ export interface BattleEvent {
   /** 決着したあとの記録(勝敗と損害) */
   record?: BattleRecord;
   /** 近くにいて加勢した、同盟国・援軍の軍団(共同作戦)。efficiency は連携の度合い(0.5〜1) */
-  supporters?: { side: "attacker" | "defender"; armyId: string; efficiency: number }[];
+  supporters?: { side: "attacker" | "defender"; armyId: string; efficiency: number; relief?: boolean; km?: number }[];
   /** 歴史の重大事件の会戦(淝水の戦いなど)のとき、その事件のID */
   histId?: string;
   /** 作戦による補正(歴史の事件の選択などで決まる) */
@@ -341,6 +341,8 @@ export interface BattleRecord {
   defenderLosses: number;
   /** 攻城戦のときだけ入る */
   siege?: SiegeOutcome;
+  /** 攻城戦の救援軍(Version 41):軍団ごとの、戦いのあとの兵力と士気(3Dの攻城戦のときだけ入る) */
+  relief?: Record<string, { after: Record<UnitTypeId, number>; morale: number }>;
 }
 
 /** 攻城戦の結末 */
@@ -428,7 +430,7 @@ export interface BattleSide {
   /** 都市のときだけ入る */
   fortification: Fortification | null;
   /** 加勢している軍団(兵力はこの陣営の troops に含まれる) */
-  supporters?: { armyId: string; name: string; factionId: string; troops: number; efficiency: number }[];
+  supporters?: { armyId: string; name: string; factionId: string; troops: number; efficiency: number; relief?: { by: Record<UnitTypeId, number>; morale: number; arriveSec: number; commander: string | null } }[];
 }
 
 /**

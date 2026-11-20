@@ -138,7 +138,10 @@ export function deploySiege(setup: BattleSetup, layout: SiegeLayout, year: numbe
   });
 
   // --- 守備隊 ---
-  const def = setup.defender;
+  // 救援軍(Version 41)の兵は、城の守備兵とは別に、城外から駆けつける部隊として置く
+  const relief = (setup.defender.supporters ?? []).filter((x) => x.relief);
+  const def = { ...setup.defender, troops: { ...setup.defender.troops } };
+  for (const r of relief) for (const k of ["infantry", "cavalry", "archer"] as const) def.troops[k] = Math.max(0, def.troops[k] - r.relief!.by[k]);
   const mood = { morale: def.morale, baseMorale: def.morale, fatigue: 0 };
   const south = layout.segments.filter((s) => s.south);
   const gates = south.filter((s) => s.kind === "gate");
@@ -170,6 +173,18 @@ export function deploySiege(setup: BattleSetup, layout: SiegeLayout, year: numbe
       ...mood, source: "infantry", isCommand: true,
     });
   }
+  // 救援軍:戦場の東西の端(攻める側の横腹)から、距離に応じた時刻に現れる
+  relief.forEach((r, i) => {
+    const sign = i % 2 === 0 ? 1 : -1;
+    const x0 = sign * (FIELD.width / 2 - 12);
+    const z0 = layout.southZ + 40 + i * 14;
+    const rm = { morale: r.relief!.morale, baseMorale: r.relief!.morale, fatigue: 10 };
+    const by = r.relief!.by;
+    const extra = { ...rm, arriveAt: r.relief!.arriveSec, reliefOf: r.armyId, facing: sign > 0 ? -Math.PI / 2 : Math.PI / 2 };
+    if (by.cavalry >= 20) make("defender", "lightCavalry", `${r.name}の騎兵(救援)`, by.cavalry, x0, z0 - 10, { ...extra, source: "cavalry" });
+    if (by.infantry >= 20) make("defender", "spearmen", `${r.name}の歩兵(救援)`, by.infantry, x0 - sign * 14, z0, { ...extra, source: "infantry" });
+    if (by.archer >= 20) make("defender", "archers", `${r.name}の弓兵(救援)`, by.archer, x0 - sign * 26, z0 + 8, { ...extra, source: "archer" });
+  });
   return { units, menPerFigure: base.menPerFigure };
 }
 
@@ -278,8 +293,118 @@ export class Siege {
     }
   }
 
+  // ===== 守る側の操作(Version 41) =====
+  /** 区画の呼び名(東から何番目か) */
+  segmentName(seg: SiegeSegment): string {
+    const south = this.layout.segments.filter((s) => s.south && s.kind === seg.kind).sort((a, b) => a.x - b.x);
+    const i = south.indexOf(seg);
+    const side = seg.x < -this.layout.w * 0.2 ? "西" : seg.x > this.layout.w * 0.2 ? "東" : "中央";
+    return `${side}・${i + 1}番目`;
+  }
+
+  /** いちばん攻められている区画(攻めの命令を受けた攻撃側の兵と、近くの攻撃側の兵の多さ) */
+  threatSegment(sim: BattleSim): SiegeSegment | null {
+    let best: SiegeSegment | null = null;
+    let score = 0;
+    for (const s of this.layout.segments.filter((k) => k.south)) {
+      let v = 0;
+      for (const u of sim.units) {
+        if (u.side !== "attacker" || !sim.isActive(u)) continue;
+        if (u.order.kind === "assault" && u.order.segmentId === s.id) v += u.men * 2;
+        else if (Math.abs(u.x - s.x) < s.w / 2 + 12 && Math.abs(u.z - s.z) < 40) v += u.men;
+      }
+      if (s.hp <= 0) v *= 1.5; // 破られた所は、いっそう危うい
+      if (v > score) {
+        score = v;
+        best = s;
+      }
+    }
+    return best;
+  }
+
+  /** 城壁(城門の楼閣)に上がれる部隊か:騎兵と兵器は上がれない */
+  canMan(u: BattleUnit): boolean {
+    const cls = unitClasses[u.classId];
+    return !cls.engine && cls.category !== "cavalry";
+  }
+
+  /** 部隊を区画へ送る:上がれる部隊は城壁の上へ(内側から階段で上がる)、騎兵は内側に控える。破られた区画は、内側で塞ぐ */
+  sendTo(sim: BattleSim, u: BattleUnit, seg: SiegeSegment, i = 0, n = 1): void {
+    const spread = n > 1 ? ((i / (n - 1)) - 0.5) * Math.min(seg.w - 4, 6 * n) : 0;
+    const x = Math.max(seg.x - seg.w / 2 + 2, Math.min(seg.x + seg.w / 2 - 2, seg.x + spread));
+    const inner = seg.z - seg.d / 2 - 4 - u.depth / 2;
+    if (u.elevation > 0) this.descend(u);
+    if (seg.hp > 0 && this.canMan(u)) u.manSeg = seg.id;
+    else u.manSeg = undefined;
+    sim.order(u.id, { kind: "move", x, z: seg.hp > 0 ? inner : seg.z - seg.d / 2 - 8 - u.depth / 2 });
+  }
+
+  /** 城壁から城内へ降りる */
+  descend(u: BattleUnit): boolean {
+    if (u.elevation <= 0) return false;
+    u.elevation = 0;
+    u.z -= 8;
+    u.manSeg = undefined;
+    u.order = { kind: "hold" };
+    return true;
+  }
+
+  /** 城門を固める:城壁の上にいない歩兵(本陣と救援軍を除く)を、城門の内側へ。破られた城門があれば、そこを先に */
+  defendGates(sim: BattleSim): number {
+    const gates = this.layout.segments.filter((s) => s.south && s.kind === "gate").sort((a, b) => a.hp - b.hp);
+    const threat = this.threatSegment(sim);
+    const order = threat && threat.kind === "gate" ? [threat, ...gates.filter((g) => g !== threat)] : gates;
+    const units = sim.units.filter((u) => u.side === "defender" && sim.isActive(u) && u.elevation === 0 && !u.isCommand && !u.reliefOf && unitClasses[u.classId].category === "infantry");
+    units.forEach((u, i) => {
+      const g = order[i % order.length];
+      u.manSeg = undefined;
+      sim.order(u.id, { kind: "move", x: g.x + ((Math.floor(i / order.length) % 3) - 1) * 6, z: g.z - g.d / 2 - 6 - u.depth / 2 - Math.floor(i / (order.length * 3)) * 8 });
+    });
+    return units.length;
+  }
+
+  /** 城壁に散る:弓兵・弩兵を、立っている南面の城壁へ均等に上げ、歩兵は城壁の内側に並べる */
+  spreadOnWalls(sim: BattleSim): number {
+    const walls = this.layout.segments.filter((s) => s.south && s.hp > 0);
+    if (!walls.length) return 0;
+    const shooters = sim.units.filter((u) => u.side === "defender" && sim.isActive(u) && u.elevation === 0 && !u.reliefOf && unitClasses[u.classId].range && this.canMan(u));
+    shooters.forEach((u, i) => this.sendTo(sim, u, walls[Math.round(((i + 0.5) / shooters.length) * (walls.length - 1))]));
+    const foot = sim.units.filter((u) => u.side === "defender" && sim.isActive(u) && u.elevation === 0 && !u.isCommand && !u.reliefOf && unitClasses[u.classId].category === "infantry" && !unitClasses[u.classId].range);
+    foot.forEach((u, i) => {
+      const w = walls[Math.round(((i + 0.5) / Math.max(1, foot.length)) * (walls.length - 1))];
+      u.manSeg = undefined;
+      sim.order(u.id, { kind: "move", x: w.x, z: w.z - w.d / 2 - 10 - u.depth / 2 });
+    });
+    return shooters.length + foot.length;
+  }
+
+  /** 城壁へ上がる途中の部隊:内側の足もとに着いたら、上がる */
+  private climb(sim: BattleSim): void {
+    for (const u of sim.units) {
+      if (!u.manSeg || u.side !== "defender" || !sim.isActive(u)) continue;
+      const seg = this.segment(u.manSeg);
+      if (!seg || seg.hp <= 0) {
+        u.manSeg = undefined;
+        continue;
+      }
+      if (u.order.kind !== "move" && u.order.kind !== "hold") {
+        u.manSeg = undefined;
+        continue;
+      }
+      const near = Math.abs(u.x - seg.x) <= seg.w / 2 + 1 && u.z < seg.z && seg.z - u.z < seg.d / 2 + 6 + u.depth;
+      if (!near) continue;
+      u.elevation = this.layout.wallHeight;
+      u.z = seg.z;
+      u.manSeg = undefined;
+      u.order = { kind: "hold" };
+      u.facing = Math.PI; // 城外(南、+z)へ向く
+      u.faceTo = Math.PI;
+    }
+  }
+
   /** 1コマ分の更新。戦闘が終わる条件を満たしたら、sim に決着を伝える */
   update(sim: BattleSim, dt: number): void {
+    this.climb(sim);
     this.day += dt / SECONDS_PER_DAY;
     for (const s of this.layout.segments) s.scalable = 0;
     const l = this.layout;

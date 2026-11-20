@@ -9,6 +9,7 @@ import type { ArmyState, Campaign } from "./Campaign";
 import { distanceKm } from "./pathfinding";
 import { chance } from "./spoils";
 import { EXTRA_EVENTS } from "./historyEvents2";
+import { diffSnapshots, snapshot, type EventDiff } from "./eventDiff";
 
 /** 歴史の会戦・攻城戦を、その場で始めてよい距離(これより遠い軍団は、戦場まで進軍させる) */
 const NEAR_KM = 45;
@@ -38,6 +39,10 @@ export interface HistRecord {
   roles?: Record<string, string | undefined>;
   /** プレイヤーが一覧から発動した(Version 40)。一度発動した事件は、もう発動できない */
   manual?: boolean;
+  /** 事件の結果、戦略マップで変わった所(Version 41) */
+  changes?: EventDiff["changes"];
+  /** 決まりに反した所(瞬間移動・存在しない人物)。空が正しい */
+  violations?: string[];
 }
 
 /** 発動の条件の1行(満たしているか・満たしていない理由) */
@@ -472,7 +477,13 @@ export class HistorySystem {
     }
     rec.roles = roles;
     rec.result = undefined;
+    const before = snapshot(this.c);
     const text = d.apply(x, roles, picks);
+    // 戦略マップの変化(Version 41):変わった所を記録し、地図で光らせる
+    const diff = diffSnapshots(this.c, before, snapshot(this.c));
+    rec.changes = diff.changes;
+    rec.violations = diff.violations;
+    this.c.listener.onEventChanges?.(d.id, diff);
     const historic = Object.entries(picks).every(([role, id]) => d.choices[role].find((ch) => ch.id === id)?.kind === "historic");
     rec.status = historic ? "occurred" : "branched";
     rec.historic = historic;

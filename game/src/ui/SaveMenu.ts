@@ -24,6 +24,10 @@ export interface SaveMenuActions {
   aiSummary?(): string;
   /** 実機テスト用:FPSの表示を切り替える */
   setFps?(on: boolean): void;
+  /** 勢力の一覧(地図つき)を開く */
+  openFactionSelect?(): void;
+  /** 音楽(Version 41) */
+  bgm?: { state(): { volume: number; muted: boolean; scene: string | null; locked: boolean }; setVolume(v: number): void; setMuted(m: boolean): void; label(scene: string | null): string };
 }
 
 /** 難易度の札(画面に出す4段階)。効果の数字は strategyAi.json にあり、ここには名前と一言だけを書く */
@@ -49,11 +53,35 @@ export class SaveMenu {
     });
 
     this.q<HTMLInputElement>("#menu-fps").addEventListener("change", (e) => actions.setFps?.((e.target as HTMLInputElement).checked));
+    this.q<HTMLInputElement>("#menu-bgm-volume").addEventListener("input", (e) => { actions.bgm?.setVolume(Number((e.target as HTMLInputElement).value)); this.syncBgm(); });
+    this.q<HTMLInputElement>("#menu-bgm-mute").addEventListener("change", (e) => { actions.bgm?.setMuted((e.target as HTMLInputElement).checked); this.syncBgm(); });
 
     // 設定
     const faction = this.q<HTMLSelectElement>("#menu-faction");
-    faction.replaceChildren(new Option("すべての勢力(制限なし)", ""), ...scenario.factions.map((f) => new Option(f.name, f.id)));
-    faction.addEventListener("change", () => actions.changeSettings({ playerFactionId: faction.value || null }));
+    faction.replaceChildren(new Option("観賞・編集モード(操作する勢力なし)", ""), ...scenario.factions.map((f) => new Option(f.name, f.id)));
+    // ゲームの途中で操作する勢力を変えるときは、確かめてから(Version 41)
+    const confirmBox = this.q("#menu-faction-confirm");
+    const nameOf = (id: string | null): string => (id ? scenario.factions.find((f) => f.id === id)?.name ?? id : "観賞・編集モード");
+    faction.addEventListener("change", () => {
+      const now = actions.settings().playerFactionId;
+      const next = faction.value || null;
+      if (next === now) return void (confirmBox.hidden = true);
+      this.q(".menu-faction-q").textContent = `操作する勢力を「${nameOf(now)}」から「${nameOf(next)}」に変えますか?(進行はそのまま続きます。元の勢力はAIが動かします)`;
+      confirmBox.hidden = false;
+    });
+    this.q(".menu-faction-yes").addEventListener("click", () => {
+      confirmBox.hidden = true;
+      actions.changeSettings({ playerFactionId: faction.value || null });
+      this.say(`操作する勢力を「${nameOf(faction.value || null)}」にしました`);
+    });
+    this.q(".menu-faction-no").addEventListener("click", () => {
+      confirmBox.hidden = true;
+      faction.value = actions.settings().playerFactionId ?? "";
+    });
+    this.q("#menu-faction-pick").addEventListener("click", () => {
+      this.close();
+      actions.openFactionSelect?.();
+    });
     // 難易度:4枚の札から選ぶ。説明の数字は、実際に使っている設定(strategyAi.json)から作る
     const difficulty = this.q("#menu-difficulty");
     difficulty.replaceChildren(
@@ -144,7 +172,11 @@ export class SaveMenu {
 
   async open(): Promise<void> {
     const s = this.actions.settings();
-    this.q<HTMLSelectElement>("#menu-faction").value = s.playerFactionId ?? "";
+    // 勢力の一覧は、滅亡・建国で変わるので、開くたびに作り直す
+    const fsel = this.q<HTMLSelectElement>("#menu-faction");
+    fsel.replaceChildren(new Option("観賞・編集モード(操作する勢力なし)", ""), ...scenario.factions.filter((f) => !f.fallen || f.id === s.playerFactionId).map((f) => new Option(f.name, f.id)));
+    fsel.value = s.playerFactionId ?? "";
+    this.q("#menu-faction-confirm").hidden = true;
     this.syncDifficulty(s.difficulty);
     this.syncFall(s.onFall ?? "gameover");
     this.syncHistory(s.historyMode ?? "historic");
@@ -154,6 +186,7 @@ export class SaveMenu {
     this.q<HTMLInputElement>("#menu-dev").checked = dev;
     try { this.q<HTMLInputElement>("#menu-fps").checked = localStorage.getItem("goko-fps") === "1"; } catch { /* 読めなければ切る */ }
     this.renderDev(dev);
+    this.syncBgm();
     this.say("");
     this.root.hidden = false;
     await this.refresh();
@@ -252,5 +285,15 @@ export class SaveMenu {
       }, !!record);
       list.appendChild(row);
     }
+  }
+
+  /** 音楽の設定の表示を、いまの状態に合わせる */
+  private syncBgm(): void {
+    const b = this.actions.bgm;
+    if (!b) return;
+    const st = b.state();
+    this.q<HTMLInputElement>("#menu-bgm-volume").value = String(st.volume);
+    this.q<HTMLInputElement>("#menu-bgm-mute").checked = st.muted;
+    this.q("#menu-bgm-state").textContent = st.locked ? "画面を一度タップすると鳴り始めます" : st.muted ? "消音中" : `再生中:${b.label(st.scene)}`;
   }
 }

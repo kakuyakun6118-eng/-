@@ -127,5 +127,23 @@ export function buildResult(
     defenderLosses: losses(defender),
     sides: { attacker, defender },
     siege,
+    relief: reliefOf(units, seconds, winner),
   };
+}
+
+/**
+ * 攻城戦の救援軍(Version 41):軍団ごとの、戦いのあとの兵力と士気。戦場に着く前に決着した部隊は、兵を失わない。
+ * 敗走・退場した兵は、半分が戻るとみなす(残りは戦死・負傷・逃散)。
+ */
+function reliefOf(units: BattleUnit[], seconds: number, winner: BattleResult["winner"]): BattleResult["relief"] {
+  const out: NonNullable<BattleResult["relief"]> = {};
+  for (const u of units) {
+    if (!u.reliefOf) continue;
+    const r = (out[u.reliefOf] ??= { after: { infantry: 0, cavalry: 0, archer: 0 }, morale: 0 });
+    const arrived = (u.arriveAt ?? 0) <= seconds;
+    const kept = !arrived ? u.maxMen : u.state === "gone" ? 0 : u.escaped || u.state === "routing" ? u.men * 0.5 : u.men;
+    r.after[u.source] += Math.round(kept);
+    r.morale = Math.max(r.morale, Math.round(Math.max(5, Math.min(100, u.morale + (winner === "defender" ? 10 : winner === "attacker" ? -20 : -4)))));
+  }
+  return Object.keys(out).length ? out : undefined;
 }

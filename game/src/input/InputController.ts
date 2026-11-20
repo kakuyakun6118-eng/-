@@ -10,6 +10,8 @@ export interface InputHandlers {
   onTap(x: number, y: number): void;
   /** 2本の指をひねった(ラジアン。時計回りが正)。回転に対応する画面だけが受け取る */
   onRotate?(angle: number): void;
+  /** 経路を描くモードのときの指1本(マウス)の動き(Version 41)。2本目の指が触れたら cancel */
+  onDraw?(phase: "start" | "move" | "end" | "cancel", x: number, y: number): void;
 }
 
 /** これ以上動いたら「タップ」ではなく「ドラッグ」とみなす距離(ピクセル) */
@@ -25,6 +27,9 @@ interface Pointer {
 export class InputController {
   private readonly pointers = new Map<number, Pointer>();
   private tapStart: { x: number; y: number; time: number } | null = null;
+  /** 経路を描くモード(指1本のドラッグは地図を動かさず、線を描く) */
+  drawMode = false;
+  private drawing = false;
 
   constructor(private readonly el: HTMLElement, private readonly handlers: InputHandlers) {
     el.addEventListener("pointerdown", this.onDown);
@@ -51,6 +56,16 @@ export class InputController {
     this.pointers.set(e.pointerId, p);
     // 1本目の指ならタップの候補にする。2本目が触れたらタップではない
     this.tapStart = this.pointers.size === 1 ? { ...p, time: performance.now() } : null;
+    if (this.drawMode && this.handlers.onDraw) {
+      if (this.pointers.size === 1) {
+        this.drawing = true;
+        this.tapStart = null;
+        this.handlers.onDraw("start", p.x, p.y);
+      } else if (this.drawing) {
+        this.drawing = false;
+        this.handlers.onDraw("cancel", p.x, p.y);
+      }
+    }
   };
 
   private onMove = (e: PointerEvent): void => {
@@ -58,7 +73,10 @@ export class InputController {
     if (!prev) return;
     const cur = this.local(e);
 
-    if (this.pointers.size === 1) {
+    if (this.pointers.size === 1 && this.drawing) {
+      this.handlers.onDraw?.("move", cur.x, cur.y);
+      this.pointers.set(e.pointerId, cur);
+    } else if (this.pointers.size === 1) {
       // 指1本(マウスのドラッグ):地図を動かす
       if (this.tapStart) {
         const moved = Math.hypot(cur.x - this.tapStart.x, cur.y - this.tapStart.y);
@@ -90,7 +108,13 @@ export class InputController {
 
   private onUp = (e: PointerEvent): void => {
     if (!this.pointers.has(e.pointerId)) return;
+    const last = this.pointers.get(e.pointerId)!;
     this.pointers.delete(e.pointerId);
+    if (this.drawing) {
+      this.drawing = false;
+      this.handlers.onDraw?.("end", last.x, last.y);
+      return;
+    }
     if (this.tapStart && performance.now() - this.tapStart.time < TAP_TIME_LIMIT) {
       this.handlers.onTap(this.tapStart.x, this.tapStart.y);
     }
@@ -99,6 +123,10 @@ export class InputController {
 
   private onCancel = (e: PointerEvent): void => {
     this.pointers.delete(e.pointerId);
+    if (this.drawing) {
+      this.drawing = false;
+      this.handlers.onDraw?.("cancel", 0, 0);
+    }
     this.tapStart = null;
   };
 

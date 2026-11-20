@@ -5,8 +5,9 @@ import { scenario, scenarioCatalog, switchScenario } from "../data";
  * 準備中のものは押せず、「準備中(未実装)」と表示する。
  */
 export class ScenarioScreen {
-  constructor(private readonly root: HTMLElement) {
-    (root.querySelector(".scenarios-close") as HTMLElement).addEventListener("click", () => (this.root.hidden = true));
+  /** 閉じたとき(いまのシナリオのまま始める・閉じる)に呼ぶ。勢力の選択へ進むため */
+  constructor(private readonly root: HTMLElement, private readonly onClosed: () => void = () => {}) {
+    (root.querySelector(".scenarios-close") as HTMLElement).addEventListener("click", () => this.close());
     const list = root.querySelector(".scenarios-list") as HTMLElement;
     list.replaceChildren(
       ...scenarioCatalog.map((e) => {
@@ -36,8 +37,8 @@ export class ScenarioScreen {
         const action = document.createElement("button");
         action.type = "button";
         if (e.id === scenario.id) {
-          action.textContent = "プレイ中";
-          action.disabled = true;
+          action.textContent = "このシナリオで続ける(いまのシナリオ)";
+          action.addEventListener("click", () => this.close());
         } else if (e.status === "ready") {
           action.textContent = "このシナリオで始める";
           action.addEventListener("click", () => switchScenario(e.id));
@@ -53,5 +54,11 @@ export class ScenarioScreen {
 
   open(): void {
     this.root.hidden = false;
+  }
+
+  close(): void {
+    if (this.root.hidden) return;
+    this.root.hidden = true;
+    this.onClosed();
   }
 }

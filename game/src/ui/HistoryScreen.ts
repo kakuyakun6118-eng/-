@@ -1,6 +1,7 @@
 // 歴史の重大事件の画面と、歴史年表の画面(PC向け)。
 // 事件:名称・年月・背景・関係人物の肖像・関係国・地図上の地点・選択肢と予想される影響・史実ではどうなったか・史料。
 // 永嘉の乱・淝水の戦いなどの最重要の事件は、大きな演出で示す。肖像の無い人物はシルエットのまま(勝手に割り当てない)。
+import { CHANGE_LABEL } from "../sim/eventDiff";
 import { persons, scenario } from "../data";
 import type { Campaign } from "../sim/Campaign";
 import { KIND_LABEL, STATUS_LABEL, type HistEventDef } from "../sim/history";
@@ -90,7 +91,9 @@ export class HistoryEventScreen {
     // 地図上の地点(小さな略図と、地図を動かす釦)
     right.append(el("h4", "", `発生地点:${d.place.name}`), this.miniMap(d), this.btn("戦略マップで見る(関係都市・軍団・進軍経路・戦場)", () => this.mapMode(d), "hist-focus"));
     if (cur.mode === "decide") {
-      const role = Object.keys(d.choices).find((r) => roles[r] === this.actions.playerFactionId());
+      // 観賞・編集モード(操作する勢力なし)では、h.choose と同じく、最初の関係国の選択肢を示す
+      const me = this.actions.playerFactionId();
+      const role = Object.keys(d.choices).find((r) => (me === null ? !!roles[r] : roles[r] === me));
       right.append(el("h4", "", `選択(${scenario.factions.find((x) => x.id === roles[role!])?.name ?? ""})`));
       for (const ch of role ? d.choices[role] : []) {
         const b = el("button", "hist-choice");
@@ -116,6 +119,20 @@ export class HistoryEventScreen {
       const res = el("p", "hist-result");
       res.append(el("b", "", rec.historic ? "史実どおり:" : "史実と異なる:"), document.createTextNode(rec.result ?? ""));
       right.append(res);
+      // 戦略マップの変化(Version 41):変わった所の一覧。地図では、その場所がしばらく光る
+      if (rec.changes?.length) {
+        const box2 = el("div", "hist-changes");
+        box2.append(el("b", "", `戦略マップの変化(${rec.changes.length}件・地図で光っている所)`));
+        const ul = el("ul", "");
+        for (const ch of rec.changes.slice(0, 40)) {
+          const li = el("li", `tone-${ch.tone ?? "neutral"}`);
+          li.append(el("span", "hist-change-kind", CHANGE_LABEL[ch.kind]), document.createTextNode(ch.text));
+          ul.append(li);
+        }
+        if (rec.changes.length > 40) ul.append(el("li", "", `ほか${rec.changes.length - 40}件`));
+        box2.append(ul);
+        right.append(box2);
+      } else if (cur.mode === "news") right.append(el("p", "hist-note", "この事件では、すぐに変わった国・都市・軍団はありません(会戦や進軍は、このあと地図の上で起こります)"));
       right.append(this.btn("閉じる", () => this.close(), "hist-close"));
     }
     box.replaceChildren(head, el("div", "hist-body"));

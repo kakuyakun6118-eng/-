@@ -7,7 +7,9 @@ const { chromium } = require('playwright');
   const ctx = await b.newContext({ viewport: { width: 1280, height: 800 } });
   const open = async (sc) => { const p = await ctx.newPage(); p.on('pageerror', e => errs.push(String(e).slice(0, 300))); p.on('console', m => { if (m.type() === 'error') errs.push(m.text().slice(0, 300)); }); await p.goto('file://' + process.argv[2] + '#s=' + sc); await p.waitForFunction(() => window.__goko, null, { timeout: 120000 });
     await p.evaluate(() => { window.__run = (days) => { const g = window.__goko, c = g.campaign, h = c.history; const d0 = c.day; let n = 0;
-      while (c.day - d0 < days && n++ < 6000000 && !c.gameOver) {
+      while (c.day - d0 < days && n++ < 6000000) {
+        // Version 41:自分の国が滅びたら(首都の陥落で君主が捕らえられるなど)、残る国から次の勢力を選んで続ける
+        if (c.gameOver) { const D = window.__gokoData; const next = D.scenario.factions.filter(f => !f.fallen && c.cities.some(k => D.scenario.cityOwners[k.id] === f.id)).sort((a, b) => c.cities.filter(k => D.scenario.cityOwners[k.id] === b.id).length - c.cities.filter(k => D.scenario.cityOwners[k.id] === a.id).length)[0]; if (!next) break; c.gameOver = false; g.changeSettings({ playerFactionId: next.id }); window.__switched = (window.__switched ?? 0) + 1; }
         const aw = h.awaiting; if (aw) { const roles = aw.roles(h.ctx()); const role = Object.keys(aw.choices).find(k => c.playerFactionId === null ? roles[k] : roles[k] === c.playerFactionId); h.choose(aw.id, aw.choices[role][0].id); }
         h.queue = h.queue.filter(q => q.mode === 'decide');
         if (c.speed === 0) { for (const ev of c.events.filter(e => e.status === 'pending')) { const st = window.__gokoSetup(ev); if (st) c.applyBattleResult(window.__gokoAuto(st)); else c.setEventStatus(ev.battleId, 'cancelled'); } for (const s of c.armies) if (s.status === 'fighting' && !c.openEventOfArmy(s.army.id)) s.status = 'camping'; if (c.spoils.pending) c.resolveCapture('preserve', true); c.speed = 8; }

@@ -111,6 +111,8 @@
             <p class="army-message"></p>
             <button class="army-battle" type="button" hidden>会戦準備</button>
             <button class="army-move" type="button">移動</button>
+            <button class="army-draw" type="button">経路を描く</button>
+            <button class="army-retreat" type="button" hidden>退却</button>
             <button class="army-halt" type="button" hidden>停止して野営</button>
             <button class="army-confirm" type="button" hidden>確定</button>
             <button class="army-cancel" type="button" hidden>キャンセル</button>
@@ -207,6 +209,10 @@
               <button class="hud-order hud-formation" type="button">陣形</button>
               <button class="hud-order hud-turn-left" type="button" aria-label="部隊を左へ向ける">↶向き</button>
               <button class="hud-order hud-turn-right" type="button" aria-label="部隊を右へ向ける">向き↷</button>
+              <button class="hud-order hud-wall-down siege-def" type="button" hidden>城壁から降りる</button>
+              <button class="hud-order hud-to-threat siege-def" type="button" hidden>攻められている所へ</button>
+              <button class="hud-order hud-def-gate siege-def" type="button" hidden>城門を固める</button>
+              <button class="hud-order hud-def-wall siege-def" type="button" hidden>城壁に散る</button>
             </div>
           </div>
           <div class="hud-tools">
@@ -219,6 +225,7 @@
             <button class="hud-overview" type="button">全景</button>
             <button class="hud-closeup" type="button">近景</button>
             <button class="hud-follow" type="button" aria-pressed="false">追従</button>
+            <button class="hud-panels" type="button" aria-pressed="true" aria-label="部隊一覧と地形の表示を切り替える">一覧</button>
             <button class="menu-open" type="button">メニュー</button>
           </div>
         </footer>
@@ -412,12 +419,14 @@
           <div class="court-body"></div>
         </div>
       </section>
+      <section id="faction-select" hidden></section>
       <section id="gameover" hidden>
         <div class="persons-inner gameover-inner">
           <h2>国は滅びた</h2>
           <p class="gameover-text"></p>
           <div class="gameover-buttons">
             <button class="gameover-load" type="button">セーブを読み込む</button>
+            <button class="gameover-faction" type="button">別の勢力を選んで続ける</button>
             <button class="gameover-scenario" type="button">シナリオを選ぶ</button>
           </div>
         </div>
@@ -451,6 +460,12 @@
               <h3>設定</h3>
               <label for="menu-faction">操作する勢力(選ぶと、ほかの勢力が自動で動きます)</label>
               <select id="menu-faction"></select>
+              <div id="menu-faction-confirm" hidden>
+                <p class="menu-faction-q"></p>
+                <button class="menu-faction-yes" type="button">変える</button>
+                <button class="menu-faction-no" type="button">やめる</button>
+              </div>
+              <button id="menu-faction-pick" type="button">一覧と地図で勢力を選ぶ</button>
               <label>敵の強さ(難易度)</label>
               <div id="menu-difficulty" class="difficulty-cards" role="radiogroup" aria-label="敵の強さ"></div>
               <p class="difficulty-note">資金や兵が無から増えることはありません。変わるのは、敵の判断の速さ・攻める基準・徴兵の量・軍団の数です。敵の国は毎月、兵力・財政・兵糧・国境の脅威・君主の性格から方針(侵攻・拡大・防衛・内政・外交・統一)を決め、勝算・到着日数・地形・兵糧・援軍の見込みで攻める都市を選びます。</p>
@@ -468,6 +483,12 @@
               <p class="difficulty-note">史実重視:AIの国は史実の行動を選びやすく、歴史イベントは史実の年月になってから発動できます(年月を過ぎて分岐した事件は発動しません)。通常:中間。史実の年月に達して条件がそろった事件を発動できます(分岐した事件も10年以内なら)。自由歴史:AIも別案や大胆な改変を選び、条件がそろえば史実より早く(15年前まで)発動できます。どのモードでも、滅んだ国が生き返ったり、まだいない人物や国が現れたり、プレイヤーの選択が取り消されたりはしません。</p>
               <label for="menu-opacity">領土の色の濃さ</label>
               <input id="menu-opacity" type="range" min="0.3" max="1.6" step="0.1" />
+              <label for="menu-bgm-volume">音楽の音量(場面ごとの曲。本作のために作った旋律を、その場で合成して鳴らします)</label>
+              <div class="menu-bgm">
+                <input id="menu-bgm-volume" type="range" min="0" max="1" step="0.05" />
+                <label><input id="menu-bgm-mute" type="checkbox" /> 消音</label>
+                <span id="menu-bgm-state"></span>
+              </div>
               <label class="dev-toggle"><input id="menu-dev" type="checkbox" /> 開発用の表示(敵AIの判断ログ)</label>
               <label class="dev-toggle"><input id="menu-fps" type="checkbox" /> 画面のなめらかさ(FPS)を表示する(実機テスト用)</label>
               <div id="menu-dev-panel" hidden>

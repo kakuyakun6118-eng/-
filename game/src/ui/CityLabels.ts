@@ -27,6 +27,9 @@ export class CityLabels {
     const item = this.items.find((i) => i.marker === marker);
     const dot = item?.el.querySelector(".dot") as HTMLElement | null;
     if (dot) dot.style.background = marker.faction ? marker.faction.color : "#9a9a9a";
+    // 首都は、名前の横に冠の印(Version 41)
+    item?.el.classList.toggle("capital", !!marker.capital);
+    if (item) item.el.title = marker.capital ? `${marker.city.name}(首都)` : "";
   }
 
   /** カメラが動くたびに、ラベルを都市の真上に置き直す */
@@ -35,7 +38,7 @@ export class CityLabels {
       this.v.copy(marker.labelAnchor).project(camera);
       // 広域では、小さい都市の名前を隠して、文字が重ならないようにする(選択中の都市は出す)
       // 広域では、小さい都市と関所の名前を出さない(関所は都市のすぐそばにあり、重なりやすいので早めに消す)
-      const minor = marker !== selected && (marker.city.kind === "pass" ? cameraDistance > 42 : cityLevelOf(marker.city) <= 2 && cameraDistance > 78);
+      const minor = marker !== selected && !marker.capital && (marker.city.kind === "pass" ? cameraDistance > 42 : cityLevelOf(marker.city) <= 2 && cameraDistance > 78);
       const visible = !minor && this.v.z < 1 && Math.abs(this.v.x) < 1.1 && Math.abs(this.v.y) < 1.1;
       el.hidden = !visible;
       if (!visible) continue;

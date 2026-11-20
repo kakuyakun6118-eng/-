@@ -7,7 +7,7 @@ import type { ArmyMarker } from "../world/Armies";
 import { STATUS_TEXT } from "./ArmyLabels";
 
 /** パネルの表示の段階:通常 / 移動先を選んでいる / 経路を確認している */
-export type ArmyPanelMode = "info" | "pick" | "confirm";
+export type ArmyPanelMode = "info" | "pick" | "draw" | "confirm";
 
 export interface ArmyPanelActions {
   onClose(): void;
@@ -21,6 +21,10 @@ export interface ArmyPanelActions {
   onHalt(): void;
   /** 「会戦準備」が押された */
   onBattle(): void;
+  /** 「経路を描く」が押された(Version 41) */
+  onDraw?(): void;
+  /** 「退却」が押された(Version 41) */
+  onRetreat?(): void;
 }
 
 /** 軍団のデータ以外に、パネルへ渡す情報 */
@@ -47,6 +51,8 @@ export class ArmyPanel {
     this.q(".army-cancel").addEventListener("click", actions.onCancel);
     this.q(".army-halt").addEventListener("click", actions.onHalt);
     this.q(".army-battle").addEventListener("click", actions.onBattle);
+    this.q(".army-draw").addEventListener("click", () => actions.onDraw?.());
+    this.q(".army-retreat").addEventListener("click", () => actions.onRetreat?.());
   }
 
   show(marker: ArmyMarker, info: ArmyPanelInfo): void {
@@ -82,6 +88,7 @@ export class ArmyPanel {
     supply.dataset.level = info.supply;
 
     this.q(".army-halt").hidden = marker.state.status !== "marching";
+    this.q(".army-retreat").hidden = (this.root.dataset.mode ?? "info") !== "info";
     this.q(".army-battle").hidden = !info.canBattle;
     // 対峙中に移動を命じると、戦闘をやめてその場を離れることになる
     this.q(".army-move").textContent = info.canBattle ? "離脱" : "移動";
@@ -99,6 +106,8 @@ export class ArmyPanel {
     this.root.dataset.mode = mode;
     this.q(".army-message").textContent = message;
     this.q(".army-move").hidden = mode !== "info";
+    this.q(".army-draw").hidden = mode !== "info";
+    this.q(".army-retreat").hidden = mode !== "info";
     this.q(".army-confirm").hidden = mode !== "confirm";
     this.q(".army-cancel").hidden = mode === "info";
     if (mode !== "info") {

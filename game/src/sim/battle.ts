@@ -175,6 +175,15 @@ export function createBattleSetup(
   for (const sup of event.supporters ?? []) {
     const a = armyOf(sup.armyId);
     const side = sup.side === "attacker" ? att : defender;
+    // 攻城戦の救援軍(Version 41):都市の守りに加わる。兵は陣営に数え、着く時刻は距離で決める(1kmあたり約1.5秒、最大150秒)
+    if (a && sup.relief && side.kind === "city") {
+      const n = a.troops.infantry + a.troops.cavalry + a.troops.archer;
+      if (n <= 0) continue;
+      for (const k of ["infantry", "cavalry", "archer"] as const) side.troops[k] += a.troops[k];
+      (side.supporters ??= []).push({ armyId: a.id, name: a.name, factionId: a.factionId, troops: n, efficiency: sup.efficiency,
+        relief: { by: { ...a.troops }, morale: Math.round(a.morale * sup.efficiency), arriveSec: Math.min(150, Math.max(20, Math.round((sup.km ?? 40) * 1.5))), commander: a.commanderId || null } });
+      continue;
+    }
     if (!a || side.kind !== "army") continue;
     const n = a.troops.infantry + a.troops.cavalry + a.troops.archer;
     const m = side.troops.infantry + side.troops.cavalry + side.troops.archer;
