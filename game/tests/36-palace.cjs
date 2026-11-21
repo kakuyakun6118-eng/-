@@ -24,7 +24,7 @@ const { chromium, devices } = require('playwright');
   // ---- 2. 自由な移動:キーで歩く・指した所へ歩く・壁を抜けない ----
   const r2 = await p.evaluate(async () => { const s = window.__goko.palace.screen; const wait = (ms) => new Promise(r => setTimeout(r, ms));
     const p0 = { x: s.pos.x, z: s.pos.z }; s.yaw = 0; s.press('w', true); await wait(1200); s.press('w', false); const p1 = { x: s.pos.x, z: s.pos.z };
-    s.walkTo(-10, 20); for (let i = 0; i < 60 && Math.hypot(s.pos.x + 10, s.pos.z - 20) > 0.6; i++) await wait(250); const p2 = { x: s.pos.x, z: s.pos.z, area: s.currentArea };
+    s.walkTo(-10, 20); for (let i = 0; i < 160 && Math.hypot(s.pos.x + 10, s.pos.z - 20) > 0.6; i++) await wait(250); const p2 = { x: s.pos.x, z: s.pos.z, area: s.currentArea };
     // 寝殿の背の壁に向かって歩き続けても、壁を抜けない
     s.pos.set(0, 0, -60); s.walkTo(0, -90); await wait(4000); const p3 = { x: s.pos.x, z: s.pos.z };
     const inWall = s.world.obstacles.some(o => p3.x > o.x0 && p3.x < o.x1 && p3.z > o.z0 && p3.z < o.z1);

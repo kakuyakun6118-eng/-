@@ -261,10 +261,10 @@ export class PalaceSystem {
     const ra = this.c.court.age(ruler);
     if (ra !== null && ra < 18) return "陛下はまだ成人していません";
     if (this.ageOf(n) < 18) return "成人していない人とは、恋愛の関係になりません";
-    if (n.rank === "dowager" || n.rank === "royal") return "皇族の女性とは、恋愛の関係になりません";
     const p = n.personId ? persons.find((x) => x.id === n.personId) : undefined;
-    if (p && this.c.court.isCloseKin(ruler, p)) return "近親とは、恋愛の関係になりません";
     if (p && this.c.court.spousesOf(p.id).some((h) => h.id !== ruler.id)) return "ほかの人の妻です";
+    if (p && this.c.court.isCloseKin(ruler, p)) return "近親とは、恋愛の関係になりません";
+    if (n.rank === "dowager" || n.rank === "royal") return "皇族の女性とは、恋愛の関係になりません";
     return null;
   }
 
