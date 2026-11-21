@@ -25,6 +25,31 @@ export interface ArmyPanelActions {
   onDraw?(): void;
   /** 「退却」が押された(Version 41) */
   onRetreat?(): void;
+  /** 「帰城」が押された(Version 51) */
+  onReturn?(): void;
+  /** 「軍団結合」が押された(Version 51) */
+  onMerge?(): void;
+}
+
+/** 帰城先の候補(Version 51) */
+export interface ReturnChoice {
+  cityId: string;
+  name: string;
+  tags: string[];
+  km: number;
+  days: number;
+  foodUse: number;
+  foodLeft: number;
+  besieged: boolean;
+}
+
+/** 結合できる軍団の候補(Version 51) */
+export interface MergeChoice {
+  armyId: string;
+  name: string;
+  troops: number;
+  km: number;
+  commander: string;
 }
 
 /** 軍団のデータ以外に、パネルへ渡す情報 */
@@ -36,6 +61,10 @@ export interface ArmyPanelInfo {
   supplied: boolean;
   /** 敵と対峙していて、会戦準備画面を開けるか */
   canBattle: boolean;
+  /** 副将・配下武将の名前(Version 51) */
+  people?: string;
+  /** 帰城・結合の進み具合や、取り消しの理由(Version 51) */
+  note?: string;
 }
 
 const SUPPLY_TEXT: Record<SupplyState, string> = { good: "良好", low: "残りわずか", out: "欠乏" };
@@ -53,6 +82,8 @@ export class ArmyPanel {
     this.q(".army-battle").addEventListener("click", actions.onBattle);
     this.q(".army-draw").addEventListener("click", () => actions.onDraw?.());
     this.q(".army-retreat").addEventListener("click", () => actions.onRetreat?.());
+    this.q(".army-return").addEventListener("click", () => actions.onReturn?.());
+    this.q(".army-merge").addEventListener("click", () => actions.onMerge?.());
   }
 
   show(marker: ArmyMarker, info: ArmyPanelInfo): void {
@@ -87,6 +118,12 @@ export class ArmyPanel {
     supply.textContent = info.supplied ? `${SUPPLY_TEXT[info.supply]}・補給線あり` : SUPPLY_TEXT[info.supply];
     supply.dataset.level = info.supply;
 
+    const people = this.q(".army-people");
+    people.textContent = info.people ?? "";
+    people.hidden = !info.people;
+    const note = this.q(".army-note");
+    note.textContent = info.note ?? "";
+    note.hidden = !info.note;
     this.q(".army-halt").hidden = marker.state.status !== "marching";
     this.q(".army-retreat").hidden = (this.root.dataset.mode ?? "info") !== "info";
     this.q(".army-battle").hidden = !info.canBattle;
@@ -108,6 +145,9 @@ export class ArmyPanel {
     this.q(".army-move").hidden = mode !== "info";
     this.q(".army-draw").hidden = mode !== "info";
     this.q(".army-retreat").hidden = mode !== "info";
+    this.q(".army-return").hidden = mode !== "info";
+    this.q(".army-merge").hidden = mode !== "info";
+    if (mode !== "info") this.closeChooser();
     this.q(".army-confirm").hidden = mode !== "confirm";
     this.q(".army-cancel").hidden = mode === "info";
     if (mode !== "info") {
@@ -117,6 +157,96 @@ export class ArmyPanel {
   }
 
   hide(): void {
+    this.closeChooser();
     this.root.hidden = true;
+  }
+
+  /** 選ぶ欄を閉じる */
+  closeChooser(): void {
+    const box = this.q(".army-choose");
+    box.hidden = true;
+    box.replaceChildren();
+  }
+
+  get chooserOpen(): boolean {
+    return !this.q(".army-choose").hidden;
+  }
+
+  private el<K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, text = ""): HTMLElementTagNameMap[K] {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text) e.textContent = text;
+    return e;
+  }
+
+  /** 帰城先の一覧(Version 51):出発元・最寄り・首都の印と、距離・日数・兵糧の見込み */
+  showReturnChoices(list: ReturnChoice[], onPick: (c: ReturnChoice) => void): void {
+    const box = this.q(".army-choose");
+    box.replaceChildren(this.el("h3", "", list.length ? "帰城先を選んでください(自国の都市)" : "帰城できる自国の都市への道がありません"));
+    const n = (v: number): string => Math.round(v).toLocaleString("ja-JP");
+    for (const c of list) {
+      const row = this.el("button", "choose-row");
+      row.type = "button";
+      row.dataset.city = c.cityId;
+      row.append(this.el("b", "", c.name));
+      for (const t of c.tags) row.append(this.el("span", "tag", t));
+      row.append(this.el("small", "", c.days === 0 ? `すぐそば(${n(c.km)}km)・その場で入城` : `${n(c.km)}km・約${c.days}日・道中の兵糧の消費 ${n(c.foodUse)}日分・着いたときの残り ${n(c.foodLeft)}日分${c.besieged ? "・包囲されている" : ""}`));
+      row.addEventListener("click", () => onPick(c));
+      box.append(row);
+    }
+    box.hidden = false;
+  }
+
+  /**
+   * 軍団結合の選択(Version 51):結合する軍団(複数可)と総指揮官を選び、結合後の兵力・兵糧・士気・疲労・指揮官を確かめてから決める。
+   * preview は、選んだ内容から見込みの文(と、決められるか)を返す。
+   */
+  showMergeChoices(list: MergeChoice[], commanders: (ids: string[]) => { id: string; label: string }[], preview: (ids: string[], cmd: string) => { text: string; ok: boolean }, onGo: (ids: string[], cmd: string) => void): void {
+    const box = this.q(".army-choose");
+    box.replaceChildren(this.el("h3", "", list.length ? "この軍団に結合する軍団を選んでください(同じ国の軍団)" : "結合できる同じ国の軍団がありません"));
+    const n = (v: number): string => Math.round(v).toLocaleString("ja-JP");
+    const picked = new Set<string>();
+    const sel = this.el("select", "choose-commander");
+    sel.setAttribute("aria-label", "結合後の総指揮官");
+    const out = this.el("p", "choose-preview");
+    const go = this.el("button", "choose-go", "結合する");
+    go.type = "button";
+    const refresh = (): void => {
+      const ids = [...picked];
+      const prev = sel.value;
+      sel.replaceChildren(...commanders(ids).map((c) => {
+        const o = document.createElement("option");
+        o.value = c.id;
+        o.textContent = c.label;
+        return o;
+      }));
+      if ([...sel.options].some((o) => o.value === prev)) sel.value = prev;
+      const pv = preview(ids, sel.value);
+      out.textContent = pv.text;
+      if (pv.ok) delete out.dataset.bad;
+      else out.dataset.bad = "1";
+      go.disabled = !pv.ok;
+    };
+    for (const c of list) {
+      const row = this.el("label", "choose-row");
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.value = c.armyId;
+      cb.addEventListener("change", () => {
+        if (cb.checked) picked.add(c.armyId);
+        else picked.delete(c.armyId);
+        refresh();
+      });
+      row.append(cb, this.el("b", "", c.name), this.el("small", "", `${n(c.troops)}人・${c.commander || "指揮官なし"}・${n(c.km)}km${c.km > 40 ? "(合流してから結合)" : ""}`));
+      box.append(row);
+    }
+    if (list.length) {
+      const lab = this.el("small", "", "結合後の総指揮官");
+      sel.addEventListener("change", refresh);
+      go.addEventListener("click", () => onGo([...picked], sel.value));
+      box.append(lab, sel, out, go);
+      refresh();
+    }
+    box.hidden = false;
   }
 }

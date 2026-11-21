@@ -1,7 +1,7 @@
 // ゲーム全体のまとめ役。地形・都市・軍団・カメラ・入力・画面表示と、進行の計算(sim)をつなぐ。
 import * as THREE from "three";
 import { MapCamera, type WorldRect } from "../camera/MapCamera";
-import { passes, extraBarriers, armies as armyData, factionById, factionOfCity, initialCityOwners, officerById, personById, persons, regions, resolveCityLayout, scenario, scenarioCatalog } from "../data";
+import { passes, extraBarriers, armies as armyData, factionById, factionOfCity, initialCityOwners, officerById, personById, persons, regions, resolveCityLayout, scenario, scenarioCatalog, totalTroops } from "../data";
 import type { Difficulty } from "../battle/ai";
 import { BattleScreen } from "../battle/BattleScreen";
 import type { BattleResult } from "../battle/types";
@@ -95,6 +95,8 @@ export class Game {
   private mode: ArmyPanelMode = "info";
   /** 確認中の経路(「確定」を押すと、この経路で行軍を始める) */
   private pendingRoute: Route | null = null;
+  /** 確認待ちの帰城先(Version 51) */
+  private pendingReturn: string | null = null;
   private input!: InputController;
   /** 描いている経路の点(Version 41) */
   private drawPts: { lon: number; lat: number }[] = [];
@@ -338,6 +340,8 @@ export class Game {
         this.route.show(route);
         this.setMode("confirm", `退却:${this.routeSummary(s.army.id, route)}`);
       },
+      onReturn: () => this.openReturnChooser(),
+      onMerge: () => this.openMergeChooser(),
       onConfirm: () => this.confirmMove(),
       onCancel: () => this.cancelMove(),
       onHalt: () => this.selectedArmy && this.campaign.halt(this.selectedArmy.state.army.id),
@@ -672,14 +676,20 @@ export class Game {
 
   private confirmMove(): void {
     if (!this.selectedArmy || !this.pendingRoute) return;
-    this.campaign.orderMove(this.selectedArmy.state.army.id, this.pendingRoute);
+    if (this.pendingReturn) {
+      // 帰城(Version 51):見せた道のりで、帰城の命令を出す
+      const err = this.campaign.orderReturn(this.selectedArmy.state.army.id, this.pendingReturn, this.pendingRoute);
+      if (err) this.showNotice(err);
+    } else this.campaign.orderMove(this.selectedArmy.state.army.id, this.pendingRoute);
     this.pendingRoute = null;
+    this.pendingReturn = null;
     this.setMode("info");
     this.showRouteOfSelected();
   }
 
   private cancelMove(): void {
     this.pendingRoute = null;
+    this.pendingReturn = null;
     this.setMode("info");
     this.showRouteOfSelected();
     if (this.selectedArmy) this.refreshArmyPanel();
@@ -703,6 +713,81 @@ export class Game {
     this.showRouteOfSelected();
   }
 
+  /** 操作できる軍団か(操作勢力の軍団か)。できなければ知らせを出して false */
+  private ownArmy(): ArmyState | null {
+    const s = this.selectedArmy?.state;
+    if (!s) return null;
+    if (this.playerFactionId && s.army.factionId !== this.playerFactionId) {
+      this.showNotice(`${factionById(s.army.factionId)?.name ?? "この勢力"}の軍団には命令できません(操作勢力:${factionById(this.playerFactionId)?.name})`);
+      return null;
+    }
+    return s;
+  }
+
+  /** 帰城先を選ぶ(Version 51) */
+  private openReturnChooser(): void {
+    const s = this.ownArmy();
+    if (!s) return;
+    if (this.armyPanel.chooserOpen) return this.armyPanel.closeChooser();
+    if (s.status === "fighting") return this.showNotice("戦闘中の軍団は帰城できません(会戦の決着か離脱のあとで)");
+    const list = this.campaign.returnOptions(s.army.id);
+    this.armyPanel.showReturnChoices(list, (c) => {
+      const opt = list.find((x) => x.cityId === c.cityId);
+      if (!opt) return;
+      this.armyPanel.closeChooser();
+      if (!opt.route) {
+        const err = this.campaign.orderReturn(s.army.id, opt.cityId);
+        this.showNotice(err ?? `${s.army.name}は${opt.name}に入城し、守備兵に加わりました`);
+        if (!err) this.clearSelection();
+        return;
+      }
+      this.pendingRoute = opt.route;
+      this.pendingReturn = opt.cityId;
+      this.route.show(opt.route);
+      this.setMode("confirm", `帰城:${opt.name}へ ${opt.km.toLocaleString("ja-JP")}km・約${opt.days}日・兵糧 ${opt.foodUse}日分(着いて残り${opt.foodLeft}日分)。着いたら兵・武将・兵糧を${opt.name}へ移します`);
+    });
+  }
+
+  /** 軍団結合を選ぶ(Version 51) */
+  private openMergeChooser(): void {
+    const s = this.ownArmy();
+    if (!s) return;
+    if (this.armyPanel.chooserOpen) return this.armyPanel.closeChooser();
+    if (s.status === "fighting") return this.showNotice("戦闘中の軍団は結合できません");
+    const km = (o: ArmyState): number => Math.hypot((o.army.lon - s.army.lon) * 85, (o.army.lat - s.army.lat) * 111);
+    const others = this.campaign.armies.filter((o) => o !== s && o.army.factionId === s.army.factionId && o.status !== "fighting").sort((a, b) => km(a) - km(b)).slice(0, 10);
+    const nameOf = (id: string): string => personById(id)?.name ?? id;
+    this.armyPanel.showMergeChoices(
+      others.map((o) => ({ armyId: o.army.id, name: o.army.name, troops: totalTroops(o.army), km: km(o), commander: personById(o.army.commanderId)?.name ?? "" })),
+      (ids) => {
+        const pv = this.campaign.mergePreview(s.army.id, ids.length ? ids : [], undefined);
+        const cands = typeof pv === "string" ? [s.army.commanderId].filter(Boolean) : pv.candidates;
+        return cands.map((id) => {
+          const p = personById(id);
+          return { id, label: p ? `${p.name}(統${p.leadership} 武${p.war} 知${p.intelligence})` : id };
+        });
+      },
+      (ids, cmd) => {
+        const pv = this.campaign.mergePreview(s.army.id, ids, cmd || undefined);
+        if (typeof pv === "string") return { text: pv, ok: false };
+        const n = (v: number): string => Math.round(v).toLocaleString("ja-JP");
+        const far = pv.far.length ? `。離れた軍団は合流してから結合:${pv.far.map((f) => `${f.name} ${n(f.km)}km・${f.days === null ? "道が無い" : `約${f.days}日`}`).join("、")}` : "";
+        const ok = pv.far.every((f) => f.days !== null);
+        return {
+          ok,
+          text: `結合後:${n(pv.total)}人(歩${n(pv.troops.infantry)}・騎${n(pv.troops.cavalry)}・弓${n(pv.troops.archer)})・兵糧 ${pv.food}日分・士気 ${pv.morale}・疲労 ${pv.fatigue}・行軍 ${pv.speed}km/日。総指揮官 ${pv.commanderId ? nameOf(pv.commanderId) : "なし"}${pv.deputyId ? `・副将 ${nameOf(pv.deputyId)}` : ""}${pv.officers.length ? `・配下 ${pv.officers.map(nameOf).join("・")}` : ""}${far}`,
+        };
+      },
+      (ids, cmd) => {
+        const err = this.campaign.orderMerge(s.army.id, ids, cmd || undefined);
+        this.armyPanel.closeChooser();
+        if (err) return this.showNotice(err);
+        this.showNotice("軍団結合を命じました");
+        this.refreshArmyPanel();
+      },
+    );
+  }
+
   private refreshArmyPanel(): void {
     const marker = this.selectedArmy;
     if (!marker) return;
@@ -714,6 +799,8 @@ export class Game {
       supply: this.campaign.supplyState(state),
       supplied: state.supplied,
       canBattle: state.status === "fighting" && this.campaign.openEventOfArmy(state.army.id) !== undefined,
+      people: [state.army.deputyId ? `副将 ${personById(state.army.deputyId)?.name ?? ""}` : "", state.army.officers?.length ? `配下 ${state.army.officers.map((id) => personById(id)?.name ?? id).join("・")}` : ""].filter(Boolean).join(" / ") || undefined,
+      note: state.opNote,
     });
     if (this.mode !== "info") this.armyPanel.setMode(this.mode, (this.root.querySelector(".army-message") as HTMLElement).textContent ?? "");
   }

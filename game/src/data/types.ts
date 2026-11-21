@@ -246,6 +246,10 @@ export interface Army {
   commanderId: string;
   /** 副将(武将のID)。指揮官との相性が、士気と指揮に小さく効く */
   deputyId?: string;
+  /** 配下の武将(Version 51:軍団結合で加わった、指揮官・副将以外の武将) */
+  officers?: string[];
+  /** 出陣した都市(Version 51:帰城先の候補「出発元の都市」) */
+  originCityId?: string;
   lon: number;
   lat: number;
   /** 向き(度)。0 = 北、90 = 東、180 = 南、270 = 西 */
@@ -391,6 +395,8 @@ export interface Fortification {
 /** 都市の、いまの状態。攻城戦の結果で変わり、次の戦いに引き継がれる */
 export interface CityState {
   garrison: number;
+  /** 守備兵のうち、騎兵・弓兵の人数(Version 51。残りは歩兵。無ければ歩兵7割・弓兵3割とみなす) */
+  garrisonMix?: { cavalry: number; archer: number };
   food: number;
   morale: number;
   wallDamage: number;

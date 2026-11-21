@@ -164,9 +164,9 @@ export class Placement {
       return { kind: "moving", label: `${to?.name ?? ""}へ移動中(${tr.why})`, certainty: "ゲーム中の任命", note: tr.why };
     }
     // 軍団:出陣中(行軍・戦闘)なら、都市には常駐していない
-    const army = this.c.armies.find((s) => s.army.commanderId === personId || s.army.deputyId === personId);
+    const army = this.c.armies.find((s) => s.army.commanderId === personId || s.army.deputyId === personId || !!s.army.officers?.includes(personId));
     if (army) {
-      const role = army.army.commanderId === personId ? "指揮官" : "副将";
+      const role = army.army.commanderId === personId ? "指揮官" : army.army.deputyId === personId ? "副将" : "配下武将";
       const away = army.status === "marching" || army.status === "fighting";
       const cur = this.curated()[personId];
       const certainty = (cur?.kind === "army" ? cur.certainty : p.fictional ? "架空" : "推定") as LocationCertainty;

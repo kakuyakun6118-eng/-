@@ -830,7 +830,7 @@ export const EXTRA_EVENTS: HistEventDef[] = [
       for (const id of ["murong_chui", "murong_nong", "murong_bao", "murong_lin", "murong_de"]) {
         const q = P(id);
         if (q && q.factionId === yan && q.role !== "ruler" && alive(x.c, id) && (id !== "murong_de" || roll(x, "de") < 0.3)) {
-          for (const s of x.c.armies) if (s.army.commanderId === id) s.army.commanderId = "";
+          x.c.vacatePosts(id); // 指揮官・副将・配下武将・太守の任を外す(Version 51)
           x.c.spoils.setFaction(id, r.qin!);
           x.c.loyalty.rebase(id, "前秦へ亡命", 70);
         }

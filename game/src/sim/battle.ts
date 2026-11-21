@@ -1,5 +1,6 @@
 // 会戦に関する計算。戦闘イベントから、会戦準備画面や3D戦闘に渡す「会戦の設定」を組み立てる。
 // ここは計算だけで、画面のことは知らない。
+import { commandSpan, garrisonTroops } from "./garrison";
 import { affinity } from "./loyalty";
 import { reliefArrivalSeconds, reliefMorale } from "./relief";
 import { factionMoraleBonus, withEquipment } from "./spoils";
@@ -103,6 +104,13 @@ export function fortificationOf(city: City, state: CityState = initialCityState(
   };
 }
 
+/** 大軍団の展開の難しさ(士気の減り。Version 51) */
+function spanPenalty(army: Army, leadership: number | undefined): number {
+  const n = army.troops.infantry + army.troops.cavalry + army.troops.archer;
+  const span = commandSpan(leadership);
+  return n > span ? Math.min(10, Math.round(((n - span) / span) * 10)) : 0;
+}
+
 function armySide(role: BattleSide["role"], army: Army): BattleSide {
   // 副将との相性:士気に±4、指揮官の統率に±3まで(能力の差を覆さない小さな補正)
   let commander = withEquipment(officerById(army.commanderId)) ?? null;
@@ -124,7 +132,8 @@ function armySide(role: BattleSide["role"], army: Army): BattleSide {
     deputy,
     synergy,
     troops: { ...army.troops },
-    morale: Math.max(0, Math.min(100, army.morale + factionMoraleBonus(army.factionId) + synergy)),
+    // 大軍団(Version 51):指揮官が動かせる数を超えると、展開に手間取り、士気が少し下がる(最大-10)
+    morale: Math.max(0, Math.min(100, army.morale + factionMoraleBonus(army.factionId) + synergy - spanPenalty(army, commander?.leadership))),
     fatigue: army.fatigue,
     food: army.food,
     fortification: null,
@@ -132,8 +141,8 @@ function armySide(role: BattleSide["role"], army: Army): BattleSide {
 }
 
 function citySide(city: City, factionId: string, state: CityState): BattleSide {
-  // 守備兵は歩兵と弓兵で構成する(城を守るのに騎兵は使わない)
-  const garrison = state.garrison;
+  // 守備兵の兵種の内訳(Version 51:帰城した騎兵なども数える。内訳が無ければ歩兵7割・弓兵3割)
+  const troops = garrisonTroops(state);
   // 守将:都市データに名前があれば、能力値は仮の値で指揮官とする(戦死・捕虜になっていれば不在)
   const governor: Officer | null = withEquipment(personById(governorIdOf(city, state))) ?? null;
   return {
@@ -144,7 +153,7 @@ function citySide(city: City, factionId: string, state: CityState): BattleSide {
     cityId: city.id,
     name: `${city.name}守備隊`,
     commander: governor,
-    troops: { infantry: Math.round(garrison * 0.7), cavalry: 0, archer: Math.round(garrison * 0.3) },
+    troops,
     morale: state.morale,
     fatigue: 0,
     food: state.food,

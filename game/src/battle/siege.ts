@@ -3,6 +3,7 @@
 import engineRules from "../data/rules/siegeEngines.json";
 import type { BattleSetup, CityLayout, Fortification, SiegeOutcome } from "../data/types";
 import type { BattleSim } from "./BattleSim";
+import { wallCapacity } from "../sim/garrison";
 import { deploy, FIELD, shapeUnit, unitClasses, type Deployment } from "./deploy";
 import type { BattleUnit, UnitClassId } from "./types";
 
@@ -147,7 +148,9 @@ export function deploySiege(setup: BattleSetup, layout: SiegeLayout, year: numbe
   const gates = south.filter((s) => s.kind === "gate");
   // 弓兵の4分の3を、南面の城壁と城門の上に配る。残りは中心部の予備
   const posts = south.length > 6 ? south.filter((_, i) => i % Math.ceil(south.length / 6) === 0) : south;
-  const perPost = Math.floor((def.troops.archer * 0.75) / Math.max(1, posts.length));
+  // 城壁の上に同時に立てる兵には限りがある(Version 51:城の規模で決まる。超えた弓兵は、城内の予備になる)
+  const wallCap = setup.defender.fortification ? wallCapacity(setup.defender.fortification) : Infinity;
+  const perPost = Math.floor(Math.min(def.troops.archer * 0.75, wallCap * 0.4) / Math.max(1, posts.length));
   posts.forEach((seg, i) => {
     if (perPost < 20) return;
     make("defender", i % 3 === 2 ? "crossbowmen" : "archers", `城壁の${i % 3 === 2 ? "弩兵" : "弓兵"}${i + 1}`, perPost, seg.x, seg.z, {

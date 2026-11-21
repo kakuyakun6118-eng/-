@@ -153,6 +153,7 @@ export class Economy {
     const inc = { commerce: 0, tax: 0, trade: 0, silk: 0, total: 0, grain: 0 };
     const cityRows: FinanceReport["cities"] = [];
     let garrison = 0;
+    let crowded = 0;
     let levels = 0;
     for (const city of mine) {
       const st = this.c.cityState(city);
@@ -168,6 +169,7 @@ export class Economy {
       inc.trade += trade;
       inc.grain += grain;
       garrison += st.garrison;
+      crowded += Math.max(0, st.garrison - e.pop * 0.06);
       if (city.kind !== "pass") levels += cityLevelOf(city);
       cityRows.push({ id: city.id, name: city.name, gold: Math.round(commerce + tax + trade), grain: Math.round(grain) });
     }
@@ -203,7 +205,8 @@ export class Economy {
       court: (n > 0 ? (nomad ? 3 + 3 * Math.sqrt(n) : 5 + 6 * Math.sqrt(n)) : 0) + (this.c.court?.courtCost(factionId) ?? 0),
       expedition: marching * 0.01,
       total: 0,
-      grain: troops / 250 + garrison / 800 + marching / 500,
+      // 兵糧:人口に見合わない大軍を置く都市では、周りの土地から運ぶ分(人口の6%を超える兵の、運ぶ手間)がかかる(Version 51)
+      grain: troops / 250 + garrison / 800 + marching / 500 + crowded / 1200,
     };
     exp.total = exp.army + exp.garrison + exp.salary + exp.bureaucracy + exp.cities + exp.court + exp.expedition;
     const r = (x: number): number => Math.round(x);
@@ -263,9 +266,22 @@ export class Economy {
       const fed = (this.c.factionStates[owner]?.grain ?? 1) > 0;
       const cap = (city.population ?? cityLevelOf(city) * 20000) * 1.4;
       st.pop = Math.round(Math.min(cap, e.pop * (fed ? 1.002 : 0.996)));
-      // 帰農:守備兵が人口の6%(募兵の上限と同じ)を超える都市では、超えた分の4%が毎月、田畑に帰る(人口に見合わない大軍は保てない)
+      // 過密(Version 51):守備兵の固定の上限は撤廃した。かわりに、人口の6%を超える兵がいる都市では、
+      // 兵舎や水が足りず、治安と繁栄(衛生)が少しずつ下がる(1か月に治安は最大-3、繁栄は最大-1.5。極端にはしない)。
+      // 兵糧が尽きた国では、超えた分の5%が毎月逃げる(脱走)。兵糧があれば、兵は減らない
       const over = st.garrison - st.pop * 0.06;
-      if (over > 0) st.garrison = Math.round(st.garrison - over * 0.04);
+      if (over > 0) {
+        const crowd = over / Math.max(1, st.pop);
+        st.order = Math.max(15, (st.order ?? e.order) - Math.min(3, crowd * 40));
+        st.prosperity = Math.max(30, (st.prosperity ?? 100) - Math.min(1.5, crowd * 20));
+        if (!fed) {
+          const n = Math.round(over * 0.05);
+          st.garrison -= n;
+          this.c.addLoss(owner, "兵糧不足による守備兵の脱走", n);
+        }
+      }
+      // 兵糧が尽きた国の守備兵は、士気が下がる
+      if (!fed) st.morale = Math.max(20, st.morale - 5);
       st.support = Math.min(70, e.support + 0.5);
     }
   }

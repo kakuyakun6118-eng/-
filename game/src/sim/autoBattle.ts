@@ -3,6 +3,7 @@
 import type { BattleResult, CommanderFate, SideResult } from "../battle/types";
 import type { BattleSetup, BattleSide, TerrainKind, UnitTypeId } from "../data/types";
 import { reliefArrivalDays } from "./relief";
+import { commandSpan, effectiveTroops, wallCapacity } from "./garrison";
 
 const TYPES: UnitTypeId[] = ["infantry", "cavalry", "archer"];
 
@@ -25,8 +26,14 @@ const ROUGH: TerrainKind[] = ["forest", "mountain", "highMountain"];
 /** 陣営の強さ。騎兵は開けた土地で強く、山や森・城攻めでは弱い */
 export function sideStrength(side: BattleSide, terrain: TerrainKind, siege: boolean): number {
   const cav = siege ? 0.6 : OPEN.includes(terrain) ? 1.5 : ROUGH.includes(terrain) ? 0.8 : 1.1;
-  const base = side.troops.infantry + side.troops.cavalry * cav + side.troops.archer * (siege && side.kind === "city" ? 1.3 : 0.9);
+  let base = side.troops.infantry + side.troops.cavalry * cav + side.troops.archer * (siege && side.kind === "city" ? 1.3 : 0.9);
   const c = side.commander;
+  // 大軍の扱い(Version 51):軍団は指揮官の統率で動かせる数を超えると、城は城壁の上に立てる数を超えると、超えた分の効き目が下がる
+  const n = side.troops.infantry + side.troops.cavalry + side.troops.archer;
+  if (n > 0) {
+    const eff = side.kind === "city" && side.fortification ? effectiveTroops(n, wallCapacity(side.fortification), 0.35) : side.kind === "army" ? effectiveTroops(n, commandSpan(c?.leadership), 0.5) : n;
+    base *= eff / n;
+  }
   const lead = c ? (c.leadership * 0.6 + c.war * 0.25 + c.intelligence * 0.15) / 300 : 0;
   return base * (0.55 + side.morale / 220) * (1 - side.fatigue / 250) * (1 + lead);
 }

@@ -249,11 +249,13 @@ export class Spoils {
    * 都市が落ちたとき:その場にいた人物と、蔵の名品を調べる。
    * 敵は、落城の前に名品の一部を別の都市へ運び出していることがある(日と都市によって変わる)。
    */
-  onCityCaptured(city: City, captor: string, from: string, governorId: string | undefined, governorFate: string | undefined, damage: number, day: number, statusOf: (id: string) => PersonStatus): PendingCapture {
+  onCityCaptured(city: City, captor: string, from: string, governorId: string | undefined, governorFate: string | undefined, damage: number, day: number, statusOf: (id: string) => PersonStatus, presentAt?: (id: string) => boolean): PendingCapture {
     const people: PendingCapture["people"] = [];
-    if (governorId && governorFate === "captured") people.push({ personId: governorId, kind: "captive" });
+    if (governorId && governorFate === "captured" && !this.custodyOf(governorId)) people.push({ personId: governorId, kind: "captive" });
     for (const p of persons) {
-      if (p.factionId !== from || p.residence !== city.id || statusOf(p.id) !== "active") continue;
+      // その場にいた人だけ(Version 51:住まいがこの都市でも、別の都市の太守や出陣中の武将は捕らえない)
+      if (p.factionId !== from || statusOf(p.id) !== "active" || this.custodyOf(p.id)) continue;
+      if (presentAt ? !presentAt(p.id) : p.residence !== city.id) continue;
       if (people.some((x) => x.personId === p.id)) continue;
       // 滞在していた人:武将は捕虜に、それ以外(后妃・文人など)は保護する
       // 君主と武将は捕虜に、それ以外(后妃・文人など)は保護する
@@ -277,7 +279,7 @@ export class Spoils {
 
   /** 陥落の処置を決める。略奪:財宝と金を多く得るが、都市が荒れる。保全:得るものは少ないが、都市を保つ */
   resolveCapture(pc: PendingCapture, choice: "loot" | "preserve", confiscate: boolean, city: City, state: CityState, date: string,
-    give: (factionId: string, gold: number, grain: number) => void, setStatus: (id: string, s: PersonStatus) => void): CaptureRecord {
+    give: (factionId: string, gold: number, grain: number) => void, setStatus: (id: string, s: PersonStatus) => void, statusOf?: (id: string) => PersonStatus): CaptureRecord {
     const rich = (city.economy ?? 20) * (state.prosperity ?? 100) / 100;
     const r = chance(`${pc.day}|${pc.cityId}|loot`);
     const keep = 1 - Math.min(0.5, pc.damage * 0.4); // 激しい攻城で焼けたり散ったりした分を引く
@@ -304,6 +306,8 @@ export class Spoils {
     const captives: string[] = [];
     const prot: string[] = [];
     for (const x of pc.people) {
+      // すでに捕虜・保護の人に記録を重ねない。処置を待つあいだに亡くなった人は、捕らえない(Version 51)
+      if (this.custodyOf(x.personId) || statusOf?.(x.personId) === "dead") continue;
       this.custody.push({ personId: x.personId, kind: x.kind, holder: pc.captor, from: pc.from, cityId: pc.cityId, day: pc.day });
       setStatus(x.personId, x.kind === "captive" ? "captured" : "protected");
       (x.kind === "captive" ? captives : prot).push(x.personId);
@@ -324,9 +328,9 @@ export class Spoils {
     return this.custody.find((c) => c.personId === personId);
   }
 
+  /** 捕虜・保護の記録を消す(その人の記録をすべて。Version 51:二重の記録が1つ残らないように) */
   release(personId: string): void {
-    const i = this.custody.findIndex((c) => c.personId === personId);
-    if (i >= 0) this.custody.splice(i, 1);
+    for (let i = this.custody.length - 1; i >= 0; i--) if (this.custody[i].personId === personId) this.custody.splice(i, 1);
   }
 
   serialize(): SpoilsSave {

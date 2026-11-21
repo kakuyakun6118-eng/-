@@ -724,7 +724,7 @@ export class HistorySystem {
     if (!p || this.c.personStatus(id) === "dead" || this.c.spoils.custodyOf(id)) return false;
     this.c.personStates[id] = "captured";
     this.c.spoils.addCaptive(id, holder, p.factionId, Math.floor(this.c.day));
-    for (const s of this.c.armies) if (s.army.commanderId === id) s.army.commanderId = "";
+    this.c.vacatePosts(id);
     this.c.checkRulers();
     return true;
   }
@@ -844,7 +844,7 @@ export const EVENTS: HistEventDef[] = [
         for (const id of ["liu_he", "liu_cong", "liu_yi", "liu_yao", "liu_xuan", "liu_can", "huyan_yi", "chen_yuanda", "huyan_yan"]) {
           const q = P(id);
           if (q && q.factionId === r.holder && x.c.personStatus(id) !== "dead" && !x.c.spoils.custodyOf(id)) {
-            for (const s of x.c.armies) if (s.army.commanderId === id) s.army.commanderId = "";
+            x.c.vacatePosts(id); // 指揮官・副将・配下武将・太守の任を外す(Version 51)
             x.c.spoils.setFaction(id, f);
           }
         }

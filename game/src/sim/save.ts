@@ -24,6 +24,12 @@ export interface ArmySave {
   ignore: string[];
   targetCityId: string | null;
   commanderFate?: CommanderFate;
+  /** 帰城・結合の命令(Version 51) */
+  returnCityId?: string;
+  mergeInto?: string;
+  mergeCommander?: string;
+  opTries?: number;
+  opNote?: string;
 }
 
 /** 進行(sim/Campaign)が持つ状態 */
@@ -31,6 +37,8 @@ export interface CampaignSave {
   day: number;
   nextEventId: number;
   armies: ArmySave[];
+  /** 帰城・結合の記録(Version 51) */
+  armyOpsLog?: ArmyOpRecord[];
   events: BattleEvent[];
   /** 攻城戦を受けた都市の状態(守備兵・食糧・士気・損傷・守将) */
   cityStates: Record<string, CityState>;
@@ -153,4 +161,15 @@ export interface DynastySave {
   gameOver?: boolean;
   /** 滅亡のとき、後継国家が受け継げずに散逸した金の合計 */
   scattered?: number;
+}
+
+/** 帰城・結合の記録の1行(Version 51) */
+export interface ArmyOpRecord {
+  day: number;
+  date: string;
+  kind: "return" | "merge" | "disband" | "cancel";
+  factionId: string;
+  ai: boolean;
+  troops: number;
+  text: string;
 }

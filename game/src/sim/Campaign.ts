@@ -5,7 +5,8 @@ import successionRules from "../data/rules/succession.json";
 import relationRules from "../data/rules/diplomacyStart.json";
 import { autoResolve } from "./autoBattle";
 import { createBattleSetup, governorIdOf, initialCityState, placeName } from "./battle";
-import { garrisonCap, StrategyAi, strategyRules } from "./strategy";
+import { StrategyAi, strategyRules } from "./strategy";
+import { addToGarrison, sumTroops, takeFromGarrison, type Troops } from "./garrison";
 import { Placement } from "./placement";
 import capitalData from "../data/scenarios/capitals.json";
 import { chance, getGameSeed, setCurrentSpoils, setGameSeed, Spoils, type CaptureRecord, type PendingCapture } from "./spoils";
@@ -15,7 +16,7 @@ import { Diplomacy, type DiploCommand } from "./diplomacy";
 import { Court } from "./court";
 import { HistorySystem } from "./history";
 import { TradeSystem } from "./trade";
-import { seasonOf, type CampaignSave, type DynastySave, type Relation } from "./save";
+import { seasonOf, type ArmyOpRecord, type CampaignSave, type DynastySave, type Relation } from "./save";
 import type { BattleResult, CommanderFate, SideResult } from "../battle/types";
 import type { Army, ArmyStatus, BattleEvent, City, CityState, Faction, Person, PersonRole, PersonStatus, UnitTypeId } from "../data/types";
 import { distanceKm, findRoute, type Route, type RoutePoint } from "./pathfinding";
@@ -32,6 +33,8 @@ const CONTACT_RANGE = 0.42;
 const SUPPLY_RANGE_KM = 80;
 /** 食糧の備蓄の上限(日数) */
 const FOOD_CAP = 90;
+/** 軍団結合で、その場で1つにできる近さ(km。Version 51) */
+const MERGE_KM = 40;
 /** 首都の陥落の確率(ゲーム上の初期設定値。史実の確率ではない) */
 export const capitalRules = { captureRate: 0.8, fallRate: 0.9 };
 
@@ -53,6 +56,16 @@ export interface ArmyState {
   targetCityId: string | null;
   /** 直近の会戦での指揮官の状態(負傷・捕虜・戦死) */
   commanderFate?: CommanderFate;
+  /** 帰城先の都市(Version 51。着いたら兵・武将・兵糧を都市へ移して、軍団は消える) */
+  returnCityId?: string;
+  /** 結合の相手(Version 51。この軍団は相手のそばまで進み、着いたら相手の軍団に合流する) */
+  mergeInto?: string;
+  /** 結合後の総指揮官(Version 51) */
+  mergeCommander?: string;
+  /** 帰城・結合で、道を探し直した回数 */
+  opTries?: number;
+  /** 帰城・結合の待ち・取り消しの理由(画面に出す) */
+  opNote?: string;
 }
 
 export interface CampaignListener {
@@ -197,6 +210,7 @@ export class Campaign {
       if (!p || chance(`${id}|${Math.floor(this.day)}|intercept`) >= 0.4) continue;
       delete this.placement.travels[id];
       this.personStates[id] = "captured";
+      this.vacatePosts(id);
       this.spoils.addCaptive(id, by, p.factionId, Math.floor(this.day));
       this.addNews(`${p.name}は移動の途中で${factionName(by)}の軍に捕らえられました`);
       this.strategy.noteCaught?.(p.factionId);
@@ -346,9 +360,41 @@ export class Campaign {
       this.dieNaturally(personId, "battle");
       this.court?.recordCause(personId, "battle", "会戦で討たれる");
     }
-    else if (fate === "captured") this.personStates[personId] = "captured";
+    else if (fate === "captured") {
+      // すでに捕虜・保護の人は、重ねて捕らえない(Version 51:捕虜の記録が二重になる原因だった)
+      // (会戦では、捕虜の記録を先に作ってから状態を書くので、状態がまだ捕虜・保護でなければ書く)
+      if (this.spoils.custodyOf(personId) && ["captured", "protected"].includes(this.personStatus(personId))) return;
+      this.personStates[personId] = "captured";
+      this.vacatePosts(personId);
+    }
     else if (fate === "wounded" && !this.spoils.custodyOf(personId)) this.personStates[personId] = "wounded";
   }
+
+  /**
+   * 捕虜・保護・死亡になった人の役目を外す(Version 51):軍団の指揮官・副将・配下武将と、都市の太守・守将。
+   * これが無いと、捕虜になった人が別の都市の太守のまま残り、その都市が落ちたときに2度目の捕縛を受けて、
+   * 捕虜の記録が二重になっていた(捕虜の記録と人物の状態がずれる問題の根の原因)
+   */
+  vacatePosts(personId: string): void {
+    for (const s of this.armies) {
+      if (s.army.commanderId === personId) s.army.commanderId = "";
+      if (s.army.deputyId === personId) delete s.army.deputyId;
+      this.dropOfficer(s.army, personId);
+    }
+    for (const c of this.cities) if (governorIdOf(c, this.cityStates[c.id]) === personId) this.cityStates[c.id] = { ...this.cityState(c), governorId: null };
+  }
+
+  /**
+   * その人が、いま実際にその都市にいるか(Version 51:落城で捕らえるのは、その場にいた人だけ。
+   * 以前は「住まい」がその都市の人を、別の都市の太守や出陣中の武将でも捕らえていた)
+   */
+  presentAt(personId: string, cityId: string): boolean {
+    const l = this.placement.locationOf(personId);
+    return l.cityId === cityId && (l.kind === "city" || l.kind === "court" || l.kind === "pass");
+  }
+
+  /** 捕虜の記録の整合を、毎月の片づけで直した件数(Version 51:根の原因を直したので、0のはず。テストで確かめる) */
+  custodyRepairs: { day: number; personId: string; status: string }[] = [];
 
   /** その人物の、いまの役目(太守・守将か、軍団の指揮官)。無ければ null */
   postOf(personId: string): { kind: "city" | "army" | "deputy"; id: string; label: string } | null {
@@ -356,6 +402,9 @@ export class Campaign {
     if (army) return { kind: "army", id: army.army.id, label: `${army.army.name} 指揮官` };
     const dep = this.armies.find((s) => s.army.deputyId === personId);
     if (dep) return { kind: "deputy", id: dep.army.id, label: `${dep.army.name} 副将` };
+    // 配下武将(Version 51:軍団結合で加わった武将)。役目の種類は副将と同じに扱う
+    const off = this.armies.find((s) => s.army.officers?.includes(personId));
+    if (off) return { kind: "deputy", id: off.army.id, label: `${off.army.name} 配下武将` };
     const city = this.cities.find((c) => governorIdOf(c, this.cityStates[c.id]) === personId);
     if (city) return { kind: "city", id: city.id, label: `${city.name} ${personById(personId)?.role === "ruler" ? "在城(君主)" : city.kind === "pass" ? "守将" : "太守"}` };
     return null;
@@ -380,6 +429,7 @@ export class Campaign {
     for (const s of this.armies) {
       if (s.army.commanderId === personId) s.army.commanderId = "";
       if (s.army.deputyId === personId) delete s.army.deputyId;
+      this.dropOfficer(s.army, personId);
     }
     for (const c of this.cities) {
       if (governorIdOf(c, this.cityStates[c.id]) === personId) this.cityStates[c.id] = { ...this.cityState(c), governorId: null };
@@ -563,10 +613,11 @@ export class Campaign {
     const e = cityEcon(city, state);
     if (e.order < 20) return "治安が悪く、兵が集まりません(治安20以上が必要)";
     if (e.support < 20) return "民の心が離れていて、兵が集まりません(民忠20以上が必要)";
-    // 人口に見合う兵まで:守備兵は人口の6%まで(規模ごとの上限もある)
+    // 人口に見合う兵まで:この都市で新しく集められるのは、守備兵が人口の6%になるまで。
+    // (Version 51:都市の規模ごとの守備兵の固定の上限は撤廃した。帰城した軍団の兵は、この上限に関係なく駐屯できる)
     const popCap = Math.floor(e.pop * 0.06);
-    const n = Math.floor(Math.min(troops, garrisonCap(city) - state.garrison, popCap - state.garrison));
-    if (n < 100) return popCap - state.garrison < 100 ? `人口に対して兵が多すぎます(人口${e.pop.toLocaleString("ja-JP")}人では、守備兵は${popCap.toLocaleString("ja-JP")}人まで)` : "守備兵は、これ以上置けません";
+    const n = Math.floor(Math.min(troops, popCap - state.garrison));
+    if (n < 100) return `人口に対して兵が多すぎて、新しくは集まりません(人口${e.pop.toLocaleString("ja-JP")}人では、募兵できるのは守備兵が${popCap.toLocaleString("ja-JP")}人になるまで。帰城した兵は、これを超えて駐屯できます)`;
     const gov = persons.find((p) => p.id === (this.cityStates[city.id]?.governorId ?? city.governorId) && p.factionId === owner);
     const skill = gov ? (gov.leadership + gov.politics) / 200 : 0.4;
     const cost = (n / 100) * strategyRules.costs.goldPer100Troops * (1.15 - skill * 0.3);
@@ -615,19 +666,28 @@ export class Campaign {
     }
     if (!spot) return "軍団を置ける場所がありません";
     st.grain -= grain;
-    this.cityStates[city.id] = { ...state, garrison: state.garrison - n };
-    // 兵種の割合:遊牧の勢力は騎兵が多い(ゲーム上の設定)
-    const people = scenario.factions.find((f) => f.id === owner)?.people ?? "";
-    const nomad = /匈奴|鮮卑|羯/.test(people);
-    const cavalry = Math.round(n * (nomad ? 0.5 : 0.15));
-    const archer = Math.round(n * (nomad ? 0.15 : 0.25));
+    // 兵種の割合:守備兵の内訳を記録している都市(帰城した兵がいる都市。Version 51)は、その割合で出す。
+    // そうでなければ、これまでどおり、遊牧の勢力は騎兵が多い(ゲーム上の設定)
+    let mix: Troops;
+    if (state.garrisonMix) {
+      const t = takeFromGarrison(state, n);
+      this.cityStates[city.id] = t.state;
+      mix = t.troops;
+    } else {
+      this.cityStates[city.id] = { ...state, garrison: state.garrison - n };
+      const people = scenario.factions.find((f) => f.id === owner)?.people ?? "";
+      const nomad = /匈奴|鮮卑|羯/.test(people);
+      const cavalry = Math.round(n * (nomad ? 0.5 : 0.15));
+      const archer = Math.round(n * (nomad ? 0.15 : 0.25));
+      mix = { infantry: n - cavalry - archer, cavalry, archer };
+    }
     const pick = personById(commanderId);
     const commander = pick && !this.court?.isMinor(pick) ? pick : undefined;
     const id = `army_n${this.nextArmyId++}`;
     const army: Army = {
       id, name: commander ? `${commander.name}軍` : `${city.name}の軍`, factionId: owner, commanderId: commander?.id ?? "",
       lon: spot.lon, lat: spot.lat, facing: 0,
-      troops: { infantry: n - cavalry - archer, cavalry, archer }, morale: 70, fatigue: 0, food: 45,
+      troops: mix, morale: 70, fatigue: 0, food: 45, originCityId: city.id,
     };
     const s: ArmyState = { army, status: "camping", route: null, progress: 0, supplied: true, ignore: new Set<string>(), targetCityId: null };
     this.armies.push(s);
@@ -641,10 +701,9 @@ export class Campaign {
     if (!s || s.status === "fighting") return "解散できません";
     const city = this.cities.filter((c) => scenario.cityOwners[c.id] === s.army.factionId && c.kind !== "pass").sort((a, b) => distanceKm(a, s.army) - distanceKm(b, s.army))[0];
     if (!city) return "戻る都市がありません";
-    const st = this.cityState(city);
-    this.cityStates[city.id] = { ...st, garrison: st.garrison + totalTroops(s.army) };
-    this.armies.splice(this.armies.indexOf(s), 1);
-    this.listener.onArmyRemoved(s);
+    // Version 51:兵種別の人数・兵糧・武将も、帰城と同じ処理で都市へ移す
+    const r = this.absorbIntoCity(s, city, "disband");
+    if (r) return r;
     this.addNews(`${factionName(s.army.factionId)}が${s.army.name}を解散し、兵を${city.name}に戻しました`);
     return null;
   }
@@ -658,10 +717,377 @@ export class Campaign {
     const state = this.cityState(city);
     const n = Math.floor(Math.min(troops, state.garrison - strategyRules.costs.minGarrison));
     if (n < 100) return "都市に、出せる兵がいません";
-    this.cityStates[city.id] = { ...state, garrison: state.garrison - n };
-    s.army.troops.infantry += n;
+    if (state.garrisonMix) {
+      // 守備兵の内訳を記録している都市(Version 51)は、その割合で兵を出す
+      const t = takeFromGarrison(state, n);
+      this.cityStates[city.id] = t.state;
+      for (const k of ["infantry", "cavalry", "archer"] as const) s.army.troops[k] += t.troops[k];
+    } else {
+      this.cityStates[city.id] = { ...state, garrison: state.garrison - n };
+      s.army.troops.infantry += n;
+    }
     this.listener.onArmyChanged(s, false);
     return null;
+  }
+
+  // ===== Version 51:軍団の帰城・軍団結合 =====
+
+  /** 帰城・結合の記録(AIの利用実績の報告とテストに使う。セーブに残す) */
+  armyOpsLog: ArmyOpRecord[] = [];
+
+  private logArmyOp(kind: ArmyOpRecord["kind"], factionId: string, troops: number, text: string): void {
+    this.armyOpsLog.push({ day: Math.floor(this.day), date: this.dateText(), kind, factionId, ai: factionId !== this.playerFactionId, troops, text });
+    if (this.armyOpsLog.length > 600) this.armyOpsLog.splice(0, this.armyOpsLog.length - 600);
+  }
+
+  /** 配下武将から外す */
+  private dropOfficer(a: Army, personId: string): void {
+    if (!a.officers) return;
+    a.officers = a.officers.filter((x) => x !== personId);
+    if (!a.officers.length) delete a.officers;
+  }
+
+  /**
+   * 配下武将の整理(毎日):死亡・捕虜・寝返り(国が変わった)・ほかの役目についた武将は、配下から外す。
+   * 外れた健在の武将は、軍団のそばの自国の都市(無ければ都)にいることになる
+   */
+  private tidyOfficers(): void {
+    for (const s of this.armies) {
+      // 副将も、死亡・捕虜・寝返りなら外す(Version 51:政変で殺された人が副将のまま残る不具合があった)
+      const dep = s.army.deputyId;
+      if (dep && (!["active", "wounded"].includes(this.personStatus(dep)) || personById(dep)?.factionId !== s.army.factionId)) delete s.army.deputyId;
+      const list = s.army.officers;
+      if (!list) continue;
+      const keep = list.filter((id, i) => list.indexOf(id) === i && ["active", "wounded"].includes(this.personStatus(id)) && personById(id)?.factionId === s.army.factionId
+        && id !== s.army.commanderId && id !== s.army.deputyId && !this.armies.some((o) => o !== s && this.membersOf(o.army).includes(id))
+        && !this.cities.some((c) => governorIdOf(c, this.cityStates[c.id]) === id));
+      if (keep.length) s.army.officers = keep;
+      else delete s.army.officers;
+      // 副将がいなければ、配下武将の筆頭が副将になる
+      if (!s.army.deputyId && s.army.officers?.length) {
+        s.army.deputyId = s.army.officers.shift();
+        if (!s.army.officers.length) delete s.army.officers;
+      }
+    }
+  }
+
+  /** 帰城・結合の命令を取り消す(新しい移動の命令・停止のとき) */
+  private clearArmyOp(s: ArmyState): void {
+    delete s.returnCityId;
+    delete s.mergeInto;
+    delete s.mergeCommander;
+    delete s.opTries;
+    delete s.opNote;
+  }
+
+  /** その軍団に属する武将(指揮官・副将・配下武将) */
+  membersOf(a: Army): string[] {
+    return [a.commanderId, a.deputyId, ...(a.officers ?? [])].filter((x, i, l): x is string => !!x && l.indexOf(x) === i);
+  }
+
+  /** 都市が包囲されているか(まだ決着していない攻城戦がある) */
+  private besieged(cityId: string): boolean {
+    return this.events.some((e) => e.defenderCityId === cityId && (e.status === "pending" || e.status === "preparing" || e.status === "in_progress"));
+  }
+
+  /** 帰城で、都市に着いたとみなす近さ(度)。行軍の終点は、都市のまわりの空いた所になる */
+  private nearCity(s: ArmyState, city: City, extra: number): boolean {
+    return Math.hypot(city.lon - s.army.lon, city.lat - s.army.lat) <= this.cityReach(city) + extra;
+  }
+
+  /**
+   * 帰城先の候補(Version 51):出発元の都市・いちばん近い自国の都市・首都と、ほかの自国の都市(近い順)。
+   * それぞれ、実際の道のりの距離・日数・兵糧の見込みを付ける。道が無い都市は出さない。
+   */
+  returnOptions(armyId: string, limit = 10): { cityId: string; name: string; tags: string[]; km: number; days: number; foodUse: number; foodLeft: number; besieged: boolean; route: Route | null }[] {
+    const s = this.stateOf(armyId);
+    if (!s) return [];
+    const f = s.army.factionId;
+    const mine = this.cities.filter((c) => scenario.cityOwners[c.id] === f).sort((a, b) => distanceKm(a, s.army) - distanceKm(b, s.army));
+    if (!mine.length) return [];
+    const cap = this.capitalCityOf(f);
+    const origin = s.army.originCityId && scenario.cityOwners[s.army.originCityId] === f ? s.army.originCityId : undefined;
+    const pick = [...new Set([origin, mine[0].id, cap?.id, ...mine.slice(0, limit).map((c) => c.id)].filter((x): x is string => !!x))];
+    const out: ReturnType<Campaign["returnOptions"]> = [];
+    for (const id of pick) {
+      const c = this.cities.find((x) => x.id === id)!;
+      const tags = [id === origin ? "出発元" : "", id === mine[0].id ? "最寄り" : "", id === cap?.id ? "首都" : ""].filter(Boolean);
+      if (this.nearCity(s, c, 0.35)) {
+        out.push({ cityId: id, name: c.name, tags, km: Math.round(distanceKm(c, s.army)), days: 0, foodUse: 0, foodLeft: Math.round(s.army.food), besieged: this.besieged(id), route: null });
+        continue;
+      }
+      const route = this.planRoute(armyId, { lon: c.lon, lat: c.lat }, 6);
+      if (!route) continue;
+      const est = this.estimateRoute(armyId, route);
+      out.push({ cityId: id, name: c.name, tags, km: Math.round(route.km), days: est.days, foodUse: est.foodUse, foodLeft: est.foodLeft, besieged: this.besieged(id), route });
+    }
+    return out;
+  }
+
+  /**
+   * 帰城の命令(Version 51)。自国の都市へ、道・地形・補給に従って進む(瞬間移動はしない)。
+   * すでに都市のすぐそば(約35km以内)にいれば、その場で入城する。着いたら兵・武将・兵糧を都市へ移し、軍団は消える。
+   */
+  orderReturn(armyId: string, cityId: string, route?: Route | null): string | null {
+    const s = this.stateOf(armyId);
+    const city = this.cities.find((c) => c.id === cityId);
+    if (!s || !city) return "軍団か都市が見つかりません";
+    if (scenario.cityOwners[city.id] !== s.army.factionId) return "自国の都市にしか帰城できません";
+    if (s.status === "fighting") return "戦闘中の軍団は帰城できません(会戦の決着か離脱のあとで)";
+    if (this.nearCity(s, city, 0.35) && !this.besieged(city.id)) {
+      if (s.status === "marching") this.halt(armyId);
+      return this.absorbIntoCity(s, city, "return");
+    }
+    const r = route ?? this.planRoute(armyId, { lon: city.lon, lat: city.lat }, 8);
+    if (!r) return `${city.name}への道が見つかりません(敵の関所や地形で塞がれています)`;
+    this.orderMove(armyId, r);
+    s.returnCityId = city.id;
+    s.opTries = 0;
+    s.opNote = `${city.name}へ帰城中`;
+    this.listener.onArmyChanged(s, false);
+    return null;
+  }
+
+  /**
+   * 軍団を都市に入れる(帰城・解散。Version 51)。兵は兵種別に守備兵へ、兵糧は国の蔵へ、武将は都市へ移す。
+   * 移し終えたことを確かめてから、軍団を地図から消す。都市の守備兵には固定の上限は無い。
+   */
+  private absorbIntoCity(s: ArmyState, city: City, kind: "return" | "disband"): string | null {
+    const a = s.army;
+    if (scenario.cityOwners[city.id] !== a.factionId) return "自国の都市ではありません";
+    if (!this.armies.includes(s)) return "軍団がありません";
+    const add: Troops = { infantry: Math.max(0, Math.round(a.troops.infantry)), cavalry: Math.max(0, Math.round(a.troops.cavalry)), archer: Math.max(0, Math.round(a.troops.archer)) };
+    const n = sumTroops(add);
+    const before = this.cityState(city);
+    let next = addToGarrison(before, add);
+    // 士気:兵数で重みをつけて平均する。疲れた兵(疲労)は、そのぶん士気を下げて加わる(城内で休めば、日ごとに戻る)
+    const g0 = before.garrison;
+    const armyMorale = Math.max(0, a.morale - a.fatigue / 5);
+    next = { ...next, morale: Math.round(((before.morale * g0 + armyMorale * n) / Math.max(1, g0 + n)) * 10) / 10 };
+    // 兵糧:軍団の残りの食糧(日数×兵)を、国の蔵の兵糧に戻す(出陣のときは 100人あたり1で45日分。同じ割合で戻す)
+    const grain = (Math.max(0, a.food) * n) / 4500;
+    const fs = (this.factionStates[a.factionId] ??= { gold: 0, grain: 0 });
+    const grain0 = fs.grain;
+    // 確かめ:守備兵の増え方が、軍団の兵の数と一致すること
+    if (next.garrison !== g0 + n) return "兵の移し替えが合いません(帰城を取りやめました)";
+    this.cityStates[city.id] = next;
+    fs.grain = grain0 + grain;
+    // 武将:指揮官・副将・配下武将を、その都市へ戻す(健在・負傷の人だけ。捕虜・死者は動かさない)
+    const people = this.membersOf(a).filter((id) => ["active", "wounded"].includes(this.personStatus(id)) && personById(id)?.factionId === a.factionId);
+    for (const id of people) this.placement.moveTo(id, city.id, "court", `${a.name}とともに${city.name}へ${kind === "return" ? "帰城" : "戻った"}`);
+    a.commanderId = "";
+    delete a.deputyId;
+    delete a.officers;
+    // 確かめてから、軍団を消す
+    const ok = this.cityState(city).garrison === g0 + n && people.every((id) => !this.postOf(id) || this.postOf(id)?.kind === "city" || this.placement.homes[id]?.cityId === city.id);
+    if (!ok) return "移し替えを確かめられませんでした";
+    this.armies.splice(this.armies.indexOf(s), 1);
+    this.listener.onArmyRemoved(s);
+    const names = people.map((id) => personById(id)?.name).filter(Boolean).join("・");
+    const text = `${a.name}(${n.toLocaleString("ja-JP")}人)が${city.name}に${kind === "return" ? "帰城" : "戻った"}。守備兵 ${g0.toLocaleString("ja-JP")} → ${(g0 + n).toLocaleString("ja-JP")}人、兵糧 +${Math.round(grain)}${names ? `、武将:${names}` : ""}`;
+    this.logArmyOp(kind, a.factionId, n, text);
+    if (kind === "return") this.addNews(`${factionName(a.factionId)}:${text}`);
+    return null;
+  }
+
+  /**
+   * 軍団結合の見込み(Version 51):結合後の兵力(兵種別)・兵糧・士気・疲労・指揮官と、離れた軍団が合流するまでの日数。
+   * できないときは、理由を文字で返す。
+   */
+  mergePreview(targetId: string, otherIds: string[], commanderId?: string): string | {
+    troops: Troops; total: number; food: number; morale: number; fatigue: number; commanderId: string; deputyId?: string; officers: string[];
+    candidates: string[]; far: { armyId: string; name: string; km: number; days: number | null }[]; speed: number;
+  } {
+    const t = this.stateOf(targetId);
+    if (!t) return "軍団が見つかりません";
+    const others = otherIds.filter((id) => id !== targetId).map((id) => this.stateOf(id));
+    if (!others.length) return "結合する軍団を選んでください";
+    if (others.some((o) => !o)) return "見つからない軍団があります";
+    const all = [t, ...(others as ArmyState[])];
+    if (all.some((x) => x.army.factionId !== t.army.factionId)) return "同じ国の軍団だけを結合できます";
+    if (all.some((x) => x.status === "fighting")) return "戦闘中の軍団は結合できません";
+    const troops: Troops = { infantry: 0, cavalry: 0, archer: 0 };
+    let food = 0;
+    let morale = 0;
+    let fatigue = 0;
+    for (const x of all) {
+      const n = totalTroops(x.army);
+      for (const k of ["infantry", "cavalry", "archer"] as const) troops[k] += x.army.troops[k];
+      food += x.army.food * n;
+      morale += x.army.morale * n;
+      fatigue += x.army.fatigue * n;
+    }
+    const total = sumTroops(troops);
+    const candidates = all.flatMap((x) => this.membersOf(x.army)).filter((id, i, l) => l.indexOf(id) === i && this.personStatus(id) === "active" && !this.court?.isMinor(personById(id)!));
+    const cmd = commanderId && candidates.includes(commanderId) ? commanderId : t.army.commanderId && candidates.includes(t.army.commanderId) ? t.army.commanderId : candidates[0] ?? "";
+    const rest = all.flatMap((x) => this.membersOf(x.army)).filter((id, i, l) => l.indexOf(id) === i && id !== cmd && ["active", "wounded"].includes(this.personStatus(id)));
+    const deputyId = t.army.deputyId && rest.includes(t.army.deputyId) ? t.army.deputyId : rest[0];
+    const officers = rest.filter((id) => id !== deputyId);
+    const far = (others as ArmyState[]).filter((o) => distanceKm(o.army, t.army) > MERGE_KM).map((o) => {
+      const r = this.planRoute(o.army.id, { lon: t.army.lon, lat: t.army.lat }, 6);
+      return { armyId: o.army.id, name: o.army.name, km: Math.round(distanceKm(o.army, t.army)), days: r ? Math.max(1, Math.ceil(this.daysFor(o, r))) : null };
+    });
+    const div = Math.max(1, total);
+    const probe: ArmyState = { ...t, army: { ...t.army, troops, commanderId: cmd, fatigue: fatigue / div, food: food / div } };
+    return { troops, total, food: Math.round(food / div), morale: Math.round(morale / div), fatigue: Math.round(fatigue / div), commanderId: cmd, deputyId, officers, candidates, far, speed: this.marchSpeed(probe) };
+  }
+
+  /**
+   * 軍団結合の命令(Version 51)。近く(約40km以内)の軍団は、その場で結合する。離れた軍団は、結合先の軍団のそばまで
+   * 進み、着いてから結合する(瞬間的な結合はしない)。commanderId は、結合後の総指揮官。
+   */
+  orderMerge(targetId: string, otherIds: string[], commanderId?: string): string | null {
+    const pv = this.mergePreview(targetId, otherIds, commanderId);
+    if (typeof pv === "string") return pv;
+    const t = this.stateOf(targetId)!;
+    const near = otherIds.filter((id) => id !== targetId && distanceKm(this.stateOf(id)!.army, t.army) <= MERGE_KM);
+    for (const id of near) {
+      const r = this.mergeNow(t, this.stateOf(id)!, commanderId);
+      if (r) return r;
+    }
+    for (const f of pv.far) {
+      const o = this.stateOf(f.armyId)!;
+      const route = this.planRoute(o.army.id, { lon: t.army.lon, lat: t.army.lat }, 8);
+      if (!route) return `${o.army.name}から${t.army.name}への道が見つかりません`;
+      this.orderMove(o.army.id, route);
+      o.mergeInto = t.army.id;
+      o.mergeCommander = commanderId;
+      o.opTries = 0;
+      o.opNote = `${t.army.name}と結合するため合流中`;
+      this.listener.onArmyChanged(o, false);
+    }
+    // 結合先は、合流を待つあいだ止まる(行軍中なら野営)
+    if (pv.far.length && t.status === "marching") {
+      t.route = null;
+      this.setStatus(t, "camping");
+    }
+    if (pv.far.length) {
+      t.opNote = `${pv.far.map((x) => x.name).join("・")}の合流を待っています`;
+      this.listener.onArmyChanged(t, false);
+    }
+    return null;
+  }
+
+  /** 2つの軍団を、いまこの場で1つにする(近くにいることを確かめてから。Version 51) */
+  private mergeNow(t: ArmyState, o: ArmyState, commanderId?: string): string | null {
+    if (t === o) return "同じ軍団です";
+    if (t.army.factionId !== o.army.factionId) return "同じ国の軍団だけを結合できます";
+    if (t.status === "fighting" || o.status === "fighting") return "戦闘中の軍団は結合できません";
+    if (distanceKm(t.army, o.army) > MERGE_KM * 1.5) return "離れすぎています";
+    const a = t.army, b = o.army;
+    const na = totalTroops(a), nb = totalTroops(b);
+    const n = na + nb;
+    const sum: Troops = { infantry: a.troops.infantry + b.troops.infantry, cavalry: a.troops.cavalry + b.troops.cavalry, archer: a.troops.archer + b.troops.archer };
+    const avg = (x: number, y: number): number => (n > 0 ? (x * na + y * nb) / n : (x + y) / 2);
+    // 武将:総指揮官を選び、ほかの武将は副将・配下武将になる
+    const members = [...this.membersOf(a), ...this.membersOf(b)].filter((id, i, l) => l.indexOf(id) === i && ["active", "wounded"].includes(this.personStatus(id)) && personById(id)?.factionId === a.factionId);
+    const able = (id: string | undefined): boolean => !!id && members.includes(id) && this.personStatus(id) === "active" && !this.court?.isMinor(personById(id)!);
+    const cmd = able(commanderId) ? commanderId! : able(a.commanderId) ? a.commanderId : able(b.commanderId) ? b.commanderId : members.find(able) ?? "";
+    const rest = members.filter((id) => id !== cmd);
+    const deputy = a.deputyId && rest.includes(a.deputyId) ? a.deputyId : rest[0];
+    const oldName = a.name;
+    const oldCmd = a.commanderId;
+    a.troops = sum;
+    a.food = Math.max(0, Math.min(FOOD_CAP, avg(a.food, b.food)));
+    a.morale = Math.round(avg(a.morale, b.morale));
+    a.fatigue = Math.round(avg(a.fatigue, b.fatigue));
+    a.commanderId = cmd;
+    if (deputy) a.deputyId = deputy;
+    else delete a.deputyId;
+    const officers = rest.filter((id) => id !== deputy);
+    if (officers.length) a.officers = officers;
+    else delete a.officers;
+    // 名前:指揮官が替われば「(指揮官)軍」にする
+    if (cmd && cmd !== oldCmd) a.name = `${personById(cmd)!.name}軍`;
+    // 確かめ:兵の合計が合うこと(消えたり、二重に増えたりしない)
+    if (totalTroops(a) !== n) return "兵の合計が合いません";
+    // 結合した軍団の、事件の印(歴史の会戦)は、結合先へ移す
+    for (const tag of this.history?.tags ?? []) {
+      if (tag.a === b.id) tag.a = a.id;
+      if (tag.b === b.id) tag.b = a.id;
+    }
+    b.commanderId = "";
+    delete b.deputyId;
+    delete b.officers;
+    b.troops = { infantry: 0, cavalry: 0, archer: 0 };
+    this.armies.splice(this.armies.indexOf(o), 1);
+    this.listener.onArmyRemoved(o);
+    delete t.opNote;
+    this.listener.onArmyChanged(t, false);
+    const text = `${b.name}(${nb.toLocaleString("ja-JP")}人)を${oldName}(${na.toLocaleString("ja-JP")}人)に結合 → ${a.name} ${n.toLocaleString("ja-JP")}人(総指揮官 ${personById(cmd)?.name ?? "なし"})`;
+    this.logArmyOp("merge", a.factionId, n, text);
+    this.addNews(`${factionName(a.factionId)}:${text}`);
+    return null;
+  }
+
+  /**
+   * 毎日:帰城・結合の命令を進める(Version 51)。帰城先を奪われた・道が無い・相手が消えたときは取り消す。
+   * 途中で敵と出会えば、ふつうの会戦になる。決着したあと、生き残っていれば、道を探し直して続ける。
+   */
+  private tickArmyOps(): void {
+    for (const s of [...this.armies]) {
+      if (!this.armies.includes(s)) continue;
+      if (s.returnCityId) {
+        const city = this.cities.find((c) => c.id === s.returnCityId);
+        if (!city || scenario.cityOwners[city.id] !== s.army.factionId) {
+          this.cancelArmyOp(s, `帰城先の${city?.name ?? "都市"}が${city ? factionName(scenario.cityOwners[city.id] ?? "") : ""}に奪われたため、帰城を取り消しました。別の帰城先を選んでください`);
+          continue;
+        }
+        if (s.status === "fighting" || s.status === "marching") continue;
+        if (this.nearCity(s, city, (s.opTries ?? 0) >= 2 ? 1.0 : 0.6)) {
+          if (this.besieged(city.id)) {
+            s.opNote = `${city.name}が包囲されているため、城外で待機(救援に加わります)`;
+            continue;
+          }
+          const r = this.absorbIntoCity(s, city, "return");
+          if (r) this.cancelArmyOp(s, r);
+          continue;
+        }
+        // 途中で止まった(会戦のあと・道が塞がれた):探し直す
+        s.opTries = (s.opTries ?? 0) + 1;
+        const route = s.opTries <= 4 ? this.planRoute(s.army.id, { lon: city.lon, lat: city.lat }, 8) : null;
+        if (!route) {
+          this.cancelArmyOp(s, `${city.name}への道が塞がれていて、帰城できません。別の帰城先を選んでください`);
+          continue;
+        }
+        const keep = { returnCityId: s.returnCityId, opTries: s.opTries };
+        this.orderMove(s.army.id, route);
+        Object.assign(s, keep, { opNote: `${city.name}へ帰城中(道を探し直した)` });
+        continue;
+      }
+      if (s.mergeInto) {
+        const t = this.stateOf(s.mergeInto);
+        if (!t || t.army.factionId !== s.army.factionId) {
+          this.cancelArmyOp(s, "結合の相手の軍団がいなくなったため、結合を取り消しました");
+          continue;
+        }
+        if (s.status === "fighting" || s.status === "marching" || t.status === "fighting") continue;
+        if (distanceKm(s.army, t.army) <= MERGE_KM * 1.5) {
+          const cmd = s.mergeCommander;
+          this.clearArmyOp(s);
+          const r = this.mergeNow(t, s, cmd);
+          if (r) this.cancelArmyOp(s, r);
+          continue;
+        }
+        s.opTries = (s.opTries ?? 0) + 1;
+        const route = s.opTries <= 6 ? this.planRoute(s.army.id, { lon: t.army.lon, lat: t.army.lat }, 8) : null;
+        if (!route) {
+          this.cancelArmyOp(s, `${t.army.name}への道が見つからず、結合を取り消しました`);
+          continue;
+        }
+        const keep = { mergeInto: s.mergeInto, mergeCommander: s.mergeCommander, opTries: s.opTries };
+        this.orderMove(s.army.id, route);
+        Object.assign(s, keep, { opNote: `${t.army.name}と結合するため合流中` });
+      }
+    }
+  }
+
+  private cancelArmyOp(s: ArmyState, why: string): void {
+    this.clearArmyOp(s);
+    s.opNote = why;
+    this.logArmyOp("cancel", s.army.factionId, totalTroops(s.army), `${s.army.name}:${why}`);
+    if (s.army.factionId === this.playerFactionId) this.addNews(`${s.army.name}:${why}`);
+    this.listener.onArmyChanged(s, false);
   }
 
   /** いまの年・月・季節 */
@@ -680,7 +1106,9 @@ export class Campaign {
       armies: this.armies.map((s) => ({
         army: s.army, status: s.status, route: s.route, progress: s.progress, supplied: s.supplied,
         ignore: [...s.ignore], targetCityId: s.targetCityId, commanderFate: s.commanderFate,
+        returnCityId: s.returnCityId, mergeInto: s.mergeInto, mergeCommander: s.mergeCommander, opTries: s.opTries, opNote: s.opNote,
       })),
+      armyOpsLog: this.armyOpsLog,
       events: this.events,
       cityStates: this.cityStates,
       relations: this.relations,
@@ -764,7 +1192,16 @@ export class Campaign {
         s = { army: a.army, status: a.status, route: null, progress: 0, supplied: false, ignore: new Set<string>(), targetCityId: null };
         this.armies.push(s);
       }
+      // セーブに無い任意の項目は消してから書き戻す(副将・配下武将・出発元が、前の状態から残らないように)
+      delete s.army.deputyId;
+      delete s.army.officers;
+      delete s.army.originCityId;
       Object.assign(s.army, a.army);
+      s.returnCityId = a.returnCityId;
+      s.mergeInto = a.mergeInto;
+      s.mergeCommander = a.mergeCommander;
+      s.opTries = a.opTries;
+      s.opNote = a.opNote;
       s.status = a.status;
       s.route = a.route;
       s.progress = a.progress;
@@ -784,6 +1221,7 @@ export class Campaign {
     if (data.capitals) this.capitals = JSON.parse(JSON.stringify(data.capitals));
     else this.initCapitals();
     this.capitalLog = JSON.parse(JSON.stringify(data.capitalLog ?? []));
+    this.armyOpsLog = JSON.parse(JSON.stringify(data.armyOpsLog ?? []));
     setGameSeed(data.seed ?? "");
   }
 
@@ -794,12 +1232,19 @@ export class Campaign {
 
   /** 城壁と城門の損傷は、日数をかけて少しずつ直る(修復に資金がかかる仕組みは、まだ無い) */
   private repairCities(): void {
-    for (const state of Object.values(this.cityStates)) {
-      if (state.prosperity !== undefined) state.prosperity = Math.min(100, state.prosperity + 0.05);
-      if (state.order !== undefined) state.order = Math.min(70, state.order + 0.1);
+    for (const [id, state] of Object.entries(this.cityStates)) {
+      // 過密(Version 51):人口の6%を超える兵がいる都市は、治安・繁栄が平常の値まで戻らない(過密の度合いで、戻る上限が下がる)
+      const pop = state.pop ?? 0;
+      const crowd = pop > 0 ? Math.max(0, state.garrison - pop * 0.06) / pop : 0;
+      // 上限を超えているときは、急に下げず、少しずつ下がる
+      const toward = (v: number, cap: number, step: number): number => (v > cap ? Math.max(cap, v - step) : Math.min(cap, v + step));
+      if (state.prosperity !== undefined) state.prosperity = toward(state.prosperity, 100 - Math.min(30, crowd * 30), 0.05);
+      if (state.order !== undefined) state.order = toward(state.order, 70 - Math.min(25, crowd * 25), 0.1);
       state.wallDamage = Math.max(0, state.wallDamage - 0.004);
       state.gateDamage = Math.max(0, state.gateDamage - 0.01);
-      state.morale = Math.min(70, state.morale + 0.5);
+      // 兵糧が尽きた国の都市では、守備兵の士気は戻らない(Version 51)
+      const owner = scenario.cityOwners[id];
+      if (!owner || (this.factionStates[owner]?.grain ?? 1) > 0) state.morale = Math.min(70, state.morale + 0.5);
     }
   }
 
@@ -831,6 +1276,14 @@ export class Campaign {
     if ((kind === "highMountain" || kind === "mountain") && cav > 0.5) k *= 0.8;
     if ((kind === "desert" || kind === "grassland") && cav > 0.5) k *= 1.1;
     if (kind === "desert") k *= 0.85;
+    // 大軍団(Version 51):2万人を超えると、道が混み、行軍が遅くなる。統率の高い指揮官ほど、遅れは小さい。
+    // 山地では、さらに遅い(狭い道を長い列で進む)
+    const n = total;
+    if (n > 20000) {
+      const lead = personById(s.army.commanderId)?.leadership ?? 0;
+      const slow = ((n - 20000) / 150000) * (1.2 - lead / 125) * (kind === "mountain" || kind === "highMountain" ? 1.5 : 1);
+      k *= Math.max(0.55, 1 - slow);
+    }
     return Math.round(base * k * (1 - s.army.fatigue / 250) * (s.army.food <= 0 ? 0.7 : 1));
   }
 
@@ -1061,6 +1514,8 @@ export class Campaign {
     const s = this.stateOf(armyId);
     if (!s) return;
     this.withdraw(s);
+    // 新しい移動の命令は、帰城・結合の命令を取り消す(帰城・結合は、この関数のあとで付け直す)
+    this.clearArmyOp(s);
     s.route = route;
     s.progress = 0;
     // 目的地が敵の都市のそばなら、その都市を攻める意思があるとみなす。
@@ -1085,6 +1540,7 @@ export class Campaign {
     const s = this.stateOf(armyId);
     if (!s || s.status !== "marching") return;
     s.route = null;
+    this.clearArmyOp(s);
     this.setStatus(s, "camping");
   }
 
@@ -1138,6 +1594,8 @@ export class Campaign {
     }
     for (let d = before; d < Math.floor(this.day); d++) {
       for (const s of this.armies) this.dailyUpkeep(s);
+      this.tidyOfficers();
+      this.tickArmyOps();
       this.tickTravels();
       this.tickAutoSieges();
       this.repairCities();
@@ -1147,7 +1605,15 @@ export class Campaign {
         this.trimEvents();
         this.loyalty.monthly();
         // 捕虜の記録の整合(Version 42):本人が捕虜・保護下でない(健在・死亡)のに残る記録を片づける
-        for (let i = this.spoils.custody.length - 1; i >= 0; i--) if (!["captured", "protected"].includes(this.personStatus(this.spoils.custody[i].personId))) this.spoils.custody.splice(i, 1);
+        // (Version 51:根の原因を直した。この片づけは安全策として残し、直した件数を数える)
+        for (let i = this.spoils.custody.length - 1; i >= 0; i--) {
+          const id = this.spoils.custody[i].personId;
+          const dupe = this.spoils.custody.findIndex((x) => x.personId === id) !== i;
+          if (dupe || !["captured", "protected"].includes(this.personStatus(id))) {
+            this.custodyRepairs.push({ day: Math.floor(this.day), personId: id, status: dupe ? "二重の記録" : this.personStatus(id) });
+            this.spoils.custody.splice(i, 1);
+          }
+        }
         this.diplo.monthly();
         this.court.monthly();
         this.checkRulers();
@@ -1202,7 +1668,9 @@ export class Campaign {
       },
       (id, s) => {
         this.personStates[id] = s;
-      });
+        this.vacatePosts(id);
+      },
+      (id) => this.personStatus(id));
     this.checkRulers();
     const names = (ids: string[]): string => ids.map((id) => personById(id)?.name ?? id).join("・");
     const items = rec.treasures.map((id) => this.spoils.treasure(id)?.name).filter(Boolean).join("・");
@@ -1520,10 +1988,10 @@ export class Campaign {
     for (const s of this.armies) {
       if (s.army.commanderId === personId) s.army.commanderId = "";
       if (s.army.deputyId === personId) delete s.army.deputyId;
+      this.dropOfficer(s.army, personId);
     }
     for (const c of this.cities) if (governorIdOf(c, this.cityStates[c.id]) === personId) this.cityStates[c.id] = { ...this.cityState(c), governorId: null };
-    const i = this.spoils.custody.findIndex((x) => x.personId === personId);
-    if (i >= 0) this.spoils.custody.splice(i, 1);
+    this.spoils.release(personId);
     const label = { illness: "病死", old_age: "老衰", battle: "戦死", execution: "処刑", assassination: "暗殺", suicide: "自害", unknown: "不明" }[cause] ?? cause;
     if (p.role === "ruler" || (this.loyalty.fame[personId] ?? 0) >= 60) this.addNews(`${factionName(p.factionId)}の${p.name}が亡くなりました(${label}${p.fictional ? "" : p.died ? `。史実では${p.died}年に没` : ""})`);
   }
@@ -1645,7 +2113,7 @@ export class Campaign {
     this.setRole(old.id, "general");
     this.personStates[old.id] = "dead";
     { const i = this.spoils.custody.findIndex((x) => x.personId === old.id); if (i >= 0) this.spoils.custody.splice(i, 1); }
-    for (const s of this.armies) if (s.army.commanderId === old.id) s.army.commanderId = "";
+    this.vacatePosts(old.id); // 指揮官・副将・配下武将・太守の任を外す(Version 51:副将が残る不具合を直した)
     this.setRole(usurper.id, "ruler");
     f.ruler = usurper.name;
     this.dynasty.rulers[factionId] = usurper.name;
@@ -1753,6 +2221,7 @@ export class Campaign {
       } else if (captor) {
         this.spoils.custody.push({ personId: p.id, kind: p.role === "general" && p.gender !== "female" ? "captive" : "protected", holder: captor, from: factionId, cityId: p.residence ?? null, day });
         this.personStates[p.id] = p.role === "general" && p.gender !== "female" ? "captured" : "protected";
+        this.vacatePosts(p.id);
       }
     }
     // 太守:新しい持ち主の人でなければ外す
@@ -2212,6 +2681,8 @@ export class Campaign {
       const prev = this.cityState(city);
       const state: CityState = {
         garrison: d.after.infantry + d.after.cavalry + d.after.archer,
+        // 兵種の内訳も残す(Version 51)
+        garrisonMix: { cavalry: Math.max(0, Math.round(d.after.cavalry)), archer: Math.max(0, Math.round(d.after.archer)) },
         food: result.siege.foodLeft,
         morale: d.morale,
         // 損傷は、前からの分と今回の分の大きいほうを残す。占領しても、すぐには直らない
@@ -2238,6 +2709,7 @@ export class Campaign {
       if (result.siege.captured) {
         // 落城:攻撃側の勢力のものになる。守備隊は、仮に攻撃側の兵から1,000人を置いたものとする(軍団の兵力は減らさない)
         state.garrison = 1000;
+        delete state.garrisonMix;
         state.morale = 60;
         // 太守の運命(君主が太守のときは、首都の陥落の判定に従う:捕虜か脱出)
         const govFate = rulerGov ? (cap!.rulerCaptured ? "captured" : "escaped") : d.commander === "killed" ? "killed" : "captured";
@@ -2249,7 +2721,7 @@ export class Campaign {
         for (const p of persons.filter((x) => x.factionId === event.defenderFactionId && x.role !== "ruler")) this.loyalty.add(p.id, -2, `${city.name}の喪失`);
         // 戦利品:その場にいた人物と、蔵の名品を調べる(持ち主が変わる前に)
         const pc = this.spoils.onCityCaptured(city, event.attackerFactionId, event.defenderFactionId, govFate === "escaped" ? undefined : governorId ?? undefined, govFate === "escaped" ? "captured" : govFate,
-          Math.max(result.siege.wallDamage, result.siege.gateDamage), Math.floor(this.day), (id) => this.personStatus(id));
+          Math.max(result.siege.wallDamage, result.siege.gateDamage), Math.floor(this.day), (id) => this.personStatus(id), (id) => this.presentAt(id, city.id));
         this.cityStates[city.id] = state;
         this.listener.onCityCaptured(city.id, event.attackerFactionId);
         this.handleCapture(pc);
@@ -2301,14 +2773,16 @@ export class Campaign {
       a.fatigue += 3;
       a.food -= 0.5;
     }
+    // 大軍団の補給の負担(Version 51):3万人を超えると、補給の届かない所では食糧の減りが速く、補給の届く所でも蓄えの戻りが遅い
+    const big = Math.max(0, totalTroops(a) - 30000) / 60000;
     if (marching) {
       // 補給の届く範囲の行軍は、道中で補給を受ける(Version 40:味方の領内の長い山道で飢えないように)
-      a.food += s.supplied ? 0.5 : -1;
+      a.food += s.supplied ? 0.5 / (1 + big) : -1 * (1 + Math.min(1, big * 0.5));
       a.fatigue += 3 * Math.min(2, this.grid.costAt(a.lon, a.lat) || 1);
     } else {
       a.fatigue -= 8;
       // 味方の都市の近くなら補給を受ける。離れていれば、現地調達で消費を半分に抑える
-      a.food += s.supplied ? 3 : -0.5;
+      a.food += s.supplied ? 3 / (1 + big) : -0.5 * (1 + Math.min(1, big * 0.5));
     }
     a.food = Math.max(0, Math.min(FOOD_CAP, a.food));
     a.fatigue = Math.max(0, Math.min(100, a.fatigue));
