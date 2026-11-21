@@ -20,6 +20,9 @@ import { CityLabels } from "../ui/CityLabels";
 import { InfoPanel } from "../ui/InfoPanel";
 import { DiplomacyScreen } from "../ui/DiplomacyScreen";
 import { CourtScreen } from "../ui/CourtScreen";
+import { PalaceScreen } from "../palace/PalaceScreen";
+import { PalaceHud } from "../ui/PalaceHud";
+import { AREA_LABEL } from "../sim/palace";
 import { EventsScreen } from "../ui/EventsScreen";
 import { HistoryEventScreen, TimelineScreen } from "../ui/HistoryScreen";
 import { autoResolve, estimateWinRate } from "../sim/autoBattle";
@@ -52,6 +55,9 @@ const GLIDE_MS = 600;
 const RATES = [1, 2, 4, 8];
 /** 何日ごとにオートセーブするか */
 const AUTOSAVE_DAYS = 10;
+
+/** 皇帝生活モードで、政治を重臣(AI)に任せているあいだの、操作勢力の代わりの印 */
+const COURT_ID = "__court__";
 
 export class Game {
   private readonly renderer: THREE.WebGLRenderer;
@@ -95,6 +101,9 @@ export class Game {
   private mode: ArmyPanelMode = "info";
   /** 確認中の経路(「確定」を押すと、この経路で行軍を始める) */
   private pendingRoute: Route | null = null;
+  /** 皇帝生活モード(3Dの後宮)の画面と欄 */
+  private palaceScreen: PalaceScreen | null = null;
+  private palaceHud: PalaceHud | null = null;
   /** 確認待ちの帰城先(Version 51) */
   private pendingReturn: string | null = null;
   private input!: InputController;
@@ -469,6 +478,17 @@ export class Game {
       },
     });
     (root.querySelector("#court-open") as HTMLElement).addEventListener("click", () => court.open());
+    // 皇帝生活モード(後宮へ):皇室の画面とメニューから
+    const goPalace = (): void => {
+      const err = this.enterPalace();
+      if (err) this.showNotice(err);
+      else {
+        (root.querySelector("#court") as HTMLElement).hidden = true;
+        this.menu.close?.();
+      }
+    };
+    (root.querySelector(".court-palace") as HTMLElement).addEventListener("click", goPalace);
+    (root.querySelector("#menu-palace") as HTMLElement).addEventListener("click", goPalace);
     this.openCourt = (id?: string) => court.open(id);
     // 歴史の重大事件と年表
     const histScreen = new HistoryEventScreen(root.querySelector("#history-event") as HTMLElement, {
@@ -871,6 +891,12 @@ export class Game {
   private onFactionFallen(info: { factionId: string; successors: string[]; captor: string | null }): void {
     this.refreshPosts();
     if (this.playerFactionId !== info.factionId) return;
+    // 宮殿にいるあいだに国が滅びたら、宮殿を出る
+    if (this.palaceScreen) {
+      this.campaign.palace.active = false;
+      this.closePalaceScreen();
+      this.campaign.playerFactionId = this.playerFactionId;
+    }
     const name = factionById(info.factionId)?.name ?? "";
     if (this.onFall === "continue" && info.successors.length > 0) {
       const next = info.successors[0];
@@ -983,6 +1009,11 @@ export class Game {
     if (change.difficulty) this.difficulty = change.difficulty === "veryEasy" ? "easy" : change.difficulty;
     // 戦略AIは、操作勢力を選んでいるあいだだけ動く(選んだ勢力以外が自動で動く)
     this.campaign.playerFactionId = this.playerFactionId;
+    // 皇帝生活モード:政治を重臣に任せているあいだは、自国もAIが動かす(操作勢力の代わりの印を入れる)。勢力を変えたら、政務に戻る
+    if (this.palaceScreen) {
+      if (this.campaign.palace.factionId !== this.playerFactionId) this.exitPalace();
+      else this.campaign.playerFactionId = COURT_ID;
+    }
     this.campaign.difficulty = this.difficulty;
     if (change.speed && RATES.includes(change.speed)) this.rate = change.speed;
     if (change.territoryOpacity !== undefined) {
@@ -1034,7 +1065,8 @@ export class Game {
       throw new Error(`別のシナリオ(${other ? `${other.year}年 ${other.title}` : data.scenarioId})のセーブデータです。先に、メニューの「シナリオを選ぶ」でそのシナリオに切り替えてください`);
     }
 
-    // 開いている会戦や画面を閉じる(会戦の結果は反映しない)
+    // 開いている会戦や画面を閉じる(会戦の結果は反映しない)。宮殿の画面も閉じる(セーブの状態に合わせて開き直す)
+    if (this.palaceScreen) this.closePalaceScreen();
     this.battle?.dispose();
     this.battle = null;
     this.battleSetup = null;
@@ -1074,6 +1106,14 @@ export class Game {
     this.onDayChanged();
     this.syncSpeedButton();
 
+    // 皇帝生活モードで保存したデータなら、宮殿に戻る(政治は重臣に任せたまま)
+    if (this.campaign.palace.active && this.campaign.palace.factionId === this.playerFactionId && !this.campaign.gameOver) {
+      this.openPalaceScreen();
+      this.showNotice(`${data.summary.date} のセーブデータを読み込みました(宮殿で)`);
+      this.dirty = true;
+      return;
+    }
+    this.campaign.palace.active = false;
     // 会戦の最中や準備中に保存したデータなら、その会戦の準備画面に戻る
     if (data.activeBattle && this.campaign.eventOf(data.activeBattle.battleId)) {
       this.openBattlePrep(data.activeBattle.battleId);
@@ -1593,7 +1633,112 @@ export class Game {
     this.renderer.setSize(this.width, this.height, false);
     this.mapCamera.setViewport(this.width, this.height);
     this.battle?.resize(this.width, this.height);
+    this.palaceScreen?.resize(this.width, this.height);
     this.dirty = true;
+  }
+
+  // ===================== 皇帝生活モード(3Dの後宮・重臣への委任) =====================
+
+  /** 宮殿に入る(政治・軍事・外交・財政を重臣に任せる)。入れないときは理由 */
+  enterPalace(): string | null {
+    const f = this.playerFactionId;
+    if (!f) return "先に、操作する勢力を選んでください";
+    if (this.battle || this.openBattleId) return "会戦の最中は、宮殿に入れません";
+    if (this.campaign.gameOver) return "国が滅びています";
+    const ruler = this.campaign.rulerOf(f);
+    if (!ruler) return "君主がいません";
+    const P = this.campaign.palace;
+    if (P.factionId !== f) {
+      // 別の国で入るときは、後宮の名簿を作り直す
+      P.restore(undefined);
+      P.factionId = f;
+      P.newsSeen = this.campaign.news.length;
+    }
+    P.active = true;
+    P.begin();
+    this.openPalaceScreen();
+    this.palaceHud?.refresh();
+    return null;
+  }
+
+  private openPalaceScreen(): void {
+    const P = this.campaign.palace;
+    this.campaign.playerFactionId = COURT_ID;
+    this.campaign.speed = 0;
+    this.syncSpeedButton();
+    this.clearSelection();
+    for (const id of ["#persons", "#diplomacy", "#spoils", "#finance", "#court", "#timeline", "#events", "#history-event", "#menu", "#overlay-panel"]) {
+      const el = this.root.querySelector<HTMLElement>(id);
+      if (el && id !== "#menu") el.hidden = true;
+    }
+    P.slot = Math.floor(((this.campaign.day % 1) + 1e-6) * 4) % 4;
+    const hudEl = this.root.querySelector("#palace-hud") as HTMLElement;
+    hudEl.hidden = false;
+    this.root.classList.add("in-palace");
+    const canvas = this.root.querySelector("#map") as HTMLCanvasElement;
+    this.palaceHud = new PalaceHud(hudEl, {
+      palace: P,
+      campaign: this.campaign,
+      advance: (n) => this.palaceAdvance(n),
+      exit: () => this.exitPalace(),
+      walkToNpc: (id) => {
+        const p = this.palaceScreen?.npcPos(id);
+        if (p) this.palaceScreen!.walkTo(p.x, p.z + 2);
+      },
+      openMenu: () => void this.menu.open(),
+    });
+    this.palaceScreen = new PalaceScreen(this.renderer, canvas, hudEl, P, {
+      onPickNpc: (id) => this.palaceHud?.openNpc(id),
+      onArea: (a) => this.palaceHud?.setArea(AREA_LABEL[a]),
+      onNear: (id) => this.palaceHud?.setNear(id),
+    });
+    this.palaceScreen.resize(this.width, this.height);
+    this.palaceHud.setArea(this.palaceScreen.areaLabel);
+    this.palaceHud.refresh();
+    this.lastFrame = performance.now();
+  }
+
+  /** 宮殿の時刻を進める(1刻 = 6時間 = 戦略マップの4分の1日)。そのあいだも、他国と歴史の事件が進む */
+  palaceAdvance(slots: number): void {
+    const P = this.campaign.palace;
+    for (let i = 0; i < slots && this.palaceScreen && !this.campaign.gameOver; i++) {
+      this.campaign.runDays(0.25);
+      P.slot = Math.floor(((this.campaign.day % 1) + 1e-6) * 4) % 4;
+      P.collectReports();
+    }
+    this.campaign.speed = 0;
+    if (!this.palaceScreen) return;
+    this.palaceScreen.onSlotChanged();
+    this.onDayChanged();
+  }
+
+  /** 政務に戻る(委任をやめて、戦略マップへ) */
+  exitPalace(): void {
+    const P = this.campaign.palace;
+    const n = P.reports.length;
+    P.active = false;
+    this.closePalaceScreen();
+    this.campaign.playerFactionId = this.playerFactionId;
+    this.campaign.speed = 0;
+    this.syncSpeedButton();
+    this.showNotice(`政務に戻りました。宮殿にいたあいだの報告 ${n}件は、もう一度宮殿に入ると「上奏」で読めます。時間は止まっています`);
+  }
+
+  private closePalaceScreen(): void {
+    this.palaceScreen?.dispose();
+    this.palaceScreen = null;
+    this.palaceHud = null;
+    const hudEl = this.root.querySelector("#palace-hud") as HTMLElement;
+    hudEl.hidden = true;
+    hudEl.replaceChildren();
+    this.root.classList.remove("in-palace");
+    this.dirty = true;
+    this.lastFrame = performance.now();
+  }
+
+  /** 皇帝生活モードの画面(テスト用) */
+  get palace(): { screen: PalaceScreen | null; hud: PalaceHud | null } {
+    return { screen: this.palaceScreen, hud: this.palaceHud };
   }
 
   /** FPSの計測(実機テスト用):1秒ごとに、描いたフレームの数と、いちばん長かったフレームの時間を出す */
@@ -1652,6 +1797,13 @@ export class Game {
     const now = performance.now();
     const dt = (now - this.lastFrame) / 1000;
     this.lastFrame = now;
+    // 皇帝生活モード:宮殿だけを動かして描く。戦略マップの時間は、宮殿の時刻が進むときだけ進む
+    if (this.palaceScreen && this.palaceHud) {
+      this.palaceScreen.update(dt);
+      this.palaceHud.tick(dt);
+      this.palaceScreen.render();
+      return;
+    }
     // 会戦中は戦場だけを動かして描く。戦略マップの時間は止まっている
     if (this.battle) {
       this.battle.update(dt);

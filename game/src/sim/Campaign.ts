@@ -16,6 +16,7 @@ import { Diplomacy, type DiploCommand } from "./diplomacy";
 import { Court } from "./court";
 import { HistorySystem } from "./history";
 import { TradeSystem } from "./trade";
+import { PalaceSystem } from "./palace";
 import { seasonOf, type ArmyOpRecord, type CampaignSave, type DynastySave, type Relation } from "./save";
 import type { BattleResult, CommanderFate, SideResult } from "../battle/types";
 import type { Army, ArmyStatus, BattleEvent, City, CityState, Faction, Person, PersonRole, PersonStatus, UnitTypeId } from "../data/types";
@@ -475,6 +476,8 @@ export class Campaign {
   readonly diplo!: Diplomacy;
   /** 皇室(家系・婚姻・子女・後継者・即位) */
   readonly court!: Court;
+  /** 皇帝生活モード(後宮・重臣への委任) */
+  readonly palace = new PalaceSystem(this);
   /** 歴史の重大事件と年表 */
   readonly history!: HistorySystem;
   /** シルクロードの交易 */
@@ -731,6 +734,22 @@ export class Campaign {
   }
 
   // ===== Version 51:軍団の帰城・軍団結合 =====
+
+  /**
+   * 時間を、ちょうど days 日だけ進める(皇帝生活モード:宮殿の時刻の移り・「日を過ごす」)。
+   * 政治は重臣(AI)に任せているので、会戦・事件・外交は、ほかの国と同じく自動で決まる。
+   */
+  runDays(days: number): void {
+    const end = this.day + days;
+    let n = 0;
+    while (this.day < end - 1e-9 && n++ < 200000 && !this.gameOver) {
+      // 1回で進む日数は 0.25秒 ÷ 1.2秒 × 速さ。残りの日数に合わせて速さを決める(行き過ぎない)
+      this.speed = Math.max(0.01, Math.min(8, (end - this.day) / (0.25 / SECONDS_PER_DAY)));
+      this.update(0.25);
+      if (this.spoils.pending) this.resolveCapture("preserve", true);
+    }
+    this.speed = 0;
+  }
 
   /** 帰城・結合の記録(AIの利用実績の報告とテストに使う。セーブに残す) */
   armyOpsLog: ArmyOpRecord[] = [];
@@ -1126,6 +1145,7 @@ export class Campaign {
       court: this.court.serialize(),
       history: this.history.serialize(),
       trade: this.trade.serialize(),
+      palace: this.palace.serialize(),
       logistics: this.logistics,
       strategy: this.strategy.serialize(),
       placement: this.placement.serialize(),
@@ -1170,6 +1190,7 @@ export class Campaign {
     this.diplo.restore(data.diplomacy);
     this.history.restore(data.history);
     this.trade.restore(data.trade);
+    this.palace.restore(data.palace);
     this.logistics.attrition = { ...(data.logistics?.attrition ?? {}) };
     this.logistics.expeditions = { ...(data.logistics?.expeditions ?? {}) };
     this.logistics.losses = JSON.parse(JSON.stringify(data.logistics?.losses ?? {}));
@@ -1622,6 +1643,7 @@ export class Campaign {
       }
       this.diplo.daily();
       this.history.daily();
+      if (this.palace.active) this.palace.dailyTick();
       if (this.playerFactionId !== null) this.strategy.daily(d + 1);
       this.listener.onDayChanged(d + 1);
     }

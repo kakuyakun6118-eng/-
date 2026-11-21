@@ -598,6 +598,30 @@ export class Court {
     return `${w.name}を正室に立てました`;
   }
 
+  /**
+   * 後宮の女官を、妃として人物の台帳に加える(皇帝生活モード)。架空の人物として扱う。
+   */
+  addPalaceLady(f: string, o: { name: string; born: number; people?: string; seed: string; bio: string; title: string }): Person {
+    return this.newPerson({ name: o.name, gender: "female", born: o.born, factionId: f, role: "minister", people: o.people, seed: o.seed, bio: o.bio, title: o.title,
+      stats: { leadership: 15, war: 8, intelligence: 50, politics: 40, charisma: 65 }, residence: this.c.capitalCityOf(f)?.id });
+  }
+
+  /**
+   * 後宮から妃(側室)を迎える(皇帝生活モード)。本人の同意は後宮の側で確かめてから呼ぶ。
+   * 側室の数は、いまの威信と国力の上限まで。正室がいなくても、妃として迎えられる(皇后の冊立は別に行う)。
+   */
+  palaceConsort(f: string, wifeId: string): string | null {
+    const h = this.c.rulerOf(f);
+    const w = persons.find((x) => x.id === wifeId);
+    if (!h || !w) return "人物が見つかりません";
+    if (this.spousesOf(h.id).some((x) => x.id === w.id)) return "すでに妃です";
+    if (this.isCloseKin(h, w)) return "近親どうしの婚姻はできません";
+    if (this.concubinesOf(h.id).length >= this.maxConcubines(f)) return `妃は、いまの威信と国力では${this.maxConcubines(f)}人までです`;
+    this.c.diplo.marriages.push({ husband: h.id, wife: w.id, kind: "secondary", historic: false, day: Math.floor(this.c.day) });
+    this.afterMarriage(h, w, "secondary");
+    return null;
+  }
+
   /** 新しい人物(架空)を作って台帳に加える */
   private newPerson(o: { name: string; gender: "male" | "female"; born: number; factionId: string; role: Person["role"]; people?: string; seed: string; bio: string; title: string; stats: Stats; father?: string; mother?: string; residence?: string }): Person {
     const id = `born_${this.nextId++}`;
@@ -1284,20 +1308,22 @@ export class Court {
       if (f.passive || f.fallen || f.id === this.c.playerFactionId) continue;
       const r = this.c.rulerOf(f.id);
       if (!r || this.isMinor(r)) continue;
+      // 皇帝生活モードの国では、皇帝の婚姻は後宮で本人どうしが決める(AIは妃を迎えない。後継者と教育は、これまでどおり)
+      const palaceF = this.c.palace.active && this.c.palace.factionId === f.id;
       const purse = this.c.factionStates[f.id] ?? { gold: 0, grain: 0 };
       const rep = this.c.economy.report(f.id);
       const rnd = (s: string): number => chance(`${day}|${f.id}|${s}`);
       const sponsor = (): Person | undefined => persons.filter((p) => p.factionId === f.id && p.role !== "ruler" && p.gender !== "female" && surnameOf(p) !== surnameOf(r) && (this.bloodDistance(p.id, r.id) ?? 99) > 4)
         .sort((a, b) => (this.c.loyalty.fame[b.id] ?? 0) - (this.c.loyalty.fame[a.id] ?? 0))[Math.floor(rnd("sp") * 3)];
       // 正室がいなければ、迎える(国内の未婚の女性か、名家の娘)
-      if (!this.primaryOf(r.id) && (this.age(r) ?? 30) < 60 && rnd("pri") < 0.6) {
+      if (!palaceF && !this.primaryOf(r.id) && (this.age(r) ?? 30) < 60 && rnd("pri") < 0.6) {
         const bride = this.brideCandidates(r).filter((w) => !this.isCloseKin(r, w))[0];
         if (bride) this.marry(r.id, bride.id, "primary");
         else {
           const sp = sponsor();
           if (sp && purse.gold > 600) this.takeNobleConsort(f.id, sp.id, "primary");
         }
-      } else if (this.primaryOf(r.id) && this.concubinesOf(r.id).length < this.maxConcubines(f.id) && purse.gold > rep.expense.total * 6 && (this.age(r) ?? 30) < 55 && rnd("con") < 0.2) {
+      } else if (!palaceF && this.primaryOf(r.id) && this.concubinesOf(r.id).length < this.maxConcubines(f.id) && purse.gold > rep.expense.total * 6 && (this.age(r) ?? 30) < 55 && rnd("con") < 0.2) {
         const sp = sponsor();
         if (sp) this.takeNobleConsort(f.id, sp.id, "secondary");
       }

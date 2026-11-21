@@ -372,6 +372,8 @@ export class Diplomacy {
         const h = persons.find((x) => x.id === opts.husbandId);
         const w = persons.find((x) => x.id === opts.wifeId);
         if (!h || !w) return { ok: false, text: "婚姻する2人を選んでください" };
+        // 皇帝生活モードの皇帝の婚姻は、後宮で本人どうしが決める(重臣・他国のAIは決めない)
+        if (this.c.palace.active && this.c.palace.ruler()?.id === h.id) return { ok: false, text: "皇帝の婚姻は、皇帝自身が後宮で決めます" };
         if (!((h.factionId === me && w.factionId === target) || (h.factionId === target && w.factionId === me))) return { ok: false, text: "2つの国の人物を1人ずつ選んでください" };
         const err = this.canMarry(h, w);
         if (err) return { ok: false, text: err };

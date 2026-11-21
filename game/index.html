@@ -422,12 +422,14 @@
           <div class="persons-head">
             <h2>皇室</h2>
             <select class="court-faction" aria-label="勢力"></select>
+            <button class="court-palace" type="button">皇帝生活(後宮へ)</button>
             <span class="court-message" role="status"></span>
             <button class="persons-close court-close" type="button">閉じる</button>
           </div>
           <div class="court-body"></div>
         </div>
       </section>
+      <section id="palace-hud" hidden></section>
       <section id="faction-select" hidden></section>
       <section id="gameover" hidden>
         <div class="persons-inner gameover-inner">
@@ -498,6 +500,9 @@
                 <label><input id="menu-bgm-mute" type="checkbox" /> 消音</label>
                 <span id="menu-bgm-state"></span>
               </div>
+              <label>皇帝生活モード</label>
+              <button id="menu-palace" type="button">皇帝生活(後宮へ)</button>
+              <p class="difficulty-note">政治・軍事・外交・財政を重臣に任せ、3Dの後宮で暮らします。宮殿にいるあいだも、他国と歴史の事件は進みます。「政務に戻る」で、いつでも戦略マップに戻れます。</p>
               <label class="dev-toggle"><input id="menu-dev" type="checkbox" /> 開発用の表示(敵AIの判断ログ)</label>
               <label class="dev-toggle"><input id="menu-fps" type="checkbox" /> 画面のなめらかさ(FPS)を表示する(実機テスト用)</label>
               <div id="menu-dev-panel" hidden>

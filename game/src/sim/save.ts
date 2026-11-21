@@ -62,6 +62,8 @@ export interface CampaignSave {
   history?: import("./history").HistorySave;
   /** 交易と兵站の記録。古いセーブには無い */
   trade?: import("./trade").TradeSave;
+  /** 皇帝生活モード(後宮の人物・時刻・報告) */
+  palace?: import("./palace").PalaceSave;
   logistics?: { attrition: Record<string, number>; expeditions: Record<string, number>; losses?: Record<string, Record<string, number>> };
   /** 戦略AIの作戦・記録(Version 40)。古いセーブには無い */
   strategy?: import("./strategy").StrategySave;
