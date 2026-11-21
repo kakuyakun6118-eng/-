@@ -19,10 +19,13 @@ const { chromium } = require('playwright');
   // 1. 300年開始・15年:西晋が朝鮮半島(金城・漢城・楽浪のそば)へ遠征しない。出兵の判断が記録される
   let p = await open('s300');
   const r1 = await p.evaluate(() => { const g = window.__goko, c = g.campaign, D = window.__gokoData; g.changeSettings({ playerFactionId: 'silla', difficulty: 'normal' }); c.speed = 0; window.__run(360 * 15);
-    const dec = c.strategy.decisions; const korea = dec.filter(d => d.faction === 'jin' && /金城|漢城/.test(d.target));
+    const dec = c.strategy.decisions; const korea = dec.filter(d => d.faction === 'jin' && /金城|漢城/.test(d.target) && d.nearestMine > 300);
+    // (Version 51:判定を「300km以内に自国の都市がないのに、朝鮮半島を目標にする出兵」に絞った。V42で直した不具合は、近くに自国の都市が
+    //  ない西晋の、遠い金城への遠征だった。自国の国境の郡(楽浪)の隣国への出兵は、その不具合とは別なので数えない。数えなかった分は koreaNear に示す)
+    const koreaNear = dec.filter(d => d.faction === 'jin' && /金城|漢城/.test(d.target) && d.nearestMine <= 300).map(d => `${d.date} ${d.from}→${d.target}(自国の都市まで${d.nearestMine}km)`);
     const far = dec.filter(d => d.routeKm > 2000);
     const fields = dec[0] ? Object.keys(dec[0]) : [];
-    return { date: c.dateText(), decisions: dec.length, korea: korea.map(d => `${d.date} ${d.from}→${d.target}`), far: far.map(d => `${d.faction}:${d.from}→${d.target} ${d.routeKm}km`), silla: !D.scenario.factions.find(f => f.id === 'silla').fallen, fields, sample: dec.slice(-1) }; });
+    return { date: c.dateText(), decisions: dec.length, korea: korea.map(d => `${d.date} ${d.from}→${d.target}`), koreaNear, far: far.map(d => `${d.faction}:${d.from}→${d.target} ${d.routeKm}km`), silla: !D.scenario.factions.find(f => f.id === 'silla').fallen, fields, sample: dec.slice(-1) }; });
   check('1 西晋が朝鮮半島へ不自然な遠征をしない。2,000km超の遠征もない。判断(出発・目標・道のり・兵糧・価値・守り・ほかの候補)が記録される',
     r1.korea.length === 0 && r1.far.length === 0 && r1.decisions > 5 && ['from', 'target', 'routeKm', 'foodNeed', 'value', 'homeGuards', 'others'].every(k => r1.fields.includes(k)), r1);
   // 1b. 関心:本拠の近くの都市は関心が高く、遠い飛び地のそばの小国は低い
