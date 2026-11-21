@@ -277,7 +277,8 @@ export class Economy {
         if (!fed) {
           const n = Math.round(over * 0.05);
           st.garrison -= n;
-          this.c.addLoss(owner, "兵糧不足による守備兵の脱走", n);
+          // (守備兵の脱走は、軍団の兵糧不足の消耗とは別に数える)
+          this.desertion[owner] = (this.desertion[owner] ?? 0) + n;
         }
       }
       // 兵糧が尽きた国の守備兵は、士気が下がる
@@ -285,6 +286,9 @@ export class Economy {
       st.support = Math.min(70, e.support + 0.5);
     }
   }
+
+  /** 兵糧が尽きて逃げた守備兵の数(国ごと。Version 51) */
+  readonly desertion: Record<string, number> = {};
 
   /** 金が尽きて未払いが続いている月数 */
   arrearsOf(factionId: string): number {

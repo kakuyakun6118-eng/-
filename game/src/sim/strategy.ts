@@ -17,6 +17,9 @@ export type StrategyProfile = (typeof rules.profiles)["normal"];
 export const strategyRules = rules;
 
 /** 都市に置ける守備兵の上限 */
+/** AIの帰城・軍団結合の使い方(Version 51。調整と確かめのために、場面ごとに切り替えられる) */
+export const armyOpsRules = { reorgMerge: true, wornReturn: true, idleReturn: true, rearReturn: true, capitalMerge: true, assemble: true };
+
 export function garrisonCap(city: City): number {
   return city.kind === "pass" ? rules.garrisonCap.pass : rules.garrisonCap.levels[cityLevelOf(city)];
 }
@@ -865,14 +868,15 @@ export class StrategyAi {
       }
     }
 
+    const V = armyOpsRules;
     // 1b) 再編成(Version 51:軍団結合を使う):同じ都市のそばで手の空いた小さな軍団が2つあれば、1つに結合する
     //     (以前は、小さいほうを解散して兵だけ移していた。いまは兵種・武将・兵糧をそのまま引き継ぐ)
     {
       const small = idle().filter((x) => x.supplied && totalTroops(x.army) < rules.costs.maxArmy * 0.6 && Math.floor(this.c.day) - (this.raised[x.army.id] ?? -999) > 90);
-      for (let i = 0; i < small.length; i++) {
+      for (let i = 0; i < small.length && V.reorgMerge; i++) {
         const a1 = small[i];
-        // 近く(120km以内)の小さな軍団。離れていれば、小さいほうが大きいほうのそばまで進んでから結合する
-        const b1 = small.slice(i + 1).find((x) => distanceKm(x.army, a1.army) < 120);
+        // 近く(40km以内。以前の再編成と同じ範囲)の小さな軍団。範囲を広げると大国が強くなりすぎたので、以前と同じにした
+        const b1 = small.slice(i + 1).find((x) => distanceKm(x.army, a1.army) < 40);
         if (!b1) continue;
         const [big, little] = totalTroops(a1.army) >= totalTroops(b1.army) ? [a1, b1] : [b1, a1];
         const n = totalTroops(little.army);
@@ -897,8 +901,8 @@ export class StrategyAi {
         if (all.filter((x) => this.c.armies.includes(x)).length < 2 || s === largest) break;
         const n = totalTroops(s.army);
         const worn = n < rules.costs.minArmy * 0.7;
-        const spare = (atPeace || rear(s)) && n < rules.costs.maxArmy * 0.5 && Math.floor(this.c.day) - (this.raised[s.army.id] ?? -999) > 180;
-        if (!worn && !spare) continue;
+        const spare = V.idleReturn && (atPeace || (V.rearReturn && rear(s))) && n < rules.costs.maxArmy * 0.5 && Math.floor(this.c.day) - (this.raised[s.army.id] ?? -999) > 180;
+        if ((!worn || !V.wornReturn) && !spare) continue;
         const home = this.homeOf(s, mine);
         if (!home || distanceKm(home, s.army) > 400) continue;
         if (this.c.orderReturn(s.army.id, home.id) === null) {
@@ -910,7 +914,7 @@ export class StrategyAi {
 
     // 1c2) 首都の防衛のための集結(Version 51):首都の300km以内に敵の軍団が迫っているとき、首都から200km以内の手の空いた
     //      2つの軍団を、首都に近いほうへ結合する(合わせて4万人まで)。首都の守備兵には手を付けない
-    if (cap && this.c.armies.some((o) => this.c.atWar(f, o.army.factionId) && distanceKm(o.army, cap) < 300)) {
+    if (V.capitalMerge && cap && this.c.armies.some((o) => this.c.atWar(f, o.army.factionId) && distanceKm(o.army, cap) < 300)) {
       const near = idle().filter((x) => distanceKm(x.army, cap) < 300).sort((x, y) => distanceKm(x.army, cap) - distanceKm(y.army, cap));
       if (near.length >= 2 && totalTroops(near[0].army) + totalTroops(near[1].army) <= 40000) {
         if (this.c.orderMerge(near[0].army.id, [near[1].army.id], this.betterCommander(near[0], near[1])) === null) this.note(f, `首都${cap.name}の守りのため、${near[1].army.name}を${near[0].army.name}に集めて結合`);
@@ -920,7 +924,7 @@ export class StrategyAi {
     // 1d) 大軍団の編成(Version 51):攻めの方針(侵攻・拡大・統一)のとき、いちばん大きい手の空いた軍団(3万人未満)のもとへ、
     //     400km以内の手の空いた軍団(3千人以上)を呼び寄せて結合し、攻め手を厚くする。結合後は5万人まで。
     //     軍団が3つ以上あるときだけ(すべてを1つにはしない)。首都の近く(80km以内)の軍団は呼ばない。国ごとに半年に1度まで
-    if ((posture === "invade" || posture === "expand" || posture === "unify") && Math.floor(this.c.day) - (this.mergedDay[f] ?? -9999) > 180) {
+    if (V.assemble && (posture === "invade" || posture === "expand" || posture === "unify") && Math.floor(this.c.day) - (this.mergedDay[f] ?? -9999) > 180) {
       const live = all.filter((x) => this.c.armies.includes(x));
       const ready = idle().filter((x) => this.ready(x) && totalTroops(x.army) >= 3000).sort((x, y) => totalTroops(y.army) - totalTroops(x.army));
       const lead = ready[0];
