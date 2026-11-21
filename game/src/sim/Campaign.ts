@@ -228,7 +228,7 @@ export class Campaign {
    * 捕虜になれば90%で滅亡、10%で後継者が即位して存続(後継者と残る都市があるときだけ)。
    * 君主が首都にいなければ、陥落だけでは捕らえない(遷都する)。判定は会戦ごとに決まる乱数で、1度だけ行う。
    */
-  private capitalFallen(def: string, city: City, captor: string, battleId: string, governorId: string | null | undefined): { rulerCaptured: boolean; rulerEscaped: boolean; rulerId?: string } {
+  private capitalFallen(def: string, city: City, captor: string, battleId: string, governorId: string | null | undefined, histRule?: { capture: "ifPresent"; survive: boolean }): { rulerCaptured: boolean; rulerEscaped: boolean; rulerId?: string } {
     const ruler = this.rulerOf(def);
     if (!ruler || this.capitalLog.some((l) => l.battleId === battleId)) return { rulerCaptured: false, rulerEscaped: false };
     const loc = this.placement.locationOf(ruler.id);
@@ -236,12 +236,13 @@ export class Campaign {
     void governorId;
     const here = (loc.kind === "city" || loc.kind === "court" || loc.kind === "army") && loc.cityId === city.id;
     const rule = capitalRules;
-    const entry = { day: Math.floor(this.day), date: this.dateText(), factionId: def, cityId: city.id, captor, rulerId: ruler.id, rulerAtCapital: here, captured: false, escaped: false, fell: false, survived: false, battleId };
+    const entry: Campaign["capitalLog"][number] = { day: Math.floor(this.day), date: this.dateText(), factionId: def, cityId: city.id, captor, rulerId: ruler.id, rulerAtCapital: here, captured: false, escaped: false, fell: false, survived: false, battleId, hist: histRule ? { survive: histRule.survive } : undefined, wasCapital: this.isCapital(city.id) };
     this.capitalLog.push(entry);
     this.capitalFallPending = battleId;
     if (this.capitalLog.length > 200) this.capitalLog.splice(0, this.capitalLog.length - 200);
     if (!here) return { rulerCaptured: false, rulerEscaped: false, rulerId: ruler.id };
-    if (chance(`${battleId}|capital|capture`) < rule.captureRate) {
+    // 事件の決まり:君主がいれば、必ず捕らえる(史料に明示された結果)
+    if (histRule || chance(`${battleId}|capital|capture`) < rule.captureRate) {
       entry.captured = true;
       return { rulerCaptured: true, rulerEscaped: false, rulerId: ruler.id };
     }
@@ -257,7 +258,9 @@ export class Campaign {
     const ruler = entry.rulerId ? personById(entry.rulerId) : undefined;
     const remaining = this.cities.filter((c) => c.kind !== "pass" && scenario.cityOwners[c.id] === def);
     const lost = this.cities.find((c) => c.id === entry.cityId)!;
-    const pickCapital = (): City | undefined => [...remaining].sort((a, b) => cityLevelOf(b) * 1000 - distanceKm(b, lost) / 10 - (cityLevelOf(a) * 1000 - distanceKm(a, lost) / 10))[0];
+    // 落ちた都市が首都でなかった(歴史の事件の攻城戦)なら、首都はそのまま
+    const keepCap = entry.wasCapital === false ? this.capitalCityOf(def) : undefined;
+    const pickCapital = (): City | undefined => keepCap ?? [...remaining].sort((a, b) => cityLevelOf(b) * 1000 - distanceKm(b, lost) / 10 - (cityLevelOf(a) * 1000 - distanceKm(a, lost) / 10))[0];
     if (!entry.captured && !remaining.length && ruler) {
       // 最後の都市を失った:君主は落ち延びたが、国を保つ都市がない。国は滅びる(君主は捕らえられていない)
       entry.fell = true;
@@ -285,7 +288,8 @@ export class Campaign {
       return;
     }
     // 捕虜:90%で滅亡、10%で存続(後継者と残る都市があるときだけ)
-    const stay = chance(`${battleId}|capital|survive`) >= capitalRules.fallRate;
+    // 存続か滅亡か:事件の決まりがあればそれに従い、なければ 10% で存続
+    const stay = entry.hist ? entry.hist.survive : chance(`${battleId}|capital|survive`) >= capitalRules.fallRate;
     const heir = ruler && remaining.length ? this.successionCandidates(def, ruler).map((x) => x.p).find((p) => this.personStatus(p.id) === "active" && !this.spoils.custodyOf(p.id) && !this.court.isMinor(p)) : undefined;
     if (!stay || !heir || !ruler) {
       entry.fell = true;
@@ -337,12 +341,13 @@ export class Campaign {
   /** 会戦の結果(戦死・捕虜・負傷)を、人物の状態に記録する */
   private recordFate(personId: string | undefined, fate: string | undefined): void {
     if (!personId) return;
+    // 戦死は、死亡の処理に回す(捕虜の記録・指揮・任地も外す。Version 42:捕虜の記録が残る不具合を直した)
     if (fate === "killed") {
-      this.personStates[personId] = "dead";
+      this.dieNaturally(personId, "battle");
       this.court?.recordCause(personId, "battle", "会戦で討たれる");
     }
     else if (fate === "captured") this.personStates[personId] = "captured";
-    else if (fate === "wounded") this.personStates[personId] = "wounded";
+    else if (fate === "wounded" && !this.spoils.custodyOf(personId)) this.personStates[personId] = "wounded";
   }
 
   /** その人物の、いまの役目(太守・守将か、軍団の指揮官)。無ければ null */
@@ -409,7 +414,7 @@ export class Campaign {
   /** 首都の陥落の記録(捕縛・滅亡・存続の判定は1回の陥落につき1度だけ。セーブにも残る) */
   /** 攻城での首都の陥落を処理している最中(都市の移転で、二重に遷都しないように) */
   private capitalFallPending: string | null = null;
-  capitalLog: { day: number; date: string; factionId: string; cityId: string; captor: string; rulerId?: string; rulerAtCapital: boolean; captured: boolean; escaped: boolean; fell: boolean; survived: boolean; newRuler?: string; newCapital?: string; battleId: string }[] = [];
+  capitalLog: { day: number; date: string; factionId: string; cityId: string; captor: string; rulerId?: string; rulerAtCapital: boolean; captured: boolean; escaped: boolean; fell: boolean; survived: boolean; newRuler?: string; newCapital?: string; battleId: string; hist?: { survive: boolean }; wasCapital?: boolean }[] = [];
   /** 名品・捕虜・保護・陥落の記録 */
   readonly spoils!: Spoils;
   /** 忠誠度・相性・名声 */
@@ -1141,6 +1146,8 @@ export class Campaign {
         this.collectIncome();
         this.trimEvents();
         this.loyalty.monthly();
+        // 捕虜の記録の整合(Version 42):本人が捕虜・保護下でない(健在・死亡)のに残る記録を片づける
+        for (let i = this.spoils.custody.length - 1; i >= 0; i--) if (!["captured", "protected"].includes(this.personStatus(this.spoils.custody[i].personId))) this.spoils.custody.splice(i, 1);
         this.diplo.monthly();
         this.court.monthly();
         this.checkRulers();
@@ -1292,6 +1299,14 @@ export class Campaign {
   private dynasty: DynastySave = { added: [], fallen: {}, roles: {}, rulers: {} };
   private readonly initialRoles = new Map(persons.map((p) => [p.id, p.role]));
   private readonly initialRulers = new Map(scenario.factions.map((f) => [f.id, f.ruler]));
+  private readonly initialNames = new Map(scenario.factions.map((f) => [f.id, f.name]));
+
+  /** 国号の中の君主の名(「漢(劉淵)」の「劉淵」)を、新しい君主の名に直す(Version 42。セーブに残す) */
+  private renameForRuler(f: Faction, oldName: string, newName: string): void {
+    if (!f.name.includes(`(${oldName})`)) return;
+    f.name = f.name.replace(`(${oldName})`, `(${newName})`);
+    (this.dynasty.names ??= {})[f.id] = f.name;
+  }
   /** プレイヤーの国が滅び、続ける国が無いとき true(時間は進まない) */
   gameOver = false;
 
@@ -1488,6 +1503,7 @@ export class Campaign {
     this.setRole(next.p.id, "ruler");
     f.ruler = next.p.name;
     this.dynasty.rulers[factionId] = next.p.name;
+    this.renameForRuler(f, old.name, next.p.name);
     this.addNews(`${f.name}の君主${old.name}が亡くなり、${next.p.name}が後を継ぎました${this.court.isMinor(next.p) ? `(${this.court.age(next.p)}歳の幼君)` : ""}`);
     this.loyalty.addFame(next.p.id, 5);
     this.loyalty.reevaluate(factionId, `君主${old.name}の死と、${next.p.name}の継承`);
@@ -1616,6 +1632,7 @@ export class Campaign {
     this.setRole(next.id, "ruler");
     f.ruler = next.name;
     this.dynasty.rulers[factionId] = next.name;
+    this.renameForRuler(f, old.name, next.name);
     delete this.court.heirs[factionId];
     delete this.court.regents[factionId];
     this.loyalty.reevaluate(factionId, `${old.name}の廃位と${next.name}の即位`);
@@ -1627,10 +1644,12 @@ export class Campaign {
     const f = scenario.factions.find((x) => x.id === factionId)!;
     this.setRole(old.id, "general");
     this.personStates[old.id] = "dead";
+    { const i = this.spoils.custody.findIndex((x) => x.personId === old.id); if (i >= 0) this.spoils.custody.splice(i, 1); }
     for (const s of this.armies) if (s.army.commanderId === old.id) s.army.commanderId = "";
     this.setRole(usurper.id, "ruler");
     f.ruler = usurper.name;
     this.dynasty.rulers[factionId] = usurper.name;
+    this.renameForRuler(f, old.name, usurper.name);
     delete this.court.heirs[factionId];
     this.loyalty.addFame(usurper.id, 5);
     this.loyalty.reevaluate(factionId, `${usurper.name}の簒奪`);
@@ -1815,6 +1834,7 @@ export class Campaign {
     for (let i = scenario.factions.length - 1; i >= 0; i--) if (scenario.factions[i].founded) scenario.factions.splice(i, 1);
     for (const f of scenario.factions) {
       f.ruler = this.initialRulers.get(f.id) ?? f.ruler;
+      f.name = this.initialNames.get(f.id) ?? f.name;
       delete f.fallen;
     }
     this.dynasty = { added: [], fallen: {}, roles: {}, rulers: {} };
@@ -1828,7 +1848,11 @@ export class Campaign {
       const f = scenario.factions.find((y) => y.id === id);
       if (f) f.ruler = name;
     }
-    this.dynasty = { added: d.added.map((f) => ({ ...f })), fallen: { ...d.fallen }, roles: { ...d.roles }, rulers: { ...d.rulers } };
+    for (const [id, nm] of Object.entries(d.names ?? {})) {
+      const f = scenario.factions.find((y) => y.id === id);
+      if (f) f.name = nm;
+    }
+    this.dynasty = { added: d.added.map((f) => ({ ...f })), fallen: { ...d.fallen }, roles: { ...d.roles }, rulers: { ...d.rulers }, names: { ...(d.names ?? {}) } };
   }
 
   /** 君主の役を戻す(spoils が人物の所属を戻したあとに呼ぶ) */
@@ -2119,7 +2143,6 @@ export class Campaign {
     const event = this.eventOf(result.battleId);
     if (!event || event.status === "completed") return;
     this.splitSupporters(event, result);
-    this.history?.onBattle(event, result);
     event.status = "completed";
     event.record = {
       winner: result.winner,
@@ -2202,7 +2225,9 @@ export class Campaign {
       const governorId = governorIdOf(city, prev);
       // 首都の陥落:君主の捕縛・脱出の判定(君主が太守を兼ねていても、この判定で決める)
       const def = event.defenderFactionId;
-      const cap = result.siege.captured && this.isCapital(city.id) && scenario.cityOwners[city.id] === def ? this.capitalFallen(def, city, event.attackerFactionId, event.battleId, governorId) : null;
+      // 歴史の事件の攻城戦で、事件に陥落の決まりがあれば、首都でなくても、その決まりで君主の捕縛を扱う(Version 42)
+      const histRule = event.histId ? this.history?.def(event.histId)?.fallRule : undefined;
+      const cap = result.siege.captured && (this.isCapital(city.id) || !!histRule) && scenario.cityOwners[city.id] === def ? this.capitalFallen(def, city, event.attackerFactionId, event.battleId, governorId, histRule) : null;
       const rulerGov = !!cap?.rulerId && governorId === cap.rulerId;
       if (!rulerGov) this.recordFate(governorId, d.commander);
       if (d.commander === "killed" || d.commander === "captured") state.governorId = null;
@@ -2254,6 +2279,9 @@ export class Campaign {
     }
     // 戦略AIの記録と、敗れたAIの軍団の撤退の判断
     this.strategy.onBattleResult(event, result);
+    // 歴史の会戦の結果:都市の持ち主・人物・首都の処理がすべて終わってから読む(Version 42:持ち主が変わる前に読んで、
+    // 「洛陽は持ちこたえた」と誤る不具合を直した)
+    this.history?.onBattle(event, result);
   }
 
   /** 1日ごとの消耗と回復 */

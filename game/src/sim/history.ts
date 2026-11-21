@@ -150,6 +150,12 @@ export interface HistEventDef {
   reserve?: string[];
   /** 歴史の会戦が決着したときの結果(勝った役。引き分けは null) */
   onBattle?: (x: Ctx, r: Record<string, string | undefined>, winner: string | null) => string;
+  /**
+   * この事件の攻城戦で都市が落ちたときの決まり(Version 42)。史料に明示された結果を、首都の陥落の処理(捕縛80%・滅亡90%)の
+   * 代わりに使う。capture:君主がその都市に実際にいれば捕らえる(いなければ捕らえない)。survive:捕らえても、
+   * 後継者と残る都市があれば国は続く(なければ滅びる)。首都でない都市でも、この決まりで君主の捕縛を扱う
+   */
+  fallRule?: { capture: "ifPresent"; survive: boolean };
 }
 
 // ---------------- 勢力の見つけ方 ----------------
@@ -478,13 +484,15 @@ export class HistorySystem {
     rec.roles = roles;
     rec.result = undefined;
     const before = snapshot(this.c);
+    this.notDone = null;
     const text = d.apply(x, roles, picks);
     // 戦略マップの変化(Version 41):変わった所を記録し、地図で光らせる
     const diff = diffSnapshots(this.c, before, snapshot(this.c));
     rec.changes = diff.changes;
     rec.violations = diff.violations;
     this.c.listener.onEventChanges?.(d.id, diff);
-    const historic = Object.entries(picks).every(([role, id]) => d.choices[role].find((ch) => ch.id === id)?.kind === "historic");
+    // 事件の会戦・攻城戦を始められなかった(軍団がない等)なら、史実どおりには起きていない(Version 42)
+    const historic = !this.notDone && Object.entries(picks).every(([role, id]) => d.choices[role].find((ch) => ch.id === id)?.kind === "historic");
     rec.status = historic ? "occurred" : "branched";
     rec.historic = historic;
     // 会戦がその場で決着した場合は、onBattle が書いた結果を後ろにつなぐ
@@ -643,6 +651,11 @@ export class HistorySystem {
       const winRole = win ? Object.keys(roles).find((k) => roles[k] === win) ?? null : null;
       const text = hd.onBattle(this.ctx(), roles, winRole);
       rec.result = `${rec.result ?? ""} → 会戦:${win ? `${name(win)}の勝利` : "引き分け"}。${text}`;
+      // 会戦の結果が史実と違った(守り切った・君主がいなかった・脱出した)なら、事件の記録を「分岐」にする(Version 42)
+      if (/史実との分岐/.test(text)) {
+        rec.status = "branched";
+        rec.historic = false;
+      }
       this.log("battle", `${hd.name}の会戦:${win ? `${name(win)}の勝利` : "引き分け"}(${event.location.name})。${text}`, undefined, hd.id);
       this.c.addNews(`【歴史】${hd.name}:${text}`);
     }
@@ -693,6 +706,9 @@ export class HistorySystem {
     this.prep = { ...(save.prep ?? {}) };
   }
 
+  /** 事件の会戦・攻城戦を始められなかった理由(resolve のあいだだけ) */
+  private notDone: string | null = null;
+
   // ================= 事件で使う操作 =================
   /** 都市を移す */
   give(cityId: string, to: string): boolean {
@@ -742,7 +758,7 @@ export class HistorySystem {
    */
   siege(att: ArmyState | undefined, cityId: string, histId: string, km = 420): string {
     const city = this.c.cities.find((x) => x.id === cityId);
-    if (!att || !city) return "攻城に出る軍団がない";
+    if (!att || !city) { this.notDone = "攻城に出る軍団がない"; return "攻城に出る軍団がない"; }
     // 瞬間移動はさせない:都市のすぐそば(45km以内)にいるときだけ、その場で攻城戦を始める(Version 40)
     if (distanceKm(att.army, city) > Math.min(km, NEAR_KM)) {
       const route = this.c.planRoute(att.army.id, city);
@@ -754,6 +770,7 @@ export class HistorySystem {
     att.army.lat = city.lat;
     att.route = null;
     const ev = this.c.startSiegeAt(att, city, histId);
+    if (!ev) this.notDone = "攻城戦を始められなかった";
     return ev ? `${city.name}の攻城戦が始まります(${att.army.name})` : "攻城戦を始められませんでした";
   }
 
@@ -767,7 +784,7 @@ export class HistorySystem {
    * 遠ければ、戦場へ向けて進軍させるだけ(瞬間移動はさせない)。
    */
   battle(att: ArmyState | undefined, def: ArmyState | undefined, place: { name: string; lon: number; lat: number }, histId: string, km = 420, tactics?: BattleEvent["tactics"]): string {
-    if (!att || !def) return "会戦に出る軍団がない";
+    if (!att || !def) { this.notDone = "会戦に出る軍団がない"; return "会戦に出る軍団がない"; }
     // 瞬間移動はさせない:両軍が戦場のすぐそば(45km以内)にいるときだけ、その場で会戦を始める(Version 40)
     const far = distanceKm(att.army, place) > Math.min(km, NEAR_KM) || distanceKm(def.army, place) > Math.min(km, NEAR_KM);
     if (far) {
@@ -789,6 +806,7 @@ export class HistorySystem {
     def.route = null;
     const ev = this.c.startEventAt(att, def, histId, tactics);
     if (ev) ev.location.name = place.name;
+    if (!ev) this.notDone = "会戦を始められなかった";
     return ev ? `${place.name}で会戦が始まります(${att.army.name} 対 ${def.army.name})` : "会戦を始められませんでした";
   }
 }
@@ -915,22 +933,28 @@ export const EVENTS: HistEventDef[] = [
       if (att) att.army.morale = Math.min(100, att.army.morale + (p.han === "storm" ? 8 : 0));
       return `漢が洛陽に迫った${p.jin === "call" ? "(晋は諸侯の援軍で守りを固めた)" : ""}。${h.siege(att, "luoyang", "yongjia311")}`;
     },
+    // 洛陽が落ちたとき:懐帝が洛陽に実際にいれば捕らえる。西晋は、後継者と残る都市があれば続く(史実では長安で316年まで)
+    fallRule: { capture: "ifPresent", survive: true },
     onBattle: (x, r) => {
       const h = H(x);
       const jin = r.jin!;
       const han = r.han!;
       if (owner("luoyang") === han) {
         h.flag("luoyang_lost", "1");
-        const ruler = x.c.rulerOf(jin);
-        if (ruler && alive(x.c, ruler.id) && (ruler.residence === "luoyang" || !ruler.residence)) {
-          h.capture(ruler.id, han);
+        // 君主の捕縛は、攻城戦の処理(この事件の決まり)が一度だけ行う。ここでは結果を読むだけ
+        const e = [...x.c.capitalLog].reverse().find((l) => l.factionId === jin && l.cityId === "luoyang");
+        const who = e?.rulerId ? P(e.rulerId)?.name ?? "" : "";
+        if (e?.captured) {
           h.flag("emperor_captured", "1");
-          return `洛陽は陥落し、${ruler.name}は漢に捕らえられた`;
+          const next = e.newRuler ? P(e.newRuler)?.name : undefined;
+          return `洛陽は陥落し、${who}は漢に捕らえられた${next ? `。${next}が即位し、晋は残る都市で続く` : e.fell ? "。晋は滅びた" : ""}`;
         }
+        if (e && !e.rulerAtCapital) return `洛陽は陥落したが、${who}は洛陽にいなかったので捕らえられなかった(史実との分岐)`;
+        if (e?.escaped) return `洛陽は陥落したが、${who}は脱出した(史実との分岐)`;
         return "洛陽は陥落した";
       }
       h.flag("luoyang_held", "1");
-      return "洛陽は持ちこたえた";
+      return "洛陽は持ちこたえた(史実との分岐)";
     },
   },
   {

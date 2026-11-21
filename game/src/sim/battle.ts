@@ -264,3 +264,18 @@ export function compareSides(setup: BattleSetup): { rows: ComparisonRow[]; notes
   if (d.kind === "army" && d.food <= 5) notes.push("防御側は食糧が尽きかけている");
   return { rows, notes };
 }
+
+/**
+ * プレイヤーが指揮する陣営(Version 42)。プレイヤーの国(と、加勢・救援に加わったプレイヤーの軍団)を、
+ * 攻撃側・防衛側の国と照らし合わせて決める。軍団の並び順や、処理を呼んだ順では決めない。
+ * どちらにもプレイヤーの国がいない(AIどうし)・観賞・編集モード(操作する勢力なし)なら null。
+ */
+export function playerSideOf(setup: BattleSetup, playerFactionId: string | null): "attacker" | "defender" | null {
+  if (!playerFactionId) return null;
+  const on = (side: BattleSide): boolean => side.factionId === playerFactionId || (side.supporters ?? []).some((s) => s.factionId === playerFactionId);
+  if (setup.defender.factionId === playerFactionId) return "defender";
+  if (setup.attacker.factionId === playerFactionId) return "attacker";
+  if (on(setup.defender)) return "defender";
+  if (on(setup.attacker)) return "attacker";
+  return null;
+}

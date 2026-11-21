@@ -682,9 +682,17 @@ export const EXTRA_EVENTS: HistEventDef[] = [
       const f = r.f!;
       if (p.f === "grant") {
         x.c.loyalty.add("shi_hu", 10, "丞相・魏王となる");
+        x.c.loyalty.addFame("shi_hu", 10);
         for (const id of ["cheng_xia", "xu_guang"]) if (inF(x.c, id, f)) x.c.court.kill(id, "execution", "石虎に殺される");
+        // 石虎が朝政を握る(摂政)。兵権も握り(いちばん大きな軍団を率いる)、幼い君主のもとで国内は揺れる(Version 42)
+        if (inF(x.c, "shi_hu", f)) {
+          x.c.court.regents[f] = "shi_hu";
+          const big = x.h.largestArmy(f);
+          if (big && big.army.commanderId !== "shi_hu" && !x.c.postOf("shi_hu")) big.army.commanderId = "shi_hu";
+        }
+        x.c.court.addStability(f, -5);
         x.h.flag("shihu_power", "1");
-        return "石虎が丞相・魏王となって朝政を握った";
+        return "石虎が丞相・魏王となって朝政と兵権を握った";
       }
       if (p.f === "cheng") {
         x.c.loyalty.add("shi_hu", -25, "地方へ出される");

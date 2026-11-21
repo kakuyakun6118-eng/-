@@ -4178,3 +4178,7 @@ select:focus-visible {
 #app { --safe-top: env(safe-area-inset-top, 0px); }
 #clock.narrow { font-size: 11px; gap: 4px; padding-left: 8px; }
 #clock.narrow #clock-treasury { font-size: 10px; }
+/* 会戦の準備画面:攻撃側・防衛側の国と、プレイヤーの陣営(Version 42) */
+.battle-roles { margin: 2px 0 0; font-size: 12px; color: var(--gold, #c8a252); font-weight: 600; }
+.battle-actions .battle-command:disabled { opacity: 1; border-color: var(--gold, #c8a252); color: var(--gold, #c8a252); cursor: default; }
+.battle-actions .battle-skip, .battle-actions .battle-auto { min-height: 40px; }

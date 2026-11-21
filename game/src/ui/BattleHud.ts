@@ -6,6 +6,8 @@ import type { BattleResult, BattleUnit, CommanderFate, SideId, SideResult, UnitS
 
 export interface BattleHudActions {
   onSelect(unitId: string): void;
+  /** 残りをスキップ(Version 42) */
+  onSkipRest?(): void;
   /** 攻城戦で守る側の命令(Version 41) */
   onWallDown?(): void;
   onToThreat?(): void;
@@ -92,6 +94,7 @@ export class BattleHud {
     const siegeDef = !!sim.siege && sim.playerSide === "defender";
     for (const b of root.querySelectorAll<HTMLElement>(".siege-def")) b.hidden = !siegeDef;
     on(".hud-wall-down", () => actions.onWallDown?.());
+    on(".hud-skip", () => actions.onSkipRest?.());
     on(".hud-to-threat", () => actions.onToThreat?.());
     on(".hud-def-gate", () => actions.onDefendGate?.());
     on(".hud-def-wall", () => actions.onDefendWall?.());
@@ -110,7 +113,8 @@ export class BattleHud {
       const info = side === "attacker" ? sim.setup.attacker : sim.setup.defender;
       const color = factionById(info.factionId)?.color ?? "#9a9a9a";
       root.style.setProperty(side === "attacker" ? "--att" : "--def", color);
-      this.q(`.hud-side-name.${side}`).textContent = info.name;
+      // プレイヤーの指揮する側に「(あなた)」、もう一方に「(AI)」を付ける(Version 42)
+      this.q(`.hud-side-name.${side}`).textContent = `${info.name}${side === sim.playerSide ? "(あなた)" : "(AI)"}`;
       // 部隊一覧
       const list = this.q(`.hud-list.${side}`);
       list.replaceChildren();
@@ -224,6 +228,13 @@ export class BattleHud {
 
   /** 「全軍撤退」の確認を出す。「撤退する」が押されたら onYes を呼ぶ */
   confirmRetreat(onYes: () => void): void {
+    this.confirm("全軍を撤退させますか? 背を向けて退くので、追撃で損害が出ます。", "撤退する", onYes);
+  }
+
+  /** 確認の画面(はい・いいえ) */
+  confirm(text: string, yes: string, onYes: () => void): void {
+    this.q(".hud-confirm-text").textContent = text;
+    this.q(".hud-confirm-yes").textContent = yes;
     const box = this.q(".hud-confirm");
     box.hidden = false;
     (this.q(".hud-confirm-yes") as HTMLButtonElement).onclick = () => {

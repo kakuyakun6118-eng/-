@@ -7,7 +7,7 @@ import { BattleScreen } from "../battle/BattleScreen";
 import type { BattleResult } from "../battle/types";
 import type { BattleEvent, BattleSetup, City, Person } from "../data/types";
 import { InputController } from "../input/InputController";
-import { compareSides, createBattleSetup, placeName } from "../sim/battle";
+import { compareSides, createBattleSetup, placeName, playerSideOf } from "../sim/battle";
 import { Campaign, type ArmyState } from "../sim/Campaign";
 import type { Route } from "../sim/pathfinding";
 import { migrateSave, SAVE_VERSION, type CitySave, type GameSettings, type SaveData } from "../sim/save";
@@ -22,7 +22,7 @@ import { DiplomacyScreen } from "../ui/DiplomacyScreen";
 import { CourtScreen } from "../ui/CourtScreen";
 import { EventsScreen } from "../ui/EventsScreen";
 import { HistoryEventScreen, TimelineScreen } from "../ui/HistoryScreen";
-import { estimateWinRate } from "../sim/autoBattle";
+import { autoResolve, estimateWinRate } from "../sim/autoBattle";
 import { governorIdOf } from "../sim/battle";
 import { PersonScreen } from "../ui/PersonScreen";
 import { FinanceScreen } from "../ui/FinanceScreen";
@@ -348,6 +348,7 @@ export class Game {
     });
     this.battlePrep = new BattlePrep(root.querySelector("#battle") as HTMLElement, {
       onStart: (side) => this.startBattle(side),
+      onAuto: (mode) => this.autoBattle(mode),
       onBack: () => this.closeBattlePrep(),
     });
     (root.querySelector("#event-open") as HTMLElement).addEventListener("click", () => {
@@ -1015,7 +1016,7 @@ export class Game {
     this.openBattleId = battleId;
     (this.root.querySelector("#event") as HTMLElement).hidden = true;
     const { rows, notes } = compareSides(setup);
-    this.battlePrep.show(setup, rows, notes);
+    this.battlePrep.show(setup, rows, notes, this.playerFactionId);
     this.root.classList.add("battle-open");
     // 戦場が中央の窓に収まるよう、カメラを寄せる(攻城戦は都市が入るよう少し引く)
     const city = event.defenderCityId ? this.allCities.find((c) => c.id === event.defenderCityId) : undefined;
@@ -1045,6 +1046,10 @@ export class Game {
     if (!event) return;
     const setup = createBattleSetup(event, (id) => this.campaign.stateOf(id)?.army, this.allCities, (c) => this.campaign.cityState(c));
     if (!setup) return;
+    // プレイヤーの陣営は、プレイヤーの国と攻撃側・防衛側の国を照らし合わせて決める(Version 42)。
+    // 通常のプレイでは、敵の側を指揮することはない(観賞・編集モードだけ、選んだ側を指揮できる)
+    const forced = playerSideOf(setup, this.playerFactionId);
+    if (forced) playerSide = forced;
     this.campaign.setEventStatus(event.battleId, "in_progress");
     this.battleSetup = setup;
     // 攻撃側から見た防御側の、実際の方角。戦場の「奥」をこの方角に合わせる
@@ -1092,6 +1097,34 @@ export class Game {
     (this.root.querySelector("#event-text") as HTMLElement).textContent = text;
     (this.root.querySelector("#event") as HTMLElement).hidden = false;
     this.layoutTopBar();
+  }
+
+  /**
+   * 自動戦闘・戦闘のスキップ(Version 42)。どちらも、AIどうしの会戦と同じ計算(autoResolve)で結果を決め、
+   * 手動の会戦と同じ処理(finishBattle → applyBattleResult)で戦略マップへ反映する。
+   * 自動戦闘は結果を準備画面に示してから戻り、スキップはすぐ戻る。
+   */
+  autoBattle(mode: "auto" | "skip"): BattleResult | null {
+    const event = this.openBattleId ? this.campaign.eventOf(this.openBattleId) : undefined;
+    if (!event || event.status === "completed") return null;
+    const setup = createBattleSetup(event, (id) => this.campaign.stateOf(id)?.army, this.allCities, (c) => this.campaign.cityState(c));
+    if (!setup) return null;
+    const result = autoResolve(setup);
+    // 囲んでいた日数ぶん、攻撃側の食糧が減る(AIどうしの攻城戦と同じ)
+    if (result.siege) {
+      const s = this.campaign.stateOf(event.attackerArmyId);
+      if (s) s.army.food = Math.max(0, s.army.food - result.siege.days * 0.5);
+    }
+    this.battleSetup = setup;
+    this.battlePrep.hide();
+    this.root.classList.remove("battle-open");
+    this.finishBattle(result);
+    if (mode === "auto") {
+      const side = playerSideOf(setup, this.playerFactionId);
+      const won = side ? result.winner === side : null;
+      this.showNotice(`自動戦闘の結果:${setup.name}は${result.winner === "draw" ? "引き分け" : `${(result.winner === "attacker" ? setup.attacker : setup.defender).name}の勝利`}${won === null ? "" : won ? "(あなたの勝ち)" : "(あなたの負け)"}。損害 ${setup.attacker.name} ${result.attackerLosses.toLocaleString("ja-JP")}人・${setup.defender.name} ${result.defenderLosses.toLocaleString("ja-JP")}人${result.siege ? (result.siege.captured ? `・${setup.location.name}は陥落(${result.siege.days}日)` : `・${setup.location.name}は持ちこたえた(${result.siege.days}日)`) : ""}`);
+    }
+    return result;
   }
 
   /** 会戦を終えて戦略マップに戻る。結果を軍団へ書き戻し、イベントを決着済みにする */

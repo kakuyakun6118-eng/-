@@ -36,6 +36,9 @@ export interface Snapshot {
   pfac: Record<string, string>;
   role: Record<string, string>;
   loyalty: Record<string, number>;
+  fame: Record<string, number>;
+  amity: Record<string, number>;
+  regents: Record<string, string>;
   armies: Record<string, ArmySnap>;
   rel: Record<string, string>;
   purse: Record<string, { gold: number; grain: number }>;
@@ -69,6 +72,9 @@ export function snapshot(c: Campaign): Snapshot {
     pfac: Object.fromEntries(persons.map((p) => [p.id, p.factionId])),
     role: Object.fromEntries(persons.map((p) => [p.id, p.role])),
     loyalty: { ...c.loyalty.loyalty },
+    fame: { ...c.loyalty.fame },
+    amity: { ...c.diplo.amity },
+    regents: { ...c.court.regents },
     armies,
     rel: { ...c.relations } as Record<string, string>,
     purse: JSON.parse(JSON.stringify(c.factionStates)) as Snapshot["purse"],
@@ -142,6 +148,23 @@ export function diffSnapshots(c: Campaign, a: Snapshot, b: Snapshot): EventDiff 
     if (a.role[p.id] !== b.role[p.id] && b.status[p.id] !== "dead" && b.role[p.id] !== "ruler" && a.role[p.id] !== "ruler") changes.push({ kind: "person", text: `${p.name}の役目:${ROLE[a.role[p.id]] ?? a.role[p.id]} → ${ROLE[b.role[p.id]] ?? b.role[p.id]}`, tone: "neutral" });
     const d = (b.loyalty[p.id] ?? 0) - (a.loyalty[p.id] ?? 0);
     if (Math.abs(d) >= 4 && a.loyalty[p.id] !== undefined) loyal[b.pfac[p.id]] = (loyal[b.pfac[p.id]] ?? 0) + Math.sign(d);
+  }
+  // 1人の大きな変化(Version 42):忠誠・名声が8以上動いた人
+  for (const p of persons) {
+    const dl = (b.loyalty[p.id] ?? 0) - (a.loyalty[p.id] ?? 0);
+    const df = (b.fame[p.id] ?? 0) - (a.fame[p.id] ?? 0);
+    if (b.status[p.id] === "dead") continue;
+    if (Math.abs(dl) >= 8 && a.loyalty[p.id] !== undefined) changes.push({ kind: "person", text: `${p.name}の忠誠 ${dl > 0 ? "+" : ""}${Math.round(dl)}`, tone: dl > 0 ? "gain" : "loss" });
+    if (Math.abs(df) >= 8 && a.fame[p.id] !== undefined) changes.push({ kind: "person", text: `${p.name}の名声 ${df > 0 ? "+" : ""}${Math.round(df)}`, tone: "gain" });
+  }
+  // 摂政(朝政を握る人)
+  for (const [f, id] of Object.entries(b.regents)) if (a.regents[f] !== id) changes.push({ kind: "ruler", text: `${fname(f)}の朝政:${pname(id)}が握る`, tone: "neutral" });
+  // 国どうしの友好度(10以上の変化)
+  for (const k of new Set([...Object.keys(a.amity), ...Object.keys(b.amity)])) {
+    const d = (b.amity[k] ?? 0) - (a.amity[k] ?? 0);
+    if (Math.abs(d) < 10) continue;
+    const [x, y] = k.split("|");
+    changes.push({ kind: "diplomacy", text: `${fname(x)}と${fname(y)}の友好度 ${d > 0 ? "+" : ""}${Math.round(d)}`, tone: d > 0 ? "gain" : "loss" });
   }
   for (const [f, n] of Object.entries(loyal)) if (Math.abs(n) >= 2) changes.push({ kind: "order", text: `${fname(f)}の臣下${Math.abs(n)}人の忠誠が${n > 0 ? "上がった" : "下がった"}`, tone: n > 0 ? "gain" : "loss" });
   // 軍団:新しい・消えた・動いた(瞬間移動の確かめ)・兵と兵糧と士気

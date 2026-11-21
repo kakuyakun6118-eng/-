@@ -125,6 +125,7 @@
           <span class="battle-type"></span>
           <h2 class="battle-name"></h2>
           <p class="battle-meta"></p>
+          <p class="battle-roles"></p>
         </header>
         <div class="battle-side attacker">
           <p class="battle-role">攻撃側</p>
@@ -152,7 +153,9 @@
           <button class="battle-info" type="button" aria-pressed="false">両軍情報</button>
           <button class="battle-command" type="button">指揮:攻撃側</button>
           <button class="menu-open" type="button">メニュー</button>
-          <button class="battle-start" type="button">戦闘開始</button>
+          <button class="battle-skip" type="button" title="戦闘の演出を省き、自動戦闘と同じ計算で結果を決めて、すぐ戦略マップへ戻る">戦闘をスキップ</button>
+          <button class="battle-auto" type="button" title="両軍をAIに任せて結果を計算し、結果を見てから戦略マップへ戻る">自動戦闘</button>
+          <button class="battle-start" type="button">手動で指揮</button>
         </footer>
         <div class="battle-handoff" hidden>
           <div class="battle-handoff-inner">
@@ -226,12 +229,13 @@
             <button class="hud-closeup" type="button">近景</button>
             <button class="hud-follow" type="button" aria-pressed="false">追従</button>
             <button class="hud-panels" type="button" aria-pressed="true" aria-label="部隊一覧と地形の表示を切り替える">一覧</button>
+            <button class="hud-skip" type="button">残りをスキップ</button>
             <button class="menu-open" type="button">メニュー</button>
           </div>
         </footer>
         <p class="hud-toast" hidden></p>
         <div class="hud-confirm" hidden>
-          <p>全軍を撤退させますか? 背を向けて退くので、追撃で損害が出ます。</p>
+          <p class="hud-confirm-text">全軍を撤退させますか? 背を向けて退くので、追撃で損害が出ます。</p>
           <button class="hud-confirm-yes" type="button">撤退する</button>
           <button class="hud-confirm-no" type="button">戦いを続ける</button>
         </div>

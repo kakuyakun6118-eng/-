@@ -3,7 +3,8 @@ import * as THREE from "three";
 import type { BattleSetup } from "../data/types";
 import { BattleHud } from "../ui/BattleHud";
 import type { HeightField } from "../world/heightField";
-import type { Difficulty } from "./ai";
+import { BattleAi, type Difficulty } from "./ai";
+import { SiegeAi } from "./siegeAi";
 import { BattleCamera } from "./BattleCamera";
 import { Battlefield, type TimeOfDay } from "./Battlefield";
 import { BattleSim } from "./BattleSim";
@@ -164,6 +165,9 @@ export class BattleScreen {
         this.refreshHud();
       },
       onRetreatAll: () => this.hud.confirmRetreat(() => this.sim.retreatAll(playerSide)),
+      // 残りをスキップ(Version 42):いまの兵・士気・疲労・兵糧・城壁と城門の傷み・配置・救援軍の到着を引き継いで、
+      // 両軍をAIに任せて、残りを同じ戦闘の計算で最後まで進める(開始時に戻して計算し直すことはしない)
+      onSkipRest: () => this.hud.confirm("残りの戦闘をスキップしますか? いまの状態から、両軍をAIに任せて結果まで計算します(やり直しはできません)。", "スキップする", () => this.skipRest()),
       // 攻城戦で守る側(Version 41)
       onWallDown: () => {
         let n = 0;
@@ -228,6 +232,8 @@ export class BattleScreen {
 
   /** 自軍の部隊がタップされた。複数選択の最中なら足したり外したりし、そうでなければその部隊だけを選ぶ */
   private tapOwnUnit(id: string, focus = false): void {
+    // 選べるのは、プレイヤーが指揮する側の部隊だけ(Version 42:敵の部隊を誤って指揮できないように)
+    if (this.sim.unit(id)?.side !== this.sim.playerSide) return;
     if (this.multi) {
       this.selectedIds = this.selectedIds.includes(id) ? this.selectedIds.filter((k) => k !== id) : [...this.selectedIds, id];
     } else {
@@ -338,6 +344,23 @@ export class BattleScreen {
   }
 
   // ===== 毎フレーム =====
+
+  /** 残りの戦闘を、いまの状態から両軍AIで最後まで進める。結果の画面が出る */
+  skipRest(): void {
+    if (this.sim.result) return;
+    const s = this.sim;
+    const mine = this.siege ? new SiegeAi(s.playerSide, this.siege) : new BattleAi(s.playerSide, "normal");
+    for (let i = 0; i < 200000 && !s.result; i++) {
+      mine.update(s, 0.1);
+      s.update(0.1);
+    }
+    this.skipped = true;
+    this.paused = false;
+    this.refreshHud();
+  }
+
+  /** 残りをスキップしたか */
+  skipped = false;
 
   /** 攻城戦か(音楽の場面を選ぶため) */
   get isSiege(): boolean {

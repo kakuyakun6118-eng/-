@@ -1,5 +1,6 @@
 // 会戦準備画面。攻撃側を左、防御側を右に置き、中央は戦略マップ(戦場と両軍の陣営)をそのまま見せる。
 // 「両軍情報」で、兵力・士気などを左右の棒で比べる表に切り替える。
+import { playerSideOf } from "../sim/battle";
 import { estimateWinRate } from "../sim/autoBattle";
 import { fillPortrait } from "./portrait";
 import { factionById, terrainRules } from "../data";
@@ -11,6 +12,8 @@ export interface BattlePrepActions {
   onStart(side: "attacker" | "defender"): void;
   /** 「戦略マップに戻る」が押された(戦闘は保留) */
   onBack(): void;
+  /** 「自動戦闘」「戦闘をスキップ」が押された(Version 42。どちらも自動戦闘と同じ計算) */
+  onAuto?(mode: "auto" | "skip"): void;
 }
 
 const TYPE_TEXT = { field_battle: "野戦", siege_battle: "攻城戦" } as const;
@@ -48,9 +51,15 @@ export class BattlePrep {
   /** プレイヤーが指揮する側(もう一方は自動で動く) */
   private playerSide: "attacker" | "defender" = "attacker";
 
+  /** プレイヤーの陣営が決まっている(通常のプレイ)なら、切り替えられない */
+  private locked = false;
+
   private setPlayerSide(side: "attacker" | "defender"): void {
     this.playerSide = side;
-    this.q(".battle-command").textContent = side === "attacker" ? "指揮:攻撃側" : "指揮:防御側";
+    const siege = this.setup?.battleType === "siege_battle";
+    const label = side === "attacker" ? (siege ? "攻城側" : "攻撃側") : siege ? "守城側" : "防衛側";
+    this.q(".battle-command").textContent = this.locked ? `あなたの陣営:${label}` : `指揮:${label}(観賞・編集モードでは切り替えられます)`;
+    (this.q(".battle-command") as HTMLButtonElement).disabled = this.locked;
     this.q(".battle-side.attacker").classList.toggle("commanded", side === "attacker");
     this.q(".battle-side.defender").classList.toggle("commanded", side === "defender");
   }
@@ -58,7 +67,11 @@ export class BattlePrep {
   constructor(private readonly root: HTMLElement, actions: BattlePrepActions) {
     this.q = (sel) => root.querySelector(sel) as HTMLElement;
     this.q(".battle-start").addEventListener("click", () => actions.onStart(this.playerSide));
-    this.q(".battle-command").addEventListener("click", () => this.setPlayerSide(this.playerSide === "attacker" ? "defender" : "attacker"));
+    this.q(".battle-command").addEventListener("click", () => {
+      if (!this.locked) this.setPlayerSide(this.playerSide === "attacker" ? "defender" : "attacker");
+    });
+    this.q(".battle-auto").addEventListener("click", () => actions.onAuto?.("auto"));
+    this.q(".battle-skip").addEventListener("click", () => actions.onAuto?.("skip"));
     this.q(".battle-back").addEventListener("click", actions.onBack);
     this.q(".battle-handoff-back").addEventListener("click", actions.onBack);
     this.q(".battle-info").addEventListener("click", () => this.setDetail(!this.detailOpen));
@@ -68,7 +81,12 @@ export class BattlePrep {
     return !this.root.hidden;
   }
 
-  show(setup: BattleSetup, rows: ComparisonRow[], notes: string[]): void {
+  /** いま指揮する陣営 */
+  get side(): "attacker" | "defender" {
+    return this.playerSide;
+  }
+
+  show(setup: BattleSetup, rows: ComparisonRow[], notes: string[], playerFactionId: string | null = null): void {
     this.root.dataset.type = setup.battleType;
     this.setup = setup;
     this.q(".battle-type").textContent = TYPE_TEXT[setup.battleType];
@@ -110,7 +128,13 @@ export class BattlePrep {
     noteList.replaceChildren(...[...notes, ...odds.factors.map((f) => `勝率の目安に効いているもの:${f}`)].map((n) => el("li", "", n)));
 
     this.q(".battle-handoff").hidden = true;
-    this.setPlayerSide("attacker");
+    // プレイヤーの陣営:プレイヤーの国を、攻撃側・防衛側の国と照らし合わせて決める(Version 42)
+    const mine = playerSideOf(setup, playerFactionId);
+    this.locked = mine !== null;
+    const who = (side: BattleSide, role: "attacker" | "defender"): string => `${factionById(side.factionId)?.name ?? side.name}(${mine === role ? "プレイヤー" : mine ? "AI" : "観賞"})`;
+    const siege = setup.battleType === "siege_battle";
+    this.q(".battle-roles").textContent = `攻撃側:${who(setup.attacker, "attacker")} / 防衛側:${who(setup.defender, "defender")}${mine ? ` / あなたの陣営:${mine === "attacker" ? (siege ? "攻城側" : "攻撃側") : siege ? "守城側" : "防衛側"}` : ""}`;
+    this.setPlayerSide(mine ?? "attacker");
     this.setDetail(false);
     this.root.hidden = false;
   }
