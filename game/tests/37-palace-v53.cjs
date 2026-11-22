@@ -1,7 +1,7 @@
 // Version 53:3D後宮の深化(性能・操作・画質・資源の片づけ・旧セーブ互換・個別の物語・表情と動き・宮廷事件・長期の進行)
 const { chromium, devices } = require('playwright');
 (async () => {
-  const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-precise-memory-info'] });
+  const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-precise-memory-info', '--js-flags=--expose-gc'] });
   const errs = []; const problems = []; const path = require('path');
   const open = async (sc, ctx = { viewport: { width: 1280, height: 800 } }) => { const p = await (await b.newContext(ctx)).newPage(); p.on('pageerror', e => errs.push(String(e).slice(0, 300))); await p.goto('file://' + process.argv[2] + '#s=' + sc); await p.waitForFunction(() => window.__goko, null, { timeout: 120000 }); return p; };
   const check = (label, ok, info) => { console.log((ok ? 'OK ' : 'NG ') + label, info === undefined ? '' : JSON.stringify(info).slice(0, 1500)); if (!ok) problems.push(label); };
@@ -20,9 +20,9 @@ const { chromium, devices } = require('playwright');
 
   // P2. 戦略マップとの往復で、資源(形・テクスチャ)が増え続けない
   const leak = await p.evaluate(async () => { const g = window.__goko, R = g['renderer']; const w = (ms) => new Promise(r => setTimeout(r, ms)); g.exitPalace(); await w(300);
-    const before = { geo: R.info.memory.geometries, tex: R.info.memory.textures, heap: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1e6) : 0 };
+    const before = { geo: R.info.memory.geometries, tex: R.info.memory.textures, heap: (window.gc?.(), performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1e6) : 0) };
     for (let i = 0; i < 10; i++) { g.enterPalace(); await w(150); g.exitPalace(); await w(80); } await w(500);
-    return { before, after: { geo: R.info.memory.geometries, tex: R.info.memory.textures, heap: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1e6) : 0 }, pixel: R.getPixelRatio() }; });
+    return { before, after: { geo: R.info.memory.geometries, tex: R.info.memory.textures, heap: (window.gc?.(), window.gc?.(), performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1e6) : 0) }, pixel: R.getPixelRatio() }; });
   check('P2 戦略マップとの往復10回で、形・テクスチャの数が増えない(資源の漏れがない)。画面の解像度も元に戻る', leak.after.geo <= leak.before.geo + 2 && leak.after.tex <= leak.before.tex + 1 && leak.after.heap < leak.before.heap + 60, leak);
 
   // P3. 操作:F で近くの人物に話しかける・仮想スティックで歩く・狭い回廊でカメラが近づく

@@ -505,6 +505,10 @@ export class StrategyAi {
     if (threat > power * (0.55 - 0.15 * pers.aggr + 0.15 * pers.caution) || stability < 25) {
       posture = "defend";
       reason = stability < 25 ? `国内が不安定(安定度${Math.round(stability)})なため守りを固める` : `国境に敵の軍団(兵力の目安${Math.round(threat)})が迫るため防衛を優先`;
+    } else if (this.c.palace.active && this.c.palace.factionId === f && this.c.palace.affairs.unrest() >= 0.6) {
+      // 皇帝生活モード:後宮の争い・皇后の廃立で宮廷が揺れているあいだは、重臣(戦略AI)は外征を控えて内を固める
+      posture = "develop";
+      reason = `後宮の争いで宮廷が揺れている(揺れ ${Math.round(this.c.palace.affairs.unrest() * 100)})ため、外征を控えて内を固める`;
     } else if (broke || hungry) {
       posture = "develop";
       reason = broke ? "財政が赤字で蓄えも乏しいため内政を優先" : "兵糧が乏しいため内政を優先";

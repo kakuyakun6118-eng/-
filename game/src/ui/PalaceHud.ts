@@ -3,6 +3,7 @@ import { persons } from "../data";
 import type { Campaign } from "../sim/Campaign";
 import { EDU_LABEL, type EduPolicy } from "../sim/court";
 import { ACTION_LABEL, AREA_LABEL, PalaceSystem, RANK_NAME, SLOT_LABEL, type Action, type PalaceNpc } from "../sim/palace";
+import { INCIDENT_LABEL } from "../sim/palaceAffairs";
 import { ENDING_LABEL } from "../sim/palaceStories";
 import type { Expr } from "../sim/palaceText";
 import { GIFT_COST, GIFT_LABEL, type Gift } from "../sim/palaceText";
@@ -67,7 +68,7 @@ export class PalaceHud {
       <div class="ph-top"><div class="ph-where"><b class="ph-area"></b><span class="ph-slot"></span><span class="ph-date"></span></div>
         <div class="ph-time"><button type="button" data-t="1">時を進める</button><button type="button" data-t="day">一日を終える</button><button type="button" data-t="10">十日を過ごす</button><button type="button" data-t="30">一月を過ごす</button>
         <label class="ph-auto"><input type="checkbox" checked /> 時の流れ(<span class="ph-auto-left"></span>)</label></div></div>
-      <div class="ph-side"><button type="button" data-s="reports">上奏<i class="ph-badge" hidden></i></button><button type="button" data-s="ministers">重臣</button><button type="button" data-s="roster">後宮の人々</button>
+      <div class="ph-side"><button type="button" data-s="reports">上奏<i class="ph-badge" hidden></i></button><button type="button" data-s="ministers">重臣</button><button type="button" data-s="roster">後宮の人々</button><button type="button" data-s="incidents">宮廷の事件<i class="ph-badge ph-inc-badge" hidden></i></button>
         <button type="button" data-s="children">子女</button><button type="button" data-s="banquet">宴を開く</button><button type="button" class="ph-quality">画質</button><button type="button" class="menu-open ph-menu">メニュー</button><button type="button" data-s="exit" class="ph-exit">政務に戻る</button></div>
       <button type="button" class="ph-near" hidden></button>
       <p class="ph-hint">PC:WASD・矢印で歩く/Fで話しかける/クリックした所へ歩く/ドラッグで視点/ホイールで拡大。iPhone:左下のスティックで歩く/タップした所へ歩く/ドラッグで視点/2本指で拡大。人物をタップすると話しかけます</p>
@@ -129,6 +130,10 @@ export class PalaceHud {
     const badge = this.q(".ph-badge");
     badge.hidden = n <= 0;
     badge.textContent = String(Math.min(99, n));
+    const inc = P.affairs.open().length;
+    const ib = this.q(".ph-inc-badge");
+    ib.hidden = inc <= 0;
+    ib.textContent = String(inc);
   }
 
   setArea(label: string): void {
@@ -387,6 +392,28 @@ export class PalaceHud {
       go.type = "button";
       go.addEventListener("click", () => this.d.exit());
       body.append(go);
+    } else if (kind === "incidents") {
+      const A = P.affairs;
+      head.append(this.el("h3", "", `宮廷の事件(後宮のできごと。選んだ結果は、国の安定度・忠誠・国庫などに反映します)`), close);
+      const open = A.open();
+      if (!open.length) body.append(this.el("p", "", "いま、決めることを待っている事件はありません"));
+      for (const inc of open) {
+        const card = this.el("div", "ph-incident");
+        card.append(this.el("b", "", `${INCIDENT_LABEL[inc.kind]}(期限まで${Math.max(0, inc.due - Math.floor(this.d.campaign.day))}日)`), this.el("p", "", inc.text), this.el("p", "ph-note", `起きたわけ:${inc.cause}`));
+        const row = this.el("div", "ph-choices");
+        for (const ch of inc.choices) {
+          const b = this.el("button", "ph-choice", ch.label);
+          b.type = "button";
+          b.addEventListener("click", () => { const r = A.resolve(inc.id, ch.id); this.sheet("incidents"); this.q(".ph-sheet-body").prepend(this.el("p", "ph-effect", `${r}${inc.effects.length ? `(${inc.effects.join("・")})` : ""}`)); this.refresh(); });
+          row.append(b);
+        }
+        card.append(row);
+        body.append(card);
+      }
+      const past = A.incidents.filter((i) => i.status !== "open").slice(-12).reverse();
+      if (past.length) body.append(this.el("h4", "", "これまでの事件"));
+      for (const i of past) body.append(this.el("p", "ph-report", `${INCIDENT_LABEL[i.kind]}:${i.status === "lapsed" ? "(放っておいた)" : ""}${i.result ?? ""}${i.effects.length ? `(${i.effects.join("・")})` : ""}`));
+      body.append(this.el("p", "ph-note", `後宮の揺れ ${Math.round(A.unrest() * 100)}(高いと、重臣は外征を控えます)`));
     } else if (kind === "ministers") {
       head.append(this.el("h3", "", "重臣(政治・軍事・外交・財政を任せています)"), close);
       for (const m of P.ministers()) {

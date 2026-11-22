@@ -13,6 +13,7 @@ import type { Campaign } from "./Campaign";
 import { surnameOf } from "./loyalty";
 import { chance } from "./spoils";
 import { ART_GIFT, ART_LABEL, confessLine, GIFT_COST, GIFT_LABEL, giftLine, HOPE_LABEL, inviteLine, moodExpr, pick, talkLines, TEMPER_LABEL, type Art, type Expr, type Gift, type Hope, type Temper } from "./palaceText";
+import { PalaceAffairs, TIE_LABEL, type AffairsSave } from "./palaceAffairs";
 import { ARC_TITLE, ARCS, ENDING_LABEL, type Arc, type StoryCtx, type StoryScene, type StoryState } from "./palaceStories";
 
 export type Area = "emperorHall" | "empressPalace" | "consortQuarters" | "ladiesStation" | "garden" | "bath" | "banquet" | "corridor";
@@ -98,6 +99,8 @@ export interface PalaceSave {
   v?: number;
   promises?: PalacePromise[];
   talkLog?: { day: number; npc: string; text: string }[];
+  /** 人間関係の種類・事件・皇后の廃立(Version 53 第4工程) */
+  affairs?: AffairsSave;
 }
 
 /** 交流の種類 */
@@ -130,7 +133,12 @@ export class PalaceSystem {
   festivals: Record<string, number> = {};
   nextId = 1;
 
-  constructor(private readonly c: Campaign) {}
+  /** 人間関係の種類・寵愛への反応・皇后と妃の立場・宮廷の事件・皇后の廃立 */
+  readonly affairs: PalaceAffairs;
+
+  constructor(private readonly c: Campaign) {
+    this.affairs = new PalaceAffairs(this, c);
+  }
 
   private get day(): number {
     return Math.floor(this.c.day);
@@ -149,7 +157,7 @@ export class PalaceSystem {
     return this.factionId ? this.c.rulerOf(this.factionId) : undefined;
   }
 
-  private note(text: string): void {
+  note(text: string): void {
     this.log.push({ day: this.day, text: `${this.c.dateText()} ${text}` });
     if (this.log.length > 200) this.log.splice(0, this.log.length - 200);
   }
@@ -194,7 +202,7 @@ export class PalaceSystem {
         // 君主が代わり、前の君主の妃だった人は、いまの皇帝の妃ではない(Version 53)
         if (!wife && known.bond === "spouse") known.bond = "none";
         known.rank = rank;
-        known.title = this.titleOf(p, rank);
+        known.title = this.affairs.isDeposed(known.id) && rank === "consort" ? "廃后(もとの皇后)" : this.titleOf(p, rank);
         if (wife) known.bond = "spouse";
         continue;
       }
@@ -266,6 +274,7 @@ export class PalaceSystem {
     this.sync();
     this.initRelations();
     this.assignStories();
+    this.affairs.palaceDays = 0;
   }
 
   /** 宮にいる成人の人物(交流できる人) */
@@ -353,12 +362,8 @@ export class PalaceSystem {
 
   /** 寵愛のしるし:ほかの、皇帝に想いを寄せる人の嫉妬が少し増える */
   private favor(n: PalaceNpc, amount: number): void {
-    for (const o of this.present()) {
-      if (o === n || o.romance < 40) continue;
-      const pride = o.temper === "proud" ? 1.6 : o.temper === "devoted" ? 1.3 : o.temper === "gentle" ? 0.6 : 1;
-      o.jealousy = clamp(o.jealousy + amount * pride);
-      o.relations[n.id] = clamp((o.relations[n.id] ?? 0) - amount * 0.5, -100, 100);
-    }
+    // 周りの反応は、性格と関係で違う(一族・仕える人は喜び、誇り高い人は妬み、内気な人は寂しがる。Version 53)
+    this.affairs.reactToFavor(n, amount);
     // 外戚:寵愛を受ける妃の一族(同じ姓・同じ民族の臣下)の忠誠が少し上がる
     if (n.bond === "spouse" && n.personId && amount >= 2) {
       const p = persons.find((x) => x.id === n.personId);
@@ -404,6 +409,8 @@ export class PalaceSystem {
     const cost = GIFT_COST[g];
     if (!purse || purse.gold < cost) return `国庫の金が足りません(${GIFT_LABEL[g]}は金${cost})`;
     purse.gold -= cost;
+    this.affairs.spent(cost);
+    this.affairs.lastGift = { npc: n.id, day: this.day };
     const k = this.once(n, "gift");
     const liked = n.likes.includes(g);
     const disliked = n.dislikes.includes(g);
@@ -613,6 +620,7 @@ export class PalaceSystem {
     if (!/立てました/.test(res)) return res;
     n.rank = "empress";
     n.title = "皇后";
+    this.affairs.deposed = this.affairs.deposed.filter((d) => d.npc !== n.id);
     n.looks.robe = "#8a1f1f";
     n.looks.trim = "#e8c860";
     // 皇后の冊立:ほかの妃の嫉妬、宮廷の安定、外戚
@@ -629,6 +637,7 @@ export class PalaceSystem {
     const list = guests.filter((g) => !g.left && this.ageOf(g) >= 18);
     if (!list.length) return "招く人を選んでください";
     purse.gold -= 200;
+    this.affairs.spent(200);
     const fest = this.festivalToday();
     const bonus = fest ? 1.5 : 1;
     const effects: string[] = [];
@@ -746,6 +755,7 @@ export class PalaceSystem {
     }
     this.heirTension();
     this.tickPromises();
+    this.affairs.daily();
     for (const n of this.npcs) {
       // 結末のあと、宮を出た人からの便り(60日ほどのち。一度だけ)
       if (n.left && n.story?.ending && !n.story.letter && this.day - n.story.last >= 60) {
@@ -833,6 +843,9 @@ export class PalaceSystem {
       親しい人: rel.filter(([, v]) => v >= 30).slice(0, 2).map(([id]) => nm(id)).join("・") || "—",
       合わない人: rel.filter(([, v]) => v <= -25).slice(-2).map(([id]) => nm(id)).join("・") || "—",
       間柄: n.bond === "spouse" ? "妃(婚姻)" : n.bond === "lover" ? "想いの通じた間柄" : "—",
+      ...(n.rank === "empress" || n.rank === "consort" ? (() => { const st = this.affairs.standing(n); return { 立場: `権威 ${st.authority}${st.deposed ? "・廃された皇后" : ""}${st.heirMother ? "・後継者の母" : ""}・子 ${st.sons.join("・") || "なし"}`, 一族: st.family.length ? `${st.family.slice(0, 3).join("・")}${st.family.length > 3 ? ` ほか${st.family.length - 3}人` : ""}(官職 ${st.offices}人)` : "—" }; })() : {}),
+      ...(this.affairs.serves[n.id] ? { 仕える主: this.npc(this.affairs.serves[n.id])?.name ?? "—" } : {}),
+      関係: this.affairs.relationsOf(n).slice(0, 3).map((r) => `${r.name}(${r.ties.map((t) => TIE_LABEL[t]).join("・") || (r.affection > 0 ? "好意" : "不仲")})`).join(" / ") || "—",
       出典: n.fictional ? "架空の人物(ゲームの中の人物)" : "史実の人物(性格・好みはゲームの設定)",
     };
   }
@@ -979,6 +992,7 @@ export class PalaceSystem {
     const purse = this.factionId ? this.c.factionStates[this.factionId] : undefined;
     if (!purse || purse.gold < gold) return false;
     purse.gold -= gold;
+    this.affairs.spent(gold);
     return true;
   }
 
@@ -1318,7 +1332,7 @@ export class PalaceSystem {
   // ===================== セーブ =====================
 
   serialize(): PalaceSave {
-    return JSON.parse(JSON.stringify({ active: this.active, factionId: this.factionId, slot: this.slot, npcs: this.npcs, reports: this.reports, newsSeen: this.newsSeen, log: this.log, avatar: this.avatar, festivals: this.festivals, nextId: this.nextId, v: 53, promises: this.promises, talkLog: this.talkLog })) as PalaceSave;
+    return JSON.parse(JSON.stringify({ active: this.active, factionId: this.factionId, slot: this.slot, npcs: this.npcs, reports: this.reports, newsSeen: this.newsSeen, log: this.log, avatar: this.avatar, festivals: this.festivals, nextId: this.nextId, v: 53, promises: this.promises, talkLog: this.talkLog, affairs: this.affairs.serialize() })) as PalaceSave;
   }
 
   restore(save: PalaceSave | undefined): void {
@@ -1336,6 +1350,7 @@ export class PalaceSystem {
     // Version 52 のセーブには、物語・約束・記憶が無い:空のまま始め、宮殿に入るときに物語の役を割り当てる
     this.promises = s?.promises ?? [];
     this.talkLog = s?.talkLog ?? [];
+    this.affairs.restore(s?.affairs);
     this.v = 53;
   }
 }
