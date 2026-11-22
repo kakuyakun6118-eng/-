@@ -12,7 +12,8 @@ import type { Person } from "../data/types";
 import type { Campaign } from "./Campaign";
 import { surnameOf } from "./loyalty";
 import { chance } from "./spoils";
-import { ART_GIFT, ART_LABEL, confessLine, GIFT_COST, GIFT_LABEL, giftLine, HOPE_LABEL, inviteLine, pick, talkLines, TEMPER_LABEL, type Art, type Gift, type Hope, type Temper } from "./palaceText";
+import { ART_GIFT, ART_LABEL, confessLine, GIFT_COST, GIFT_LABEL, giftLine, HOPE_LABEL, inviteLine, moodExpr, pick, talkLines, TEMPER_LABEL, type Art, type Expr, type Gift, type Hope, type Temper } from "./palaceText";
+import { ARC_TITLE, ARCS, ENDING_LABEL, type Arc, type StoryCtx, type StoryScene, type StoryState } from "./palaceStories";
 
 export type Area = "emperorHall" | "empressPalace" | "consortQuarters" | "ladiesStation" | "garden" | "bath" | "banquet" | "corridor";
 export const AREA_LABEL: Record<Area, string> = {
@@ -64,7 +65,18 @@ export interface PalaceNpc {
   fictional: boolean;
   /** 最後に皇帝と過ごした日 */
   seen: number;
+  /** 個別の物語(主要な6人。Version 53) */
+  story?: StoryState;
+  /** 記憶(重要な出来事。上限 30。Version 53) */
+  memory?: { day: number; kind: MemoryKind; text: string; data?: string }[];
+  /** いまの表情(Version 53) */
+  expr?: Expr;
+  /** 帰郷など、宮を離れている期限の日 */
+  awayUntil?: number;
 }
+
+export type MemoryKind = "gift" | "promise" | "story" | "event";
+export interface PalacePromise { id: string; npc: string; kind: string; text: string; made: number; due: number; status: "open" | "doing" | "kept" | "broken"; doneDay?: number; result?: string }
 
 export type ConcernKind = "family" | "study" | "chief" | "leave" | "quarrel" | "heir" | "sick";
 export interface Concern { kind: ConcernKind; text: string; other?: string; day: number }
@@ -82,6 +94,10 @@ export interface PalaceSave {
   avatar?: { x: number; z: number; facing: number };
   festivals: Record<string, number>;
   nextId: number;
+  /** Version 53 */
+  v?: number;
+  promises?: PalacePromise[];
+  talkLog?: { day: number; npc: string; text: string }[];
 }
 
 /** 交流の種類 */
@@ -170,6 +186,8 @@ export class PalaceSystem {
       const rank: PalaceRank = wife ? (primary?.id === p.id ? "empress" : "consort") : kin && (court.motherOf(ruler.id) === p.id || /太后/.test(p.title)) ? "dowager" : kin || royalWife ? "royal" : "lady";
       if (known) {
         known.left = false;
+        // 君主が代わり、前の君主の妃だった人は、いまの皇帝の妃ではない(Version 53)
+        if (!wife && known.bond === "spouse") known.bond = "none";
         known.rank = rank;
         known.title = this.titleOf(p, rank);
         if (wife) known.bond = "spouse";
@@ -242,11 +260,12 @@ export class PalaceSystem {
   begin(): void {
     this.sync();
     this.initRelations();
+    this.assignStories();
   }
 
   /** 宮にいる成人の人物(交流できる人) */
   present(): PalaceNpc[] {
-    return this.npcs.filter((n) => !n.left && this.ageOf(n) >= 18);
+    return this.npcs.filter((n) => !n.left && !(n.awayUntil !== undefined && n.awayUntil > this.day) && this.ageOf(n) >= 18);
   }
 
   npc(id: string): PalaceNpc | undefined {
@@ -358,6 +377,13 @@ export class PalaceSystem {
       lines.splice(1, lines.length - 1, "お見舞い、ありがとうございます。少し楽になりました。");
       n.trust = clamp(n.trust + 3 * k);
     }
+    // 記憶:約束・贈り物・物語・戦の情勢を、会話に織りまぜる(Version 53)
+    const mem = this.memoryLine(n);
+    if (mem) lines.splice(1, 0, mem.replace(/^「|」$/g, ""));
+    this.talkLog.push({ day: this.day, npc: n.id, text: lines.join(" ").slice(0, 80) });
+    if (this.talkLog.length > 50) this.talkLog.splice(0, this.talkLog.length - 50);
+    this.visitMistress(n);
+    n.expr = moodExpr(n.mood, n.jealousy, n.romance);
     const shy = n.temper === "shy" ? 0.6 : n.temper === "cheerful" ? 1.3 : 1;
     n.intimacy = clamp(n.intimacy + 3 * k * shy);
     n.trust = clamp(n.trust + 1.5 * k);
@@ -376,6 +402,9 @@ export class PalaceSystem {
     const k = this.once(n, "gift");
     const liked = n.likes.includes(g);
     const disliked = n.dislikes.includes(g);
+    this.remember(n, "gift", `陛下から${GIFT_LABEL[g]}を贈られた`, g);
+    this.visitMistress(n);
+    n.expr = liked ? "joy" : disliked ? "puzzled" : "smile";
     const proud = n.temper === "proud";
     const gain = liked ? 8 : disliked ? -3 : proud && cost < 20 ? 0 : 3;
     n.intimacy = clamp(n.intimacy + gain * k);
@@ -399,6 +428,8 @@ export class PalaceSystem {
       return { line: inviteLine(n.temper, false, kind), ok, effect: "今日は断られた(また別の日に)" };
     }
     const k = this.once(n, kind);
+    this.visitMistress(n);
+    n.expr = "smile";
     n.intimacy = clamp(n.intimacy + 5 * k);
     n.trust = clamp(n.trust + (kind === "meal" ? 5 : 3) * k);
     n.mood = clamp(n.mood + 6 * k);
@@ -709,6 +740,14 @@ export class PalaceSystem {
       }
     }
     this.heirTension();
+    this.tickPromises();
+    for (const n of this.npcs) {
+      // 結末のあと、宮を出た人からの便り(60日ほどのち。一度だけ)
+      if (n.left && n.story?.ending && !n.story.letter && this.day - n.story.last >= 60) {
+        n.story.letter = this.day;
+        this.report("palace", `${n.name}から便りが届きました:「${n.story.ending === "healer_out" ? "郡の医官のもとで、毎日病人を看ております" : n.story.ending === "home" ? `${n.origin}の麦が実りました。家族はみな元気です` : "宮の外で、書を読み続けております"}」`);
+      }
+    }
     const fest = this.festivalToday();
     if (fest && !this.reports.some((r) => r.day === day && r.text.includes(fest))) this.report("palace", `今日は${fest}です。宴会場で宴を開けば、皆が喜びます`);
   }
@@ -793,10 +832,488 @@ export class PalaceSystem {
     };
   }
 
+  // ===================== Version 53:個別の物語・約束・記憶 =====================
+
+  /** 約束(皇帝が人物にした約束。果たす行動をして日数がたつまで、果たした扱いにしない) */
+  promises: PalacePromise[] = [];
+  /** ふだんの会話の記録(上限 50。重要な出来事は人物ごとの記憶に構造化して残す) */
+  talkLog: { day: number; npc: string; text: string }[] = [];
+  /** セーブの版(Version 53 で 53) */
+  v = 53;
+
+  /** 人物の記憶に残す(重要な出来事。人物ごとに上限 30) */
+  remember(n: PalaceNpc, kind: MemoryKind, text: string, data?: string): void {
+    (n.memory ??= []).push({ day: this.day, kind, text, data });
+    if (n.memory.length > 30) n.memory.splice(0, n.memory.length - 30);
+  }
+
+  /** 主要な6人に、物語の役を割り当てる(女官は役に合う性格・好み・希望にそろえる。妃は史実の人物のまま) */
+  assignStories(): void {
+    const has = (a: Arc): boolean => this.npcs.some((n) => n.story?.arc === a && !n.left);
+    const ladies = (): PalaceNpc[] => this.present().filter((n) => n.rank === "lady" && n.fictional && !n.personId && !n.story);
+    const shape: Record<Exclude<Arc, "consort">, Pick<PalaceNpc, "temper" | "art" | "hope">> = {
+      scholar: { temper: "clever", art: "poetry", hope: "study" }, ambitious: { temper: "proud", art: "go", hope: "chief" }, provincial: { temper: "shy", art: "embroidery", hope: "family" },
+      attendant: { temper: "devoted", art: "music", hope: "serve" }, free: { temper: "cheerful", art: "herbs", hope: "leave" },
+    };
+    for (const a of ["scholar", "ambitious", "provincial", "attendant", "free"] as const) {
+      if (has(a)) continue;
+      const n = ladies()[0];
+      if (!n) break;
+      Object.assign(n, shape[a]);
+      n.likes = [ART_GIFT[n.art], n.likes.find((g) => g !== ART_GIFT[n.art]) ?? "sweets"];
+      n.dislikes = n.dislikes.filter((g) => !n.likes.includes(g));
+      if (!n.dislikes.length) n.dislikes = [GIFTS.find((g) => !n.likes.includes(g))!];
+      const flags: StoryState["flags"] = {};
+      if (a === "provincial") {
+        // 出身:都からいちばん遠い自国の都市(国の情勢が物語に響く)
+        const cap = this.c.capitalCityOf(this.factionId!);
+        const far = this.c.cities.filter((k) => k.kind !== "pass" && scenario.cityOwners[k.id] === this.factionId).sort((x, y) => (cap ? Math.hypot(y.lon - cap.lon, y.lat - cap.lat) - Math.hypot(x.lon - cap.lon, x.lat - cap.lat) : 0))[0];
+        if (far) { n.origin = far.name; flags.originId = far.id; }
+      }
+      n.story = { arc: a, stage: 0, flags, last: -999 };
+    }
+    if (!has("consort")) {
+      const w = this.present().find((n) => n.bond === "spouse" && !n.story) ?? this.present().find((n) => n.rank === "empress" && !n.story);
+      if (w) w.story = { arc: "consort", stage: 0, flags: {}, last: -999 };
+    }
+    // 主に仕える女官の主:皇后、いなければ最も位の高い妃
+    const att = this.npcs.find((n) => n.story?.arc === "attendant");
+    if (att && (!att.story!.flags.mistress || !this.npc(String(att.story!.flags.mistress)) || this.npc(String(att.story!.flags.mistress))!.left)) {
+      const m = this.present().find((n) => n.rank === "empress") ?? this.present().find((n) => n.bond === "spouse");
+      if (m) att.story!.flags.mistress = m.id;
+    }
+  }
+
+  /** 物語の主要な人物(6人まで) */
+  mains(): PalaceNpc[] {
+    return this.npcs.filter((n) => n.story);
+  }
+
+  private homeState(n: PalaceNpc): "safe" | "war" | "lost" {
+    const id = n.story?.flags.originId as string | undefined;
+    const city = id ? this.c.cities.find((k) => k.id === id) : undefined;
+    if (!city) return "safe";
+    if (scenario.cityOwners[city.id] !== this.factionId) return "lost";
+    const near = this.c.armies.some((s) => this.c.atWar(this.factionId!, s.army.factionId) && Math.hypot((s.army.lon - city.lon) * 85, (s.army.lat - city.lat) * 111) < 150);
+    return near ? "war" : "safe";
+  }
+
+  /** 物語の場面に渡す、いまの状態 */
+  storyCtx(n: PalaceNpc): StoryCtx {
+    const s = n.story!;
+    const ruler = this.ruler();
+    const mis = s.flags.mistress ? this.npc(String(s.flags.mistress)) : undefined;
+    const p = n.personId ? persons.find((x) => x.id === n.personId) : undefined;
+    const kin = p ? persons.filter((x) => x.factionId === this.factionId && x.gender !== "female" && x.role !== "ruler" && this.c.personStatus(x.id) === "active" && !this.c.court.isMinor(x) && surnameOf(x) === surnameOf(p) && x.people === p.people && x.id !== ruler?.id)
+      .sort((a, b) => (this.c.loyalty.fame[b.id] ?? 0) - (this.c.loyalty.fame[a.id] ?? 0))[0] : undefined;
+    const son = ruler && n.personId ? this.c.court.childrenOf(ruler.id).find((k) => this.c.court.motherOf(k.id) === n.personId && k.gender !== "female" && this.c.personStatus(k.id) !== "dead") : undefined;
+    const heir = this.factionId ? this.c.court.heirOf(this.factionId) : undefined;
+    const fac = this.factions()[0];
+    const hist = Object.values(this.c.history.records).filter((r) => r.status === "occurred" && (r.day ?? -9999) > this.day - 360).sort((a, b) => (b.day ?? 0) - (a.day ?? 0))[0];
+    const sick = this.present().find((o) => o !== n && o.sickUntil !== undefined && o.sickUntil >= this.day);
+    return {
+      name: n.name, emperor: ruler?.name ?? "陛下", slot: this.slot, month: this.c.calendar().month, day: this.day,
+      intimacy: n.intimacy, trust: n.trust, romance: n.romance, regard: n.regard, jealousy: n.jealousy, flags: s.flags, since: s.last,
+      romanceBlock: this.romanceBlock(n),
+      promise: (k) => (this.promises.filter((x) => x.npc === n.id && x.kind === k).slice(-1)[0]?.status ?? "none") as ReturnType<StoryCtx["promise"]>,
+      promiseResult: (k) => this.promises.filter((x) => x.npc === n.id && x.kind === k && x.status === "kept").slice(-1)[0]?.result,
+      origin: n.origin, home: this.homeState(n), atWar: scenario.factions.some((g) => g.id !== this.factionId && !g.fallen && this.c.atWar(this.factionId!, g.id)),
+      mistress: mis?.name, mistressJealous: !!mis && mis.jealousy >= 25,
+      kin: kin?.name, son: son?.name, sonIsHeir: !!son && heir?.id === son.id, hasEmpress: !!(ruler && this.c.court.primaryOf(ruler.id)),
+      strongFaction: fac ? `${fac.leader.name}の派` : undefined, recentHistory: hist ? this.c.history.def(Object.entries(this.c.history.records).find(([, r]) => r === hist)?.[0] ?? "")?.name : undefined,
+      sickName: sick?.name,
+    };
+  }
+
+  /** 物語の状態:次の段階に進めるか(進めないなら手がかり) */
+  storyStatus(n: PalaceNpc): { arc?: Arc; title?: string; stage: number; ready: boolean; hint: string; ending?: string } {
+    const s = n.story;
+    if (!s) return { stage: 0, ready: false, hint: "" };
+    if (s.stage >= 5) return { arc: s.arc, title: ARC_TITLE[s.arc], stage: 5, ready: false, hint: "物語は結末を迎えた", ending: s.ending };
+    if (n.left) return { arc: s.arc, title: ARC_TITLE[s.arc], stage: s.stage, ready: false, hint: "宮にいない" };
+    const why = ARCS[s.arc][s.stage].cond(this.storyCtx(n));
+    return { arc: s.arc, title: ARC_TITLE[s.arc], stage: s.stage, ready: !why, hint: why ?? "物語が進められる" };
+  }
+
+  storyScene(n: PalaceNpc): StoryScene | null {
+    const st = this.storyStatus(n);
+    if (!st.ready || !n.story) return null;
+    return ARCS[n.story.arc][n.story.stage].scene(this.storyCtx(n));
+  }
+
+  /** 物語の選択をする。段階が1つ進み、選択の効き目がゲームの状態に出る。結末の段階では、結末が決まる */
+  storyChoose(n: PalaceNpc, choiceId: string): { text: string; expr: Expr; ending?: string } | string {
+    const scene = this.storyScene(n);
+    if (!scene || !n.story) return "いまは物語を進められません";
+    const ch = scene.choices.find((c) => c.id === choiceId);
+    if (!ch) return "その選択肢はありません";
+    const x = this.storyCtx(n);
+    const block = ch.need?.(x);
+    if (block) return block;
+    const s = n.story;
+    const stage = s.stage + 1;
+    s.flags[`s${stage}`] = choiceId;
+    const r = this.storyEffect(n, s.arc, stage, choiceId);
+    s.stage = stage;
+    s.last = this.day;
+    n.seen = this.day;
+    this.remember(n, "story", `${ARC_TITLE[s.arc]} 第${stage}段階:${ch.label}`, `${stage}:${choiceId}`);
+    if (r.ending) {
+      s.ending = r.ending;
+      this.note(`${n.name}の物語「${ARC_TITLE[s.arc]}」が結末を迎えた:${ENDING_LABEL[r.ending] ?? r.ending}`);
+      this.report("palace", `${n.name}の物語「${ARC_TITLE[s.arc]}」:${ENDING_LABEL[r.ending] ?? r.ending}`);
+    }
+    return r;
+  }
+
+  private bump(n: PalaceNpc, d: Partial<Record<"intimacy" | "trust" | "romance" | "regard" | "mood" | "jealousy", number>>): void {
+    for (const [k, v] of Object.entries(d) as [keyof typeof d, number][]) n[k] = clamp(n[k] + v);
+  }
+
+  private spend(gold: number): boolean {
+    const purse = this.factionId ? this.c.factionStates[this.factionId] : undefined;
+    if (!purse || purse.gold < gold) return false;
+    purse.gold -= gold;
+    return true;
+  }
+
+  /** 恋の結末:本人の同意(後宮の決まり)を通す。断られたら、友として結ぶ */
+  private romanceEnd(n: PalaceNpc, fallback: string): { text: string; expr: Expr; ending: string } {
+    if (this.romanceBlock(n)) return { text: "二人は、心を許した友として結ばれた。", expr: "smile", ending: fallback };
+    if (n.bond === "none") {
+      n.coolUntil = undefined;
+      const r = this.propose(n, "confess");
+      if (typeof r === "string" || !r.ok) return { text: typeof r === "string" ? r : `${r.line}(気持ちを尊重し、友として結ばれた)`, expr: "puzzled", ending: fallback };
+      return { text: r.line, expr: "shy", ending: "lover" };
+    }
+    return { text: "これまでの想いが、いっそう深まった。", expr: "shy", ending: "lover" };
+  }
+
+  private storyEffect(n: PalaceNpc, arc: Arc, stage: number, id: string): { text: string; expr: Expr; ending?: string } {
+    const f = n.story!.flags;
+    const ok = (t: string, e: Expr = "smile"): { text: string; expr: Expr } => ({ text: t, expr: e });
+    if (arc === "scholar") {
+      if (stage === 1) {
+        if (id === "praise") { this.bump(n, { intimacy: 6, trust: 4 }); return ok("「……では、続きを。春の柳を詠んだものです」"); }
+        if (id === "reply") { this.bump(n, { regard: 8, intimacy: 4 }); return ok("「陛下も詩をなさるのですね!」", "joy"); }
+        this.bump(n, { trust: -3, regard: -2 }); return ok("「……はい。務めに戻ります」", "sad");
+      }
+      if (stage === 2) {
+        if (id === "lend") { this.makePromise(n, "books", "書庫の書を届ける", 20); this.bump(n, { trust: 3 }); return ok("「本当ですか……楽しみにお待ちしております」", "joy"); }
+        if (id === "salon") {
+          this.bump(n, { mood: 10, intimacy: 5 });
+          for (const o of this.present()) if (o !== n && (o.art === "poetry" || o.art === "painting")) { n.relations[o.id] = clamp((n.relations[o.id] ?? 0) + 8, -100, 100); o.relations[n.id] = clamp((o.relations[n.id] ?? 0) + 8, -100, 100); }
+          return ok("詩の会が開かれ、詩を好む女官たちとの仲が深まった。", "joy");
+        }
+        this.bump(n, { trust: -4 }); return ok("「……心得ました」", "sad");
+      }
+      if (stage === 3) {
+        if (id === "post") { n.title = "女史"; this.bump(n, { trust: 10, regard: 6 }); this.c.court.addStability(this.factionId!, 1); return ok("彼女は宮中の女史(記録の役)に取り立てられた。", "joy"); }
+        if (id === "marry") { this.bump(n, { trust: -5, romance: -10 }); return ok("「……家の決めたこと、ですものね」", "sad"); }
+        this.bump(n, { romance: 10, intimacy: 5 }); return ok("「陛下……」", "shy");
+      }
+      if (stage === 4) {
+        if (id === "respect") this.bump(n, { trust: 8 });
+        if (id === "compile") this.bump(n, { trust: 6, regard: 4 });
+        return ok(id === "free" ? "「宮を、出てもよいと……」" : "「ありがとうございます」", id === "free" ? "surprised" : "smile");
+      }
+      // 結末
+      const broken = this.promises.some((p) => p.npc === n.id && p.status === "broken");
+      if (broken && (f.s1 === "duty" || f.s2 === "duty")) return { ...ok("「陛下には、もう何も申し上げることはございません」", "sad"), ending: "distant" };
+      if (f.s4 === "free" || (f.s4 === "respect" && f.s3 === "marry")) { this.leave(n, f.s4 === "free" ? "学問の道を求めて宮を出た" : "家の決めた道へ進み、宮を出た"); return { ...ok(f.s4 === "free" ? "「宮の外で、書を読み続けます。いつか、陛下に一冊をお届けします」" : "「……嫁いでも、筆は捨てません」", "smile"), ending: "leave" }; }
+      if (f.s4 === "respect" && f.s3 === "heart") return this.romanceEnd(n, "friend");
+      if (f.s4 === "compile") { n.title = "女史"; this.c.court.addStability(this.factionId!, 1); return { ...ok("二人は、宮の詩と記録をまとめる仲間になった。", "joy"), ending: "colleague" }; }
+      n.title = n.title === "女史" ? n.title : "女史";
+      return { ...ok("彼女は女史として、書と記録の道に生きることを選んだ。", "joy"), ending: "scholar" };
+    }
+    if (arc === "ambitious") {
+      if (stage === 1) {
+        if (id === "task") { this.bump(n, { trust: 6, regard: 4 }); return ok("「お任せください。一反残らず改めます」", "joy"); }
+        if (id === "politics") { this.bump(n, { intimacy: 6 }); return ok("「宮中は、見えない糸だらけでございます」"); }
+        this.bump(n, { regard: -5, trust: -2 }); return ok("「……かしこまりました」", "angry");
+      }
+      if (stage === 2) {
+        const fac = this.factions()[0];
+        if (id === "side" && fac) { n.relations[fac.leader.id] = clamp((n.relations[fac.leader.id] ?? 0) + 20, -100, 100); fac.leader.relations[n.id] = clamp((fac.leader.relations[n.id] ?? 0) + 10, -100, 100); return ok(`彼女は${fac.leader.name}の派に近づいた。`, "smile"); }
+        if (id === "spy") { this.bump(n, { trust: 2 }); return ok("「……陛下のためなら」", "puzzled"); }
+        this.bump(n, { trust: 4 }); return ok("「どこにも属さぬ、というのも勇気が要りますね」");
+      }
+      if (stage === 3) {
+        if (id === "investigate") { this.makePromise(n, "investigate", "絹の噂を調べさせる", 15); return ok("「ありがとうございます……真実が明らかになれば」", "smile"); }
+        if (id === "trust") { this.bump(n, { trust: 10 }); this.favor(n, 3); return ok("「陛下……」", "joy"); }
+        this.bump(n, { trust: -15, regard: -10 }); return ok("「……」", "sad");
+      }
+      if (stage === 4) return ok(id === "chief" ? "「わたくしが、尚宮に……」" : id === "consort" ? "「妃に……?」" : "「自分の道、ですか」", id === "consort" ? "surprised" : "puzzled");
+      if (f.s3 === "blame" && n.trust < 30) return { ...ok("「陛下のお心は、よくわかりました」", "sad"), ending: "distant" };
+      if (f.s4 === "chief") { n.title = "尚宮(女官の長)"; this.c.court.addStability(this.factionId!, 2); this.bump(n, { mood: 15, regard: 8 }); return { ...ok("彼女は尚宮となり、後宮の務めを束ねることになった。", "joy"), ending: "chief" }; }
+      if (f.s4 === "consort") {
+        // 本人の望みは「務めで認められること」。気持ちが十分でなければ、断る(本人の意思)
+        if (n.romance < 65) { this.bump(n, { trust: 3 }); return { ...ok("「お言葉はうれしゅうございます。けれど、わたくしは務めで認められたいのです」(本人の意思で、自分の道を選んだ)", "puzzled"), ending: "own" }; }
+        const r = this.romanceEnd(n, "own");
+        if (r.ending === "lover") {
+          const c2 = this.propose(n, "consort");
+          if (typeof c2 !== "string" && c2.ok) return { text: c2.line, expr: "shy", ending: "consort" };
+        }
+        return r;
+      }
+      for (const o of this.present()) if (o.rank !== "lady") n.relations[o.id] = clamp((n.relations[o.id] ?? 0) * 0.5, -100, 100);
+      return { ...ok("彼女は派閥から離れ、務めに打ち込むことにした。", "smile"), ending: "own" };
+    }
+    if (arc === "provincial") {
+      if (stage === 1) {
+        if (id === "ask") { this.bump(n, { intimacy: 7 }); return ok("「麦の畑が、どこまでも続く所です」", "smile"); }
+        if (id === "cheer") { this.bump(n, { trust: 3 }); return ok("「はい……慣れるよう、努めます」"); }
+        return ok("彼女は、しばらく空を見ていた。", "sad");
+      }
+      if (stage === 2) {
+        if (id === "family") { this.makePromise(n, "family", `${n.origin}の家族の様子を調べさせる`, 30); this.bump(n, { trust: 4 }); return ok("「調べて……くださるのですか」", "joy"); }
+        if (id === "letter") { if (!this.spend(20)) return ok("国庫の金が足りず、文を届けられなかった。", "sad"); this.bump(n, { trust: 5 }); return ok("「文が届けば、母も安心します」", "joy"); }
+        this.bump(n, { trust: 3 }); return ok("「……正直に言ってくださって、ありがとうございます」", "sad");
+      }
+      if (stage === 3) {
+        if (id === "help") {
+          const lost = (this.promises.filter((p) => p.npc === n.id && p.kind === "family" && p.status === "kept").slice(-1)[0]?.result ?? this.homeState(n)) === "lost";
+          if (!this.spend(lost ? 80 : 40)) return ok("国庫の金が足りず、手を差しのべられなかった。", "sad");
+          this.bump(n, { trust: 10, regard: 5 });
+          return ok(lost ? "使者が行方を探し、兄が近くの城に逃れて無事だと分かった。" : "薬と見舞いの品が、故郷へ送られた。", "joy");
+        }
+        if (id === "visit") { n.sickUntil = undefined; n.awayUntil = this.day + 20; this.bump(n, { trust: 8, mood: 15 }); return ok("彼女は20日のあいだ、故郷へ帰ることになった。", "joy"); }
+        this.bump(n, { trust: -3, romance: 3 }); return ok("「……陛下がそうおっしゃるなら」", "sad");
+      }
+      if (stage === 4) return ok(id === "home" ? "「故郷へ……」" : id === "bring" ? "「家族を、都へ?」" : "「陛下……」", id === "heart" ? "shy" : "surprised");
+      if (f.s4 === "home") { this.leave(n, `${n.origin}へ帰り、家族のもとで暮らすことにした`); return { ...ok("「陛下のことは、故郷の空を見るたびに思い出します」", "smile"), ending: "home" }; }
+      if (f.s4 === "bring") {
+        if (!this.spend(200)) return { ...ok("国庫の金が足りず、家族を呼び寄せられなかった。彼女は宮にとどまっている。", "sad"), ending: "friend" };
+        this.bump(n, { mood: 25, trust: 10 }); return { ...ok("家族が都へ移り、彼女は宮仕えを続けながら、休みの日に家族と会えるようになった。", "joy"), ending: "family" };
+      }
+      return this.romanceEnd(n, "friend");
+    }
+    if (arc === "attendant") {
+      const m = f.mistress ? this.npc(String(f.mistress)) : undefined;
+      if (stage === 1) {
+        if (id === "ask") { this.bump(n, { trust: 4 }); if (m) n.relations[m.id] = clamp((n.relations[m.id] ?? 0) + 2, -100, 100); return ok(`「${m?.name ?? "主"}さまは、お健やかでございます」`); }
+        if (id === "self") { this.bump(n, { intimacy: 6 }); return ok("「わたくしのこと、ですか……」", "shy"); }
+        this.bump(n, { trust: -2, regard: 2 }); return ok("「主に隠しごとはいたしません」", "normal");
+      }
+      if (stage === 2) {
+        if (id === "visit" && m) { this.makePromise(n, "visit", `${m.name}を訪ねる`, 10); return ok("「主も、お喜びになります」", "joy"); }
+        if (id === "mediate" && m) { m.jealousy = clamp(m.jealousy - 10); this.bump(n, { trust: 5 }); return ok("「お心遣い、ありがとうございます」"); }
+        this.bump(n, { trust: -5 }); if (m) m.regard = clamp(m.regard - 3); return ok("「……さようでございますか」", "sad");
+      }
+      if (stage === 3) {
+        if (id === "loyal") { this.bump(n, { trust: 6 }); if (m) n.relations[m.id] = clamp((n.relations[m.id] ?? 0) + 10, -100, 100); return ok("「はい。主を裏切ることはいたしません」"); }
+        if (id === "report") { this.bump(n, { trust: -3 }); return ok("「……陛下のお望みなら」", "puzzled"); }
+        n.title = "寝殿の女官"; this.bump(n, { trust: 5 }); return ok("彼女は、皇帝の寝殿の務めに移った。", "smile");
+      }
+      if (stage === 4) return ok("「……考えます」", "puzzled");
+      // 結末:訴えの真相(主の嫉妬が強いと、主にも非があった)
+      const guilty = !!m && m.jealousy >= 25;
+      if (f.s4 === "truth") {
+        if (m && guilty) {
+          m.regard = clamp(m.regard - 6);
+          this.c.court.addStability(this.factionId!, -2);
+          const mp = m.personId ? persons.find((x) => x.id === m.personId) : undefined;
+          if (mp) for (const x of persons) if (x.factionId === this.factionId && x.gender !== "female" && x.role !== "ruler" && surnameOf(x) === surnameOf(mp) && x.people === mp.people) this.c.loyalty.add(x.id, -3, "一族の妃に呪詛の疑い");
+          return { ...ok(`彼女の証言で、${m.name}にも非があったことが分かった。${m.name}の立場は揺らいだが、彼女は陛下の信を得た。`, "sad"), ending: "confidant" };
+        }
+        if (m) m.regard = clamp(m.regard + 6);
+        return { ...ok(`彼女の証言で、${m?.name ?? "主"}の潔白が明らかになった。`, "joy"), ending: "loyal" };
+      }
+      if (f.s4 === "protect") { if (m) n.relations[m.id] = clamp((n.relations[m.id] ?? 0) + 15, -100, 100); return { ...ok("彼女は主を守り抜き、主との絆はいっそう深まった。", "smile"), ending: "loyal" }; }
+      if (f.s3 === "transfer") return { ...ok("寝殿に移った彼女は、陛下の身のまわりを任される腹心となった。", "smile"), ending: "confidant" };
+      if (n.trust < 35) { this.leave(n, "板挟みに疲れ、宮仕えを退いた"); return { ...ok("「わたくしは、宮を下がらせていただきます」", "sad"), ending: "leave" }; }
+      return { ...ok("彼女は自分の判断で真実を語り、主のもとに残った。", "normal"), ending: "loyal" };
+    }
+    if (arc === "consort") {
+      const x = this.storyCtx(n);
+      const kin = x.kin ? persons.find((p) => p.name === x.kin && p.factionId === this.factionId) : undefined;
+      if (stage === 1) {
+        if (id === "kin") { this.bump(n, { intimacy: 4 }); if (kin) this.c.loyalty.add(kin.id, 1, "妃が一族のことを陛下に話す"); return ok("「家の者たちが聞いたら、喜びます」"); }
+        if (id === "life") { this.bump(n, { trust: 5 }); return ok("「お気遣い、うれしゅうございます」", "smile"); }
+        this.bump(n, { regard: -3 }); return ok("「心得ております」", "normal");
+      }
+      if (stage === 2) {
+        if (id === "appoint" && kin) {
+          // 外戚の取り立て:太守のいない自国の都市(無ければ小さな都市)に任じる。一族の忠誠は上がり、ほかの臣下は不満、国の安定は少し下がる
+          const city = this.c.cities.filter((k) => k.kind !== "pass" && scenario.cityOwners[k.id] === this.factionId && !this.c.cityStates[k.id]?.governorId).sort((a, b) => (a.population ?? 0) - (b.population ?? 0))[0];
+          const err = city ? this.c.appoint(kin.id, { kind: "city", id: city.id }) : "任じる都市がない";
+          if (!err) {
+            this.c.loyalty.add(kin.id, 10, "妃の口添えで太守に取り立てられる");
+            for (const p of persons.filter((q) => q.factionId === this.factionId && q.role !== "ruler" && q.id !== kin.id && q.gender !== "female").slice(0, 8)) this.c.loyalty.add(p.id, -1, "外戚の取り立て");
+            this.c.court.addStability(this.factionId!, -2);
+            this.bump(n, { trust: 8, regard: 6 });
+            this.report("court", `${kin.name}を${city!.name}の太守に取り立てた(外戚の取り立て)`);
+            return ok(`${kin.name}は${city!.name}の太守に取り立てられた。`, "joy");
+          }
+          return ok(`取り立てはできなかった(${err})。`, "sad");
+        }
+        if (id === "chancellor") { this.makePromise(n, "chancellor", "宰相に諮る", 15); return ok("「陛下のよいように」"); }
+        if (id === "mother") { this.bump(n, { mood: 12, trust: 5 }); return ok("「母も、どんなに喜ぶことか」", "joy"); }
+        if (id === "gift") { if (!this.spend(40)) return ok("国庫の金が足りなかった。", "sad"); this.bump(n, { trust: 6 }); return ok("「ありがとうございます」", "joy"); }
+        this.bump(n, { regard: n.temper === "clever" ? 0 : -5, trust: n.temper === "clever" ? 3 : 0 }); if (kin) this.c.loyalty.add(kin.id, -5, "取り立てを断られる"); return ok("「……わきまえております」", "sad");
+      }
+      if (stage === 3) {
+        const son = x.son ? persons.find((p) => p.name === x.son) : undefined;
+        if (id === "tutor" && son) { const tutor = persons.filter((p) => p.factionId === this.factionId && p.gender !== "female" && p.role !== "ruler" && this.c.personStatus(p.id) === "active" && !this.c.court.isMinor(p)).sort((a, b) => b.intelligence - a.intelligence)[0]; this.c.court.setEducation(son.id, "study", tutor?.id); this.bump(n, { trust: 6 }); return ok(`${son.name}に${tutor?.name ?? "師"}がつけられた。`, "joy"); }
+        if (id === "talent") { this.bump(n, { trust: -3, regard: 2 }); return ok("「……陛下は、まっすぐなお方ですね」", "sad"); }
+        if (id === "honest") { this.bump(n, { trust: 6 }); return ok("「話してくださって、よかった」", "smile"); }
+        this.bump(n, { romance: 4, trust: 3 }); return ok("「……はい」", "shy");
+      }
+      if (stage === 4) {
+        if (id === "heir") { const son = persons.find((p) => p.name === x.son); const r = son ? this.c.court.designateHeir(this.factionId!, son.id) : "子がいない"; for (const o of this.present()) if (o !== n && o.bond === "spouse") o.jealousy = clamp(o.jealousy + 15); this.report("court", `後継の指名:${r}`); return ok(r, "joy"); }
+        if (id === "distance") { this.bump(n, { romance: -15, regard: -10 }); return ok("「……かしこまりました」", "sad"); }
+        return ok(id === "empress" ? "「皇后に……」" : "「穏やかに、ですか」", id === "empress" ? "surprised" : "smile");
+      }
+      if (f.s4 === "heir") return { ...ok("彼女の子は後継者となり、彼女は後継の母として重んじられた。", "smile"), ending: "heir" };
+      if (f.s4 === "empress") {
+        n.coolUntil = undefined;
+        const r = this.propose(n, "empress");
+        if (typeof r !== "string" && r.ok) return { text: r.line, expr: "joy", ending: "empress" };
+        return { text: typeof r === "string" ? `${r}(皇后には立てられず、穏やかな日々を過ごすことになった)` : `${r.line}(本人の意思で、いまの立場にとどまった)`, expr: "puzzled", ending: "quiet" };
+      }
+      if (f.s4 === "distance") return { ...ok("二人のあいだには、静かな距離ができた。", "sad"), ending: "distant" };
+      return { ...ok("彼女は、陛下のそばで穏やかな日々を送ることにした。", "smile"), ending: "quiet" };
+    }
+    // ===== free =====
+    if (stage === 1) {
+      if (id === "learn") { this.bump(n, { intimacy: 6, trust: 3 }); return ok("「陛下が草の名を覚えてくださるなんて!」", "joy"); }
+      if (id === "outside") { this.bump(n, { intimacy: 5, romance: 2 }); return ok("「川の向こうには、どんな町があるのでしょう」", "smile"); }
+      this.bump(n, { trust: -6, regard: -5 }); return ok("「……申し訳ございません」", "sad");
+    }
+    if (stage === 2) {
+      if (id === "doctor") { n.title = "医女見習い"; this.bump(n, { trust: 8 }); return ok("「ありがとうございます!」", "joy"); }
+      if (id === "decide") { this.makePromise(n, "doctor", "侍医に話を通す", 15); return ok("「お待ちしております」", "smile"); }
+      this.bump(n, { trust: -8 }); return ok("「……そう、ですか」", "angry");
+    }
+    if (stage === 3) {
+      const x = this.storyCtx(n);
+      const sick = x.sickName ? this.present().find((o) => o.name === x.sickName) : undefined;
+      if (id === "nurse" || id === "together") {
+        if (sick) { sick.sickUntil = this.day; sick.relations[n.id] = clamp((sick.relations[n.id] ?? 0) + 20, -100, 100); }
+        this.bump(n, id === "together" ? { trust: 8, intimacy: 5 } : { trust: 8 });
+        return ok(sick ? `${sick.name}は、彼女の看病で快方に向かった。` : "彼女の手当てで、多くの人が助かった。", "joy");
+      }
+      this.bump(n, { trust: -6, regard: -6 }); return ok("「……」", "sad");
+    }
+    if (stage === 4) return ok(id === "go" ? "「本当に、よろしいのですか」" : id === "stay" ? "「宮の医女……」" : "「陛下……」", id === "heart" ? "shy" : "surprised");
+    if (f.s4 === "go") { this.leave(n, "郡の医官のもとで医の道を学ぶため、宮を出た"); return { ...ok("「いつか、陛下の病も治してさしあげます」", "joy"), ending: "healer_out" }; }
+    if (f.s4 === "stay") {
+      if (n.trust >= 50 && f.s3 !== "stop") { n.title = "医女"; this.bump(n, { mood: 10 }); return { ...ok("彼女は宮の医女として残り、後宮の病を看ることになった。", "smile"), ending: "healer_in" }; }
+      this.leave(n, "本人の意思で、宮を出て医の道へ進んだ"); return { ...ok("「ごめんなさい。わたくしは、外の世界で学びたいのです」(本人の意思で宮を出た)", "puzzled"), ending: "healer_out" };
+    }
+    if (n.romance >= 60 && f.s3 !== "stop") return this.romanceEnd(n, "healer_in");
+    this.leave(n, "本人の意思で、宮を出て医の道へ進んだ");
+    return { ...ok("「陛下のお気持ち、大切に胸にしまっておきます。でも、わたくしは行きます」(本人の意思で宮を出た)", "smile"), ending: "healer_out" };
+  }
+
+  /** 宮を出る(本人の望み・結末) */
+  private leave(n: PalaceNpc, why: string): void {
+    n.left = true;
+    if (n.bond === "lover") n.bond = "none";
+    this.remember(n, "story", why);
+    this.note(`${n.name}が${why}`);
+  }
+
+  // ----- 約束 -----
+
+  makePromise(n: PalaceNpc, kind: string, text: string, dueDays: number): PalacePromise {
+    const p: PalacePromise = { id: `pr${this.day}_${n.id}_${kind}`, npc: n.id, kind, text, made: this.day, due: this.day + dueDays, status: "open" };
+    this.promises.push(p);
+    // 済んだ古い約束は消す(上限 60)
+    if (this.promises.length > 60) this.promises = this.promises.filter((x, i) => x.status === "open" || x.status === "doing" || i >= this.promises.length - 40);
+    this.remember(n, "promise", `陛下が「${text}」と約束した`, kind);
+    return p;
+  }
+
+  /** 約束を果たす行動(費用・日数)。visit は、主を実際に訪ねる(話す・贈り物など)と果たされる */
+  static readonly FULFILL: Record<string, { label: string; gold: number; days: number } | null> = {
+    books: { label: "書庫から書を届けさせる", gold: 0, days: 2 },
+    family: { label: "使者を故郷へ送る(金60)", gold: 60, days: 10 },
+    investigate: { label: "内侍にひそかに調べさせる", gold: 0, days: 5 },
+    chancellor: { label: "宰相に諮る", gold: 0, days: 3 },
+    doctor: { label: "侍医に話を通す", gold: 0, days: 3 },
+    visit: null,
+  };
+
+  openPromises(n?: PalaceNpc): PalacePromise[] {
+    return this.promises.filter((p) => (!n || p.npc === n.id) && (p.status === "open" || p.status === "doing"));
+  }
+
+  /** 約束を果たす行動を始める(すぐには果たされない。日数がたってから) */
+  fulfill(promiseId: string): string {
+    const p = this.promises.find((x) => x.id === promiseId);
+    if (!p || p.status !== "open") return "その約束は、いま果たせません";
+    const how = PalaceSystem.FULFILL[p.kind];
+    if (!how) return "この約束は、相手を実際に訪ねることで果たされます";
+    if (!this.spend(how.gold)) return `国庫の金が足りません(金${how.gold})`;
+    p.status = "doing";
+    p.doneDay = this.day + how.days;
+    return `${how.label}。${how.days}日ほどで結果が届きます`;
+  }
+
+  /** 毎日:約束の行動が済んだら結果を出し、期限を過ぎた約束は破られたことになる */
+  private tickPromises(): void {
+    for (const p of this.promises) {
+      const n = this.npc(p.npc);
+      if (p.status === "doing" && p.doneDay !== undefined && this.day >= p.doneDay) {
+        p.status = "kept";
+        if (p.kind === "family" && n) p.result = this.homeState(n);
+        if (p.kind === "investigate") p.result = "絹は、病に倒れた同輩の薬代に回されていたと分かりました";
+        if (p.kind === "chancellor" && n) {
+          const x = this.storyCtx(n);
+          const kin = persons.find((q) => q.name === x.kin && q.factionId === this.factionId);
+          p.result = kin && (kin.politics >= 55 || kin.leadership >= 60) ? `${kin.name}の才なら取り立てに異論はない` : "外戚を重く用いることには反対している";
+        }
+        if (n) {
+          this.bump(n, { trust: 8, regard: 5 });
+          this.remember(n, "promise", `約束「${p.text}」が果たされた`, `kept:${p.kind}`);
+          this.report("palace", `${n.name}との約束「${p.text}」を果たしました`);
+        }
+      } else if (p.status === "open" && this.day > p.due) {
+        p.status = "broken";
+        if (n) {
+          this.bump(n, { trust: -10, regard: -5 });
+          this.remember(n, "promise", `約束「${p.text}」は果たされなかった`, `broken:${p.kind}`);
+          this.report("palace", `${n.name}との約束「${p.text}」を果たせませんでした`);
+        }
+      }
+    }
+  }
+
+  /** 主を訪ねる約束:主と実際に交流すると果たされる */
+  private visitMistress(m: PalaceNpc): void {
+    for (const p of this.promises) {
+      if (p.kind !== "visit" || p.status !== "open") continue;
+      const n = this.npc(p.npc);
+      if (n?.story?.flags.mistress !== m.id) continue;
+      p.status = "kept";
+      p.result = `${m.name}を訪ねた`;
+      this.bump(n, { trust: 8 });
+      this.remember(n, "promise", `陛下は約束どおり${m.name}を訪ねた`, "kept:visit");
+    }
+  }
+
+  /** 会話に、記憶(贈り物・約束・物語の選択・戦の情勢)を織りまぜる */
+  private memoryLine(n: PalaceNpc): string | null {
+    const open = this.openPromises(n)[0];
+    if (open) return open.status === "doing" ? `「${open.text}のこと、手を打ってくださったと聞きました」` : `「${open.text}というお約束、覚えていらっしゃいますか」`;
+    const mem = [...(n.memory ?? [])].reverse();
+    const kept = mem.find((m) => m.data?.startsWith("kept:") && this.day - m.day < 40);
+    if (kept) return `「${kept.text.replace(/^約束「|」が果たされた$/g, "")}……あのことは、本当にうれしゅうございました」`;
+    const broken = mem.find((m) => m.data?.startsWith("broken:") && this.day - m.day < 60);
+    if (broken) return "「……お約束のことは、もうよいのです」";
+    const gift = mem.find((m) => m.kind === "gift" && this.day - m.day < 30);
+    if (gift && chance(`${n.id}|${this.day}|gm`) < 0.6) return `「先日いただいた${gift.data ? GIFT_LABEL[gift.data as Gift] ?? "品" : "品"}、大切にしております」`;
+    if (n.story?.arc === "provincial" && this.homeState(n) !== "safe") return `「${n.origin}のあたりで戦があると聞きました。家族は無事でしょうか」`;
+    const atWar = scenario.factions.some((g) => g.id !== this.factionId && !g.fallen && this.c.atWar(this.factionId!, g.id));
+    if (atWar && (n.temper === "gentle" || n.temper === "devoted") && chance(`${n.id}|${this.day}|war`) < 0.3) return "「戦の知らせを聞くたび、陛下のお体が心配になります」";
+    return null;
+  }
+
   // ===================== セーブ =====================
 
   serialize(): PalaceSave {
-    return JSON.parse(JSON.stringify({ active: this.active, factionId: this.factionId, slot: this.slot, npcs: this.npcs, reports: this.reports, newsSeen: this.newsSeen, log: this.log, avatar: this.avatar, festivals: this.festivals, nextId: this.nextId })) as PalaceSave;
+    return JSON.parse(JSON.stringify({ active: this.active, factionId: this.factionId, slot: this.slot, npcs: this.npcs, reports: this.reports, newsSeen: this.newsSeen, log: this.log, avatar: this.avatar, festivals: this.festivals, nextId: this.nextId, v: 53, promises: this.promises, talkLog: this.talkLog })) as PalaceSave;
   }
 
   restore(save: PalaceSave | undefined): void {
@@ -811,5 +1328,9 @@ export class PalaceSystem {
     this.avatar = s?.avatar;
     this.festivals = s?.festivals ?? {};
     this.nextId = s?.nextId ?? 1;
+    // Version 52 のセーブには、物語・約束・記憶が無い:空のまま始め、宮殿に入るときに物語の役を割り当てる
+    this.promises = s?.promises ?? [];
+    this.talkLog = s?.talkLog ?? [];
+    this.v = 53;
   }
 }

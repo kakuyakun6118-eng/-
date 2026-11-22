@@ -2,7 +2,9 @@
 import { persons } from "../data";
 import type { Campaign } from "../sim/Campaign";
 import { EDU_LABEL, type EduPolicy } from "../sim/court";
-import { ACTION_LABEL, AREA_LABEL, RANK_NAME, SLOT_LABEL, type Action, type PalaceNpc, type PalaceSystem } from "../sim/palace";
+import { ACTION_LABEL, AREA_LABEL, PalaceSystem, RANK_NAME, SLOT_LABEL, type Action, type PalaceNpc } from "../sim/palace";
+import { ENDING_LABEL } from "../sim/palaceStories";
+import type { Expr } from "../sim/palaceText";
 import { GIFT_COST, GIFT_LABEL, type Gift } from "../sim/palaceText";
 import { fillPortrait } from "./portrait";
 
@@ -23,15 +25,27 @@ export interface PalaceHudDeps {
 }
 
 /** 架空の女官の似顔(衣の色と髪の形から作る絵。写実ではない) */
-export function ladyPortrait(n: PalaceNpc): string {
+export function ladyPortrait(n: PalaceNpc, expr: Expr = n.expr ?? "normal"): string {
   const hair = ["<circle cx='48' cy='20' r='9' fill='#1a1412'/>", "<circle cx='38' cy='22' r='7' fill='#1a1412'/><circle cx='58' cy='22' r='7' fill='#1a1412'/>", "<circle cx='48' cy='16' r='6' fill='#1a1412'/><circle cx='48' cy='26' r='8' fill='#1a1412'/>", "<ellipse cx='48' cy='30' rx='16' ry='9' fill='#1a1412'/>"][n.looks.hair] ?? "";
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect width='96' height='96' fill='#241812'/>` +
     `<path d='M14 96c2-22 16-32 34-32s32 10 34 32z' fill='${n.looks.robe}'/><path d='M36 66l12 14 12-14' stroke='${n.looks.trim}' stroke-width='4' fill='none'/>` +
     `${hair}<ellipse cx='48' cy='42' rx='15' ry='18' fill='#e9c9a8'/><path d='M33 38c3-12 27-12 30 0c-6-6-24-6-30 0z' fill='#1a1412'/>` +
-    `<circle cx='42' cy='43' r='1.6' fill='#2a1a14'/><circle cx='54' cy='43' r='1.6' fill='#2a1a14'/><path d='M44 52q4 3 8 0' stroke='#a85a50' stroke-width='1.6' fill='none'/>` +
+    `${FACE[expr] ?? FACE.normal}` +
     `<line x1='56' y1='20' x2='68' y2='14' stroke='${n.looks.trim}' stroke-width='2'/></svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
+
+/** 表情の差分(似顔の目・眉・口・頬) */
+const FACE: Record<Expr, string> = {
+  normal: "<circle cx='42' cy='43' r='1.6' fill='#2a1a14'/><circle cx='54' cy='43' r='1.6' fill='#2a1a14'/><path d='M44 52q4 2 8 0' stroke='#a85a50' stroke-width='1.6' fill='none'/>",
+  smile: "<path d='M39 43q3-2 6 0M51 43q3-2 6 0' stroke='#2a1a14' stroke-width='1.4' fill='none'/><path d='M43 51q5 4 10 0' stroke='#a85a50' stroke-width='1.6' fill='none'/>",
+  joy: "<path d='M39 43q3-3 6 0M51 43q3-3 6 0' stroke='#2a1a14' stroke-width='1.6' fill='none'/><path d='M42 50q6 7 12 0z' fill='#a85a50'/><circle cx='38' cy='48' r='3' fill='#e89a90' opacity='0.5'/><circle cx='58' cy='48' r='3' fill='#e89a90' opacity='0.5'/>",
+  sad: "<path d='M39 40l6 2M57 40l-6 2' stroke='#2a1a14' stroke-width='1.2'/><circle cx='42' cy='44' r='1.5' fill='#2a1a14'/><circle cx='54' cy='44' r='1.5' fill='#2a1a14'/><path d='M44 54q4-3 8 0' stroke='#a85a50' stroke-width='1.6' fill='none'/><path d='M41 47v3' stroke='#7ab0d8' stroke-width='1.2'/>",
+  angry: "<path d='M38 39l7 3M58 39l-7 3' stroke='#2a1a14' stroke-width='1.8'/><circle cx='42' cy='44' r='1.6' fill='#2a1a14'/><circle cx='54' cy='44' r='1.6' fill='#2a1a14'/><path d='M44 53h8' stroke='#a85a50' stroke-width='1.8'/>",
+  puzzled: "<path d='M39 40l6-1M51 38l6 2' stroke='#2a1a14' stroke-width='1.2'/><circle cx='42' cy='43' r='1.6' fill='#2a1a14'/><circle cx='54' cy='43' r='1.6' fill='#2a1a14'/><path d='M44 53q2-2 4 0t4 0' stroke='#a85a50' stroke-width='1.4' fill='none'/>",
+  surprised: "<circle cx='42' cy='43' r='2.4' fill='none' stroke='#2a1a14' stroke-width='1.2'/><circle cx='54' cy='43' r='2.4' fill='none' stroke='#2a1a14' stroke-width='1.2'/><ellipse cx='48' cy='53' rx='2.2' ry='3' fill='#a85a50'/>",
+  shy: "<path d='M39 44q3 2 6 0M51 44q3 2 6 0' stroke='#2a1a14' stroke-width='1.4' fill='none'/><path d='M45 52q3 2 6 0' stroke='#a85a50' stroke-width='1.4' fill='none'/><ellipse cx='38' cy='48' rx='4' ry='2.4' fill='#e8808a' opacity='0.6'/><ellipse cx='58' cy='48' rx='4' ry='2.4' fill='#e8808a' opacity='0.6'/>",
+};
 
 const REPORT_KIND: Record<string, string> = { war: "軍事", city: "都市", court: "宮廷", event: "事件", diplomacy: "外交", palace: "後宮", finance: "財政" };
 
@@ -166,6 +180,39 @@ export class PalaceHud {
     const card = this.el("dl", "ph-card");
     for (const [k, v] of Object.entries(P.card(n))) card.append(this.el("dt", "", k), this.el("dd", "", v));
     box.append(card);
+    // 個別の物語(Version 53)
+    const st = P.storyStatus(n);
+    if (st.arc) {
+      const sb = this.el("div", "ph-story");
+      sb.append(this.el("b", "", `物語「${st.title}」 ${Math.min(5, st.stage)}/5`));
+      if (st.ending) sb.append(this.el("span", "ph-note", `結末:${ENDING_LABEL[st.ending] ?? st.ending}`));
+      else if (st.ready) {
+        const go = this.el("button", "ph-story-go", `第${st.stage + 1}段階へ進む`);
+        go.type = "button";
+        go.addEventListener("click", () => this.storyScene(n));
+        sb.append(go);
+      } else sb.append(this.el("span", "ph-note", `次へ:${st.hint}`));
+      box.append(sb);
+    }
+    // 約束
+    const ps = P.openPromises(n);
+    if (ps.length) {
+      const pb = this.el("div", "ph-promises");
+      for (const pr of ps) {
+        const row = this.el("div", "ph-promise");
+        row.append(this.el("span", "", `約束:${pr.text}(${pr.status === "doing" ? "手を打った・結果待ち" : `期限まで${Math.max(0, pr.due - Math.floor(this.d.campaign.day))}日`})`));
+        const how = PalaceSystem.FULFILL[pr.kind];
+        if (pr.status === "open" && how) {
+          const b = this.el("button", "", how.label);
+          b.type = "button";
+          b.dataset.promise = pr.id;
+          b.addEventListener("click", () => { const r = P.fulfill(pr.id); this.openNpc(id); this.say([], r); });
+          row.append(b);
+        } else if (pr.status === "open") row.append(this.el("span", "ph-note", "(相手を実際に訪ねて話すと果たされます)"));
+        pb.append(row);
+      }
+      box.append(pb);
+    }
     const talk = this.el("div", "ph-talk");
     box.append(talk);
     const acts = this.el("div", "ph-actions");
@@ -220,6 +267,48 @@ export class PalaceHud {
   }
 
   private say: (lines: string[], effect?: string) => void = () => {};
+
+  /** 物語の場面:文と選択肢。選ぶと段階が進み、反応と結果が出る */
+  storyScene(n: PalaceNpc): void {
+    const P = this.d.palace;
+    const sc = P.storyScene(n);
+    const box = this.q(".ph-panel");
+    if (!sc) return;
+    const wrap = this.el("div", "ph-scene");
+    wrap.append(this.el("h4", "", `${sc.title}`));
+    const face = this.el("img", "ph-face ph-scene-face");
+    face.alt = "";
+    face.src = ladyPortrait(n, sc.lines[sc.lines.length - 1]?.e ?? "normal");
+    wrap.append(face);
+    for (const l of sc.lines) {
+      const pp = this.el("p", "", l.t);
+      if (l.e) pp.dataset.expr = l.e;
+      wrap.append(pp);
+    }
+    const x = P.storyCtx(n);
+    const acts = this.el("div", "ph-actions");
+    for (const ch of sc.choices) {
+      const b = this.el("button", "", ch.label);
+      b.type = "button";
+      b.dataset.choice = ch.id;
+      const why = ch.need?.(x);
+      if (why) { b.disabled = true; b.title = why; }
+      b.addEventListener("click", () => {
+        const r = P.storyChoose(n, ch.id);
+        this.openNpc(n.id);
+        if (typeof r === "string") this.say([], r);
+        else {
+          this.say([r.text.replace(/^「|」$/g, "")], r.ending ? `物語の結末:${ENDING_LABEL[r.ending] ?? r.ending}` : "物語が進んだ");
+          const img = this.q<HTMLImageElement>(".ph-panel .ph-face");
+          if (img && (!n.personId || n.fictional)) img.src = ladyPortrait(n, r.expr);
+          img.dataset.expr = r.expr;
+        }
+      });
+      acts.append(b);
+    }
+    wrap.append(acts);
+    box.replaceChildren(wrap);
+  }
 
   private giftMenu(n: PalaceNpc, box: HTMLElement, done: (line: string, effect: string) => void): void {
     box.replaceChildren(this.el("p", "ph-sub", "贈り物を選んでください(国庫の金を使います)"));

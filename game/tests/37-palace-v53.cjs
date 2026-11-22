@@ -41,6 +41,71 @@ const { chromium, devices } = require('playwright');
   check('P4 旧 Version 52 のセーブ(新しい項目が無いデータ)を読み込める。宮殿に戻り、会話できる', old.ok && old.n >= 10 && old.talk >= 2, old);
   await p.close();
 
+  // ===== 第2工程:個別の物語 =====
+  // 物語を進める道具:段階の条件(信頼・時刻・日数・約束)を満たしてから選ぶ。条件の数値は、テストの準備として人物の値を上げる
+  const drive = () => { window.__drive = (n, choices, opt = {}) => { const g = window.__goko, P = g.campaign.palace; const log = [];
+    for (const ch of choices) {
+      let tries = 0; let st = P.storyStatus(n);
+      while (!st.ready && tries++ < 40) {
+        n.intimacy = Math.max(n.intimacy, opt.intimacy ?? 70); n.trust = Math.max(n.trust, opt.trust ?? 70); if (opt.romance !== undefined) n.romance = Math.max(n.romance, opt.romance); n.jealousy = 0;
+        const open = P.openPromises(n).filter(x => x.status === 'open');
+        for (const pr of open) { if (pr.kind === 'visit') { const m = P.npc(String(n.story.flags.mistress)); if (m) P.talk(m); } else P.fulfill(pr.id); }
+        if (/日が浅い|約束|調べ|宰相|侍医|訪ねる|季節/.test(st.hint)) g.palaceAdvance(4 * 6); else g.palaceAdvance(1);
+        st = P.storyStatus(n);
+      }
+      if (!st.ready) { log.push(`進めず:${st.hint}`); break; }
+      // 「a|b」は、場面にある最初の選択肢を選ぶ(人物の事情で選択肢が変わるため)
+      const sc = P.storyScene(n); const pickId = String(ch).split('|').find(c => sc.choices.some(x => x.id === c)) ?? ch;
+      const r = P.storyChoose(n, pickId); log.push(typeof r === 'string' ? `NG:${r}` : `${n.story.stage}:${ch}${r.ending ? '→' + r.ending : ''}`);
+    }
+    return { log, stage: n.story.stage, ending: n.story.ending ?? null, left: !!n.left, bond: n.bond, title: n.title }; }; };
+  const paths = {
+    scholar: [['praise', 'lend', 'heart', 'respect', 'end'], ['reply', 'salon', 'post', 'compile', 'end']],
+    ambitious: [['task', 'neutral', 'investigate', 'chief', 'end'], ['limit', 'side', 'blame', 'own', 'end']],
+    provincial: [['ask', 'family', 'help', 'bring', 'end'], ['cheer', 'honest', 'stay', 'heart', 'end']],
+    attendant: [['ask', 'visit', 'loyal', 'protect', 'end'], ['self', 'mediate', 'transfer', 'own', 'end']],
+    consort: [['kin', 'chancellor|mother', 'promiseSon|reassure', 'empress', 'end'], ['nopol', 'refuse', 'honest', 'distance', 'end']],
+    free: [['learn', 'doctor', 'nurse', 'go', 'end'], ['outside', 'decide', 'together', 'stay', 'end']],
+  };
+  const res = {};
+  for (const k of [0, 1]) {
+    const q = await open('s317'); await q.evaluate(drive);
+    const r = await q.evaluate(([paths, k, enterSrc]) => { eval(enterSrc)(); const g = window.__goko, P = g.campaign.palace; g.campaign.factionStates.jin.gold = 50000;
+      const mains = P.mains().map(n => ({ id: n.id, name: n.name, arc: n.story.arc }));
+      const out = { mains, runs: {} };
+      for (const m of mains) { const n = P.npc(m.id); out.runs[m.arc] = { name: m.name, ...window.__drive(n, paths[m.arc][k], { romance: k === 1 && ['provincial'].includes(m.arc) ? 80 : k === 0 && ['scholar'].includes(m.arc) ? 80 : k === 0 && m.arc === 'consort' ? 90 : undefined }) }; }
+      return out; }, [paths, k, enter.toString()]);
+    res[k] = r;
+    await q.close();
+  }
+  const arcs = Object.keys(paths);
+  check('S1 主要な6人に物語の役が割り当てられ、物語を始められる', res[0].mains.length === 6 && arcs.every(a => res[0].mains.some(m => m.arc === a)), res[0].mains);
+  check('S2 6人それぞれの5段階の物語が、結末まで進む', arcs.every(a => res[0].runs[a].stage === 5 && res[1].runs[a].stage === 5), Object.fromEntries(arcs.map(a => [a, [res[0].runs[a].log, res[1].runs[a].log]])));
+  check('S3 選択によって、6人とも結末が実際に分かれる', arcs.every(a => res[0].runs[a].ending && res[1].runs[a].ending && res[0].runs[a].ending !== res[1].runs[a].ending), Object.fromEntries(arcs.map(a => [a, `${res[0].runs[a].ending} / ${res[1].runs[a].ending}`])));
+
+  // S4. 約束:果たす行動をするまで、果たした扱いにならない。会話に出てくる。期限を過ぎると破られる
+  p = await open('s317'); await p.evaluate(drive);
+  const pr = await p.evaluate((enterSrc) => { eval(enterSrc)(); const g = window.__goko, P = g.campaign.palace; g.campaign.factionStates.jin.gold = 50000;
+    const n = P.mains().find(x => x.story.arc === 'provincial'); window.__drive(n, ['ask', 'family']);
+    const pmise = P.openPromises(n)[0]; g.palaceAdvance(4 * 5); const before = P.storyStatus(n);
+    const talk = P.talk(n).lines.join(''); const status0 = pmise?.status;
+    // 何もしないで20日:まだ果たされていない(結果も出ない)
+    g.palaceAdvance(4 * 20); const status1 = pmise.status; const ready1 = P.storyStatus(n).ready;
+    // 使者を送る:10日後に果たされ、結果(出身の都市の実際の様子)が出る
+    const f = P.fulfill(pmise.id); const status2 = pmise.status; g.palaceAdvance(4 * 11); const status3 = pmise.status;
+    const after = P.talk(n).lines.join('');
+    // 別の人の約束を放っておくと、期限を過ぎて破られる
+    const s2 = P.mains().find(x => x.story.arc === 'scholar'); window.__drive(s2, ['praise', 'lend']); const pp = P.openPromises(s2)[0]; const t0 = s2.trust; g.palaceAdvance(4 * 22);
+    return { before: before.hint, talk, status0, status1, ready1, f, status2, status3, result: pmise.result, after, broken: pp.status, trustDrop: t0 - s2.trust, memory: (s2.memory ?? []).slice(-2).map(m => m.text) }; }, enter.toString());
+  check('S4 約束は、実際に果たす行動(使者を送る)をして日数がたつまで果たされない。会話に約束と結果が出る。放っておくと期限を過ぎて破られ、記憶に残る', /約束|調べ/.test(pr.before) && /約束/.test(pr.talk) && pr.status0 === 'open' && pr.status1 === 'open' && !pr.ready1 && pr.status2 === 'doing' && pr.status3 === 'kept' && ['safe', 'war', 'lost'].includes(pr.result) && pr.broken === 'broken' && pr.trustDrop > 0 && pr.memory.some(t => /果たされなかった/.test(t)), pr);
+
+  // S5. セーブ・ロード後も物語が続く(段階・選択・約束・記憶)
+  const sl = await p.evaluate(() => { const g = window.__goko, P = g.campaign.palace; const snap = () => JSON.stringify(P.mains().map(n => [n.id, n.story.stage, n.story.flags, (n.memory ?? []).length]).concat([P.promises.map(x => [x.kind, x.status])]));
+    const a = snap(); const sv = JSON.parse(JSON.stringify(g.buildSave())); g.applySave(sv); const b2 = snap(); const n = P.mains().find(x => x.story.arc === 'provincial'); const next = window.__drive(n, ['help']);
+    return { same: a === b2, next }; });
+  check('S5 セーブ・ロード後も、物語の段階・選択・約束・記憶が残り、続きから進められる', sl.same && sl.next.stage === 3, sl);
+  await p.close();
+
   await b.close();
   if (problems.length) { console.log('問題:', problems); process.exit(1); }
   console.log('errors:', errs.slice(0, 3));

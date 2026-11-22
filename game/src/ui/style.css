@@ -4365,3 +4365,14 @@ select:focus-visible {
 .palace-stick i { position: absolute; left: 34px; top: 34px; width: 44px; height: 44px; border-radius: 50%; background: rgba(200, 162, 82, 0.6); }
 #app.in-palace #map { touch-action: none; }
 @media (pointer: coarse) { .ph-hint { left: 150px !important; } }
+
+/* 物語・約束(Version 53) */
+.ph-story { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 6px 0; padding: 6px 8px; border: 1px solid #8a6a3a; border-radius: 3px; background: rgba(140, 100, 40, 0.12); }
+.ph-story b { color: #f0d9a0; font-size: 13px; }
+.ph-story-go { border-color: var(--gold) !important; }
+.ph-promises { display: flex; flex-direction: column; gap: 4px; margin: 4px 0; }
+.ph-promise { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 12px; color: #e8d8b0; }
+.ph-scene { display: flex; flex-direction: column; gap: 6px; }
+.ph-scene h4 { margin: 0; font-family: var(--font-display); font-size: 18px; color: #f0d9a0; }
+.ph-scene p { margin: 0; font-size: 14px; line-height: 1.7; }
+.ph-scene-face { align-self: flex-start; width: 96px; height: 96px; }

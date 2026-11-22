@@ -110,3 +110,17 @@ export function confessLine(temper: Temper, ok: boolean, reason: string): string
   if (ok) return ({ gentle: "……わたくしも、同じ気持ちでございます。", cheerful: "本当ですか!……わたくしも、ずっと。", shy: "…………はい。わたくしも、お慕いしております。", clever: "そのお言葉、心から信じてもよろしゅうございますか。……はい。", proud: "ずいぶん待たされましたわ。……わたくしもです。", devoted: "うれしい……陛下、わたくしも同じでございます。" } as Record<Temper, string>)[temper];
   return `${({ gentle: "お気持ちはうれしゅうございます。けれど", cheerful: "ありがとうございます。でも", shy: "あの……ごめんなさい。", clever: "お言葉はありがたく存じます。ただ", proud: "急なお話ですこと。", devoted: "陛下のお気持ちは大切に思います。けれど" } as Record<Temper, string>)[temper]}${reason}`;
 }
+
+/** 表情(Version 53):通常・微笑・喜び・悲しみ・怒り・困惑・驚き・照れ */
+export type Expr = "normal" | "smile" | "joy" | "sad" | "angry" | "puzzled" | "surprised" | "shy";
+export const EXPR_LABEL: Record<Expr, string> = { normal: "通常", smile: "微笑", joy: "喜び", sad: "悲しみ", angry: "怒り", puzzled: "困惑", surprised: "驚き", shy: "照れ" };
+
+/** 気持ちから、ふだんの表情を決める */
+export function moodExpr(mood: number, jealousy: number, romance: number): Expr {
+  if (jealousy >= 60) return "angry";
+  if (mood < 35) return "sad";
+  if (romance >= 60 && mood >= 60) return "shy";
+  if (mood >= 75) return "joy";
+  if (mood >= 55) return "smile";
+  return "normal";
+}
