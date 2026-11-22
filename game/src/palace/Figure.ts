@@ -3,6 +3,7 @@
 // 髪は結い上げた形(4種)と、身分の飾り(皇后:歩揺の冠、妃:玉の簪と垂れ飾り、女官:簡素な簪)。皇帝は黒と朱の衣に冠。
 // 顔は、表情(通常・微笑・喜び・悲しみ・怒り・困惑・驚き・照れ)ごとに描いた絵を貼る。動きは関節の回転で作る(静止した形を動かすだけではない)。
 import * as THREE from "three";
+import type { RealHead } from "./RealHead";
 import type { Expr } from "../sim/palaceText";
 
 export type Pose = "stand" | "walk" | "sit" | "bow" | "talk" | "read" | "play" | "eat";
@@ -323,7 +324,35 @@ export class Figure {
   }
 
   /** 表情を変える */
+  /** 写実寄りの頭(Version 54)。付けている間は、これまでの球の頭と髪を隠す */
+  real: RealHead | null = null;
+  private hiddenHead: THREE.Object3D[] = [];
+  attachHead(h: RealHead): void {
+    this.detachHead();
+    this.hiddenHead = [...this.head.children];
+    for (const c of this.hiddenHead) c.visible = false;
+    h.root.scale.setScalar(this.k * 1.14);
+    h.root.position.set(0, -0.015 * this.k, 0.01 * this.k);
+    this.head.add(h.root);
+    this.real = h;
+    h.setExpr(this.expr);
+  }
+  detachHead(): RealHead | null {
+    const h = this.real;
+    if (!h) return null;
+    h.root.removeFromParent();
+    for (const c of this.hiddenHead) c.visible = true;
+    this.hiddenHead = [];
+    this.real = null;
+    return h;
+  }
+  /** 顔の位置(世界の座標。会話のカメラ用) */
+  faceWorld(out = new THREE.Vector3()): THREE.Vector3 {
+    return this.head.localToWorld(out.set(0, 0.15 * this.k, 0.05 * this.k));
+  }
+
   setExpr(e: Expr): void {
+    this.real?.setExpr(e);
     if (this.expr === e) return;
     this.expr = e;
     this.faceMat.map = this.faceTex(e);
@@ -343,6 +372,10 @@ export class Figure {
 
   /** 毎フレーム:姿勢に合わせて関節を動かす。speed は歩く速さ(m/秒) */
   update(dt: number, t: number, speed = 0): void {
+    if (this.real) {
+      this.real.setTalking(this.pose === "talk");
+      this.real.update(dt, t);
+    }
     const k = this.k;
     const p = this.pose;
     const seated = p === "sit" || p === "read" || p === "play" || p === "eat";
@@ -407,10 +440,13 @@ export class Figure {
 
   /** 細部を出す・隠す(遠い人は隠して軽くする) */
   setDetail(on: boolean): void {
-    for (const o of this.detailObjs) o.visible = on;
+    // 写実の頭を付けている間は、これまでの頭の飾りは隠したまま
+    for (const o of this.detailObjs) o.visible = on && !(this.real && this.hiddenHead.includes(o));
   }
 
   dispose(): void {
+    // 写実寄りの頭は、共有の材質を持つので、先に外して片づける
+    this.detachHead()?.dispose();
     for (const t of this.textures) t.dispose();
     this.root.traverse((o) => {
       const m = o as THREE.Mesh;

@@ -74,6 +74,8 @@ export interface PalaceNpc {
   expr?: Expr;
   /** 帰郷など、宮を離れている期限の日 */
   awayUntil?: number;
+  /** 3Dの顔の形(Version 54。なければ人ごとの種から決める) */
+  shape?: Record<string, number>;
 }
 
 export type MemoryKind = "gift" | "promise" | "story" | "event";

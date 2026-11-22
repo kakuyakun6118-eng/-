@@ -7,6 +7,8 @@ import { AREA_LABEL, type Area } from "../sim/palace";
 import { buildPalace, type PalaceWorld, type Rect, type Seat } from "./PalaceWorld";
 import { Figure, type Pose } from "./Figure";
 import { moodExpr } from "../sim/palaceText";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { HeadKit, RealHead, shapeFor, type HeadStyle } from "./RealHead";
 
 const HIT_GEO = new THREE.CylinderGeometry(0.6, 0.6, 1.9, 8);
 const HIT_MAT = new THREE.MeshBasicMaterial({ visible: false });
@@ -125,6 +127,57 @@ export class PalaceScreen {
     this.applyLight(palace.slot);
     this.bindInput();
     this.buildStick(labelRoot);
+    // 写実寄りの頭(Version 54):金属・肌の見え方のための周りの光と、頭の素の読み込み
+    const pm = new THREE.PMREMGenerator(renderer);
+    this.envTex = pm.fromScene(new RoomEnvironment(), 0.04).texture;
+    pm.dispose();
+    this.scene.environment = this.envTex;
+    this.scene.environmentIntensity = 0.45;
+    HeadKit.load().then((k) => { if (!this.closed) this.kit = k; }, (e) => console.warn("写実の頭を読み込めませんでした", e));
+  }
+
+  private envTex: THREE.Texture;
+  private closed = false;
+  private kit: HeadKit | null = null;
+  /** 写実の頭を付ける人:"proto" = 試作の3人(皇后・妃・女官を1人ずつ)、"all" = 後宮の全員 */
+  realHeads: "proto" | "all" | "off" = "proto";
+  private protoIds(): Set<string> {
+    const list = this.palace.present();
+    const pick = (r: string): string | undefined => list.find((n) => n.rank === r)?.id;
+    return new Set([pick("empress"), pick("consort"), pick("lady")].filter(Boolean) as string[]);
+  }
+  private styleOf(n: PalaceNpc): HeadStyle {
+    return n.rank === "empress" ? "empress" : n.rank === "consort" || n.rank === "royal" || n.rank === "dowager" ? "consort" : "lady";
+  }
+  /** 近くの人だけに写実の頭を付け、離れたら外して片づける(画質で人数と距離が変わる) */
+  private updateHeads(): void {
+    const kit = this.kit;
+    if (!kit) return;
+    const lim = this.quality === "low" ? { n: 2, d: 5 } : this.quality === "mid" ? { n: 4, d: 8 } : { n: 7, d: 12 };
+    const allow = this.realHeads === "all" ? null : this.realHeads === "proto" ? this.protoIds() : new Set<string>();
+    const cand = [...this.views.values()]
+      .filter((v) => (allow ? allow.has(v.npc.id) : true))
+      .map((v) => ({ v, d: Math.hypot(v.fig.position.x - this.pos.x, v.fig.position.z - this.pos.z) }))
+      .sort((a, b) => a.d - b.d);
+    const want = new Set(cand.filter((c, i) => i < lim.n && (c.d < lim.d || this.talking === c.v.npc.id)).map((c) => c.v.npc.id));
+    if (this.talking && this.views.has(this.talking) && (!allow || allow.has(this.talking))) want.add(this.talking);
+    for (const v of this.views.values()) {
+      const has = !!v.body.real;
+      if (want.has(v.npc.id) && !has) {
+        let h = 0;
+        for (let i = 0; i < v.npc.id.length; i++) h = (h * 31 + v.npc.id.charCodeAt(i)) >>> 0;
+        const style = this.styleOf(v.npc);
+        const head = new RealHead(kit, style, v.npc.shape ?? shapeFor(h, this.palace.ageOf(v.npc), style), h);
+        kit.live++;
+        v.body.attachHead(head);
+      } else if (!want.has(v.npc.id) && has) {
+        v.body.detachHead()?.dispose();
+      }
+    }
+  }
+  /** 確かめ用:写実の頭を付けている人 */
+  realHeadIds(): string[] {
+    return [...this.views.values()].filter((v) => v.body.real).map((v) => v.npc.id);
   }
 
   /** 仮想スティック(タッチの端末):画面の左下を指でなぞると歩く */
@@ -280,6 +333,11 @@ export class PalaceScreen {
 
   /** いま話している人(身ぶりをする) */
   private talking: string | null = null;
+  private talkCam = new THREE.Vector3();
+  private talkLook = new THREE.Vector3();
+  private talkBlend = 0;
+  /** 確かめ用のカメラ(画像を撮るとき) */
+  debugCam: { pos: THREE.Vector3; look: THREE.Vector3 } | null = null;
   setTalking(id: string | null): void {
     this.talking = id;
   }
@@ -665,6 +723,7 @@ export class PalaceScreen {
         nearest = v.npc.id;
       }
     }
+    if (this.tick % 10 === 0) this.updateHeads();
     this.npcMs = this.npcMs * 0.9 + (performance.now() - t0) * 0.1;
     if (nearest !== this.near) {
       this.near = nearest;
@@ -705,8 +764,29 @@ export class PalaceScreen {
     const cx = this.pos.x + Math.sin(this.yaw) * Math.cos(pitch) * dist;
     const cz = this.pos.z + Math.cos(this.yaw) * Math.cos(pitch) * dist;
     const cy = floor + 1.5 + Math.sin(pitch) * dist;
-    this.camera.position.set(cx, cy, cz);
-    this.camera.lookAt(this.pos.x, floor + 1.4, this.pos.z);
+    const tv = this.talking ? this.views.get(this.talking) : undefined;
+    if (this.debugCam) {
+      // 確かめ用(画像を撮る):カメラの位置と見る点を決めて置く
+      this.camera.position.copy(this.debugCam.pos);
+      this.camera.lookAt(this.debugCam.look);
+    } else if (tv) {
+      // 会話中:相手の顔が見えるよう、皇帝の肩ごしに近づく(相手の顔の正面寄り・少し斜め)
+      const face = tv.body.faceWorld(new THREE.Vector3());
+      const dx = this.pos.x - face.x, dz = this.pos.z - face.z;
+      const l = Math.hypot(dx, dz) || 1;
+      const side = 0.35;
+      const want = new THREE.Vector3(face.x + (dx / l) * 1.3 + (-dz / l) * side, face.y + 0.04, face.z + (dz / l) * 1.3 + (dx / l) * side);
+      this.talkCam.lerp(want, this.talkBlend < 0.01 ? 1 : 0.12);
+      this.talkBlend = Math.min(1, this.talkBlend + 0.06);
+      this.camera.position.set(cx, cy, cz).lerp(this.talkCam, this.talkBlend);
+      // 顔が画面の上の方に来るよう、少し下を見る(下の交流の欄に顔が隠れないように)
+      this.talkLook.lerp(face.clone().setY(face.y - 0.32), this.talkBlend < 0.07 ? 1 : 0.15);
+      this.camera.lookAt(new THREE.Vector3(this.pos.x, floor + 1.4, this.pos.z).lerp(this.talkLook, this.talkBlend));
+    } else {
+      this.talkBlend = 0;
+      this.camera.position.set(cx, cy, cz);
+      this.camera.lookAt(this.pos.x, floor + 1.4, this.pos.z);
+    }
     this.sun.target.position.set(this.pos.x, 0, this.pos.z);
     const L = LIGHT[this.palace.slot] ?? LIGHT[1];
     this.sun.position.set(this.pos.x + L.pos[0], L.pos[1], this.pos.z + L.pos[2]);
@@ -760,6 +840,7 @@ export class PalaceScreen {
 
   /** 戦略マップへ戻るとき:形・材質・テクスチャ・影の描画先をすべて片づける(資源の漏れを防ぐ) */
   dispose(): void {
+    this.closed = true;
     for (const f of this.cleanup) f();
     for (const v of this.views.values()) v.body.dispose();
     this.avatarBody.dispose();
@@ -776,6 +857,8 @@ export class PalaceScreen {
       for (const v of Object.values(m) as unknown[]) if (v instanceof THREE.Texture) v.dispose();
       m.dispose();
     }
+    this.envTex.dispose();
+    this.scene.environment = null;
     this.sun.shadow.map?.dispose();
     this.sun.dispose();
     this.lampLight.dispose();
