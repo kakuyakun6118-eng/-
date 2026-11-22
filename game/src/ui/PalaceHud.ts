@@ -17,6 +17,9 @@ export interface PalaceHudDeps {
   walkToNpc(id: string): void;
   /** メニュー(セーブ・ロード・設定)を開く */
   openMenu(): void;
+  /** 画質(低・中・高) */
+  quality(): "low" | "mid" | "high";
+  setQuality(q: "low" | "mid" | "high"): void;
 }
 
 /** 架空の女官の似顔(衣の色と髪の形から作る絵。写実ではない) */
@@ -49,9 +52,9 @@ export class PalaceHud {
         <div class="ph-time"><button type="button" data-t="1">時を進める</button><button type="button" data-t="day">一日を終える</button><button type="button" data-t="10">十日を過ごす</button><button type="button" data-t="30">一月を過ごす</button>
         <label class="ph-auto"><input type="checkbox" checked /> 時の流れ(<span class="ph-auto-left"></span>)</label></div></div>
       <div class="ph-side"><button type="button" data-s="reports">上奏<i class="ph-badge" hidden></i></button><button type="button" data-s="ministers">重臣</button><button type="button" data-s="roster">後宮の人々</button>
-        <button type="button" data-s="children">子女</button><button type="button" data-s="banquet">宴を開く</button><button type="button" class="menu-open ph-menu">メニュー</button><button type="button" data-s="exit" class="ph-exit">政務に戻る</button></div>
+        <button type="button" data-s="children">子女</button><button type="button" data-s="banquet">宴を開く</button><button type="button" class="ph-quality">画質</button><button type="button" class="menu-open ph-menu">メニュー</button><button type="button" data-s="exit" class="ph-exit">政務に戻る</button></div>
       <button type="button" class="ph-near" hidden></button>
-      <p class="ph-hint">PC:WASD・矢印で歩く/クリックした所へ歩く/ドラッグで視点/ホイールで拡大。iPhone:タップした所へ歩く/ドラッグで視点/2本指で拡大。人物をタップすると話しかけます</p>
+      <p class="ph-hint">PC:WASD・矢印で歩く/Fで話しかける/クリックした所へ歩く/ドラッグで視点/ホイールで拡大。iPhone:左下のスティックで歩く/タップした所へ歩く/ドラッグで視点/2本指で拡大。人物をタップすると話しかけます</p>
       <section class="ph-panel" hidden></section>
       <section class="ph-sheet" hidden></section>`;
     root.querySelectorAll<HTMLButtonElement>(".ph-time button").forEach((b) => b.addEventListener("click", () => this.time(b.dataset.t!)));
@@ -59,6 +62,14 @@ export class PalaceHud {
     this.q<HTMLInputElement>(".ph-auto input").addEventListener("change", (e) => (this.auto = (e.target as HTMLInputElement).checked));
     this.q(".ph-near").addEventListener("click", () => this.nearId && this.openNpc(this.nearId));
     this.q(".ph-side .menu-open").addEventListener("click", () => this.d.openMenu());
+    const qb = this.q(".ph-quality");
+    const ql = { low: "低", mid: "中", high: "高" } as const;
+    qb.textContent = `画質:${ql[this.d.quality()]}`;
+    qb.addEventListener("click", () => {
+      const order = ["low", "mid", "high"] as const;
+      const next = order[(order.indexOf(this.d.quality()) + 1) % 3];
+      this.d.setQuality(next);
+    });
   }
 
   private el<K extends keyof HTMLElementTagNameMap>(tag: K, cls = "", text = ""): HTMLElementTagNameMap[K] {

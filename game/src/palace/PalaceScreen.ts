@@ -6,6 +6,9 @@ import type { PalaceNpc, PalaceSystem } from "../sim/palace";
 import { AREA_LABEL, type Area } from "../sim/palace";
 import { buildFigure, buildPalace, type PalaceWorld, type Rect } from "./PalaceWorld";
 
+const HIT_GEO = new THREE.CylinderGeometry(0.6, 0.6, 1.9, 8);
+const HIT_MAT = new THREE.MeshBasicMaterial({ visible: false });
+
 interface NpcView { npc: PalaceNpc; fig: THREE.Group; path: { x: number; z: number }[]; label: HTMLDivElement; phase: number }
 
 const LIGHT: { sky: number; ground: number; sun: number; sunI: number; hemiI: number; fog: number; pos: [number, number, number]; lamp: number }[] = [
@@ -14,6 +17,15 @@ const LIGHT: { sky: number; ground: number; sun: number; sunI: number; hemiI: nu
   { sky: 0xf0b888, ground: 0x6a4a3a, sun: 0xff9a50, sunI: 1.4, hemiI: 0.8, fog: 0xd8a888, pos: [-70, 25, 30], lamp: 0.6 }, // 夕
   { sky: 0x2a3550, ground: 0x18140f, sun: 0x8aa0d0, sunI: 0.35, hemiI: 0.45, fog: 0x1a2030, pos: [-30, 60, -40], lamp: 1 }, // 夜
 ];
+
+/** 画質(Version 53):低=影なし・人物の描く距離が短い・装飾を簡略(モバイル向け)/中=基本の影/高=細かい装飾・影の解像度・灯火 */
+export type PalaceQuality = "low" | "mid" | "high";
+export const QUALITY_LABEL: Record<PalaceQuality, string> = { low: "低", mid: "中", high: "高" };
+const Q = {
+  low: { shadow: 0, npcDist: 32, pixel: 1, lamps: 0, fogFar: 170 },
+  mid: { shadow: 1024, npcDist: 70, pixel: 1.5, lamps: 1, fogFar: 260 },
+  high: { shadow: 2048, npcDist: 999, pixel: 2, lamps: 3, fogFar: 320 },
+} as const;
 
 export interface PalaceScreenEvents {
   /** 人物をタップした(近ければ話しかける) */
@@ -40,6 +52,7 @@ export class PalaceScreen {
   private readonly hemi: THREE.HemisphereLight;
   private readonly sun: THREE.DirectionalLight;
   private readonly lampLight: THREE.PointLight;
+  private readonly extraLamps: THREE.PointLight[] = [];
   private readonly views = new Map<string, NpcView>();
   private readonly labels: HTMLDivElement;
   private area: Area | null = null;
@@ -52,25 +65,46 @@ export class PalaceScreen {
   fps = 0;
   private frames = 0;
   private fpsAt = performance.now();
+  /** 直近のフレームの時間(ミリ秒。性能の計測用、最大600) */
+  private frameMs: number[] = [];
+  private lastAt = performance.now();
+  /** 人物の更新にかかった時間(ミリ秒・直近の平均) */
+  npcMs = 0;
+  private tick = 0;
+  /** 仮想スティック(iPhone):-1〜1 */
+  private stick = { x: 0, y: 0 };
+  private readonly oldPixel: number;
+  readonly quality: PalaceQuality;
 
   constructor(
     private readonly renderer: THREE.WebGLRenderer, private readonly canvas: HTMLCanvasElement, labelRoot: HTMLElement,
-    private readonly palace: PalaceSystem, private readonly events: PalaceScreenEvents,
+    private readonly palace: PalaceSystem, private readonly events: PalaceScreenEvents, quality: PalaceQuality = "mid",
   ) {
-    this.world = buildPalace();
+    this.quality = quality;
+    const q = Q[quality];
+    this.oldPixel = renderer.getPixelRatio();
+    renderer.setPixelRatio(Math.min(typeof devicePixelRatio === "number" ? devicePixelRatio : 1, q.pixel));
+    this.world = buildPalace(quality);
     this.scene.add(this.world.group);
     this.hemi = new THREE.HemisphereLight(0xffffff, 0x806040, 1);
     this.scene.add(this.hemi);
     this.sun = new THREE.DirectionalLight(0xffffff, 1.5);
     // 影は、タッチ操作の端末(iPhone など)では切る(重いため)。PCでは付ける
-    this.sun.castShadow = !(typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches);
-    this.sun.shadow.mapSize.set(1024, 1024);
+    this.sun.castShadow = q.shadow > 0;
+    this.sun.shadow.mapSize.set(Math.max(256, q.shadow), Math.max(256, q.shadow));
     const sc = this.sun.shadow.camera;
     sc.left = -40; sc.right = 40; sc.top = 40; sc.bottom = -40; sc.near = 1; sc.far = 260;
     this.scene.add(this.sun, this.sun.target);
     this.lampLight = new THREE.PointLight(0xffc870, 0, 30, 1.6);
     this.scene.add(this.lampLight);
-    this.scene.fog = new THREE.Fog(0xdde2e6, 90, 260);
+    this.scene.fog = new THREE.Fog(0xdde2e6, 90, q.fogFar);
+    // 高画質:皇帝のまわりに灯火の光を増やす
+    for (let i = 1; i < q.lamps; i++) {
+      const l = new THREE.PointLight(0xffc070, 0, 22, 1.8);
+      l.userData.extraLamp = i;
+      this.scene.add(l);
+      this.extraLamps.push(l);
+    }
     this.avatar = buildFigure({ robe: "#1c1a22", trim: "#b0302a", hair: 0, height: 1.72 }, true);
     this.scene.add(this.avatar);
     const saved = palace.avatar;
@@ -84,6 +118,75 @@ export class PalaceScreen {
     this.syncNpcs(true);
     this.applyLight(palace.slot);
     this.bindInput();
+    this.buildStick(labelRoot);
+  }
+
+  /** 仮想スティック(タッチの端末):画面の左下を指でなぞると歩く */
+  private buildStick(root: HTMLElement): void {
+    const touch = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
+    const pad = document.createElement("div");
+    pad.className = "palace-stick";
+    pad.hidden = !touch;
+    const knob = document.createElement("i");
+    pad.append(knob);
+    root.append(pad);
+    this.stickEl = pad;
+    let id: number | null = null;
+    let cx = 0, cy = 0;
+    const move = (e: PointerEvent): void => {
+      const r = 46;
+      const dx = Math.max(-r, Math.min(r, e.clientX - cx)), dy = Math.max(-r, Math.min(r, e.clientY - cy));
+      knob.style.transform = `translate(${dx}px, ${dy}px)`;
+      this.stick = { x: dx / r, y: dy / r };
+      this.target = null;
+      this.route = [];
+    };
+    const on = (type: string, fn: (e: PointerEvent) => void): void => {
+      pad.addEventListener(type, fn as EventListener);
+      this.cleanup.push(() => pad.removeEventListener(type, fn as EventListener));
+    };
+    on("pointerdown", (e) => {
+      id = e.pointerId;
+      const r = pad.getBoundingClientRect();
+      cx = r.left + r.width / 2;
+      cy = r.top + r.height / 2;
+      pad.setPointerCapture?.(e.pointerId);
+      move(e);
+      e.preventDefault();
+    });
+    on("pointermove", (e) => { if (e.pointerId === id) move(e); });
+    const end = (e: PointerEvent): void => {
+      if (e.pointerId !== id) return;
+      id = null;
+      this.stick = { x: 0, y: 0 };
+      knob.style.transform = "";
+    };
+    on("pointerup", end);
+    on("pointercancel", end);
+  }
+
+  private stickEl: HTMLDivElement | null = null;
+
+  /** 仮想スティックを外から動かす(テスト用) */
+  setStick(x: number, y: number): void {
+    this.stick = { x, y };
+  }
+
+  /** 性能の計測値:FPSの平均・最低、フレーム時間の95パーセンタイル、描画の回数・三角形、資源の数、人物の更新時間 */
+  stats(): Record<string, number | string> {
+    const t = this.frameMs.slice(5);
+    const sorted = [...t].sort((a, b) => a - b);
+    const avg = t.length ? t.reduce((a, b) => a + b, 0) / t.length : 0;
+    const info = this.renderer.info;
+    return {
+      quality: this.quality, frames: t.length, fpsAvg: avg ? +(1000 / avg).toFixed(1) : 0, fpsMin: sorted.length ? +(1000 / sorted[sorted.length - 1]).toFixed(1) : 0,
+      p95ms: sorted.length ? +sorted[Math.floor(sorted.length * 0.95)].toFixed(1) : 0, calls: info.render.calls, triangles: info.render.triangles,
+      geometries: info.memory.geometries, textures: info.memory.textures, npcMs: +this.npcMs.toFixed(3), npcs: this.views.size,
+    };
+  }
+
+  resetStats(): void {
+    this.frameMs = [];
   }
 
   // ===================== 人物 =====================
@@ -102,6 +205,11 @@ export class PalaceScreen {
       const spot = this.spotOf(n);
       if (!v) {
         const fig = buildFigure(n.looks);
+        // タップしやすいよう、目に見えない当たりの筒を付ける(誤タップを減らす)
+        const hit = new THREE.Mesh(HIT_GEO, HIT_MAT);
+        hit.position.y = 0.9;
+        hit.name = "hit";
+        fig.add(hit);
         fig.userData.npc = n.id;
         fig.traverse((o) => (o.userData.npc = n.id));
         fig.position.set(spot.x, this.world.floorAt(spot.x, spot.z), spot.z);
@@ -180,6 +288,12 @@ export class PalaceScreen {
     on(window, "keydown", (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.closest?.("input, select, textarea")) return;
       const k = e.key.toLowerCase();
+      // 交流のキー:F(または Enter)で、近くの人物に話しかける
+      if ((k === "f" || k === "enter") && this.near) {
+        this.events.onPickNpc(this.near);
+        e.preventDefault();
+        return;
+      }
       if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", "q", "e"].includes(k)) {
         this.keys.add(k);
         this.target = null;
@@ -384,8 +498,13 @@ export class PalaceScreen {
     if (this.keys.has("q")) this.yaw += dt * 1.6;
     if (this.keys.has("e")) this.yaw -= dt * 1.6;
     let walking = false;
+    const sl0 = Math.hypot(this.stick.x, this.stick.y);
+    if (sl0 > 0.15) {
+      mx += this.stick.x;
+      mz += this.stick.y;
+    }
     if (mx || mz) {
-      const l = Math.hypot(mx, mz);
+      const l = Math.max(1, Math.hypot(mx, mz));
       // カメラの向きに合わせて(前 = カメラの見ている方)
       const s = Math.sin(this.yaw), c = Math.cos(this.yaw);
       const wx = (mx * c + mz * s) / l, wz = (-mx * s + mz * c) / l;
@@ -416,12 +535,17 @@ export class PalaceScreen {
     this.avatar.rotation.y = this.facing;
     this.palace.avatar = { x: Math.round(this.pos.x * 10) / 10, z: Math.round(this.pos.z * 10) / 10, facing: Math.round(this.facing * 100) / 100 };
 
-    // 人物:道に沿って歩く。止まっているときは、ゆっくり揺れる
+    // 人物:道に沿って歩く。止まっているときは、ゆっくり揺れる。遠い人は、描かない・動きの更新を間引く(画質で変わる)
+    const t0 = performance.now();
+    this.tick++;
+    const far = Q[this.quality].npcDist;
     const t = performance.now() / 1000;
     let nearest: string | null = null;
     let nd = 3.5;
     for (const v of this.views.values()) {
       const p = v.fig.position;
+      const dc = Math.hypot(p.x - this.pos.x, p.z - this.pos.z);
+      v.fig.visible = dc < far;
       const next = v.path[0];
       if (next) {
         const dx = next.x - p.x, dz = next.z - p.z;
@@ -438,8 +562,11 @@ export class PalaceScreen {
         p.y = this.world.floorAt(p.x, p.z);
         // 皇帝が近くにいれば、そちらを向く
         if (p.distanceTo(this.pos) < 5) v.fig.rotation.y = Math.atan2(this.pos.x - p.x, this.pos.z - p.z);
-        const sl = v.fig.getObjectByName("sleeveL");
-        if (sl) sl.rotation.x = Math.sin(t * 1.3 + v.phase) * 0.06;
+        // 遠い人(25m より先)の身ぶりは、3フレームに1度だけ動かす
+        if (dc < 25 || this.tick % 3 === 0) {
+          const sl = v.fig.getObjectByName("sleeveL");
+          if (sl) sl.rotation.x = Math.sin(t * 1.3 + v.phase) * 0.06;
+        }
       }
       const d = p.distanceTo(this.pos);
       if (d < nd) {
@@ -447,6 +574,7 @@ export class PalaceScreen {
         nearest = v.npc.id;
       }
     }
+    this.npcMs = this.npcMs * 0.9 + (performance.now() - t0) * 0.1;
     if (nearest !== this.near) {
       this.near = nearest;
       this.events.onNear(nearest);
@@ -460,31 +588,42 @@ export class PalaceScreen {
     for (const r of this.world.roofs) r.mesh.visible = !(this.pos.x > r.rect.x0 && this.pos.x < r.rect.x1 && this.pos.z > r.rect.z0 && this.pos.z < r.rect.z1);
     // 夜の灯り:皇帝のそばを照らす
     this.lampLight.position.set(this.pos.x, 3.5, this.pos.z + 1);
-    // カメラ:皇帝の後ろ上から。あいだに壁があれば、壁の手前まで寄せる(壁の中に入り込まない)
-    let dist = this.dist;
+    // カメラ:皇帝の後ろ上から。あいだに壁があれば、壁の手前まで寄せる(壁の中に入り込まない)。
+    // 狭い回廊では、カメラを近く・少し高くして、柱に視界をふさがれないようにする
+    const inCorridor = area === "corridor";
+    const maxD = inCorridor ? Math.min(this.dist, 7) : this.dist;
+    const pitch = inCorridor ? Math.max(this.pitch, 0.38) : this.pitch;
+    let dist = maxD;
     for (let i = 1; i <= 16; i++) {
-      const d = (this.dist * i) / 16;
-      const x = this.pos.x + Math.sin(this.yaw) * Math.cos(this.pitch) * d;
-      const z = this.pos.z + Math.cos(this.yaw) * Math.cos(this.pitch) * d;
-      const y = floor + 1.5 + Math.sin(this.pitch) * d;
+      const d = (maxD * i) / 16;
+      const x = this.pos.x + Math.sin(this.yaw) * Math.cos(pitch) * d;
+      const z = this.pos.z + Math.cos(this.yaw) * Math.cos(pitch) * d;
+      const y = floor + 1.5 + Math.sin(pitch) * d;
       const wall = y < 6.5 && this.world.obstacles.some((o) => x > o.x0 - 0.2 && x < o.x1 + 0.2 && z > o.z0 - 0.2 && z < o.z1 + 0.2);
       // 殿舎の屋根の下(皇帝が入っていない殿舎)にもカメラを入れない
       const roof = y < 14 && this.world.roofs.some((r) => r.mesh.visible && x > r.rect.x0 - 2 && x < r.rect.x1 + 2 && z > r.rect.z0 - 2 && z < r.rect.z1 + 2 && !(this.pos.x > r.rect.x0 - 2 && this.pos.x < r.rect.x1 + 2 && this.pos.z > r.rect.z0 - 2 && this.pos.z < r.rect.z1 + 2));
       if (wall || roof) {
-        dist = Math.max(2.5, (this.dist * (i - 1)) / 16);
+        dist = Math.max(2.5, (maxD * (i - 1)) / 16);
         break;
       }
     }
-    const cx = this.pos.x + Math.sin(this.yaw) * Math.cos(this.pitch) * dist;
-    const cz = this.pos.z + Math.cos(this.yaw) * Math.cos(this.pitch) * dist;
-    const cy = floor + 1.5 + Math.sin(this.pitch) * dist;
+    const cx = this.pos.x + Math.sin(this.yaw) * Math.cos(pitch) * dist;
+    const cz = this.pos.z + Math.cos(this.yaw) * Math.cos(pitch) * dist;
+    const cy = floor + 1.5 + Math.sin(pitch) * dist;
     this.camera.position.set(cx, cy, cz);
     this.camera.lookAt(this.pos.x, floor + 1.4, this.pos.z);
     this.sun.target.position.set(this.pos.x, 0, this.pos.z);
     const L = LIGHT[this.palace.slot] ?? LIGHT[1];
     this.sun.position.set(this.pos.x + L.pos[0], L.pos[1], this.pos.z + L.pos[2]);
+    for (const [i, l] of this.extraLamps.entries()) {
+      l.intensity = this.lampLight.intensity * 0.7;
+      l.position.set(this.pos.x + (i % 2 ? 8 : -8), 3.2, this.pos.z - 6 * i);
+    }
     this.frames++;
     const now = performance.now();
+    this.frameMs.push(now - this.lastAt);
+    this.lastAt = now;
+    if (this.frameMs.length > 600) this.frameMs.shift();
     if (now - this.fpsAt > 1000) {
       this.fps = (this.frames * 1000) / (now - this.fpsAt);
       this.frames = 0;
@@ -524,12 +663,28 @@ export class PalaceScreen {
     this.camera.updateProjectionMatrix();
   }
 
+  /** 戦略マップへ戻るとき:形・材質・テクスチャ・影の描画先をすべて片づける(資源の漏れを防ぐ) */
   dispose(): void {
     for (const f of this.cleanup) f();
     this.labels.remove();
+    this.stickEl?.remove();
+    const mats = new Set<THREE.Material>();
     this.scene.traverse((o) => {
       const m = o as THREE.Mesh;
-      if (m.geometry) m.geometry.dispose();
+      if (m.geometry && m.geometry !== HIT_GEO) m.geometry.dispose();
+      const mm = m.material as THREE.Material | THREE.Material[] | undefined;
+      if (mm && mm !== HIT_MAT) for (const x of Array.isArray(mm) ? mm : [mm]) mats.add(x);
     });
+    for (const m of mats) {
+      for (const v of Object.values(m) as unknown[]) if (v instanceof THREE.Texture) v.dispose();
+      m.dispose();
+    }
+    this.sun.shadow.map?.dispose();
+    this.sun.dispose();
+    this.lampLight.dispose();
+    for (const l of this.extraLamps) l.dispose();
+    this.scene.clear();
+    this.renderer.setPixelRatio(this.oldPixel);
+    this.renderer.renderLists.dispose();
   }
 }

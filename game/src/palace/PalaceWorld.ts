@@ -78,7 +78,8 @@ function hipRoof(w: number, d: number, h: number): THREE.BufferGeometry {
   return g;
 }
 
-export function buildPalace(): PalaceWorld {
+export function buildPalace(quality: "low" | "mid" | "high" = "mid"): PalaceWorld {
+  const simple = quality === "low";
   const group = new THREE.Group();
   const obstacles: Rect[] = [];
   const roofs: PalaceWorld["roofs"] = [];
@@ -209,6 +210,7 @@ export function buildPalace(): PalaceWorld {
     box(w * 0.9, 1.8, 0.12, M.screen, x, y + 1.3, z - d / 2 + 0.1); // 屏風
   };
   const table = (x: number, z: number, y: number): void => {
+    if (simple) return; // 低画質:小さな調度を省く
     box(1.4, 0.35, 0.7, M.wood, x, y + 0.35, z);
     box(0.9, 0.08, 0.9, M.silk, x, y + 0.04, z + 0.9);
   };
@@ -431,8 +433,11 @@ export function buildPalace(): PalaceWorld {
  */
 function mergeStatic(group: THREE.Group, keep: Set<THREE.Object3D>): void {
   group.updateMatrixWorld(true);
-  const byMat = new Map<THREE.Material, THREE.BufferGeometry[]>();
-  const shadow = new Map<THREE.Material, boolean>();
+  // 材質と場所(40m ごとの区切り)ごとにまとめる:画面の外の区切りは描かない(視野の外の省略が効くように)
+  const byMat = new Map<string, { mat: THREE.Material; list: THREE.BufferGeometry[] }>();
+  const shadow = new Map<string, boolean>();
+  const box = new THREE.Box3();
+  const c = new THREE.Vector3();
   const drop: THREE.Mesh[] = [];
   group.traverse((o) => {
     const m = o as THREE.Mesh;
@@ -444,16 +449,20 @@ function mergeStatic(group: THREE.Group, keep: Set<THREE.Object3D>): void {
     if (!g.getAttribute("uv")) g.setAttribute("uv", new THREE.Float32BufferAttribute(new Float32Array((g.getAttribute("position").count) * 2), 2));
     for (const k of Object.keys(g.attributes)) if (!["position", "normal", "uv"].includes(k)) g.deleteAttribute(k);
     if (!g.getAttribute("normal")) g.computeVertexNormals();
-    (byMat.get(mat) ?? byMat.set(mat, []).get(mat)!).push(g);
-    shadow.set(mat, (shadow.get(mat) ?? false) || m.castShadow);
+    box.setFromBufferAttribute(g.getAttribute("position") as THREE.BufferAttribute).getCenter(c);
+    const key = `${mat.uuid}|${Math.floor(c.x / 40)}|${Math.floor(c.z / 40)}`;
+    (byMat.get(key) ?? byMat.set(key, { mat, list: [] }).get(key)!).list.push(g);
+    shadow.set(key, (shadow.get(key) ?? false) || m.castShadow);
     drop.push(m);
   });
   for (const m of drop) m.parent?.remove(m);
-  for (const [mat, list] of byMat) {
+  for (const [key, { mat, list }] of byMat) {
     const merged = mergeGeometries(list, false);
+    for (const g of list) g.dispose();
     if (!merged) continue;
+    merged.computeBoundingSphere();
     const mesh = new THREE.Mesh(merged, mat);
-    mesh.castShadow = shadow.get(mat) ?? false;
+    mesh.castShadow = shadow.get(key) ?? false;
     mesh.receiveShadow = true;
     group.add(mesh);
   }

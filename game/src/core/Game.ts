@@ -20,7 +20,7 @@ import { CityLabels } from "../ui/CityLabels";
 import { InfoPanel } from "../ui/InfoPanel";
 import { DiplomacyScreen } from "../ui/DiplomacyScreen";
 import { CourtScreen } from "../ui/CourtScreen";
-import { PalaceScreen } from "../palace/PalaceScreen";
+import { PalaceScreen, type PalaceQuality } from "../palace/PalaceScreen";
 import { PalaceHud } from "../ui/PalaceHud";
 import { AREA_LABEL } from "../sim/palace";
 import { EventsScreen } from "../ui/EventsScreen";
@@ -1686,17 +1686,47 @@ export class Game {
         if (p) this.palaceScreen!.walkTo(p.x, p.z + 2);
       },
       openMenu: () => void this.menu.open(),
+      quality: () => this.palaceQuality(),
+      setQuality: (q) => this.setPalaceQuality(q),
     });
     this.palaceScreen = new PalaceScreen(this.renderer, canvas, hudEl, P, {
       onPickNpc: (id) => this.palaceHud?.openNpc(id),
       onArea: (a) => this.palaceHud?.setArea(AREA_LABEL[a]),
       onNear: (id) => this.palaceHud?.setNear(id),
-    });
+    }, this.palaceQuality());
     this.palaceScreen.resize(this.width, this.height);
     this.palaceHud.setArea(this.palaceScreen.areaLabel);
     this.palaceHud.refresh();
     this.lastFrame = performance.now();
   }
+
+  /** 宮殿の画質(端末ごとに覚える。無ければ、タッチの端末は低、ほかは中) */
+  palaceQuality(): PalaceQuality {
+    if (this.forcedQuality) return this.forcedQuality;
+    try {
+      const v = localStorage.getItem("goko-palace-quality");
+      if (v === "low" || v === "mid" || v === "high") return v;
+    } catch {
+      // 読めなければ既定の値
+    }
+    return typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches ? "low" : "mid";
+  }
+
+  /** 宮殿の画質を変える(宮殿にいれば、画面を作り直す) */
+  setPalaceQuality(q: PalaceQuality): void {
+    try {
+      localStorage.setItem("goko-palace-quality", q);
+    } catch {
+      // 保存できなくても、いまの画面には使う
+    }
+    this.forcedQuality = q;
+    if (this.palaceScreen) {
+      this.closePalaceScreen();
+      this.openPalaceScreen();
+    }
+  }
+
+  private forcedQuality: PalaceQuality | null = null;
 
   /** 宮殿の時刻を進める(1刻 = 6時間 = 戦略マップの4分の1日)。そのあいだも、他国と歴史の事件が進む */
   palaceAdvance(slots: number): void {

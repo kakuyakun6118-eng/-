@@ -4358,3 +4358,10 @@ select:focus-visible {
   .ph-sheet { top: calc(48px + env(safe-area-inset-top, 0px)); }
   .ph-side { gap: 2px; } .ph-side button { min-height: 32px; }
 }
+
+/* 仮想スティック(Version 53) */
+.palace-stick { position: absolute; left: max(18px, env(safe-area-inset-left, 0px)); bottom: calc(26px + env(safe-area-inset-bottom, 0px)); width: 112px; height: 112px; border-radius: 50%; background: rgba(20, 12, 10, 0.35); border: 2px solid rgba(200, 162, 82, 0.5); pointer-events: auto; touch-action: none; z-index: 2; }
+.palace-stick[hidden] { display: none; }
+.palace-stick i { position: absolute; left: 34px; top: 34px; width: 44px; height: 44px; border-radius: 50%; background: rgba(200, 162, 82, 0.6); }
+#app.in-palace #map { touch-action: none; }
+@media (pointer: coarse) { .ph-hint { left: 150px !important; } }
