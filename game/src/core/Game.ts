@@ -1130,8 +1130,27 @@ export class Game {
   /** オートセーブ(失敗しても、ゲームは止めない) */
   private autosave(): void {
     this.lastAutosaveDay = this.campaign.day;
-    this.saves.put(AUTO_SLOT, this.buildSave()).catch((err) => console.warn("オートセーブに失敗しました", err));
+    // 書き込みは一度に一つだけ(Version 54)。書いている途中に次が来たら、終わったあとで最新の状態を一度だけ書く。
+    // 時を早く進めたとき、書き込み待ちのセーブの写しがたまり、メモリが増え続けていたため
+    if (this.autosaving) {
+      this.autosaveAgain = true;
+      return;
+    }
+    this.autosaving = true;
+    const run = (): void => {
+      this.autosaveAgain = false;
+      this.saves
+        .put(AUTO_SLOT, this.buildSave())
+        .catch((err) => console.warn("オートセーブに失敗しました", err))
+        .finally(() => {
+          if (this.autosaveAgain) run();
+          else this.autosaving = false;
+        });
+    };
+    run();
   }
+  private autosaving = false;
+  private autosaveAgain = false;
 
   /** 会戦準備画面を開く。カメラを戦場へ寄せ、両軍の情報を表示する */
   openBattlePrep(battleId: string): void {
