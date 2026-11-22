@@ -158,6 +158,8 @@ function curvedRoof(w: number, d: number, h: number): THREE.BufferGeometry {
 export function buildPalace(quality: Quality = "mid"): PalaceWorld {
   const low = quality === "low", high = quality === "high";
   const T = textures();
+  // 低・中の画質では、模様の絵の拡大縮小を軽い方式(段階の間を混ぜない)にする。見た目はほぼ同じで、描く手間が減る
+  if (!high) for (const t of Object.values(T)) if ((t as THREE.Texture).isTexture) (t as THREE.Texture).minFilter = THREE.LinearMipmapNearestFilter;
   const M = {
     stone: new THREE.MeshLambertMaterial({ color: 0xbcb4a4 }),
     paving: new THREE.MeshLambertMaterial({ map: T.paving }),
@@ -250,7 +252,8 @@ export function buildPalace(quality: Quality = "mid"): PalaceWorld {
   const skyCol = new Float32Array(skyGeo.getAttribute("position").count * 3);
   skyGeo.setAttribute("color", new THREE.BufferAttribute(skyCol, 3));
   const sky = new THREE.Mesh(skyGeo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false }));
-  sky.renderOrder = -1;
+  // 空は最後に描く(手前の建物で隠れる所は塗らない。ソフトウェア描画やスマートフォンで軽くなる)
+  sky.renderOrder = 1e6;
   group.add(sky);
   keep.add(sky);
   const setSky = (top: number, horizon: number): void => {
@@ -757,7 +760,8 @@ export function buildPalace(quality: Quality = "mid"): PalaceWorld {
   // ---------- まとめ描き(場所と材質ごと。屋根・柱・灯火・湯気・空・室内は別にまとめる) ----------
   for (const it of interiors) {
     keep.add(it.group);
-    mergeStatic(it.group, new Set(lamps));
+    // 室内の家具は屋根の下にあるため、影を落とさない(影の描画を軽くする)
+    mergeStatic(it.group, new Set(lamps), 999, false);
   }
   mergeStatic(group, keep);
   const tick = (dt: number, t: number): void => {
@@ -774,7 +778,7 @@ export function buildPalace(quality: Quality = "mid"): PalaceWorld {
 }
 
 /** 動かない飾りを、材質と場所(40m ごと)ごとに1つの形にまとめる(描く回数を減らす。画面の外の区切りは描かない) */
-function mergeStatic(group: THREE.Object3D, keep: Set<THREE.Object3D>): void {
+function mergeStatic(group: THREE.Object3D, keep: Set<THREE.Object3D>, chunk = 80, castShadow = true): void {
   group.updateMatrixWorld(true);
   const inv = new THREE.Matrix4().copy(group.matrixWorld).invert();
   const byMat = new Map<string, { mat: THREE.Material; list: THREE.BufferGeometry[]; shadow: boolean }>();
@@ -792,7 +796,7 @@ function mergeStatic(group: THREE.Object3D, keep: Set<THREE.Object3D>): void {
     for (const k of Object.keys(g.attributes)) if (!["position", "normal", "uv"].includes(k)) g.deleteAttribute(k);
     if (!g.getAttribute("normal")) g.computeVertexNormals();
     box.setFromBufferAttribute(g.getAttribute("position") as THREE.BufferAttribute).getCenter(c);
-    const key = `${mat.uuid}|${Math.floor(c.x / 40)}|${Math.floor(c.z / 40)}`;
+    const key = `${mat.uuid}|${Math.floor(c.x / chunk)}|${Math.floor(c.z / chunk)}`;
     const e = byMat.get(key) ?? byMat.set(key, { mat, list: [], shadow: false }).get(key)!;
     e.list.push(g);
     e.shadow ||= m.castShadow;
@@ -808,7 +812,7 @@ function mergeStatic(group: THREE.Object3D, keep: Set<THREE.Object3D>): void {
     if (!merged) continue;
     merged.computeBoundingSphere();
     const mesh = new THREE.Mesh(merged, mat);
-    mesh.castShadow = shadow;
+    mesh.castShadow = shadow && castShadow;
     mesh.receiveShadow = true;
     group.add(mesh);
   }

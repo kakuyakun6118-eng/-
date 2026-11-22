@@ -49,6 +49,7 @@ const { chromium } = require('playwright');
   check('L6b 20年後のセーブを読み込んでも、人物・事件・物語が同じで、続けて進められる', reload.before[0] === reload.after[0] && reload.before[2] === reload.after[2], reload);
   check('L7 20年の進行のあいだ、画面の中でエラーが起きない', errs.length === 0, errs.slice(0, 3));
   console.log(`INFO 合計 ${Math.round((Date.now() - t0) / 1000)}秒`);
+  console.log('errors:', errs.slice(0, 3));
   await b.close();
   if (problems.length) { console.log('問題:', problems); process.exit(1); }
 })();

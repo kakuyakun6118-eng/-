@@ -534,8 +534,15 @@ export class PalaceScreen {
   /** 皇帝が歩いているか(足音) */
   walking = false;
 
+  /** 動かす量を小さく分けて動かす(コマが遅い端末でも、壁を抜けず、歩く速さが変わらない) */
+  private moveSteps(dx: number, dz: number): void {
+    const n = Math.max(1, Math.ceil(Math.hypot(dx, dz) / 0.3));
+    for (let i = 0; i < n; i++) this.moveBy(dx / n, dz / n);
+  }
+
   update(dt: number): void {
-    dt = Math.min(dt, 0.1);
+    // 遅い端末(1秒に数コマ)でも、歩く速さが落ちないよう 0.4秒までは実際の時間で進める
+    dt = Math.min(dt, 0.4);
     const speed = (this.keys.has("shift") ? 7 : 4.2) * dt;
     let mx = 0, mz = 0;
     if (this.keys.has("w") || this.keys.has("arrowup")) mz -= 1;
@@ -555,7 +562,7 @@ export class PalaceScreen {
       // カメラの向きに合わせて(前 = カメラの見ている方)
       const s = Math.sin(this.yaw), c = Math.cos(this.yaw);
       const wx = (mx * c + mz * s) / l, wz = (-mx * s + mz * c) / l;
-      this.moveBy(wx * speed, wz * speed);
+      this.moveSteps(wx * speed, wz * speed);
       this.facing = Math.atan2(wx, wz);
       walking = true;
     } else if (this.target) {
@@ -572,7 +579,7 @@ export class PalaceScreen {
         }
       } else {
         const st = Math.min(speed, d - stop + 0.01);
-        this.moveBy((dx / d) * st, (dz / d) * st);
+        this.moveSteps((dx / d) * st, (dz / d) * st);
         this.facing = Math.atan2(dx, dz);
         walking = true;
       }
@@ -669,7 +676,7 @@ export class PalaceScreen {
       this.events.onArea(area);
     }
     // 遠い殿舎の室内の調度は描かない(画質で距離が変わる)
-    const inDist = this.quality === "high" ? 80 : 50;
+    const inDist = this.quality === "high" ? 60 : this.quality === "mid" ? 35 : 28;
     for (const it of this.world.interiors) it.group.visible = Math.hypot(it.x - this.pos.x, it.z - this.pos.z) < inDist;
     this.world.tick(dt, t);
     // 中に入った殿舎の屋根は消す(中が見えるように)
