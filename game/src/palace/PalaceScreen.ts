@@ -4,18 +4,21 @@
 import * as THREE from "three";
 import type { PalaceNpc, PalaceSystem } from "../sim/palace";
 import { AREA_LABEL, type Area } from "../sim/palace";
-import { buildFigure, buildPalace, type PalaceWorld, type Rect } from "./PalaceWorld";
+import { buildPalace, type PalaceWorld, type Rect, type Seat } from "./PalaceWorld";
+import { Figure, type Pose } from "./Figure";
+import { moodExpr } from "../sim/palaceText";
 
 const HIT_GEO = new THREE.CylinderGeometry(0.6, 0.6, 1.9, 8);
 const HIT_MAT = new THREE.MeshBasicMaterial({ visible: false });
 
-interface NpcView { npc: PalaceNpc; fig: THREE.Group; path: { x: number; z: number }[]; label: HTMLDivElement; phase: number }
+interface NpcView { npc: PalaceNpc; fig: THREE.Group; body: Figure; path: { x: number; z: number }[]; label: HTMLDivElement; phase: number; seat?: Seat; wanderAt: number; bowed: boolean; acc?: number }
 
-const LIGHT: { sky: number; ground: number; sun: number; sunI: number; hemiI: number; fog: number; pos: [number, number, number]; lamp: number }[] = [
-  { sky: 0xcfe0f0, ground: 0x8a7a60, sun: 0xffe2b8, sunI: 1.5, hemiI: 0.95, fog: 0xd8dde0, pos: [60, 40, 40], lamp: 0 }, // 朝
-  { sky: 0xe4eef8, ground: 0x9a8a6a, sun: 0xffffff, sunI: 2.0, hemiI: 1.1, fog: 0xe4e8ea, pos: [20, 90, 20], lamp: 0 }, // 昼
-  { sky: 0xf0b888, ground: 0x6a4a3a, sun: 0xff9a50, sunI: 1.4, hemiI: 0.8, fog: 0xd8a888, pos: [-70, 25, 30], lamp: 0.6 }, // 夕
-  { sky: 0x2a3550, ground: 0x18140f, sun: 0x8aa0d0, sunI: 0.35, hemiI: 0.45, fog: 0x1a2030, pos: [-30, 60, -40], lamp: 1 }, // 夜
+// 時刻ごとの光:朝はやわらかい斜めの光、昼は高い日差し、夕は長い影と朱の光、夜は月の青と灯火
+const LIGHT: { sky: number; ground: number; sun: number; sunI: number; hemiI: number; fog: number; pos: [number, number, number]; lamp: number; top: number; horizon: number }[] = [
+  { sky: 0xcfe0f0, ground: 0x8a7a60, sun: 0xffdcae, sunI: 1.35, hemiI: 1.0, fog: 0xdfe0dc, pos: [70, 28, 50], lamp: 0, top: 0x9cc0e4, horizon: 0xf2e2cc },
+  { sky: 0xe4eef8, ground: 0x9a8a6a, sun: 0xfffaf0, sunI: 2.1, hemiI: 1.1, fog: 0xe6eaec, pos: [20, 95, 25], lamp: 0, top: 0x6a9ed8, horizon: 0xdfe8f0 },
+  { sky: 0xf0b080, ground: 0x6a4a3a, sun: 0xff8c48, sunI: 1.5, hemiI: 0.75, fog: 0xd8a080, pos: [-80, 18, 34], lamp: 0.6, top: 0x5a6aa0, horizon: 0xf0a060 },
+  { sky: 0x2a3550, ground: 0x18140f, sun: 0x9ab0e0, sunI: 0.38, hemiI: 0.42, fog: 0x161c2c, pos: [-30, 60, -40], lamp: 1, top: 0x0a1024, horizon: 0x2a3450 },
 ];
 
 /** 画質(Version 53):低=影なし・人物の描く距離が短い・装飾を簡略(モバイル向け)/中=基本の影/高=細かい装飾・影の解像度・灯火 */
@@ -41,6 +44,7 @@ export class PalaceScreen {
   readonly camera = new THREE.PerspectiveCamera(55, 1, 0.3, 600);
   readonly world: PalaceWorld;
   private readonly avatar: THREE.Group;
+  private readonly avatarBody: Figure;
   pos = new THREE.Vector3(8, 0, 76);
   facing = Math.PI;
   private target: { x: number; z: number } | null = null;
@@ -105,7 +109,8 @@ export class PalaceScreen {
       this.scene.add(l);
       this.extraLamps.push(l);
     }
-    this.avatar = buildFigure({ robe: "#1c1a22", trim: "#b0302a", hair: 0, height: 1.72 }, true);
+    this.avatarBody = new Figure({ robe: "#1c1a22", trim: "#b0302a", hair: 0, height: 1.72 }, { emperor: true });
+    this.avatar = this.avatarBody.root;
     this.scene.add(this.avatar);
     const saved = palace.avatar;
     if (saved) {
@@ -115,6 +120,7 @@ export class PalaceScreen {
     this.labels = document.createElement("div");
     this.labels.className = "palace-labels";
     labelRoot.append(this.labels);
+    this.world.setSeason(palace.month());
     this.syncNpcs(true);
     this.applyLight(palace.slot);
     this.bindInput();
@@ -197,53 +203,90 @@ export class PalaceScreen {
     for (const [id, v] of [...this.views]) {
       if (list.some((n) => n.id === id)) continue;
       this.scene.remove(v.fig);
+      v.body.dispose();
       v.label.remove();
       this.views.delete(id);
     }
     for (const n of list) {
       let v = this.views.get(n.id);
-      const spot = this.spotOf(n);
+      const goal = this.goalOf(n);
       if (!v) {
-        const fig = buildFigure(n.looks);
+        let h = 0;
+        for (let i = 0; i < n.id.length; i++) h = (h * 31 + n.id.charCodeAt(i)) >>> 0;
+        const body = new Figure(n.looks, { rank: n.rank, face: h % 3, girth: 0.92 + (h % 5) * 0.04, detail: this.quality !== "low" });
+        const fig = body.root;
         // タップしやすいよう、目に見えない当たりの筒を付ける(誤タップを減らす)
         const hit = new THREE.Mesh(HIT_GEO, HIT_MAT);
         hit.position.y = 0.9;
         hit.name = "hit";
         fig.add(hit);
-        fig.userData.npc = n.id;
         fig.traverse((o) => (o.userData.npc = n.id));
-        fig.position.set(spot.x, this.world.floorAt(spot.x, spot.z), spot.z);
+        // あとから来た人は、区画の入口から歩いて入る(皇帝の目の前に急に現れない)
+        const area = this.world.areaAt(goal.x, goal.z);
+        const door = this.world.doors[area];
+        const fromDoor = !first && door && Math.hypot(door.x - this.pos.x, door.z - this.pos.z) > 8;
+        const sx = fromDoor ? door.x : goal.x, sz = fromDoor ? door.z : goal.z;
+        fig.position.set(sx, this.world.floorAt(sx, sz), sz);
         this.scene.add(fig);
         const label = document.createElement("div");
         label.className = "palace-label";
         this.labels.append(label);
-        v = { npc: n, fig, path: [], label, phase: Math.random() * 6 };
+        v = { npc: n, fig, body, path: [], label, phase: (h % 100) / 16, wanderAt: 0, bowed: false };
         this.views.set(n.id, v);
+        if (fromDoor) {
+          v.path = this.findPath(sx, sz, goal.x, goal.z) ?? [{ x: goal.x, z: goal.z }];
+          v.seat = goal.seat;
+          v.npc = n;
+          v.label.textContent = n.name;
+          v.label.dataset.rank = n.rank;
+          continue;
+        }
       }
       v.npc = n;
       v.label.textContent = n.name;
       v.label.dataset.rank = n.rank;
+      v.seat = goal.seat;
       if (first) {
-        v.fig.position.set(spot.x, this.world.floorAt(spot.x, spot.z), spot.z);
+        v.fig.position.set(goal.x, this.world.floorAt(goal.x, goal.z), goal.z);
         v.path = [];
+        if (goal.seat) v.fig.rotation.y = goal.seat.face;
       } else {
-        // 時刻が変わった:区画の入口を通って、新しい居場所へ歩く
-        const from = this.world.areaAt(v.fig.position.x, v.fig.position.z);
-        const to = this.palace.whereAt(n).area;
-        v.path = from === to ? [spot] : [this.world.doors[from], { x: 0, z: -12 }, this.world.doors[to], spot];
+        // 時刻が変わった:道を探して、新しい居場所へ歩く(瞬間移動しない)
+        v.path = this.findPath(v.fig.position.x, v.fig.position.z, goal.x, goal.z) ?? [{ x: goal.x, z: goal.z }];
       }
     }
   }
 
-  private spotOf(n: PalaceNpc): { x: number; z: number } {
+  /** 人物の行き先:区画の中の座る所・読む所・楽器・宴席(時刻と好みで決まる)。無ければ立つ所 */
+  private goalOf(n: PalaceNpc): { x: number; z: number; seat?: Seat } {
     const where = this.palace.whereAt(n);
-    const list = this.world.spots[where.area];
     let h = 0;
     for (let i = 0; i < n.id.length; i++) h = (h * 31 + n.id.charCodeAt(i)) >>> 0;
-    const s = list[(h + this.palace.slot) % list.length];
-    // 同じ所に重ならないよう、少しずらす
+    const seats = this.world.seats[where.area];
+    // 夜と、散策の時刻(昼の庭園・回廊)は立って歩く。そのほかは座る・読む・弾く・食べる
+    const stroll = (where.area === "garden" || where.area === "corridor") && this.palace.slot === 1 && h % 2 === 0;
+    if (seats.length && !stroll && this.palace.slot !== 3) {
+      const taken = new Set([...this.views.values()].filter((v) => v.npc.id !== n.id && v.seat).map((v) => v.seat));
+      for (let k = 0; k < seats.length; k++) {
+        const st = seats[(h + this.palace.slot + k) % seats.length];
+        if (!taken.has(st)) return { x: st.x, z: st.z, seat: st };
+      }
+    }
+    const list = this.world.spots[where.area];
+    const sp = list[(h + this.palace.slot) % list.length];
     const a = ((h % 360) * Math.PI) / 180;
-    return { x: s.x + Math.cos(a) * 1.6, z: s.z + Math.sin(a) * 1.6 };
+    return { x: sp.x + Math.cos(a) * 1.6, z: sp.z + Math.sin(a) * 1.6 };
+  }
+
+  /** いま話している人(身ぶりをする) */
+  private talking: string | null = null;
+  setTalking(id: string | null): void {
+    this.talking = id;
+  }
+
+  /** 人物の姿(テスト用:関節の角度・姿勢・表情) */
+  figureOf(id: string): Figure | undefined {
+    return this.views.get(id)?.body;
   }
 
   /** 人物の、いまの位置(テスト・会話の距離の判定用) */
@@ -259,6 +302,7 @@ export class PalaceScreen {
 
   applyLight(slot: number): void {
     const L = LIGHT[slot] ?? LIGHT[1];
+    this.world.setSky(L.top, L.horizon);
     this.hemi.color.setHex(L.sky);
     this.hemi.groundColor.setHex(L.ground);
     this.hemi.intensity = L.hemiI;
@@ -266,15 +310,16 @@ export class PalaceScreen {
     this.sun.intensity = L.sunI;
     this.sun.position.set(...L.pos);
     (this.scene.fog as THREE.Fog).color.setHex(L.fog);
-    this.scene.background = new THREE.Color(L.fog);
+    this.scene.background = new THREE.Color(L.horizon);
     this.lampLight.intensity = L.lamp * 3;
     for (const l of this.world.lamps) (l.material as THREE.MeshLambertMaterial).emissive.setHex(L.lamp > 0 ? 0xffb040 : 0x000000);
   }
 
-  /** 時刻が変わった(光・人物の居場所) */
-  onSlotChanged(): void {
+  /** 時刻が変わった(光・人物の居場所)。skip(何刻も飛ばしたとき)は、暗転のあいだに人物を置き直す */
+  onSlotChanged(skip = false): void {
     this.applyLight(this.palace.slot);
-    this.syncNpcs(false);
+    this.world.setSeason(this.palace.month());
+    this.syncNpcs(skip);
   }
 
   // ===================== 操作 =====================
@@ -486,6 +531,8 @@ export class PalaceScreen {
 
   /** 回り込む向き(右回り・左回り) */
   private side = 1;
+  /** 皇帝が歩いているか(足音) */
+  walking = false;
 
   update(dt: number): void {
     dt = Math.min(dt, 0.1);
@@ -531,8 +578,11 @@ export class PalaceScreen {
       }
     }
     const floor = this.world.floorAt(this.pos.x, this.pos.z);
-    this.avatar.position.set(this.pos.x, floor + (walking ? Math.abs(Math.sin(performance.now() / 160)) * 0.05 : 0), this.pos.z);
-    this.avatar.rotation.y = this.facing;
+    this.avatar.position.set(this.pos.x, floor, this.pos.z);
+    this.avatar.rotation.y += Math.atan2(Math.sin(this.facing - this.avatar.rotation.y), Math.cos(this.facing - this.avatar.rotation.y)) * Math.min(1, dt * 10);
+    this.avatarBody.setPose(walking ? "walk" : this.talking ? "talk" : "stand");
+    this.avatarBody.update(dt, performance.now() / 1000, walking ? 4 : 0);
+    this.walking = walking;
     this.palace.avatar = { x: Math.round(this.pos.x * 10) / 10, z: Math.round(this.pos.z * 10) / 10, facing: Math.round(this.facing * 100) / 100 };
 
     // 人物:道に沿って歩く。止まっているときは、ゆっくり揺れる。遠い人は、描かない・動きの更新を間引く(画質で変わる)
@@ -546,29 +596,63 @@ export class PalaceScreen {
       const p = v.fig.position;
       const dc = Math.hypot(p.x - this.pos.x, p.z - this.pos.z);
       v.fig.visible = dc < far;
+      // 見えない人は4コマに1度だけ動かす。その間の時間はためておき、まとめて進める(遅れない)
+      if (!v.fig.visible && this.tick % 4 !== 0) {
+        v.acc = (v.acc ?? 0) + dt;
+        continue;
+      }
+      const vdt = dt + (v.acc ?? 0);
+      v.acc = 0;
       const next = v.path[0];
+      let pose: Pose = "stand";
+      let spd = 0;
       if (next) {
         const dx = next.x - p.x, dz = next.z - p.z;
         const d = Math.hypot(dx, dz);
         if (d < 0.3) v.path.shift();
         else {
-          const st = Math.min(d, 1.6 * dt);
+          // 庭園・回廊の散策はゆっくり、用のあるときは少し速く
+          spd = v.seat ? 1.5 : 1.0;
+          // 皇帝から遠い(30m より先)人は、用のある所へ急ぎ足で向かう
+          if (dc > 30 && v.seat) spd = 2.6;
+          const st = Math.min(d, spd * vdt);
           p.x += (dx / d) * st;
           p.z += (dz / d) * st;
-          v.fig.rotation.y = Math.atan2(dx, dz);
+          const want = Math.atan2(dx, dz);
+          v.fig.rotation.y += Math.atan2(Math.sin(want - v.fig.rotation.y), Math.cos(want - v.fig.rotation.y)) * Math.min(1, dt * 8);
+          pose = "walk";
         }
-        p.y = this.world.floorAt(p.x, p.z) + Math.abs(Math.sin(t * 5 + v.phase)) * 0.03;
+      } else if (v.seat) {
+        pose = v.seat.pose;
+        v.fig.rotation.y += Math.atan2(Math.sin(v.seat.face - v.fig.rotation.y), Math.cos(v.seat.face - v.fig.rotation.y)) * Math.min(1, dt * 4);
       } else {
-        p.y = this.world.floorAt(p.x, p.z);
-        // 皇帝が近くにいれば、そちらを向く
-        if (p.distanceTo(this.pos) < 5) v.fig.rotation.y = Math.atan2(this.pos.x - p.x, this.pos.z - p.z);
-        // 遠い人(25m より先)の身ぶりは、3フレームに1度だけ動かす
-        if (dc < 25 || this.tick % 3 === 0) {
-          const sl = v.fig.getObjectByName("sleeveL");
-          if (sl) sl.rotation.x = Math.sin(t * 1.3 + v.phase) * 0.06;
+        // 散策:しばらく立ち止まり、また近くの立つ所へ歩く
+        if (t > v.wanderAt) {
+          v.wanderAt = t + 8 + ((v.phase * 37) % 10);
+          if (v.wanderAt > 0 && (this.palace.slot === 1 || this.palace.slot === 2)) {
+            const list = this.world.spots[this.world.areaAt(p.x, p.z)];
+            const sp = list[Math.floor((t + v.phase * 10) % list.length)];
+            if (sp && Math.hypot(sp.x - p.x, sp.z - p.z) > 2) v.path = this.findPath(p.x, p.z, sp.x + Math.sin(v.phase) * 1.2, sp.z + Math.cos(v.phase) * 1.2) ?? [];
+          }
         }
       }
-      const d = p.distanceTo(this.pos);
+      // 皇帝が近づくと、立って拝礼し、そちらを向く。話している人は、身ぶりをまじえる
+      if (dc < 3.5 && !next) {
+        if (!v.bowed && pose !== "walk") {
+          v.bowed = true;
+          v.body.setPose("bow");
+        }
+        const want = Math.atan2(this.pos.x - p.x, this.pos.z - p.z);
+        v.fig.rotation.y += Math.atan2(Math.sin(want - v.fig.rotation.y), Math.cos(want - v.fig.rotation.y)) * Math.min(1, dt * 5);
+      } else if (dc > 6) v.bowed = false;
+      if (this.talking === v.npc.id) pose = "talk";
+      if (v.body.pose !== "bow" || pose === "walk") v.body.setPose(pose);
+      v.body.setExpr(v.npc.expr ?? moodExpr(v.npc.mood, v.npc.jealousy, v.npc.romance));
+      // 遠い人(25m より先)の動きは間引き、細部(髪飾り・披帛)を隠す
+      if (dc < 25 || this.tick % 3 === 0) v.body.update(vdt * (dc < 25 ? 1 : 3), t, spd);
+      v.body.setDetail(dc < 22);
+      p.y = this.world.floorAt(p.x, p.z);
+      const d = dc;
       if (d < nd) {
         nd = d;
         nearest = v.npc.id;
@@ -584,6 +668,10 @@ export class PalaceScreen {
       this.area = area;
       this.events.onArea(area);
     }
+    // 遠い殿舎の室内の調度は描かない(画質で距離が変わる)
+    const inDist = this.quality === "high" ? 80 : 50;
+    for (const it of this.world.interiors) it.group.visible = Math.hypot(it.x - this.pos.x, it.z - this.pos.z) < inDist;
+    this.world.tick(dt, t);
     // 中に入った殿舎の屋根は消す(中が見えるように)
     for (const r of this.world.roofs) r.mesh.visible = !(this.pos.x > r.rect.x0 && this.pos.x < r.rect.x1 && this.pos.z > r.rect.z0 && this.pos.z < r.rect.z1);
     // 夜の灯り:皇帝のそばを照らす
@@ -666,6 +754,8 @@ export class PalaceScreen {
   /** 戦略マップへ戻るとき:形・材質・テクスチャ・影の描画先をすべて片づける(資源の漏れを防ぐ) */
   dispose(): void {
     for (const f of this.cleanup) f();
+    for (const v of this.views.values()) v.body.dispose();
+    this.avatarBody.dispose();
     this.labels.remove();
     this.stickEl?.remove();
     const mats = new Set<THREE.Material>();

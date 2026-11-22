@@ -19,6 +19,8 @@ export interface PalaceHudDeps {
   walkToNpc(id: string): void;
   /** メニュー(セーブ・ロード・設定)を開く */
   openMenu(): void;
+  /** 話している人(身ぶり) */
+  talking?(id: string | null): void;
   /** 画質(低・中・高) */
   quality(): "low" | "mid" | "high";
   setQuality(q: "low" | "mid" | "high"): void;
@@ -70,6 +72,7 @@ export class PalaceHud {
       <button type="button" class="ph-near" hidden></button>
       <p class="ph-hint">PC:WASD・矢印で歩く/Fで話しかける/クリックした所へ歩く/ドラッグで視点/ホイールで拡大。iPhone:左下のスティックで歩く/タップした所へ歩く/ドラッグで視点/2本指で拡大。人物をタップすると話しかけます</p>
       <section class="ph-panel" hidden></section>
+      <div class="ph-fade" hidden></div>
       <section class="ph-sheet" hidden></section>`;
     root.querySelectorAll<HTMLButtonElement>(".ph-time button").forEach((b) => b.addEventListener("click", () => this.time(b.dataset.t!)));
     root.querySelectorAll<HTMLButtonElement>(".ph-side button[data-s]").forEach((b) => b.addEventListener("click", () => this.sheet(b.dataset.s!)));
@@ -340,7 +343,18 @@ export class PalaceHud {
     }
   }
 
+  /** 時を飛ばすときの暗転 */
+  fade(): void {
+    const f = this.q(".ph-fade");
+    f.hidden = false;
+    f.classList.remove("go");
+    void f.offsetWidth;
+    f.classList.add("go");
+    window.setTimeout(() => (f.hidden = true), 1200);
+  }
+
   closeNpc(): void {
+    this.d.talking?.(null);
     this.selected = null;
     this.q(".ph-panel").hidden = true;
   }

@@ -23,6 +23,7 @@ import { CourtScreen } from "../ui/CourtScreen";
 import { PalaceScreen, type PalaceQuality } from "../palace/PalaceScreen";
 import { PalaceHud } from "../ui/PalaceHud";
 import { AREA_LABEL } from "../sim/palace";
+import { Ambience } from "../palace/Ambience";
 import { EventsScreen } from "../ui/EventsScreen";
 import { HistoryEventScreen, TimelineScreen } from "../ui/HistoryScreen";
 import { autoResolve, estimateWinRate } from "../sim/autoBattle";
@@ -104,6 +105,8 @@ export class Game {
   /** 皇帝生活モード(3Dの後宮)の画面と欄 */
   private palaceScreen: PalaceScreen | null = null;
   private palaceHud: PalaceHud | null = null;
+  /** 宮殿の環境音(合成音) */
+  private ambience: Ambience | null = null;
   /** 確認待ちの帰城先(Version 51) */
   private pendingReturn: string | null = null;
   private input!: InputController;
@@ -1686,11 +1689,12 @@ export class Game {
         if (p) this.palaceScreen!.walkTo(p.x, p.z + 2);
       },
       openMenu: () => void this.menu.open(),
+      talking: (id) => this.palaceScreen?.setTalking(id),
       quality: () => this.palaceQuality(),
       setQuality: (q) => this.setPalaceQuality(q),
     });
     this.palaceScreen = new PalaceScreen(this.renderer, canvas, hudEl, P, {
-      onPickNpc: (id) => this.palaceHud?.openNpc(id),
+      onPickNpc: (id) => { this.palaceHud?.openNpc(id); this.palaceScreen?.setTalking(id); },
       onArea: (a) => this.palaceHud?.setArea(AREA_LABEL[a]),
       onNear: (id) => this.palaceHud?.setNear(id),
     }, this.palaceQuality());
@@ -1738,7 +1742,9 @@ export class Game {
     }
     this.campaign.speed = 0;
     if (!this.palaceScreen) return;
-    this.palaceScreen.onSlotChanged();
+    // 何刻も飛ばしたときは、暗転のあいだに人物を置き直す(目の前で瞬間移動させない)
+    if (slots > 1) this.palaceHud?.fade();
+    this.palaceScreen.onSlotChanged(slots > 1);
     this.onDayChanged();
   }
 
@@ -1755,6 +1761,8 @@ export class Game {
   }
 
   private closePalaceScreen(): void {
+    this.ambience?.dispose();
+    this.ambience = null;
     this.palaceScreen?.dispose();
     this.palaceScreen = null;
     this.palaceHud = null;
@@ -1767,8 +1775,8 @@ export class Game {
   }
 
   /** 皇帝生活モードの画面(テスト用) */
-  get palace(): { screen: PalaceScreen | null; hud: PalaceHud | null } {
-    return { screen: this.palaceScreen, hud: this.palaceHud };
+  get palace(): { screen: PalaceScreen | null; hud: PalaceHud | null; ambience: Ambience | null } {
+    return { screen: this.palaceScreen, hud: this.palaceHud, ambience: this.ambience };
   }
 
   /** FPSの計測(実機テスト用):1秒ごとに、描いたフレームの数と、いちばん長かったフレームの時間を出す */
@@ -1796,6 +1804,7 @@ export class Game {
   /** いまの場面の音楽を選ぶ(画面の状態を、30コマに1度調べる) */
   private bgmScene(): BgmScene {
     const shown = (sel: string): boolean => !(this.root.querySelector(sel) as HTMLElement | null)?.hidden;
+    if (this.palaceScreen) return "court";
     if (this.battle) {
       const res = this.root.querySelector(".hud-result") as HTMLElement | null;
       if (res && !res.hidden) {
@@ -1830,6 +1839,10 @@ export class Game {
     // 皇帝生活モード:宮殿だけを動かして描く。戦略マップの時間は、宮殿の時刻が進むときだけ進む
     if (this.palaceScreen && this.palaceHud) {
       this.palaceScreen.update(dt);
+      // 環境音:音を出せるようになってから作る(最初の操作のあと)
+      if (!this.ambience) { const a = this.bgm.audio(); if (a) this.ambience = new Ambience(a.ctx, a.out); }
+      const sc = this.palaceScreen;
+      this.ambience?.update({ area: sc.currentArea, slot: this.campaign.palace.slot, walking: sc.walking, pondDist: Math.hypot(sc.pos.x + 10, sc.pos.z - 40), season: sc.world.season });
       this.palaceHud.tick(dt);
       this.palaceScreen.render();
       return;

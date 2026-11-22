@@ -93,6 +93,11 @@ export class Bgm {
     for (const t of ["pointerdown", "keydown", "touchend"]) window.addEventListener(t, unlock, { capture: true, passive: true });
   }
 
+  /** 環境音などが同じ音の出口(音量・消音の設定)を使うための、音の文脈と出口。まだ鳴らせなければ null */
+  audio(): { ctx: AudioContext; out: GainNode } | null {
+    return this.ctx && this.master && !this.locked ? { ctx: this.ctx, out: this.master } : null;
+  }
+
   get state(): { volume: number; muted: boolean; scene: BgmScene | null; locked: boolean } {
     return { volume: this.volume, muted: this.muted, scene: this.current?.scene ?? this.wanted, locked: this.locked };
   }

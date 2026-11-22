@@ -140,6 +140,11 @@ export class PalaceSystem {
     return this.c.calendar().year;
   }
 
+  /** いまの月(季節の景色) */
+  month(): number {
+    return this.c.calendar().month;
+  }
+
   ruler(): Person | undefined {
     return this.factionId ? this.c.rulerOf(this.factionId) : undefined;
   }

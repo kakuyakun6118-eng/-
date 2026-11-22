@@ -106,6 +106,50 @@ const { chromium, devices } = require('playwright');
   check('S5 セーブ・ロード後も、物語の段階・選択・約束・記憶が残り、続きから進められる', sl.same && sl.next.stage === 3, sl);
   await p.close();
 
+  // ===== 第3工程:人物の動き・表情・居場所・環境音 =====
+  p = await open('s317');
+  // G1. 歩く・座る・拝礼・話す:骨組み(腰・胴・腕・足)が実際に動く(静止した人形を動かすだけではない)
+  const an = await p.evaluate(async (enterSrc) => { eval(enterSrc)(); const g = window.__goko, s = g.palace.screen; const w = (ms) => new Promise(r => setTimeout(r, ms));
+    const n = g.campaign.palace.present()[0]; const f = s.figureOf(n.id); const samp = async (pose, ms = 900) => { const out = []; for (let i = 0; i < 6; i++) { f.setPose(pose); f.update(0.15, performance.now() / 1000 + i * 0.15, pose === 'walk' ? 1.5 : 0); out.push(f.joints()); await w(ms / 6); } return out; };
+    // 画面の更新に上書きされないよう、話し相手にして離れた所で確かめる
+    const stand = await samp('stand'); const walk = await samp('walk'); const sit = []; for (let i = 0; i < 12; i++) { f.setPose('sit'); f.update(0.2, i * 0.2, 0); sit.push(f.joints()); }
+    f.setPose('bow'); const bow = []; for (let i = 0; i < 6; i++) { f.update(0.15, i * 0.15, 0); bow.push(f.joints()); }
+    const talk = []; for (let i = 0; i < 8; i++) { f.setPose('talk'); f.update(0.15, i * 0.3, 0); talk.push(f.joints()); }
+    const spread = (a, k) => Math.max(...a.map(j => j[k])) - Math.min(...a.map(j => j[k]));
+    // 画面の中で、歩いている人物が実際にいる(時刻を変えて歩かせる)
+    g.palaceAdvance(1); let walkers = 0; for (let i = 0; i < 10 && !walkers; i++) { await w(300); walkers = [...s['views'].values()].filter(v => v.body.pose === 'walk').length; }
+    return { walkFoot: spread(walk, 'footL'), walkArm: spread(walk, 'armL'), standFoot: spread(stand, 'footL'), sitHips: stand[0].hipsY - sit[sit.length - 1].hipsY, bowTorso: Math.max(...bow.map(j => j.torsoX)), talkArm: spread(talk, 'armR'), walkers }; }, enter.toString());
+  check('G1 歩く(足と腕が交互に振れる)・座る(腰が下がる)・拝礼(上体を傾ける)・話す(身ぶり)で、人物の骨組みが実際に動く。時刻が変わると、人物が歩いて移る', an.walkFoot > 0.1 && an.walkArm > 0.1 && an.standFoot < 0.05 && an.sitHips > 0.15 && an.bowTorso > 0.3 && an.talkArm > 0.05 && an.walkers > 0, an);
+
+  // G2. 表情が会話と結びつく:贈り物・話の結果で表情が変わり、3Dの顔と顔絵に出る
+  const ex = await p.evaluate(async () => { const g = window.__goko, P = g.campaign.palace, s = g.palace.screen; const w = (ms) => new Promise(r => setTimeout(r, ms)); g.campaign.factionStates.jin.gold = 50000;
+    const n = P.present().find(x => x.adult !== false && x.rank !== 'royal') ?? P.present()[0]; const res = [];
+    const before = s.figureOf(n.id).expr; const r1 = P.gift(n, 'silk'); await w(400); res.push([n.expr, s.figureOf(n.id).expr]);
+    n.mood = 10; n.expr = undefined; await w(400); const low = s.figureOf(n.id).expr; n.mood = 90; await w(400); const high = s.figureOf(n.id).expr;
+    g.palace.hud.openNpc?.(n.id); await w(200); const img = document.querySelector('.ph-panel svg, .ph-panel img')?.outerHTML.length ?? 0;
+    return { before, after: res[0], low, high, gift: !!r1, img }; });
+  check('G2 会話・贈り物の結果で表情が変わり、3Dの人物の顔に同じ表情が出る。気分が沈むと悲しい顔、晴れると笑顔になる', ex.after[0] && ex.after[0] === ex.after[1] && ex.low !== ex.high && ['sad', 'angry', 'puzzled'].includes(ex.low) && ['smile', 'joy'].includes(ex.high), ex);
+
+  // G3. 居場所の一貫性:時刻の予定(どの区画で何をするか)と、3Dの居場所が合う。目の前で瞬間移動しない
+  const loc = await p.evaluate(async () => { const g = window.__goko, P = g.campaign.palace, s = g.palace.screen; const w = (ms) => new Promise(r => setTimeout(r, ms)); g.palace.hud.closeNpc?.();
+    const res = []; let jump = 0;
+    for (let k = 0; k < 2; k++) { const near = new Map([...s['views'].values()].map(v => [v.npc.id, v.fig.position.clone()]));
+      g.palaceAdvance(1); await w(120); for (const v of s['views'].values()) { const a = near.get(v.npc.id); if (a && a.distanceTo(s.pos) < 20) jump = Math.max(jump, a.distanceTo(v.fig.position)); }
+      // ソフトウェア描画では1秒に数コマしか進まず歩みが遅いので、15秒歩かせたあと「着いた人の居場所」と「歩いている人の行き先」を確かめる
+      await w(15000);
+      let ok = 0, all = 0, arrived = 0; for (const v of s['views'].values()) { const want = P.whereAt(v.npc).area; const end = v.path.length ? v.path[v.path.length - 1] : v.fig.position; const at = s['world'].areaAt(end.x, end.z); all++; if (!v.path.length) arrived++; if (want === at) ok++; } res.push({ slot: P.slot, ok, all, arrived }); }
+    return { res, jump: +jump.toFixed(2) }; });
+  check('G3 時刻ごとの予定の区画と、3Dで着いた所・向かっている所の区画が合う(9割以上)。時刻が変わっても、皇帝の近くの人物は瞬間移動せず歩いて移る', loc.res.every(r => r.ok >= r.all * 0.9) && loc.jump < 2, loc);
+
+  // G4. 環境音(合成音):場所と時刻で、鳴る音が変わる
+  await p.keyboard.press('Shift');
+  const am = await p.evaluate(async () => { const g = window.__goko, s = g.palace.screen; const w = (ms) => new Promise(r => setTimeout(r, ms)); await g.bgm?.unlock?.(); for (let i = 0; i < 10 && !g.palace.ambience; i++) await w(200);
+    const a = g.palace.ambience; if (!a) return { none: true }; const c0 = a.state().counts; s.pos.set(-10, 0, 46); await w(1500); const garden = a.state();
+    s.pos.set(0, 0, -60); await w(1200); const inside = a.state(); return { c0, garden, inside }; });
+  if (am.none) console.log('INFO G4 この試験環境では音の出力(AudioContext)が作られなかったため、環境音の確かめを省いた');
+  else check('G4 環境音(録音ではなく合成音):庭園の池の近くでは水の音・風の音が強く、室内では弱まる', am.garden.water > am.inside.water && am.garden.wind >= am.inside.wind, am);
+  await p.close();
+
   await b.close();
   if (problems.length) { console.log('問題:', problems); process.exit(1); }
   console.log('errors:', errs.slice(0, 3));
