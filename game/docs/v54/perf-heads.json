@@ -1,0 +1,56 @@
+{
+ "low-off": {
+  "fps": 4.8,
+  "heads": 0,
+  "calls": 209,
+  "tris": 26798,
+  "heap": 216,
+  "tex": 24,
+  "geo": 271
+ },
+ "low-all": {
+  "fps": 4.4,
+  "heads": 1,
+  "calls": 216,
+  "tris": 42602,
+  "heap": 205,
+  "tex": 34,
+  "geo": 284
+ },
+ "mid-off": {
+  "fps": 3.2,
+  "heads": 0,
+  "calls": 654,
+  "tris": 78592,
+  "heap": 231,
+  "tex": 34,
+  "geo": 528
+ },
+ "mid-all": {
+  "fps": 2.6,
+  "heads": 4,
+  "calls": 711,
+  "tris": 201496,
+  "heap": 214,
+  "tex": 55,
+  "geo": 587
+ },
+ "high-off": {
+  "fps": 2.8,
+  "heads": 0,
+  "calls": 664,
+  "tris": 78690,
+  "heap": 241,
+  "tex": 35,
+  "geo": 529
+ },
+ "high-all": {
+  "fps": 2.2,
+  "heads": 7,
+  "calls": 753,
+  "tris": 278854,
+  "heap": 268,
+  "tex": 67,
+  "geo": 631
+ }
+}

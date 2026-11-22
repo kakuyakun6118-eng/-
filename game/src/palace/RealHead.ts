@@ -202,7 +202,7 @@ export class RealHead {
     const eyeY = K.landmarks.eyeL[1];
     const tube = (pts: number[][], r: number, closed = false, mat: THREE.Material = K.hairTubeMat): THREE.Mesh => {
       const c = new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(p[0], p[1], p[2])), closed, "centripetal");
-      const g = new THREE.TubeGeometry(c, 40, r, 10, closed);
+      const g = new THREE.TubeGeometry(c, r > 0.005 ? 22 : 8, r, r > 0.005 ? 7 : 4, closed);
       this.owned.push(g);
       const m = new THREE.Mesh(g, mat);
       m.castShadow = true;
@@ -210,7 +210,7 @@ export class RealHead {
       return m;
     };
     const ball = (x: number, y: number, z: number, sx: number, sy: number, sz: number, mat: THREE.Material = K.hairTubeMat): THREE.Mesh => {
-      const g = new THREE.SphereGeometry(1, 20, 14);
+      const g = new THREE.SphereGeometry(1, 14, 10);
       this.owned.push(g);
       const m = new THREE.Mesh(g, mat);
       m.position.set(x, y, z);

@@ -129,7 +129,10 @@ export class PalaceScreen {
     this.buildStick(labelRoot);
     // 写実寄りの頭(Version 54):金属・肌の見え方のための周りの光と、頭の素の読み込み
     const pm = new THREE.PMREMGenerator(renderer);
-    this.envTex = pm.fromScene(new RoomEnvironment(), 0.04).texture;
+    const room = new RoomEnvironment();
+    this.envRT = pm.fromScene(room, 0.04);
+    this.envTex = this.envRT.texture;
+    room.dispose();
     pm.dispose();
     this.scene.environment = this.envTex;
     this.scene.environmentIntensity = 0.45;
@@ -137,8 +140,10 @@ export class PalaceScreen {
   }
 
   private envTex: THREE.Texture;
+  private envRT: THREE.WebGLRenderTarget;
   private closed = false;
   private kit: HeadKit | null = null;
+  private headsAt = 1;
   /** 写実の頭を付ける人:"proto" = 試作の3人(皇后・妃・女官を1人ずつ)、"all" = 後宮の全員 */
   realHeads: "proto" | "all" | "off" = "proto";
   private protoIds(): Set<string> {
@@ -153,7 +158,7 @@ export class PalaceScreen {
   private updateHeads(): void {
     const kit = this.kit;
     if (!kit) return;
-    const lim = this.quality === "low" ? { n: 2, d: 5 } : this.quality === "mid" ? { n: 4, d: 8 } : { n: 7, d: 12 };
+    const lim = this.quality === "low" ? { n: 1, d: 4 } : this.quality === "mid" ? { n: 4, d: 8 } : { n: 7, d: 12 };
     const allow = this.realHeads === "all" ? null : this.realHeads === "proto" ? this.protoIds() : new Set<string>();
     const cand = [...this.views.values()]
       .filter((v) => (allow ? allow.has(v.npc.id) : true))
@@ -723,7 +728,11 @@ export class PalaceScreen {
         nearest = v.npc.id;
       }
     }
-    if (this.tick % 10 === 0) this.updateHeads();
+    this.headsAt += dt;
+    if (this.headsAt > 0.3) {
+      this.headsAt = 0;
+      this.updateHeads();
+    }
     this.npcMs = this.npcMs * 0.9 + (performance.now() - t0) * 0.1;
     if (nearest !== this.near) {
       this.near = nearest;
@@ -776,11 +785,13 @@ export class PalaceScreen {
       const l = Math.hypot(dx, dz) || 1;
       const side = 0.35;
       const want = new THREE.Vector3(face.x + (dx / l) * 1.3 + (-dz / l) * side, face.y + 0.04, face.z + (dz / l) * 1.3 + (dx / l) * side);
-      this.talkCam.lerp(want, this.talkBlend < 0.01 ? 1 : 0.12);
-      this.talkBlend = Math.min(1, this.talkBlend + 0.06);
+      // 時間で寄る(コマの遅い端末でも、約1秒で寄りきる)
+      const kk = 1 - Math.exp(-dt * 6);
+      this.talkCam.lerp(want, this.talkBlend < 0.01 ? 1 : kk);
+      this.talkBlend = Math.min(1, this.talkBlend + dt * 1.6);
       this.camera.position.set(cx, cy, cz).lerp(this.talkCam, this.talkBlend);
       // 顔が画面の上の方に来るよう、少し下を見る(下の交流の欄に顔が隠れないように)
-      this.talkLook.lerp(face.clone().setY(face.y - 0.32), this.talkBlend < 0.07 ? 1 : 0.15);
+      this.talkLook.lerp(face.clone().setY(face.y - 0.32), this.talkBlend < 0.07 ? 1 : kk);
       this.camera.lookAt(new THREE.Vector3(this.pos.x, floor + 1.4, this.pos.z).lerp(this.talkLook, this.talkBlend));
     } else {
       this.talkBlend = 0;
@@ -857,7 +868,7 @@ export class PalaceScreen {
       for (const v of Object.values(m) as unknown[]) if (v instanceof THREE.Texture) v.dispose();
       m.dispose();
     }
-    this.envTex.dispose();
+    this.envRT.dispose();
     this.scene.environment = null;
     this.sun.shadow.map?.dispose();
     this.sun.dispose();

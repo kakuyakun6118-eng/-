@@ -25,6 +25,9 @@ export interface PalaceHudDeps {
   /** 画質(低・中・高) */
   quality(): "low" | "mid" | "high";
   setQuality(q: "low" | "mid" | "high"): void;
+  /** 写実の顔を付ける人(Version 54) */
+  faces(): "proto" | "all" | "off";
+  setFaces(f: "proto" | "all" | "off"): void;
 }
 
 /** 架空の女官の似顔(衣の色と髪の形から作る絵。写実ではない) */
@@ -69,7 +72,7 @@ export class PalaceHud {
         <div class="ph-time"><button type="button" data-t="1">時を進める</button><button type="button" data-t="day">一日を終える</button><button type="button" data-t="10">十日を過ごす</button><button type="button" data-t="30">一月を過ごす</button>
         <label class="ph-auto"><input type="checkbox" checked /> 時の流れ(<span class="ph-auto-left"></span>)</label></div></div>
       <div class="ph-side"><button type="button" data-s="reports">上奏<i class="ph-badge" hidden></i></button><button type="button" data-s="ministers">重臣</button><button type="button" data-s="roster">後宮の人々</button><button type="button" data-s="incidents">宮廷の事件<i class="ph-badge ph-inc-badge" hidden></i></button>
-        <button type="button" data-s="children">子女</button><button type="button" data-s="banquet">宴を開く</button><button type="button" class="ph-quality">画質</button><button type="button" class="menu-open ph-menu">メニュー</button><button type="button" data-s="exit" class="ph-exit">政務に戻る</button></div>
+        <button type="button" data-s="children">子女</button><button type="button" data-s="banquet">宴を開く</button><button type="button" class="ph-quality">画質</button><button type="button" class="ph-faces">顔</button><button type="button" class="menu-open ph-menu">メニュー</button><button type="button" data-s="exit" class="ph-exit">政務に戻る</button></div>
       <button type="button" class="ph-near" hidden></button>
       <p class="ph-hint">PC:WASD・矢印で歩く/Fで話しかける/クリックした所へ歩く/ドラッグで視点/ホイールで拡大。iPhone:左下のスティックで歩く/タップした所へ歩く/ドラッグで視点/2本指で拡大。人物をタップすると話しかけます</p>
       <section class="ph-panel" hidden></section>
@@ -87,6 +90,16 @@ export class PalaceHud {
       const order = ["low", "mid", "high"] as const;
       const next = order[(order.indexOf(this.d.quality()) + 1) % 3];
       this.d.setQuality(next);
+    });
+    const fb = this.q(".ph-faces");
+    const fl = { proto: "試作の3人", all: "全員", off: "従来" } as const;
+    const showF = (): void => void (fb.textContent = `顔:${fl[this.d.faces()]}`);
+    showF();
+    fb.title = "写実寄りの3Dの顔を付ける人(試作の3人・全員・従来の簡単な顔)";
+    fb.addEventListener("click", () => {
+      const order = ["proto", "all", "off"] as const;
+      this.d.setFaces(order[(order.indexOf(this.d.faces()) + 1) % 3]);
+      showF();
     });
   }
 

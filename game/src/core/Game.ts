@@ -1711,16 +1711,37 @@ export class Game {
       talking: (id) => this.palaceScreen?.setTalking(id),
       quality: () => this.palaceQuality(),
       setQuality: (q) => this.setPalaceQuality(q),
+      faces: () => this.palaceFaces(),
+      setFaces: (f) => {
+        try {
+          localStorage.setItem("goko-palace-faces", f);
+        } catch {
+          // 保存できなくても、いまの画面には使う
+        }
+        if (this.palaceScreen) this.palaceScreen.realHeads = f;
+      },
     });
     this.palaceScreen = new PalaceScreen(this.renderer, canvas, hudEl, P, {
       onPickNpc: (id) => { this.palaceHud?.openNpc(id); this.palaceScreen?.setTalking(id); },
       onArea: (a) => this.palaceHud?.setArea(AREA_LABEL[a]),
       onNear: (id) => this.palaceHud?.setNear(id),
     }, this.palaceQuality());
+    this.palaceScreen.realHeads = this.palaceFaces();
     this.palaceScreen.resize(this.width, this.height);
     this.palaceHud.setArea(this.palaceScreen.areaLabel);
     this.palaceHud.refresh();
     this.lastFrame = performance.now();
+  }
+
+  /** 写実の顔を付ける人(端末ごとに覚える。既定は試作の3人) */
+  palaceFaces(): "proto" | "all" | "off" {
+    try {
+      const v = localStorage.getItem("goko-palace-faces");
+      if (v === "proto" || v === "all" || v === "off") return v;
+    } catch {
+      // 読めなければ既定の値
+    }
+    return "proto";
   }
 
   /** 宮殿の画質(端末ごとに覚える。無ければ、タッチの端末は低、ほかは中) */
