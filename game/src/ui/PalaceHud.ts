@@ -8,6 +8,8 @@ import { ENDING_LABEL } from "../sim/palaceStories";
 import type { Expr } from "../sim/palaceText";
 import { GIFT_COST, GIFT_LABEL, type Gift } from "../sim/palaceText";
 import { fillPortrait } from "./portrait";
+import { CAST, EXPR_JA, EXPRS } from "../palace2d/cast";
+import { registered, portraitUrl } from "../palace2d/assets";
 
 export interface PalaceHudDeps {
   palace: PalaceSystem;
@@ -22,12 +24,8 @@ export interface PalaceHudDeps {
   openMenu(): void;
   /** 話している人(身ぶり) */
   talking?(id: string | null): void;
-  /** 画質(低・中・高) */
-  quality(): "low" | "mid" | "high";
-  setQuality(q: "low" | "mid" | "high"): void;
-  /** 写実の顔を付ける人(Version 54) */
-  faces(): "proto" | "all" | "off";
-  setFaces(f: "proto" | "all" | "off"): void;
+  /** 特別な場面の一枚絵を出す(Version 54 の2D化。絵が無ければ false) */
+  showEvent?(key: string, caption: string): boolean;
 }
 
 /** 架空の女官の似顔(衣の色と髪の形から作る絵。写実ではない) */
@@ -72,9 +70,9 @@ export class PalaceHud {
         <div class="ph-time"><button type="button" data-t="1">時を進める</button><button type="button" data-t="day">一日を終える</button><button type="button" data-t="10">十日を過ごす</button><button type="button" data-t="30">一月を過ごす</button>
         <label class="ph-auto"><input type="checkbox" checked /> 時の流れ(<span class="ph-auto-left"></span>)</label></div></div>
       <div class="ph-side"><button type="button" data-s="reports">上奏<i class="ph-badge" hidden></i></button><button type="button" data-s="ministers">重臣</button><button type="button" data-s="roster">後宮の人々</button><button type="button" data-s="incidents">宮廷の事件<i class="ph-badge ph-inc-badge" hidden></i></button>
-        <button type="button" data-s="children">子女</button><button type="button" data-s="banquet">宴を開く</button><button type="button" class="ph-quality">画質</button><button type="button" class="ph-faces">顔</button><button type="button" class="menu-open ph-menu">メニュー</button><button type="button" data-s="exit" class="ph-exit">政務に戻る</button></div>
+        <button type="button" data-s="children">子女</button><button type="button" data-s="banquet">宴を開く</button><button type="button" data-s="portraits">絵の登録</button><button type="button" class="menu-open ph-menu">メニュー</button><button type="button" data-s="exit" class="ph-exit">政務に戻る</button></div>
       <button type="button" class="ph-near" hidden></button>
-      <p class="ph-hint">PC:WASD・矢印で歩く/Fで話しかける/クリックした所へ歩く/ドラッグで視点/ホイールで拡大。iPhone:左下のスティックで歩く/タップした所へ歩く/ドラッグで視点/2本指で拡大。人物をタップすると話しかけます</p>
+      <p class="ph-hint">左の地図で場所を選ぶと移ります。人物を押す(タップする)と話しかけます</p>
       <section class="ph-panel" hidden></section>
       <div class="ph-fade" hidden></div>
       <section class="ph-sheet" hidden></section>`;
@@ -83,24 +81,6 @@ export class PalaceHud {
     this.q<HTMLInputElement>(".ph-auto input").addEventListener("change", (e) => (this.auto = (e.target as HTMLInputElement).checked));
     this.q(".ph-near").addEventListener("click", () => this.nearId && this.openNpc(this.nearId));
     this.q(".ph-side .menu-open").addEventListener("click", () => this.d.openMenu());
-    const qb = this.q(".ph-quality");
-    const ql = { low: "低", mid: "中", high: "高" } as const;
-    qb.textContent = `画質:${ql[this.d.quality()]}`;
-    qb.addEventListener("click", () => {
-      const order = ["low", "mid", "high"] as const;
-      const next = order[(order.indexOf(this.d.quality()) + 1) % 3];
-      this.d.setQuality(next);
-    });
-    const fb = this.q(".ph-faces");
-    const fl = { proto: "試作の3人", all: "全員", off: "従来" } as const;
-    const showF = (): void => void (fb.textContent = `顔:${fl[this.d.faces()]}`);
-    showF();
-    fb.title = "写実寄りの3Dの顔を付ける人(試作の3人・全員・従来の簡単な顔)";
-    fb.addEventListener("click", () => {
-      const order = ["proto", "all", "off"] as const;
-      this.d.setFaces(order[(order.indexOf(this.d.faces()) + 1) % 3]);
-      showF();
-    });
   }
 
   private el<K extends keyof HTMLElementTagNameMap>(tag: K, cls = "", text = ""): HTMLElementTagNameMap[K] {
@@ -177,7 +157,10 @@ export class PalaceHud {
     img.alt = "";
     const p = n.personId ? persons.find((x) => x.id === n.personId) : undefined;
     // 肖像の絵があれば、それを。なければ衣の色と髪の形から作った似顔(写実ではない)
-    if (!p || !fillPortrait(img, p)) img.src = ladyPortrait(n);
+    // 2Dの肖像画(登録済み)を優先。なければ人物の肖像、それもなければ似顔
+    const cast = portraitUrl(n.portrait, n.expr ?? "normal");
+    if (cast) img.src = cast.url;
+    else if (!p || !fillPortrait(img, p)) img.src = ladyPortrait(n);
     const where = P.whereAt(n);
     head.append(img, this.el("div", "ph-name", `${n.name}`), this.el("span", "ph-title", `${RANK_NAME[n.rank]}・${n.title}`), this.el("span", "ph-doing", `${AREA_LABEL[where.area]}で${where.doing.split("・").pop()}`));
     const close = this.el("button", "ph-close", "×");
@@ -427,6 +410,18 @@ export class PalaceHud {
       if (past.length) body.append(this.el("h4", "", "これまでの事件"));
       for (const i of past) body.append(this.el("p", "ph-report", `${INCIDENT_LABEL[i.kind]}:${i.status === "lapsed" ? "(放っておいた)" : ""}${i.result ?? ""}${i.effects.length ? `(${i.effects.join("・")})` : ""}`));
       body.append(this.el("p", "ph-note", `後宮の揺れ ${Math.round(A.unrest() * 100)}(高いと、重臣は外征を控えます)`));
+    } else if (kind === "portraits") {
+      // 肖像画・背景の登録の様子(ChatGPT などで作った絵を、ID ごとに登録する)
+      const reg = registered();
+      head.append(this.el("h3", "", `絵の登録(肖像 ${reg.portraits}枚・背景 ${reg.bg}枚・一枚絵 ${reg.ev}枚)`), close);
+      body.append(this.el("p", "ph-note", "絵が無い所は、仮の絵を出しています。作り方は docs/v54-2d-image-guide.md にあります"));
+      for (const c of CAST) {
+        const users = P.present().filter((n) => n.portrait === c.id).map((n) => n.name);
+        const row = this.el("div", "ph-row ph-reg");
+        const has = EXPRS.filter((e) => portraitUrl(c.id, e)?.expr === e);
+        row.append(this.el("b", "", c.id), this.el("span", "", `${c.age}歳・${c.look.split("。")[0]}`), this.el("span", "ph-note", `表情 ${has.length}/8${has.length ? `(${has.map((e) => EXPR_JA[e]).join("・")})` : ""}・使っている人:${users.join("・") || "—"}`));
+        body.append(row);
+      }
     } else if (kind === "ministers") {
       head.append(this.el("h3", "", "重臣(政治・軍事・外交・財政を任せています)"), close);
       for (const m of P.ministers()) {
@@ -448,7 +443,9 @@ export class PalaceHud {
         const img = this.el("img", "ph-face-s");
         img.alt = "";
         const p = n.personId ? persons.find((x) => x.id === n.personId) : undefined;
-        if (!p || !fillPortrait(img, p)) img.src = ladyPortrait(n);
+        const cast = portraitUrl(n.portrait, "normal");
+        if (cast) img.src = cast.url;
+        else if (!p || !fillPortrait(img, p)) img.src = ladyPortrait(n);
         const w = P.whereAt(n);
         row.append(img, this.el("b", "", n.name), this.el("span", "", `${RANK_NAME[n.rank]}・${P.ageOf(n)}歳・${AREA_LABEL[w.area]}・親密${Math.round(n.intimacy)} 信頼${Math.round(n.trust)} 恋愛${Math.round(n.romance)}${n.bond === "lover" ? "・想い人" : n.bond === "spouse" ? "・妃" : ""}`));
         row.addEventListener("click", () => {
@@ -495,8 +492,10 @@ export class PalaceHud {
       const go = this.el("button", "ph-go", "宴を開く");
       go.type = "button";
       go.addEventListener("click", () => {
+        const fest = P.festivalToday();
         const r = P.banquet([...picked].map((id) => P.npc(id)!).filter(Boolean));
         out.textContent = typeof r === "string" ? r : `${r.text}。${r.effects.join("。")}`;
+        if (typeof r !== "string" && fest) this.d.showEvent?.("banquet", `${fest}の宴`);
       });
       body.append(go, out);
     }

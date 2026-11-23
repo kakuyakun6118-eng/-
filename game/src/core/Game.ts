@@ -20,7 +20,9 @@ import { CityLabels } from "../ui/CityLabels";
 import { InfoPanel } from "../ui/InfoPanel";
 import { DiplomacyScreen } from "../ui/DiplomacyScreen";
 import { CourtScreen } from "../ui/CourtScreen";
-import { PalaceScreen, type PalaceQuality } from "../palace/PalaceScreen";
+import { Palace2DScreen } from "../palace2d/Palace2DScreen";
+/** 画質(Version 53 の3Dの宮殿の名残。2D化のあとは使わないが、保存した値は残す) */
+type PalaceQuality = "low" | "mid" | "high";
 import { PalaceHud } from "../ui/PalaceHud";
 import { AREA_LABEL } from "../sim/palace";
 import { Ambience } from "../palace/Ambience";
@@ -103,7 +105,7 @@ export class Game {
   /** 確認中の経路(「確定」を押すと、この経路で行軍を始める) */
   private pendingRoute: Route | null = null;
   /** 皇帝生活モード(3Dの後宮)の画面と欄 */
-  private palaceScreen: PalaceScreen | null = null;
+  private palaceScreen: Palace2DScreen | null = null;
   private palaceHud: PalaceHud | null = null;
   /** 宮殿の環境音(合成音) */
   private ambience: Ambience | null = null;
@@ -1655,7 +1657,7 @@ export class Game {
     this.renderer.setSize(this.width, this.height, false);
     this.mapCamera.setViewport(this.width, this.height);
     this.battle?.resize(this.width, this.height);
-    this.palaceScreen?.resize(this.width, this.height);
+    this.palaceScreen?.resize();
     this.dirty = true;
   }
 
@@ -1697,51 +1699,30 @@ export class Game {
     const hudEl = this.root.querySelector("#palace-hud") as HTMLElement;
     hudEl.hidden = false;
     this.root.classList.add("in-palace");
-    const canvas = this.root.querySelector("#map") as HTMLCanvasElement;
     this.palaceHud = new PalaceHud(hudEl, {
       palace: P,
       campaign: this.campaign,
       advance: (n) => this.palaceAdvance(n),
       exit: () => this.exitPalace(),
       walkToNpc: (id) => {
-        const p = this.palaceScreen?.npcPos(id);
-        if (p) this.palaceScreen!.walkTo(p.x, p.z + 2);
+        // その人のいる区画へ移り、話しかける
+        const n = P.npc(id);
+        if (!n || !this.palaceScreen) return;
+        this.palaceScreen.moveTo(P.whereAt(n).area);
+        this.palaceHud?.openNpc(id);
+        this.palaceScreen.setTalking(id);
       },
       openMenu: () => void this.menu.open(),
       talking: (id) => this.palaceScreen?.setTalking(id),
-      quality: () => this.palaceQuality(),
-      setQuality: (q) => this.setPalaceQuality(q),
-      faces: () => this.palaceFaces(),
-      setFaces: (f) => {
-        try {
-          localStorage.setItem("goko-palace-faces", f);
-        } catch {
-          // 保存できなくても、いまの画面には使う
-        }
-        if (this.palaceScreen) this.palaceScreen.realHeads = f;
-      },
+      showEvent: (key, caption) => this.palaceScreen?.showEventKey(key, caption) ?? false,
     });
-    this.palaceScreen = new PalaceScreen(this.renderer, canvas, hudEl, P, {
-      onPickNpc: (id) => { this.palaceHud?.openNpc(id); this.palaceScreen?.setTalking(id); },
+    this.palaceScreen = new Palace2DScreen(hudEl, P, {
+      onPickNpc: (id) => { this.palaceHud?.openNpc(id); this.palaceScreen?.setTalking(id); this.ambience?.chime(); },
       onArea: (a) => this.palaceHud?.setArea(AREA_LABEL[a]),
-      onNear: (id) => this.palaceHud?.setNear(id),
-    }, this.palaceQuality());
-    this.palaceScreen.realHeads = this.palaceFaces();
-    this.palaceScreen.resize(this.width, this.height);
+    });
     this.palaceHud.setArea(this.palaceScreen.areaLabel);
     this.palaceHud.refresh();
     this.lastFrame = performance.now();
-  }
-
-  /** 写実の顔を付ける人(端末ごとに覚える。既定は試作の3人) */
-  palaceFaces(): "proto" | "all" | "off" {
-    try {
-      const v = localStorage.getItem("goko-palace-faces");
-      if (v === "proto" || v === "all" || v === "off") return v;
-    } catch {
-      // 読めなければ既定の値
-    }
-    return "proto";
   }
 
   /** 宮殿の画質(端末ごとに覚える。無ければ、タッチの端末は低、ほかは中) */
@@ -1785,6 +1766,7 @@ export class Game {
     // 何刻も飛ばしたときは、暗転のあいだに人物を置き直す(目の前で瞬間移動させない)
     if (slots > 1) this.palaceHud?.fade();
     this.palaceScreen.onSlotChanged(slots > 1);
+    this.palaceHud?.setArea(this.palaceScreen.areaLabel);
     this.onDayChanged();
   }
 
@@ -1815,7 +1797,7 @@ export class Game {
   }
 
   /** 皇帝生活モードの画面(テスト用) */
-  get palace(): { screen: PalaceScreen | null; hud: PalaceHud | null; ambience: Ambience | null } {
+  get palace(): { screen: Palace2DScreen | null; hud: PalaceHud | null; ambience: Ambience | null } {
     return { screen: this.palaceScreen, hud: this.palaceHud, ambience: this.ambience };
   }
 
@@ -1882,7 +1864,9 @@ export class Game {
       // 環境音:音を出せるようになってから作る(最初の操作のあと)
       if (!this.ambience) { const a = this.bgm.audio(); if (a) this.ambience = new Ambience(a.ctx, a.out); }
       const sc = this.palaceScreen;
-      this.ambience?.update({ area: sc.currentArea, slot: this.campaign.palace.slot, walking: sc.walking, pondDist: Math.hypot(sc.pos.x + 10, sc.pos.z - 40), season: sc.world.season });
+      const mo = this.campaign.palace.month();
+      const season = mo >= 2 && mo <= 4 ? "spring" : mo >= 5 && mo <= 7 ? "summer" : mo >= 8 && mo <= 10 ? "autumn" : "winter";
+      this.ambience?.update({ area: sc.currentArea, slot: this.campaign.palace.slot, walking: false, pondDist: sc.currentArea === "garden" ? 8 : 99, season });
       this.palaceHud.tick(dt);
       this.palaceScreen.render();
       return;

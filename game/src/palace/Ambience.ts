@@ -129,6 +129,14 @@ export class Ambience {
     }
   }
 
+  /** 話しかけたときの小さな鈴の音(合成音) */
+  chime(): void {
+    const now = this.ctx.currentTime;
+    this.tone(1320, 1300, 0.6, 0.035, "sine", now);
+    this.tone(1980, 1960, 0.5, 0.02, "sine", now + 0.05);
+    this.counts.chime = (this.counts.chime ?? 0) + 1;
+  }
+
   /** 確かめ用:鳴っている音の様子 */
   state(): { running: boolean; area: string; wind: number; water: number; counts: Record<string, number> } {
     return { running: this.ctx.state === "running", area: this.input.area, wind: +this.wind.gain.value.toFixed(3), water: +this.water.gain.value.toFixed(3), counts: { ...this.counts } };

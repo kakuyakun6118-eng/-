@@ -4385,3 +4385,48 @@ select:focus-visible {
 .ph-incident { border: 1px solid rgba(232, 200, 140, 0.35); border-radius: 6px; padding: 8px 10px; margin: 6px 0; background: rgba(60, 30, 20, 0.35); }
 .ph-incident p { margin: 4px 0; }
 .ph-incident .ph-choices { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+
+/* ===== Version 54:皇帝生活モードの2D画面(背景画・肖像・地図) ===== */
+.p2-stage { position: absolute; inset: 0; z-index: 4; overflow: hidden; background: #120b08; font-family: var(--font-body); color: var(--kinari); }
+#app.in-palace #map { visibility: hidden; }
+.p2-bg { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0; transition: opacity 0.9s ease; }
+.p2-bg.on { opacity: 1; }
+.p2-tint { position: absolute; inset: 0; pointer-events: none; transition: background 1.2s ease, opacity 1.2s ease; }
+.p2-tint[data-time="morning"] { background: linear-gradient(180deg, rgba(190, 200, 240, 0.28), rgba(255, 220, 210, 0.12)); }
+.p2-tint[data-time="day"] { background: none; }
+.p2-tint[data-time="evening"] { background: linear-gradient(180deg, rgba(255, 140, 60, 0.32), rgba(120, 40, 30, 0.28)); }
+.p2-tint[data-time="night"] { background: radial-gradient(circle at 18% 62%, rgba(255, 190, 110, 0.32), transparent 24%), radial-gradient(circle at 82% 58%, rgba(255, 190, 110, 0.28), transparent 22%), linear-gradient(180deg, rgba(10, 16, 48, 0.72), rgba(20, 12, 30, 0.6)); }
+.p2-tint[data-native="1"] { opacity: 0.35; }
+.p2-tint[data-time="night"]::after { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 18% 62%, rgba(255, 180, 90, 0.12), transparent 18%); animation: p2-flicker 2.6s infinite alternate ease-in-out; }
+@keyframes p2-flicker { from { opacity: 0.6; } to { opacity: 1; } }
+.p2-map { position: absolute; left: max(12px, env(safe-area-inset-left, 0px)); top: calc(100px + env(safe-area-inset-top, 0px)); width: 240px; height: 250px; padding: 6px; box-sizing: border-box; background: rgba(20, 12, 10, 0.72); border: 1px solid var(--gold-dim); border-radius: 4px; z-index: 6; }
+.p2-map b { font-family: var(--font-display); font-size: 13px; color: #f0d9a0; }
+.p2-map button { position: absolute; transform: translate(-50%, -50%); min-height: 30px !important; padding: 2px 6px !important; font-size: 11px !important; white-space: nowrap; border: 1px solid var(--gold-dim); border-radius: 3px; background: linear-gradient(180deg, #3b1e17, #21110d); color: var(--kinari); cursor: pointer; }
+.p2-map button.here { border-color: #f0d080; background: linear-gradient(180deg, #7a2c1c, #4a1810); color: #fff4d0; }
+.p2-people { position: absolute; left: 260px; right: 150px; bottom: 0; top: 90px; display: flex; justify-content: safe center; align-items: flex-end; gap: 0; overflow-x: auto; overflow-y: hidden; pointer-events: auto; scrollbar-width: thin; }
+.p2-person { pointer-events: auto; position: relative; flex: 0 0 clamp(130px, 17vw, 250px); height: 92%; margin: 0 -14px; padding: 0 !important; border: none !important; background: none !important; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; cursor: pointer; transition: transform 0.4s ease, filter 0.4s ease, opacity 0.4s ease; animation: p2-in 0.6s ease both; animation-delay: calc(var(--i) * 0.08s); }
+.p2-person img { max-height: calc(100% - 34px); max-width: 100%; object-fit: contain; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5)); }
+.p2-person span { font-family: var(--font-display); font-size: 14px; padding: 1px 8px; background: rgba(20, 12, 10, 0.8); border: 1px solid var(--gold-dim); border-radius: 2px; }
+.p2-person small { font-size: 11px; color: #d8c8a8; text-shadow: 0 1px 2px #000; }
+.p2-person:hover { transform: translateY(-6px); }
+@keyframes p2-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+.p2-empty { align-self: center; padding: 8px 14px; background: rgba(20, 12, 10, 0.75); border: 1px solid var(--gold-dim); border-radius: 3px; }
+.p2-talking .p2-person { opacity: 0.25; filter: blur(1px); }
+.p2-focus { position: absolute; left: 4%; bottom: 0; height: 94%; width: 46%; pointer-events: none; z-index: 5; }
+.p2-focus[hidden] { display: none; }
+.p2-focus img { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%) translateY(10px); max-height: 100%; max-width: 100%; object-fit: contain; opacity: 0; transition: opacity 0.35s ease, transform 0.5s ease; filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.55)); }
+.p2-focus img.on { opacity: 1; transform: translateX(-50%); }
+.p2-stage.p2-talking + #palace-hud .ph-panel { left: auto; right: max(152px, calc(env(safe-area-inset-right, 0px) + 152px)); transform: none; width: min(560px, calc(54% - 150px)); max-height: calc(100% - 120px); bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+.p2-event { position: absolute; inset: 0; z-index: 9; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.85); cursor: pointer; animation: p2-in 0.8s ease both; }
+.p2-event[hidden] { display: none; }
+.p2-event img { max-width: 94%; max-height: 82%; object-fit: contain; }
+.p2-event p { margin: 10px; font-family: var(--font-display); font-size: 16px; color: #f0d9a0; }
+.ph-reg span { font-size: 12px; }
+@media (max-width: 760px), (max-height: 480px) {
+  .p2-map { top: auto; bottom: calc(6px + env(safe-area-inset-bottom, 0px)); left: max(6px, env(safe-area-inset-left, 0px)); width: 200px; height: 150px; }
+  .p2-map button { font-size: 10px !important; min-height: 24px !important; padding: 1px 4px !important; }
+  .p2-people { left: 210px; right: 140px; top: 70px; }
+  .p2-person span { font-size: 12px; }
+  .p2-focus { width: 40%; left: 0; }
+  .p2-stage.p2-talking + #palace-hud .ph-panel { right: max(140px, calc(env(safe-area-inset-right, 0px) + 140px)); width: calc(60% - 140px); max-height: calc(100% - 70px); }
+}

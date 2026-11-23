@@ -5,11 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
-    "build": "node tools/portraits.cjs && tsc --noEmit && vite build",
+    "build": "node tools/portraits.cjs && node tools/palace2d/manifest.cjs && tsc --noEmit && vite build",
     "preview": "vite preview --host",
     "typecheck": "tsc --noEmit",
     "test": "node tests/run.cjs",
-    "build:publish": "node tools/portraits.cjs && tsc --noEmit && PORTRAITS=external vite build"
+    "build:publish": "node tools/portraits.cjs && node tools/palace2d/manifest.cjs && tsc --noEmit && PORTRAITS=external vite build"
   },
   "dependencies": {
     "three": "^0.187.0"

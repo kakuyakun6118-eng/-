@@ -13,6 +13,7 @@ import type { Campaign } from "./Campaign";
 import { surnameOf } from "./loyalty";
 import { chance } from "./spoils";
 import { ART_GIFT, ART_LABEL, confessLine, GIFT_COST, GIFT_LABEL, giftLine, HOPE_LABEL, inviteLine, moodExpr, pick, talkLines, TEMPER_LABEL, type Art, type Expr, type Gift, type Hope, type Temper } from "./palaceText";
+import { assignPortraits } from "../palace2d/cast";
 import { PalaceAffairs, TIE_LABEL, type AffairsSave } from "./palaceAffairs";
 import { ARC_TITLE, ARCS, ENDING_LABEL, type Arc, type StoryCtx, type StoryScene, type StoryState } from "./palaceStories";
 
@@ -76,6 +77,17 @@ export interface PalaceNpc {
   awayUntil?: number;
   /** 3Dの顔の形(Version 54。なければ人ごとの種から決める) */
   shape?: Record<string, number>;
+  /** 2Dの肖像画の配役の ID(Version 54 の2D化。A1〜A6・N01〜D01) */
+  portrait?: string;
+}
+
+/** Version 53 までの3Dの宮殿の区画の範囲(旧セーブの位置を2Dの区画に移すため) */
+const OLD_ZONES: [Area, number, number, number, number][] = [
+  ["corridor", -3, 12, 3, 84], ["corridor", -3, -30, 3, -4], ["corridor", -40, -15, 40, -9], ["emperorHall", -20, -86, 20, -56], ["empressPalace", -18, -52, 18, -30],
+  ["consortQuarters", 34, -64, 68, 8], ["ladiesStation", -68, -52, -36, -8], ["bath", -68, -90, -36, -60], ["banquet", -68, 26, -34, 70], ["garden", -30, 4, 30, 80],
+];
+export function areaFromXZ(x: number, z: number): Area {
+  return OLD_ZONES.find(([, x0, z0, x1, z1]) => x >= x0 && x <= x1 && z >= z0 && z <= z1)?.[0] ?? "corridor";
 }
 
 export type MemoryKind = "gift" | "promise" | "story" | "event";
@@ -95,6 +107,8 @@ export interface PalaceSave {
   newsSeen: number;
   log: { day: number; text: string }[];
   avatar?: { x: number; z: number; facing: number };
+  /** 2Dの後宮で、いまいる区画(Version 54 の2D化) */
+  area?: Area;
   festivals: Record<string, number>;
   nextId: number;
   /** Version 53 */
@@ -132,6 +146,8 @@ export class PalaceSystem {
   newsSeen = 0;
   log: { day: number; text: string }[] = [];
   avatar?: { x: number; z: number; facing: number };
+  /** 2Dの後宮で、いまいる区画(Version 54 の2D化) */
+  area: Area = "emperorHall";
   festivals: Record<string, number> = {};
   nextId = 1;
 
@@ -276,6 +292,7 @@ export class PalaceSystem {
     this.sync();
     this.initRelations();
     this.assignStories();
+    assignPortraits(this.npcs.filter((n) => !n.left), (n) => this.ageOf(n));
     this.affairs.palaceDays = 0;
   }
 
@@ -757,6 +774,7 @@ export class PalaceSystem {
     }
     this.heirTension();
     this.tickPromises();
+    assignPortraits(this.npcs.filter((n) => !n.left), (n) => this.ageOf(n));
     this.affairs.daily();
     for (const n of this.npcs) {
       // 結末のあと、宮を出た人からの便り(60日ほどのち。一度だけ)
@@ -859,7 +877,7 @@ export class PalaceSystem {
   /** ふだんの会話の記録(上限 50。重要な出来事は人物ごとの記憶に構造化して残す) */
   talkLog: { day: number; npc: string; text: string }[] = [];
   /** セーブの版(Version 53 で 53) */
-  v = 53;
+  v = 54;
 
   /** 人物の記憶に残す(重要な出来事。人物ごとに上限 30) */
   remember(n: PalaceNpc, kind: MemoryKind, text: string, data?: string): void {
@@ -1334,7 +1352,7 @@ export class PalaceSystem {
   // ===================== セーブ =====================
 
   serialize(): PalaceSave {
-    return JSON.parse(JSON.stringify({ active: this.active, factionId: this.factionId, slot: this.slot, npcs: this.npcs, reports: this.reports, newsSeen: this.newsSeen, log: this.log, avatar: this.avatar, festivals: this.festivals, nextId: this.nextId, v: 53, promises: this.promises, talkLog: this.talkLog, affairs: this.affairs.serialize() })) as PalaceSave;
+    return JSON.parse(JSON.stringify({ active: this.active, factionId: this.factionId, slot: this.slot, npcs: this.npcs, reports: this.reports, newsSeen: this.newsSeen, log: this.log, avatar: this.avatar, area: this.area, festivals: this.festivals, nextId: this.nextId, v: 54, promises: this.promises, talkLog: this.talkLog, affairs: this.affairs.serialize() })) as PalaceSave;
   }
 
   restore(save: PalaceSave | undefined): void {
@@ -1347,12 +1365,14 @@ export class PalaceSystem {
     this.newsSeen = s?.newsSeen ?? 0;
     this.log = s?.log ?? [];
     this.avatar = s?.avatar;
+    // 2D化の前(3Dの宮殿)のセーブ:皇帝が立っていた位置から、その区画へ移す
+    this.area = s?.area ?? (s?.avatar ? areaFromXZ(s.avatar.x, s.avatar.z) : "emperorHall");
     this.festivals = s?.festivals ?? {};
     this.nextId = s?.nextId ?? 1;
     // Version 52 のセーブには、物語・約束・記憶が無い:空のまま始め、宮殿に入るときに物語の役を割り当てる
     this.promises = s?.promises ?? [];
     this.talkLog = s?.talkLog ?? [];
     this.affairs.restore(s?.affairs);
-    this.v = 53;
+    this.v = 54;
   }
 }

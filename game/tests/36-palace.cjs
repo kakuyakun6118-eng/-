@@ -21,18 +21,12 @@ const { chromium, devices } = require('playwright');
   await p.screenshot({ path: out('palace-pc.png') });
   check('1 宮殿に入れる。成人の人物が10人以上いて、性格・好きなことが人ごとに違い、会話も人ごとに違う。政治は重臣に委任される', !r1.err && r1.n >= 10 && r1.tempers.length >= 4 && r1.arts.length >= 4 && r1.distinct >= 4 && r1.adults && r1.court === '__court__' && r1.inPalace && r1.hudShown && ['名前', '年齢', '出身', '身分', '性格', '好み', '将来の希望', '親しい人', '合わない人'].every(k => r1.fields.includes(k)), r1);
 
-  // ---- 2. 自由な移動:キーで歩く・指した所へ歩く・壁を抜けない ----
-  const r2 = await p.evaluate(async () => { const s = window.__goko.palace.screen; const wait = (ms) => new Promise(r => setTimeout(r, ms));
-    const p0 = { x: s.pos.x, z: s.pos.z }; s.yaw = 0; s.press('w', true); await wait(1200); s.press('w', false); const p1 = { x: s.pos.x, z: s.pos.z };
-    s.walkTo(-10, 20); for (let i = 0; i < 160 && Math.hypot(s.pos.x + 10, s.pos.z - 20) > 0.6; i++) await wait(250); const p2 = { x: s.pos.x, z: s.pos.z, area: s.currentArea };
-    // 寝殿の背の壁に向かって歩き続けても、壁を抜けない
-    s.pos.set(0, 0, -60); s.walkTo(0, -90); await wait(4000); const p3 = { x: s.pos.x, z: s.pos.z };
-    const inWall = s.world.obstacles.some(o => p3.x > o.x0 && p3.x < o.x1 && p3.z > o.z0 && p3.z < o.z1);
-    // 区画を巡る:8つの区画すべてに行ける
-    const seen = new Set(); for (const a of Object.keys(s.world.spots)) { const sp = s.world.spots[a][0]; s.pos.set(sp.x, 0, sp.z); seen.add(s.currentArea); }
-    s.pos.set(8, 0, 76);
-    return { p0, p1, p2, p3, inWall, areas: [...seen] }; });
-  check('2 皇帝が自由に歩ける(キーで前へ・指した所へ)。壁を抜けない。8つの区画(寝殿・皇后の宮殿・妃の居所・女官の詰所・庭園・浴殿・宴会場・回廊)がある', Math.hypot(r2.p1.x - r2.p0.x, r2.p1.z - r2.p0.z) > 2 && r2.p1.z < r2.p0.z && Math.hypot(r2.p2.x + 10, r2.p2.z - 20) < 1 && r2.p3.z > -66 && !r2.inWall && r2.areas.length === 8, r2);
+  // ---- 2. (Version 54 で置き換え)3Dの宮殿を歩く試験は、皇帝生活モードの完全2D化(3Dの探索の廃止)に合わせて、
+  //      2Dの地図で8区画へ移る試験にした。区画ごとに背景が替わり、その区画にいる人だけが出る ----
+  const r2 = await p.evaluate(async () => { const g = window.__goko, s = g.palace.screen, P = g.campaign.palace; const wait = (ms) => new Promise(r => setTimeout(r, ms)); const seen = [];
+    for (const b of [...document.querySelectorAll('.p2-map button[data-area]')]) { b.click(); await wait(80); seen.push({ area: s.currentArea, label: document.querySelector('.ph-area').textContent, people: s.here().length, wrong: s.here().filter(n => P.whereAt(n).area !== s.currentArea).length }); }
+    return { seen, areas: [...new Set(seen.map(x => x.area))] }; });
+  check('2 (2D化)地図から、8つの区画(寝殿・皇后の宮殿・妃の居所・女官の詰所・庭園・浴殿・宴会場・回廊)すべてへ移れる。区画の名前が画面に出て、その区画にいない人は出ない', r2.areas.length === 8 && r2.seen.every(x => x.wrong === 0 && x.label.length > 1), r2);
 
   // ---- 3. 時刻で居場所が変わる ----
   const r3 = await p.evaluate(() => { const g = window.__goko, P = g.campaign.palace; const list = P.present();
@@ -110,11 +104,10 @@ const { chromium, devices } = require('playwright');
     return { same: a === b2, back: !!g.palace.screen, court: c.playerFactionId, active: P.active }; });
   check('10 セーブ・ロード:宮殿の状態・人物の気持ち・妃が元どおりに戻り、宮殿に戻る', r10.same && r10.back && r10.court === '__court__' && r10.active, r10);
 
-  // ---- 11. 画面の操作:人物をクリックして話しかけ、欄の釦で交流する。政務に戻る ----
-  await p.evaluate(() => { const g = window.__goko, s = g.palace.screen; const n = g.campaign.palace.present()[0]; const q = s.npcPos(n.id); s.pos.set(q.x + 1.5, 0, q.z + 1.5); s.yaw = Math.atan2(1.5, 1.5); s.dist = 6; s.pitch = 0.35; window.__n0 = n.id; });
-  await p.waitForTimeout(700);
-  const box = await p.evaluate(() => { const g = window.__goko, s = g.palace.screen; const q = s.npcPos(window.__n0).clone(); q.y += 1.0; q.project(s.camera); const r = document.querySelector('#map').getBoundingClientRect(); return { x: r.left + (q.x + 1) / 2 * r.width, y: r.top + (1 - q.y) / 2 * r.height }; });
-  await p.mouse.click(box.x, box.y);
+  // ---- 11. 画面の操作:人物を押して話しかけ、欄の釦で交流する。政務に戻る(Version 54:3Dの人物のクリックを、2Dの肖像のクリックに置き換え) ----
+  await p.evaluate(() => { const g = window.__goko, s = g.palace.screen; let a = null; for (const x of ['garden', 'ladiesStation', 'consortQuarters', 'empressPalace', 'corridor', 'banquet']) { s.moveTo(x); if (s.here().length) { a = x; break; } } window.__n0 = s.here()[0]?.id; });
+  await p.waitForTimeout(500);
+  await p.click(`.p2-person[data-npc="${await p.evaluate(() => window.__n0)}"]`);
   await p.waitForTimeout(300);
   const ui1 = await p.evaluate(() => ({ panel: !document.querySelector('.ph-panel').hidden, name: document.querySelector('.ph-name')?.textContent, buttons: [...document.querySelectorAll('.ph-actions button')].map(b => b.textContent) }));
   if (ui1.panel) await p.click('.ph-actions button[data-a="talk"]');
@@ -127,31 +120,29 @@ const { chromium, devices } = require('playwright');
   await p.click('.ph-side .ph-exit');
   const ui3 = await p.evaluate(() => ({ inPalace: document.querySelector('#app').classList.contains('in-palace'), court: window.__goko.campaign.playerFactionId, rail: getComputedStyle(document.querySelector('#court-open')).display }));
   check('11 画面:人物をクリックすると交流の欄が開き、「話す」で会話が出る。後宮の人々・重臣の一覧が出る。「政務に戻る」で戦略マップと操作に戻る', ui1.panel && ui1.buttons.includes('話す') && ui2.talk.length > 4 && roster >= 10 && mins.length === 4 && !ui3.inPalace && ui3.court === 'jin' && ui3.rail !== 'none', { ui1, ui2, roster, mins, ui3 });
-  // 性能(ソフトウェア描画での目安。実機の値ではない)
+  // 性能:2D化のあとは WebGL で宮殿を描かない(Version 54。描画の重さの代わりに、画面の画像の数を出す)
   await p.evaluate(() => window.__goko.enterPalace());
-  await p.waitForTimeout(2500);
-  const fps = await p.evaluate(() => Math.round(window.__goko.palace.screen.fps * 10) / 10);
-  console.log('INFO 宮殿の描画(ソフトウェア描画・1280×800):', fps, 'FPS');
+  await p.waitForTimeout(1500);
+  console.log('INFO 2Dの宮殿の画面:', JSON.stringify(await p.evaluate(() => window.__goko.palace.screen.stats())));
   await p.close();
 
-  // ---- 12. iPhone:タップで歩き、人物をタップして話す。欄が画面に収まる ----
+  // ---- 12. iPhone:地図の場所をタップして移り、人物をタップして話す。欄が画面に収まる(Version 54:3Dのタップで歩く操作を、2Dの操作に置き換え) ----
   const q = await open('s317', { ...devices['iPhone 13 landscape'] });
   await q.evaluate(() => { const g = window.__goko; g.campaign.speed = 0; g.changeSettings({ playerFactionId: 'jin' }); g.enterPalace(); });
   await q.waitForTimeout(800);
-  const t0 = await q.evaluate(() => ({ x: window.__goko.palace.screen.pos.x, z: window.__goko.palace.screen.pos.z }));
-  const vp = q.viewportSize();
-  await q.touchscreen.tap(vp.width * 0.5, vp.height * 0.45);
-  await q.waitForTimeout(2500);
-  const t1 = await q.evaluate(() => ({ x: window.__goko.palace.screen.pos.x, z: window.__goko.palace.screen.pos.z }));
-  await q.evaluate(() => { const g = window.__goko, s = g.palace.screen; const n = g.campaign.palace.present()[1]; const pp = s.npcPos(n.id); s.pos.set(pp.x + 1.2, 0, pp.z + 1.2); s.yaw = Math.atan2(1.2, 1.2); s.dist = 6; s.pitch = 0.35; window.__n1 = n.id; });
-  await q.waitForTimeout(600);
-  await q.tap('.ph-near');
-  await q.waitForTimeout(300);
+  const a0 = await q.evaluate(() => window.__goko.palace.screen.currentArea);
+  const target = await q.evaluate(() => { const s = window.__goko.palace.screen; for (const x of ['garden', 'ladiesStation', 'consortQuarters', 'empressPalace', 'corridor', 'banquet', 'emperorHall', 'bath']) if (x !== s.currentArea && s.here(x).length) return x; return 'garden'; });
+  await q.tap(`.p2-map button[data-area="${target}"]`);
+  await q.waitForTimeout(500);
+  const a1 = await q.evaluate(() => window.__goko.palace.screen.currentArea);
+  const nid = await q.evaluate(() => window.__goko.palace.screen.here()[0]?.id);
+  await q.tap(`.p2-person[data-npc="${nid}"]`);
+  await q.waitForTimeout(400);
   const ip = await q.evaluate(() => { const el = document.querySelector('.ph-panel'); const r = el.getBoundingClientRect(); return { open: !el.hidden, fits: r.left >= -1 && r.right <= window.innerWidth + 1 && r.top >= -1, scroll: document.documentElement.scrollWidth <= window.innerWidth + 1 }; });
   if (ip.open) await q.tap('.ph-actions button[data-a="talk"]');
   const ipTalk = await q.evaluate(() => document.querySelector('.ph-talk')?.textContent ?? '');
   await q.screenshot({ path: out('palace-iphone.png') });
-  check('12 iPhone(横向き・タッチの模擬):タップした所へ歩き、近くの人物に「話しかける」で欄が開く。欄が画面に収まる', Math.hypot(t1.x - t0.x, t1.z - t0.z) > 1 && ip.open && ip.fits && ip.scroll && ipTalk.length > 4, { t0, t1, ip, ipTalk: ipTalk.slice(0, 60) });
+  check('12 iPhone(横向き・タッチの模擬):地図の場所をタップして移り、人物をタップすると欄が開く。欄が画面に収まる', a1 === target && a1 !== a0 && ip.open && ip.fits && ip.scroll && ipTalk.length > 4, { a0, a1, ip, ipTalk: ipTalk.slice(0, 60) });
   await q.close();
 
   await b.close();
