@@ -57,6 +57,7 @@ export class Palace2DScreen {
     this.eventBox.addEventListener("click", () => this.hideEvent());
     this.mapBox = r.querySelector(".p2-map")!;
     this.buildMap();
+    palace.ensurePortraits();
     this.refresh(true);
   }
 

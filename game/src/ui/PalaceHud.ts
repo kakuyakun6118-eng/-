@@ -39,6 +39,11 @@ export function ladyPortrait(n: PalaceNpc, expr: Expr = n.expr ?? "normal"): str
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
+/** 顔の絵:2Dの肖像画(登録済み)があればそれ、なければ似顔 */
+export function faceSrc(n: PalaceNpc, expr: Expr): string {
+  return portraitUrl(n.portrait, expr)?.url ?? ladyPortrait(n, expr);
+}
+
 /** 表情の差分(似顔の目・眉・口・頬) */
 const FACE: Record<Expr, string> = {
   normal: "<circle cx='42' cy='43' r='1.6' fill='#2a1a14'/><circle cx='54' cy='43' r='1.6' fill='#2a1a14'/><path d='M44 52q4 2 8 0' stroke='#a85a50' stroke-width='1.6' fill='none'/>",
@@ -282,8 +287,12 @@ export class PalaceHud {
     wrap.append(this.el("h4", "", `${sc.title}`));
     const face = this.el("img", "ph-face ph-scene-face");
     face.alt = "";
-    face.src = ladyPortrait(n, sc.lines[sc.lines.length - 1]?.e ?? "normal");
+    const e0 = (sc.lines[sc.lines.length - 1]?.e ?? "normal") as Expr;
+    face.src = faceSrc(n, e0);
     wrap.append(face);
+    // 重要な場面:相手を大きく出し、場面の表情にする(Version 54 の2D化)
+    n.expr = e0;
+    this.d.talking?.(n.id);
     for (const l of sc.lines) {
       const pp = this.el("p", "", l.t);
       if (l.e) pp.dataset.expr = l.e;
@@ -304,8 +313,11 @@ export class PalaceHud {
         else {
           this.say([r.text.replace(/^「|」$/g, "")], r.ending ? `物語の結末:${ENDING_LABEL[r.ending] ?? r.ending}` : "物語が進んだ");
           const img = this.q<HTMLImageElement>(".ph-panel .ph-face");
-          if (img && (!n.personId || n.fictional)) img.src = ladyPortrait(n, r.expr);
-          img.dataset.expr = r.expr;
+          if (img) {
+            img.src = faceSrc(n, r.expr);
+            img.dataset.expr = r.expr;
+          }
+          n.expr = r.expr;
         }
       });
       acts.append(b);

@@ -16,10 +16,16 @@ const FALLBACK: Record<Expr, Expr[]> = {
   normal: [], smile: ["normal"], joy: ["smile", "normal"], shy: ["smile", "normal"], sad: ["normal"], angry: ["normal"], puzzled: ["normal"], surprised: ["normal"],
 };
 
+/** 確かめ用:画像を目録に足す(試験で、書き出した画像を登録するため) */
+export function registerForTest(kind: "portraits" | "bg" | "ev", id: string, sub?: string): void {
+  if (kind === "ev") M.ev[id] = 1;
+  else (M[kind][id] ??= {})[sub ?? "normal"] = 1;
+}
+
 /** 画面の大きさで、大きい版・小さい版を選ぶ */
 export function sizeTag(): "l" | "s" {
-  const px = Math.min(innerWidth, innerHeight) * (devicePixelRatio || 1);
-  return px < 900 ? "s" : "l";
+  // スマートフォン(画面の短い辺が 500 未満)は小さい版。画素の細かさではなく、画面の大きさで決める(メモリを抑える)
+  return Math.min(innerWidth, innerHeight) < 500 ? "s" : "l";
 }
 
 export function registered(): { portraits: number; bg: number; ev: number; total: number; perCast: Record<string, number> } {

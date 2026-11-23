@@ -4428,5 +4428,10 @@ select:focus-visible {
   .p2-people { left: 210px; right: 140px; top: 70px; }
   .p2-person span { font-size: 12px; }
   .p2-focus { width: 40%; left: 0; }
-  .p2-stage.p2-talking + #palace-hud .ph-panel { right: max(140px, calc(env(safe-area-inset-right, 0px) + 140px)); width: calc(60% - 140px); max-height: calc(100% - 70px); }
+  /* 小さい画面:右の列は2列に詰め、会話中は隠す(会話の欄を広く) */
+  #palace-hud .ph-side { display: grid; grid-template-columns: 1fr 1fr; width: 196px; gap: 3px; }
+  #palace-hud .ph-side button { min-height: 28px; padding: 2px 4px; font-size: 11px; }
+  .p2-people { right: 206px; }
+  .p2-stage.p2-talking + #palace-hud .ph-side { display: none; }
+  .p2-stage.p2-talking + #palace-hud .ph-panel { right: max(8px, env(safe-area-inset-right, 0px)); width: 58%; max-height: calc(100% - 70px); }
 }

@@ -6,7 +6,8 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { Expr } from "../sim/palaceText";
-import headsUrl from "../assets/heads.glb?url";
+// Version 54 の2D化で使わなくなったため、頭の素(heads.glb)はリポジトリから外した(tools/v54/build_heads.py で作り直せる)
+const headsUrl = "heads.glb";
 
 export type HeadStyle = "empress" | "consort" | "lady";
 export const EXPR_MORPH: Record<Expr, string | null> = { normal: null, smile: "smile", joy: "joy", sad: "sad", angry: "angry", puzzled: "puzzled", surprised: "surprised", shy: "shy" };

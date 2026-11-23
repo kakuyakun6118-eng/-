@@ -460,6 +460,8 @@ export class PalaceAffairs {
         break;
       }
     }
+    // 関わった人の表情:気分で決まる(会話の画面の肖像に出る)
+    for (const id of inc.people) { const n = this.P.npc(id); if (n) n.expr = n.mood < 35 ? "sad" : n.mood > 70 ? "smile" : n.jealousy > 60 ? "angry" : "normal"; }
     inc.status = choice === "__lapse" ? "lapsed" : "resolved";
     inc.chose = choice;
     inc.result = res;

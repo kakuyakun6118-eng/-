@@ -296,6 +296,11 @@ export class PalaceSystem {
     this.affairs.palaceDays = 0;
   }
 
+  /** 2Dの肖像を、まだ割り当てていない人に割り当てる(旧セーブを読み込んだあとなど) */
+  ensurePortraits(): void {
+    assignPortraits(this.npcs.filter((n) => !n.left), (n) => this.ageOf(n));
+  }
+
   /** 宮にいる成人の人物(交流できる人) */
   present(): PalaceNpc[] {
     return this.npcs.filter((n) => !n.left && !(n.awayUntil !== undefined && n.awayUntil > this.day) && this.ageOf(n) >= 18);
@@ -593,6 +598,8 @@ export class PalaceSystem {
       return { ok: true, why: "" };
     };
     const d = decide();
+    // 表情:受けたら喜び(内気な人は照れ)、断るときは困った顔(Version 54 の2D化)
+    n.expr = d.ok ? (n.temper === "shy" ? "shy" : "joy") : n.temper === "proud" ? "angry" : "puzzled";
     if (!d.ok) {
       n.coolUntil = this.day + 30;
       n.declined++;

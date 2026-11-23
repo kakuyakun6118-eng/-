@@ -1,4 +1,6 @@
 // ゲームの起動。
+import { registerForTest, registered, portraitUrl } from "./palace2d/assets";
+import { CAST } from "./palace2d/cast";
 import { armyOpsRules } from "./sim/strategy";
 import "./ui/style.css";
 import { Game } from "./core/Game";
@@ -26,6 +28,7 @@ Game.create(root)
     (window as unknown as { __gokoAuto: unknown }).__gokoAuto = autoResolve;
     (window as unknown as { __gokoSeed: unknown }).__gokoSeed = setGameSeed;
     (window as unknown as { __gokoArmyOps: unknown }).__gokoArmyOps = armyOpsRules;
+    (window as unknown as { __gokoPalace2D: unknown }).__gokoPalace2D = { registerForTest, registered, portraitUrl, CAST };
     hint.textContent = "ドラッグで移動・ピンチで拡大縮小・都市や軍団をタップ";
   })
   .catch((err) => {

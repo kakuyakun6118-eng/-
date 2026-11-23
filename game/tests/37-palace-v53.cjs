@@ -10,29 +10,26 @@ const { chromium, devices } = require('playwright');
 
   let p = await open('s317');
   // ===== 第1工程:性能・基盤 =====
-  // P1. 画質の3段階:影・人物の描く距離・装飾が変わる
-  const q1 = await p.evaluate(async (enterSrc) => { const enter = eval(enterSrc); enter(); const g = window.__goko; const w = (ms) => new Promise(r => setTimeout(r, ms)); const res = {};
-    for (const q of ['low', 'mid', 'high']) { g.setPalaceQuality(q); await w(600); const s = g.palace.screen; let shadow = false; s.scene.traverse(o => { if (o.isDirectionalLight) shadow = o.castShadow; });
-      s.resetStats(); await w(1500); res[q] = { ...s.stats(), shadow, hidden: [...s['views'].values()].filter(v => !v.fig.visible).length }; }
-    g.setPalaceQuality('mid'); return res; }, enter.toString());
-  check('P1 画質の3段階(低・中・高)で、影・人物の描く距離・装飾の量が変わる', q1.low.shadow === false && q1.mid.shadow === true && q1.high.shadow === true && q1.low.triangles < q1.mid.triangles && q1.low.quality === 'low' && q1.high.quality === 'high', q1);
-  console.log('INFO 性能(ソフトウェア描画・1280×800。実機の値ではない):', JSON.stringify(q1));
+  // Version 54 で皇帝生活モードを完全2Dにしたため、3Dの画質(影・描く距離)・3Dの資源・3Dの操作(F キー・スティック・カメラ)の試験を、
+  // 2Dの画面の同じ目的の試験(時刻の光・往復での片づけ・人物を押して話す)に置き換えた。
+  // P1. 時刻(朝・昼・夕・夜)で、背景の光が変わる
+  const q1 = await p.evaluate(async (enterSrc) => { eval(enterSrc)(); const g = window.__goko, s = g.palace.screen, P = g.campaign.palace; const w = (ms) => new Promise(r => setTimeout(r, ms)); const res = {};
+    for (const slot of [0, 1, 2, 3]) { P.slot = slot; s.onSlotChanged(false); await w(150); const t = document.querySelector('.p2-tint'); res[slot] = { time: t.dataset.time, bg: getComputedStyle(t).backgroundImage.slice(0, 40) }; }
+    return res; }, enter.toString());
+  check('P1 (2D化)朝・昼・夕・夜で、背景に重ねる光(朝もや・夕焼け・夜の灯火)が変わる', ['morning', 'day', 'evening', 'night'].every((t, i) => q1[i].time === t) && q1[3].bg !== q1[1].bg, q1);
 
-  // P2. 戦略マップとの往復で、資源(形・テクスチャ)が増え続けない
+  // P2. 戦略マップとの往復で、2Dの画面の部品・画像が残らない(資源の漏れがない)。3Dの宮殿の形・テクスチャは作られない
   const leak = await p.evaluate(async () => { const g = window.__goko, R = g['renderer']; const w = (ms) => new Promise(r => setTimeout(r, ms)); g.exitPalace(); await w(300);
-    const before = { geo: R.info.memory.geometries, tex: R.info.memory.textures, heap: (window.gc?.(), performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1e6) : 0) };
-    for (let i = 0; i < 10; i++) { g.enterPalace(); await w(150); g.exitPalace(); await w(80); } await w(500);
-    return { before, after: { geo: R.info.memory.geometries, tex: R.info.memory.textures, heap: (window.gc?.(), window.gc?.(), performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1e6) : 0) }, pixel: R.getPixelRatio() }; });
-  check('P2 戦略マップとの往復10回で、形・テクスチャの数が増えない(資源の漏れがない)。画面の解像度も元に戻る', leak.after.geo <= leak.before.geo + 2 && leak.after.tex <= leak.before.tex + 1 && leak.after.heap < leak.before.heap + 60, leak);
+    const count = () => ({ geo: R.info.memory.geometries, tex: R.info.memory.textures, stages: document.querySelectorAll('.p2-stage').length, imgs: document.querySelectorAll('img').length, heap: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1e6) : 0 });
+    const before = count(); for (let i = 0; i < 10; i++) { g.enterPalace(); await w(150); g.exitPalace(); await w(80); } await w(500); window.gc?.(); return { before, after: count() }; });
+  check('P2 (2D化)戦略マップとの往復10回で、2Dの画面の部品・画像が残らず、3Dの形・テクスチャも増えない', leak.after.stages === 0 && leak.after.imgs <= leak.before.imgs && leak.after.geo <= leak.before.geo + 2 && leak.after.tex <= leak.before.tex + 1, leak);
 
-  // P3. 操作:F で近くの人物に話しかける・仮想スティックで歩く・狭い回廊でカメラが近づく
+  // P3. 人物の肖像を押すと話しかけ、相手が大きく出る。閉じると戻る
   const op = await p.evaluate(async () => { const g = window.__goko; const w = (ms) => new Promise(r => setTimeout(r, ms)); g.enterPalace(); const s = g.palace.screen;
-    const n = g.campaign.palace.present()[0]; const q = s.npcPos(n.id); s.pos.set(q.x + 1.2, 0, q.z + 1.2); await w(400);
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'f' })); await w(100); const panel = !document.querySelector('.ph-panel').hidden; g.palace.hud.closeNpc();
-    s.pos.set(8, 0, 76); s.yaw = 0; const p0 = s.pos.z; s.setStick(0, -1); await w(1000); s.setStick(0, 0); const p1 = s.pos.z;
-    s.pos.set(0, 0, 50); s.dist = 20; await w(300); const camD = Math.hypot(s.camera.position.x - s.pos.x, s.camera.position.z - s.pos.z);
-    return { panel, stickMoved: p0 - p1, camD }; });
-  check('P3 F キーで近くの人物に話しかけられる。仮想スティックで歩ける。狭い回廊では、カメラが近くに寄る', op.panel && op.stickMoved > 1.5 && op.camD < 7.5, op);
+    for (const a of ['garden', 'ladiesStation', 'consortQuarters', 'empressPalace']) { s.moveTo(a); if (s.here().length) break; }
+    const id = s.here()[0].id; document.querySelector(`.p2-person[data-npc="${id}"]`).click(); await w(400); const panel = !document.querySelector('.ph-panel').hidden; const focus = !document.querySelector('.p2-focus').hidden;
+    g.palace.hud.closeNpc(); await w(200); return { panel, focus, closed: document.querySelector('.p2-focus').hidden }; });
+  check('P3 (2D化)人物の肖像を押すと交流の欄が開き、相手の肖像が大きく出る。閉じると元に戻る', op.panel && op.focus && op.closed, op);
 
   // P4. 旧 Version 52 のセーブ(物語・記憶の項目が無い)を読み込める
   const old = await p.evaluate(() => { const g = window.__goko, c = g.campaign; const sv = JSON.parse(JSON.stringify(g.buildSave()));
@@ -106,48 +103,41 @@ const { chromium, devices } = require('playwright');
   check('S5 セーブ・ロード後も、物語の段階・選択・約束・記憶が残り、続きから進められる', sl.same && sl.next.stage === 3, sl);
   await p.close();
 
-  // ===== 第3工程:人物の動き・表情・居場所・環境音 =====
+  // ===== 第3工程:人物の演出・表情・居場所・環境音 =====
+  // Version 54 の2D化で、3Dの骨組みの動き(歩く・座る)と3Dの居場所の試験を、2Dの演出(現れ方・表情の入れ替え)と区画の一致の試験に置き換えた
   p = await open('s317');
-  // G1. 歩く・座る・拝礼・話す:骨組み(腰・胴・腕・足)が実際に動く(静止した人形を動かすだけではない)
+  // G1. 人物は、ふわっと現れる(順に少しずつ遅れて)。会話の相手の肖像は、2枚を重ねて入れ替える
   const an = await p.evaluate(async (enterSrc) => { eval(enterSrc)(); const g = window.__goko, s = g.palace.screen; const w = (ms) => new Promise(r => setTimeout(r, ms));
-    const n = g.campaign.palace.present()[0]; const f = s.figureOf(n.id); const samp = async (pose, ms = 900) => { const out = []; for (let i = 0; i < 6; i++) { f.setPose(pose); f.update(0.15, performance.now() / 1000 + i * 0.15, pose === 'walk' ? 1.5 : 0); out.push(f.joints()); await w(ms / 6); } return out; };
-    // 画面の更新に上書きされないよう、話し相手にして離れた所で確かめる
-    const stand = await samp('stand'); const walk = await samp('walk'); const sit = []; for (let i = 0; i < 12; i++) { f.setPose('sit'); f.update(0.2, i * 0.2, 0); sit.push(f.joints()); }
-    f.setPose('bow'); const bow = []; for (let i = 0; i < 6; i++) { f.update(0.15, i * 0.15, 0); bow.push(f.joints()); }
-    const talk = []; for (let i = 0; i < 8; i++) { f.setPose('talk'); f.update(0.15, i * 0.3, 0); talk.push(f.joints()); }
-    const spread = (a, k) => Math.max(...a.map(j => j[k])) - Math.min(...a.map(j => j[k]));
-    // 画面の中で、歩いている人物が実際にいる(時刻を変えて歩かせる)
-    g.palaceAdvance(1); let walkers = 0; for (let i = 0; i < 10 && !walkers; i++) { await w(300); walkers = [...s['views'].values()].filter(v => v.body.pose === 'walk').length; }
-    return { walkFoot: spread(walk, 'footL'), walkArm: spread(walk, 'armL'), standFoot: spread(stand, 'footL'), sitHips: stand[0].hipsY - sit[sit.length - 1].hipsY, bowTorso: Math.max(...bow.map(j => j.torsoX)), talkArm: spread(talk, 'armR'), walkers }; }, enter.toString());
-  check('G1 歩く(足と腕が交互に振れる)・座る(腰が下がる)・拝礼(上体を傾ける)・話す(身ぶり)で、人物の骨組みが実際に動く。時刻が変わると、人物が歩いて移る', an.walkFoot > 0.1 && an.walkArm > 0.1 && an.standFoot < 0.05 && an.sitHips > 0.15 && an.bowTorso > 0.3 && an.talkArm > 0.05 && an.walkers > 0, an);
+    for (const a of ['ladiesStation', 'garden', 'consortQuarters']) { s.moveTo(a); if (s.here().length >= 2) break; }
+    const els = [...document.querySelectorAll('.p2-person')]; const anim = els.map(e => getComputedStyle(e).animationName); const delays = els.map(e => getComputedStyle(e).animationDelay);
+    const n = s.here()[0]; g.palace.hud.openNpc(n.id); s.setTalking(n.id); await w(300); const on1 = [...document.querySelectorAll('.p2-focus img')].map(i => i.classList.contains('on'));
+    n.expr = n.expr === 'joy' ? 'sad' : 'joy'; await w(500); const on2 = [...document.querySelectorAll('.p2-focus img')].map(i => i.classList.contains('on'));
+    g.palace.hud.closeNpc(); return { anim: [...new Set(anim)], delays: delays.slice(0, 3), on1, on2, changes: s.counts.exprChanges }; }, enter.toString());
+  check('G1 (2D化)人物は順に少しずつ遅れてふわっと現れる。会話の相手の肖像は、表情が変わると2枚を重ねてなめらかに入れ替える', an.anim.includes('p2-in') && new Set(an.delays).size > 1 && JSON.stringify(an.on1) !== JSON.stringify(an.on2) && an.changes >= 2, an);
 
-  // G2. 表情が会話と結びつく:贈り物・話の結果で表情が変わり、3Dの顔と顔絵に出る
+  // G2. 表情が会話と結びつく:贈り物・話の結果で表情が変わり、大きな肖像に同じ表情が出る
   const ex = await p.evaluate(async () => { const g = window.__goko, P = g.campaign.palace, s = g.palace.screen; const w = (ms) => new Promise(r => setTimeout(r, ms)); g.campaign.factionStates.jin.gold = 50000;
-    const n = P.present().find(x => x.adult !== false && x.rank !== 'royal') ?? P.present()[0]; const res = [];
-    const before = s.figureOf(n.id).expr; const r1 = P.gift(n, 'silk'); await w(400); res.push([n.expr, s.figureOf(n.id).expr]);
-    n.mood = 10; n.expr = undefined; await w(400); const low = s.figureOf(n.id).expr; n.mood = 90; await w(400); const high = s.figureOf(n.id).expr;
-    g.palace.hud.openNpc?.(n.id); await w(200); const img = document.querySelector('.ph-panel svg, .ph-panel img')?.outerHTML.length ?? 0;
-    return { before, after: res[0], low, high, gift: !!r1, img }; });
-  check('G2 会話・贈り物の結果で表情が変わり、3Dの人物の顔に同じ表情が出る。気分が沈むと悲しい顔、晴れると笑顔になる', ex.after[0] && ex.after[0] === ex.after[1] && ex.low !== ex.high && ['sad', 'angry', 'puzzled'].includes(ex.low) && ['smile', 'joy'].includes(ex.high), ex);
+    for (const a of ['ladiesStation', 'garden', 'consortQuarters']) { s.moveTo(a); if (s.here().length) break; }
+    const n = s.here()[0]; g.palace.hud.openNpc(n.id); s.setTalking(n.id); const r1 = P.gift(n, 'silk'); await w(400); const after = [n.expr, s.stats().focusExpr];
+    n.expr = undefined; n.mood = 10; await w(400); const low = s.stats().focusExpr; n.mood = 90; await w(400); const high = s.stats().focusExpr; g.palace.hud.closeNpc();
+    return { after, low, high, gift: !!r1 }; });
+  check('G2 会話・贈り物の結果で表情が変わり、大きな肖像に同じ表情が出る。気分が沈むと悲しい顔、晴れると笑顔になる', ex.after[0] && ex.after[0] === ex.after[1] && ex.low !== ex.high && ['sad', 'angry', 'puzzled'].includes(ex.low) && ['smile', 'joy'].includes(ex.high), ex);
 
-  // G3. 居場所の一貫性:時刻の予定(どの区画で何をするか)と、3Dの居場所が合う。目の前で瞬間移動しない
-  const loc = await p.evaluate(async () => { const g = window.__goko, P = g.campaign.palace, s = g.palace.screen; const w = (ms) => new Promise(r => setTimeout(r, ms)); g.palace.hud.closeNpc?.();
-    const res = []; let jump = 0;
-    for (let k = 0; k < 2; k++) { const near = new Map([...s['views'].values()].map(v => [v.npc.id, v.fig.position.clone()]));
-      g.palaceAdvance(1); await w(120); for (const v of s['views'].values()) { const a = near.get(v.npc.id); if (a && a.distanceTo(s.pos) < 20) jump = Math.max(jump, a.distanceTo(v.fig.position)); }
-      // ソフトウェア描画では1秒に数コマしか進まず歩みが遅いので、15秒歩かせたあと「着いた人の居場所」と「歩いている人の行き先」を確かめる
-      await w(15000);
-      let ok = 0, all = 0, arrived = 0; for (const v of s['views'].values()) { const want = P.whereAt(v.npc).area; const end = v.path.length ? v.path[v.path.length - 1] : v.fig.position; const at = s['world'].areaAt(end.x, end.z); all++; if (!v.path.length) arrived++; if (want === at) ok++; } res.push({ slot: P.slot, ok, all, arrived }); }
-    return { res, jump: +jump.toFixed(2) }; });
-  check('G3 時刻ごとの予定の区画と、3Dで着いた所・向かっている所の区画が合う(9割以上)。時刻が変わっても、皇帝の近くの人物は瞬間移動せず歩いて移る', loc.res.every(r => r.ok >= r.all * 0.9) && loc.jump < 2, loc);
+  // G3. 居場所の一貫性:時刻の予定(どの区画にいるか)と、画面に出る人が合う。いない人は出ない。時刻が変わると入れ替わる
+  const loc = await p.evaluate(async () => { const g = window.__goko, P = g.campaign.palace, s = g.palace.screen; const w = (ms) => new Promise(r => setTimeout(r, ms)); const res = [];
+    for (let k = 0; k < 4; k++) { g.palaceAdvance(1); await w(300); let wrong = 0, shown = 0, total = 0;
+      for (const a of ['emperorHall', 'empressPalace', 'consortQuarters', 'ladiesStation', 'garden', 'bath', 'banquet', 'corridor']) { s.moveTo(a); await w(30); const ids = [...document.querySelectorAll('.p2-person')].map(e => e.dataset.npc); shown += ids.length; wrong += ids.filter(id => P.whereAt(P.npc(id)).area !== a).length; }
+      total = P.present().length; res.push({ slot: P.slot, shown, total, wrong }); }
+    return res; });
+  check('G3 (2D化)時刻ごとの予定の区画と、画面に出る人が合う。8区画を合わせると全員がちょうど1回ずつ出て、いない人は出ない', loc.every(r => r.wrong === 0 && r.shown === r.total), loc);
 
-  // G4. 環境音(合成音):場所と時刻で、鳴る音が変わる
+  // G4. 環境音(合成音):場所で、鳴る音が変わる
   await p.keyboard.press('Shift');
   const am = await p.evaluate(async () => { const g = window.__goko, s = g.palace.screen; const w = (ms) => new Promise(r => setTimeout(r, ms)); await g.bgm?.unlock?.(); for (let i = 0; i < 10 && !g.palace.ambience; i++) await w(200);
-    const a = g.palace.ambience; if (!a) return { none: true }; const c0 = a.state().counts; s.pos.set(-10, 0, 46); await w(1500); const garden = a.state();
-    s.pos.set(0, 0, -60); await w(1200); const inside = a.state(); return { c0, garden, inside }; });
+    const a = g.palace.ambience; if (!a) return { none: true }; const c0 = a.state().counts; s.moveTo('garden'); await w(1500); const garden = a.state();
+    s.moveTo('emperorHall'); await w(1200); const inside = a.state(); return { c0, garden, inside }; });
   if (am.none) console.log('INFO G4 この試験環境では音の出力(AudioContext)が作られなかったため、環境音の確かめを省いた');
-  else check('G4 環境音(録音ではなく合成音):庭園の池の近くでは水の音・風の音が強く、室内では弱まる', am.garden.water > am.inside.water && am.garden.wind >= am.inside.wind, am);
+  else check('G4 環境音(録音ではなく合成音):庭園では水の音・風の音が強く、室内では弱まる', am.garden.water > am.inside.water && am.garden.wind >= am.inside.wind, am);
   await p.close();
 
   await b.close();
