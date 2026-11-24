@@ -15,10 +15,14 @@
   "A4": {
    "normal": 1,
    "smile": 1
+  },
+  "A5": {
+   "normal": 1,
+   "smile": 1
   }
  },
  "bg": {},
  "ev": {},
- "count": 8,
- "bytes": 1682744
+ "count": 10,
+ "bytes": 2132446
 }
