@@ -4436,3 +4436,11 @@ select:focus-visible {
   .p2-stage.p2-talking + #palace-hud .ph-side { display: none; }
   .p2-stage.p2-talking + #palace-hud .ph-panel { right: max(8px, env(safe-area-inset-right, 0px)); width: 58%; max-height: calc(100% - 70px); }
 }
+/* 会話中は地図を隠す(大きく出た相手の肖像に重ならないように。閉じると戻る) */
+.p2-stage.p2-talking .p2-map { display: none; }
+@media (max-width: 760px), (max-height: 480px) {
+  /* 小さい画面:会話中は時を進めるボタンの列を隠す(会話のあいだは時が止まる。顔に重ならないように) */
+  .p2-stage.p2-talking + #palace-hud .ph-time { display: none; }
+  .p2-focus { top: 44px; height: auto; }
+}
+.p2-stage.p2-talking + #palace-hud .ph-hint { display: none; }

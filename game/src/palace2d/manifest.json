@@ -1,7 +1,12 @@
 {
- "portraits": {},
+ "portraits": {
+  "A1": {
+   "normal": 1,
+   "smile": 1
+  }
+ },
  "bg": {},
  "ev": {},
- "count": 0,
- "bytes": 0
+ "count": 2,
+ "bytes": 486260
 }

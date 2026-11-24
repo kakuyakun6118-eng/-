@@ -15,7 +15,8 @@ const fs = require('fs'); const path = require('path');
   const made = [];
   const writeImg = async (rel, w, h, color, text) => {
     const data = await p.evaluate(({ w, h, color, text }) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.fillStyle = color; g.fillRect(0, 0, w, h); g.fillStyle = '#fff'; g.font = '40px sans-serif'; g.fillText(text, 20, 60); return c.toDataURL('image/png').split(',')[1]; }, { w, h, color, text });
-    for (const tag of ['l', 's']) { const f = path.join(dist, 'palace2d', rel + `-${tag}.webp`); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, Buffer.from(data, 'base64')); made.push(f); }
+    // 本物の絵がすでにあれば、控えを取ってから書き、試験のあとで元に戻す
+    for (const tag of ['l', 's']) { const f = path.join(dist, 'palace2d', rel + `-${tag}.webp`); fs.mkdirSync(path.dirname(f), { recursive: true }); made.push([f, fs.existsSync(f) ? fs.readFileSync(f) : null]); fs.writeFileSync(f, Buffer.from(data, 'base64')); }
   };
   await writeImg('p/A1_normal', 400, 600, '#a04040', 'A1 normal');
   await writeImg('p/A1_smile', 400, 600, '#40a040', 'A1 smile');
@@ -79,7 +80,7 @@ const fs = require('fs'); const path = require('path');
 
   // T9. 絵の登録の欄:配役ごとの登録の数と、使っている人が出る
   const t9 = await p.evaluate(async () => { const g = window.__goko; g.palace.hud.sheet('portraits'); await new Promise(r => setTimeout(r, 200)); const rows = [...document.querySelectorAll('.ph-sheet .ph-reg')].map(r => r.textContent); const head = document.querySelector('.ph-sheet h3').textContent; document.querySelector('.ph-sheet .ph-close').click(); return { n: rows.length, head, a1: rows.find(r => r.startsWith('A1')) }; });
-  check('T9 「絵の登録」の欄に、22人の配役それぞれの表情の登録の数と、使っている人が出る', t9.n === 22 && /肖像 3枚/.test(t9.head) && /表情 2\/8/.test(t9.a1 ?? ''), t9);
+  check('T9 「絵の登録」の欄に、22人の配役それぞれの表情の登録の数と、使っている人が出る', t9.n === 22 && /肖像 \d+枚/.test(t9.head) && /表情 2\/8/.test(t9.a1 ?? ''), t9);
   await p.screenshot({ path: path.join(__dirname, 'out', '40-2d-pc.png') });
 
   // T10. PC と iPhone 相当の画面で、地図・人物・会話の欄が画面からはみ出さない
@@ -89,7 +90,8 @@ const fs = require('fs'); const path = require('path');
     const over = (a, b) => { const r1 = document.querySelector(a).getBoundingClientRect(), r2 = document.querySelector(b).getBoundingClientRect(); return !(r1.right <= r2.left || r2.right <= r1.left || r1.bottom <= r2.top || r2.bottom <= r1.top); };
     const sideShown = getComputedStyle(document.querySelector('.ph-side')).display !== 'none';
     g.palace.hud.closeNpc(); await w(300); const sideIdle = inside('.ph-side'); g.palace.hud.openNpc(n.id); s.setTalking(n.id); await w(300);
-    return { label, map: inside('.p2-map'), panel: inside('.ph-panel'), side: sideIdle, panelOverSide: sideShown && over('.ph-panel', '.ph-side'), hscroll: document.documentElement.scrollWidth > innerWidth + 1, w: innerWidth, h: innerHeight }; }, label);
+    g.palace.hud.closeNpc(); await w(200); const mapIdle = inside('.p2-map'); g.palace.hud.openNpc(n.id); s.setTalking(n.id); await w(200);
+    return { label, map: mapIdle, panel: inside('.ph-panel'), side: sideIdle, panelOverSide: sideShown && over('.ph-panel', '.ph-side'), hscroll: document.documentElement.scrollWidth > innerWidth + 1, w: innerWidth, h: innerHeight }; }, label);
   const pc = await ui(p, 'PC');
   const q = await open({ ...devices['iPhone 13 landscape'] });
   await q.evaluate(() => { const g = window.__goko; g.campaign.speed = 0; g.changeSettings({ playerFactionId: 'jin' }); g.enterPalace(); });
@@ -97,7 +99,7 @@ const fs = require('fs'); const path = require('path');
   await q.screenshot({ path: path.join(__dirname, 'out', '40-2d-iphone.png') });
   check('T10 PC(1280×800)と iPhone(横向き)の画面で、地図・会話の欄・右の列が画面に収まり、会話の欄が右の列に重ならない(iPhone では会話中だけ右の列を隠す)。横にはみ出さない', [pc, ip].every(x => x.map && x.panel && x.side && !x.panelOverSide && !x.hscroll), { pc, ip });
 
-  for (const f of made) try { fs.unlinkSync(f); } catch { /* 消せなくても試験は続ける */ }
+  for (const [f, orig] of made) try { if (orig) fs.writeFileSync(f, orig); else fs.unlinkSync(f); } catch { /* 戻せなくても試験は続ける */ }
   console.log('errors:', errs.slice(0, 3));
   await b.close();
   if (problems.length) { console.log('問題:', problems); process.exit(1); }
