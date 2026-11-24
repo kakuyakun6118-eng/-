@@ -19,10 +19,14 @@
   "A5": {
    "normal": 1,
    "smile": 1
+  },
+  "A6": {
+   "normal": 1,
+   "smile": 1
   }
  },
  "bg": {},
  "ev": {},
- "count": 10,
- "bytes": 2132446
+ "count": 12,
+ "bytes": 2574838
 }
