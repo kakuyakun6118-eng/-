@@ -896,6 +896,215 @@
     "certainty": "推定",
     "note": "国内城(丸都の近く)"
    }
+  },
+  "s409": {
+   "jin": {
+    "city": "jiankang",
+    "certainty": "確認",
+    "note": "建康"
+   },
+   "houqin": {
+    "city": "changan",
+    "certainty": "確認",
+    "note": "長安(常安)"
+   },
+   "beiwei": {
+    "city": "pingcheng",
+    "certainty": "確認",
+    "note": "平城(398年に遷都)"
+   },
+   "beiyan": {
+    "city": "jicheng",
+    "certainty": "確認",
+    "note": "龍城(和龍)"
+   },
+   "xiliang": {
+    "city": "jiuquan",
+    "certainty": "確認",
+    "note": "酒泉(405年に敦煌から遷都)"
+   },
+   "chouchi": {
+    "city": "chouchi",
+    "certainty": "確認",
+    "note": "仇池山"
+   },
+   "tuyuhun": {
+    "city": "tuyuhunting",
+    "certainty": "推定",
+    "note": "吐谷渾の王帳(暫定の首都)"
+   },
+   "goguryeo": {
+    "city": "wandu",
+    "certainty": "確認",
+    "note": "国内城(427年に平壌へ遷都)"
+   },
+   "baekje": {
+    "city": "hanseong",
+    "certainty": "推定",
+    "note": "漢城(慰礼城)"
+   },
+   "silla": {
+    "city": "geumseong",
+    "certainty": "確認",
+    "note": "金城(慶州)"
+   },
+   "shanshan": {
+    "city": "shanshan",
+    "certainty": "確認",
+    "note": "扜泥城"
+   },
+   "yutian": {
+    "city": "yutian",
+    "certainty": "確認",
+    "note": "西城"
+   },
+   "shule": {
+    "city": "shule",
+    "certainty": "確認",
+    "note": "疏勒城"
+   },
+   "qiuci": {
+    "city": "qiuci",
+    "certainty": "確認",
+    "note": "延城"
+   },
+   "yanqi": {
+    "city": "yanqi",
+    "certainty": "確認",
+    "note": "員渠城"
+   },
+   "jushi": {
+    "city": "jiaohe",
+    "certainty": "確認",
+    "note": "交河城"
+   },
+   "nanyan": {
+    "city": "guanggu",
+    "certainty": "確認",
+    "note": "広固"
+   },
+   "xia": {
+    "city": "shuofang",
+    "certainty": "推定",
+    "note": "朔方・高平の一帯(統万城は413年築城。ゲーム上の推定)"
+   },
+   "xiqin": {
+    "city": "jincheng",
+    "certainty": "推定",
+    "note": "409年に苑川で再び自立。金城の一帯に置く(ゲーム上の推定)"
+   },
+   "nanliang": {
+    "city": "guzang",
+    "certainty": "確認",
+    "note": "姑臧(406年に後秦から得る)"
+   },
+   "beiliang": {
+    "city": "zhangye",
+    "certainty": "確認",
+    "note": "張掖"
+   },
+   "qiaoshu": {
+    "city": "chengdu",
+    "certainty": "確認",
+    "note": "成都"
+   }
+  },
+  "s416": {
+   "jin": {
+    "city": "jiankang",
+    "certainty": "確認",
+    "note": "建康"
+   },
+   "houqin": {
+    "city": "changan",
+    "certainty": "確認",
+    "note": "長安(常安)"
+   },
+   "beiwei": {
+    "city": "pingcheng",
+    "certainty": "確認",
+    "note": "平城(398年に遷都)"
+   },
+   "beiyan": {
+    "city": "jicheng",
+    "certainty": "確認",
+    "note": "龍城(和龍)"
+   },
+   "xiliang": {
+    "city": "jiuquan",
+    "certainty": "確認",
+    "note": "酒泉(405年に敦煌から遷都)"
+   },
+   "chouchi": {
+    "city": "chouchi",
+    "certainty": "確認",
+    "note": "仇池山"
+   },
+   "tuyuhun": {
+    "city": "tuyuhunting",
+    "certainty": "推定",
+    "note": "吐谷渾の王帳(暫定の首都)"
+   },
+   "goguryeo": {
+    "city": "wandu",
+    "certainty": "確認",
+    "note": "国内城(427年に平壌へ遷都)"
+   },
+   "baekje": {
+    "city": "hanseong",
+    "certainty": "推定",
+    "note": "漢城(慰礼城)"
+   },
+   "silla": {
+    "city": "geumseong",
+    "certainty": "確認",
+    "note": "金城(慶州)"
+   },
+   "shanshan": {
+    "city": "shanshan",
+    "certainty": "確認",
+    "note": "扜泥城"
+   },
+   "yutian": {
+    "city": "yutian",
+    "certainty": "確認",
+    "note": "西城"
+   },
+   "shule": {
+    "city": "shule",
+    "certainty": "確認",
+    "note": "疏勒城"
+   },
+   "qiuci": {
+    "city": "qiuci",
+    "certainty": "確認",
+    "note": "延城"
+   },
+   "yanqi": {
+    "city": "yanqi",
+    "certainty": "確認",
+    "note": "員渠城"
+   },
+   "jushi": {
+    "city": "jiaohe",
+    "certainty": "確認",
+    "note": "交河城"
+   },
+   "xia": {
+    "city": "shuofang",
+    "certainty": "確認",
+    "note": "統万城(413年築城。地図では朔方の位置)"
+   },
+   "xiqin": {
+    "city": "jincheng",
+    "certainty": "推定",
+    "note": "枹罕・金城の一帯(ゲーム上の推定)"
+   },
+   "beiliang": {
+    "city": "guzang",
+    "certainty": "確認",
+    "note": "姑臧(412年に遷都)"
+   }
   }
  }
 }

@@ -445,5 +445,120 @@
    "basis": "史実確認済み",
    "note": "382年、鄯善王休密馱・車師前部王弥窴が長安に入朝し、前秦に従った(『晋書』苻堅載記)"
   }
+ },
+ "s409": {
+  "houqin|nanyan": {
+   "rel": "friendly",
+   "basis": "史実",
+   "note": "慕容超は母を取り戻すため姚興に臣礼をとり楽人を献じた。広固の包囲中には後秦に救援を求める(『晋書』慕容超載記)"
+  },
+  "houqin|xiqin": {
+   "rel": "vassal",
+   "basis": "史実",
+   "note": "乞伏乾帰は407年に後秦に降り、409年7月に苑川で再び秦王を称する(開始時は後秦に従う)",
+   "overlord": "houqin"
+  },
+  "beiwei|houqin": {
+   "rel": "hostile",
+   "basis": "史実",
+   "note": "402年の柴壁の戦いののち、北魏と後秦はにらみ合う"
+  },
+  "beiwei|nanyan": {
+   "rel": "hostile",
+   "basis": "推定",
+   "note": "北魏は399年に滑台を得て、南燕の北を圧した"
+  },
+  "houqin|nanliang": {
+   "rel": "hostile",
+   "basis": "史実",
+   "note": "408年、姚弼の軍が姑臧を攻めて敗れた"
+  },
+  "nanliang|xia": {
+   "rel": "hostile",
+   "basis": "史実",
+   "note": "407年、赫連勃勃が禿髪傉檀を陽武下峡で破った"
+  },
+  "beiliang|xiliang": {
+   "rel": "hostile",
+   "basis": "史実",
+   "note": "沮渠蒙遜と李暠は境を争った"
+  },
+  "beiwei|xia": {
+   "rel": "hostile",
+   "basis": "推定",
+   "note": "赫連勃勃の父 劉衛辰は北魏に滅ぼされた"
+  },
+  "beiwei|beiyan": {
+   "rel": "hostile",
+   "basis": "推定",
+   "note": "北燕は後燕の残り。北魏とは対立する"
+  },
+  "beiyan|goguryeo": {
+   "rel": "friendly",
+   "basis": "史実",
+   "note": "高雲は高句麗の王族の出。広開土王は使者を送り同族の好を結んだ(『三国史記』)"
+  },
+  "baekje|goguryeo": {
+   "rel": "hostile",
+   "basis": "史実",
+   "note": "広開土王は百済と戦い続けた(広開土王碑)"
+  },
+  "chouchi|houqin": {
+   "rel": "hostile",
+   "basis": "推定",
+   "note": "楊盛は後秦と東晋の間を行き来した"
+  },
+  "jin|tuyuhun": {
+   "rel": "friendly",
+   "basis": "推定",
+   "note": "吐谷渾は南朝にも使いを送った(年次は推定)"
+  }
+ },
+ "s416": {
+  "beiwei|houqin": {
+   "rel": "alliance",
+   "basis": "史実",
+   "note": "415年、姚興の娘 西平公主が拓跋嗣に嫁いだ。北伐の時、北魏は後秦の救援を議した(『魏書』崔浩伝)"
+  },
+  "beiwei|jin": {
+   "rel": "hostile",
+   "basis": "史実",
+   "note": "北魏は黄河の北岸に兵を出して東晋の水軍を見張った"
+  },
+  "beiwei|xia": {
+   "rel": "hostile",
+   "basis": "推定",
+   "note": "赫連勃勃は北魏を仇とする"
+  },
+  "beiwei|beiyan": {
+   "rel": "hostile",
+   "basis": "史実",
+   "note": "北魏はたびたび北燕を攻めた"
+  },
+  "houqin|xiqin": {
+   "rel": "hostile",
+   "basis": "史実",
+   "note": "乞伏熾磐は後秦の隴西を攻めた"
+  },
+  "beiyan|goguryeo": {
+   "rel": "friendly",
+   "basis": "史実",
+   "note": "高句麗は北燕と使者を往来させた"
+  },
+  "baekje|goguryeo": {
+   "rel": "hostile",
+   "basis": "史実",
+   "note": "高句麗と百済は対立を続けた"
+  },
+  "chouchi|jin": {
+   "rel": "friendly",
+   "basis": "推定",
+   "note": "楊盛は東晋に臣従を表した"
+  },
+  "jin|tuyuhun": {
+   "rel": "friendly",
+   "basis": "推定",
+   "note": "吐谷渾は南朝にも使いを送った(年次は推定)"
+  }
  }
 }

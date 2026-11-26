@@ -741,6 +741,342 @@
    "basis": "史実確認済み",
    "by": "liu_cong",
    "note": "318年、平陽で劉聡に殺された"
+  },
+  "liu_yu_song": {
+   "cause": "illness",
+   "basis": "史実確認済み",
+   "month": 5,
+   "note": "422年5月、建康で病没(『宋書』武帝紀)"
+  },
+  "liu_muzhi": {
+   "cause": "illness",
+   "basis": "史実確認済み",
+   "month": 11,
+   "note": "417年11月、建康で病没"
+  },
+  "liu_daogui": {
+   "cause": "illness",
+   "basis": "史実確認済み",
+   "note": "412年に病没"
+  },
+  "liu_daolian": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "shen_linzi": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "hu_fan": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "wang_zhongde": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "mao_dezu": {
+   "cause": "illness",
+   "basis": "推定",
+   "note": "虎牢が落ちて北魏に捕らえられ、のちに没した"
+  },
+  "zhang_que": {
+   "cause": "illness",
+   "basis": "推定"
+  },
+  "zang_aiqin": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "xie_yu": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "sima_xiuzhi": {
+   "cause": "illness",
+   "basis": "推定",
+   "note": "北魏へ移ったのちに没した"
+  },
+  "yang_sheng": {
+   "cause": "illness",
+   "basis": "推定"
+  },
+  "shuluogan": {
+   "cause": "illness",
+   "basis": "推定"
+  },
+  "jangsu": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "jeonji": {
+   "cause": "illness",
+   "basis": "推定"
+  },
+  "feng_ba": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "qifu_chipan": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "juqu_mengxun": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "li_gao": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "tuoba_si": {
+   "cause": "illness",
+   "basis": "史実確認済み",
+   "month": 11
+  },
+  "zhangsun_song": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "shusun_jian": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "xi_jin": {
+   "cause": "illness",
+   "basis": "史実確認済み"
+  },
+  "helian_bobo": {
+   "cause": "illness",
+   "basis": "史実確認済み",
+   "month": 8
+  },
+  "yao_shao": {
+   "cause": "illness",
+   "basis": "推定",
+   "note": "417年、北伐の軍を防ぎきれず憤死したと伝わる"
+  },
+  "yao_xing": {
+   "cause": "illness",
+   "basis": "史実確認済み",
+   "month": 2,
+   "note": "416年2月、長安で病没"
+  },
+  "liu_yilong": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "note": "453年、太子の劉劭に殺された(劉劭は台帳にいない)"
+  },
+  "liu_yi2": {
+   "cause": "suicide",
+   "basis": "史実確認済み",
+   "by": "liu_yu_song",
+   "note": "412年、劉裕の軍に江陵を攻められて自害した"
+  },
+  "zhuge_changmin": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "liu_yu_song",
+   "note": "413年、劉裕に疑われて殺された"
+  },
+  "meng_chang": {
+   "cause": "suicide",
+   "basis": "史実確認済み",
+   "note": "410年、盧循の軍が迫ったとき、北伐を止めなかった責めを負って自害した"
+  },
+  "he_wuji": {
+   "cause": "battle",
+   "basis": "史実確認済み",
+   "note": "410年、豫章で盧循・徐道覆の軍と戦って戦死した"
+  },
+  "liu_jingxuan": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "note": "415年、部下の司馬道賜に殺された"
+  },
+  "hu_daoan": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "liu_yu_song",
+   "note": "409年、劉裕に死を賜った"
+  },
+  "wang_zhene": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "by": "shen_tianzi",
+   "note": "418年、長安で沈田子に殺された"
+  },
+  "shen_tianzi": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "note": "418年、王鎮悪を殺した罪で王脩に処刑された"
+  },
+  "zhu_lingshi": {
+   "cause": "battle",
+   "basis": "史実確認済み",
+   "note": "418年、関中からの撤退中に夏の軍に敗れて死んだ"
+  },
+  "zhu_chaoshi": {
+   "cause": "battle",
+   "basis": "史実確認済み",
+   "note": "418年、兄とともに夏の軍に殺された"
+  },
+  "fu_hongzhi": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "helian_bobo",
+   "note": "418年、青泥で赫連勃勃に捕らえられ、屈せずに殺された"
+  },
+  "tan_daoji": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "note": "436年、宋の文帝に猜疑されて殺された"
+  },
+  "xu_xianzhi": {
+   "cause": "suicide",
+   "basis": "史実確認済み",
+   "note": "426年、少帝の廃殺を問われて自害した"
+  },
+  "fu_liang": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "note": "426年に処刑された"
+  },
+  "xie_hui": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "note": "426年、江陵で挙兵して敗れ、処刑された"
+  },
+  "liu_yifu": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "by": "xu_xianzhi",
+   "note": "424年、徐羨之らに廃されて殺された"
+  },
+  "liu_yizhen": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "by": "xu_xianzhi",
+   "note": "424年、徐羨之らに殺された"
+  },
+  "murong_chao": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "liu_yu_song",
+   "note": "410年、広固が落ちて捕らえられ、建康で斬られた"
+  },
+  "murong_zhen": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "liu_yu_song",
+   "note": "410年、広固の陥落ののち殺された"
+  },
+  "gongsun_wulou": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "liu_yu_song",
+   "note": "410年、広固の陥落ののち殺された"
+  },
+  "duan_hui": {
+   "cause": "battle",
+   "basis": "史実確認済み",
+   "note": "409年、臨朐の戦いで戦死した"
+  },
+  "yao_hong": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "liu_yu_song",
+   "note": "417年、長安が落ちて降り、建康で斬られた"
+  },
+  "yao_bi": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "yao_xing",
+   "note": "416年、帝位を狙ったとして死を賜った"
+  },
+  "yao_hui": {
+   "cause": "battle",
+   "basis": "史実確認済み",
+   "note": "417年、長安へ攻め上ったが姚紹に敗れて死んだ"
+  },
+  "yao_yi": {
+   "cause": "execution",
+   "basis": "推定",
+   "by": "yao_hong",
+   "note": "417年、蒲坂で帝を称しようとして捕らえられた(その後の扱いは推定)"
+  },
+  "yao_zan": {
+   "cause": "execution",
+   "basis": "推定",
+   "by": "liu_yu_song",
+   "note": "417年、長安の陥落ののち殺されたと推定"
+  },
+  "tuoba_gui": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "note": "409年10月、子の拓跋紹に殺された(拓跋紹は台帳にいないため、この死はゲームでは必ずは起きない)"
+  },
+  "gao_yun": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "note": "409年、近臣の離班・桃仁に殺された(二人は台帳にいない)"
+  },
+  "qifu_qiangui": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "note": "412年、甥の乞伏公府に殺された"
+  },
+  "helian_gui": {
+   "cause": "assassination",
+   "basis": "推定",
+   "note": "424年、弟の赫連昌に殺された"
+  },
+  "li_xin": {
+   "cause": "battle",
+   "basis": "史実確認済み",
+   "by": "juqu_mengxun",
+   "note": "420年、沮渠蒙遜と戦って敗死した"
+  },
+  "tufa_rutan": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "by": "qifu_chipan",
+   "note": "415年、西秦に降ったのち毒殺された"
+  },
+  "qiao_zong": {
+   "cause": "suicide",
+   "basis": "史実確認済み",
+   "note": "413年、成都が落ちて自害した"
+  },
+  "qiao_daofu": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "note": "413年に捕らえられて斬られた"
+  },
+  "lu_xun": {
+   "cause": "suicide",
+   "basis": "史実確認済み",
+   "note": "411年、交州で敗れて自害した"
+  },
+  "xu_daofu": {
+   "cause": "battle",
+   "basis": "史実確認済み",
+   "note": "411年、始興で敗死した"
+  },
+  "cui_hao": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "note": "450年、国史の筆禍で処刑された"
+  },
+  "tuoba_tao": {
+   "cause": "assassination",
+   "basis": "史実確認済み",
+   "note": "452年、宦官の宗愛に殺された"
+  },
+  "juqu_mujian": {
+   "cause": "execution",
+   "basis": "史実確認済み",
+   "note": "447年、北魏に殺された"
   }
  }
 }

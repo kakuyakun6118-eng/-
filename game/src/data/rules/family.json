@@ -437,6 +437,45 @@
   },
   "shipi": {
    "father": "shilian"
+  },
+  "liu_yifu": {
+   "father": "liu_yu_song",
+   "mother": "zhang_que"
+  },
+  "liu_yizhen": {
+   "father": "liu_yu_song",
+   "note": "母は孫氏(台帳にいない)"
+  },
+  "liu_yilong": {
+   "father": "liu_yu_song",
+   "mother": "hu_daoan"
+  },
+  "yao_hong": {
+   "father": "yao_xing"
+  },
+  "yao_bi": {
+   "father": "yao_xing"
+  },
+  "yao_yi": {
+   "father": "yao_xing"
+  },
+  "yao_guang": {
+   "father": "yao_xing"
+  },
+  "tuoba_si": {
+   "father": "tuoba_gui"
+  },
+  "helian_gui": {
+   "father": "helian_bobo"
+  },
+  "li_xin": {
+   "father": "li_gao"
+  },
+  "qifu_chipan": {
+   "father": "qifu_qiangui"
+  },
+  "liu_jingxuan": {
+   "father": "liu_laozhi"
   }
  },
  "siblings": [
@@ -512,6 +551,26 @@
    "sima_ai",
    "sima_ying",
    "sima_chi"
+  ],
+  [
+   "liu_yu_song",
+   "liu_daogui"
+  ],
+  [
+   "liu_yu_song",
+   "liu_daolian"
+  ],
+  [
+   "zhu_lingshi",
+   "zhu_chaoshi"
+  ],
+  [
+   "shen_tianzi",
+   "shen_linzi"
+  ],
+  [
+   "yao_xing",
+   "yao_shao"
   ]
  ],
  "marriages": [
@@ -526,6 +585,24 @@
    "qi_shi",
    "primary",
    ""
+  ],
+  [
+   "liu_yu_song",
+   "zang_aiqin",
+   "primary",
+   "臧愛親は劉裕の正妻(408年没)"
+  ],
+  [
+   "liu_yu_song",
+   "zhang_que",
+   "secondary",
+   "劉義符の母"
+  ],
+  [
+   "liu_yu_song",
+   "hu_daoan",
+   "secondary",
+   "劉義隆の母"
   ]
  ],
  "heirs": {
@@ -567,13 +644,32 @@
    "jin": "sima_dezong",
    "goguryeo": "gogugyang",
    "baekje": "chimnyu"
+  },
+  "s409": {
+   "jin": "sima_dewen",
+   "houqin": "yao_hong",
+   "beiwei": "tuoba_si",
+   "xia": "helian_gui",
+   "xiqin": "qifu_chipan",
+   "xiliang": "li_xin",
+   "beiliang": "juqu_mujian",
+   "goguryeo": "jangsu"
+  },
+  "s416": {
+   "jin": "sima_dewen",
+   "beiwei": "tuoba_tao",
+   "xia": "helian_gui",
+   "xiliang": "li_xin",
+   "beiliang": "juqu_mujian"
   }
  },
  "heirNotes": {
   "s317|chenghan": "李雄は甥の李班を太子とした(史実)",
   "s383|jin": "孝武帝の長子 司馬徳宗(のちの安帝)を後継者とする(383年は1歳。立太子は387年)",
   "s329|jin": "成帝が幼く、ここでは叔父の司馬昱を仮の後継者とする(推定)",
-  "s383|goguryeo": "小獣林王に子がなく、弟の故国壌王が継いだ(史実)"
+  "s383|goguryeo": "小獣林王に子がなく、弟の故国壌王が継いだ(史実)",
+  "s409": "東晋の安帝には子がなく、弟の琅邪王 司馬徳文が後を継ぐ立場(のちの恭帝)。後秦の姚泓は409年に太子に立てられた(『晋書』姚興載記)。",
+  "s416": "北魏の拓跋燾は422年に太子に立つ(開始時は泰平王。ゲーム上は後継の第一候補)。後秦の姚泓には成人の後継がいない。"
  },
  "ranks": {
   "s300": {
@@ -757,6 +853,51 @@
    "qiuci": "king",
    "yanqi": "king",
    "jushi": "king"
+  },
+  "s409": {
+   "jin": "emperor",
+   "houqin": "emperor",
+   "beiwei": "emperor",
+   "xia": "king",
+   "beiyan": "king",
+   "xiqin": "king",
+   "beiliang": "duke",
+   "xiliang": "duke",
+   "chouchi": "duke",
+   "tuyuhun": "chief",
+   "goguryeo": "king",
+   "baekje": "king",
+   "silla": "king",
+   "shanshan": "king",
+   "yutian": "king",
+   "shule": "king",
+   "qiuci": "king",
+   "yanqi": "king",
+   "jushi": "king",
+   "nanyan": "emperor",
+   "nanliang": "king",
+   "qiaoshu": "king"
+  },
+  "s416": {
+   "jin": "emperor",
+   "houqin": "emperor",
+   "beiwei": "emperor",
+   "xia": "king",
+   "beiyan": "king",
+   "xiqin": "king",
+   "beiliang": "king",
+   "xiliang": "duke",
+   "chouchi": "duke",
+   "tuyuhun": "chief",
+   "goguryeo": "king",
+   "baekje": "king",
+   "silla": "king",
+   "shanshan": "king",
+   "yutian": "king",
+   "shule": "king",
+   "qiuci": "king",
+   "yanqi": "king",
+   "jushi": "king"
   }
  },
  "historicCrown": {
@@ -764,7 +905,8 @@
   "shile": 330,
   "murong": 352,
   "qianqin": 351,
-  "qianyan": 352
+  "qianyan": 352,
+  "xia": 418
  },
  "usurpations": [
   {
@@ -917,5 +1059,537 @@
    ]
   }
  },
- "_noteAddRoyals": "addRoyals:生年が分からないため自動では加わらないが、開始時に宮廷にいたと考えられる王族(推定)"
+ "_noteAddRoyals": "addRoyals:生年が分からないため自動では加わらないが、開始時に宮廷にいたと考えられる王族(推定)",
+ "_noteLiuYu": "劉裕の北伐(Version 55)で、劉裕の家族・後秦の姚氏・北魏・夏・西涼・西秦の親子を追加。劉裕と劉道規・劉道憐は異母兄弟。姚紹は姚興の弟。",
+ "debuts": [
+  {
+   "person": "liu_yu_song",
+   "year": 399,
+   "follow": [
+    "liu_laozhi"
+   ],
+   "faction": "jin",
+   "title": "北府軍の参軍",
+   "note": "399年、劉牢之に従って孫恩の乱を討つ(『宋書』武帝紀)"
+  },
+  {
+   "person": "zang_aiqin",
+   "year": 399,
+   "follow": [
+    "liu_yu_song"
+   ],
+   "title": "劉裕の妻"
+  },
+  {
+   "person": "he_wuji",
+   "year": 399,
+   "follow": [
+    "liu_laozhi"
+   ],
+   "faction": "jin",
+   "title": "北府軍の将"
+  },
+  {
+   "person": "liu_daogui",
+   "year": 399,
+   "follow": [
+    "liu_yu_song"
+   ],
+   "faction": "jin",
+   "title": "劉裕の弟"
+  },
+  {
+   "person": "liu_daolian",
+   "year": 399,
+   "follow": [
+    "liu_yu_song"
+   ],
+   "faction": "jin",
+   "title": "劉裕の弟"
+  },
+  {
+   "person": "liu_yi2",
+   "year": 400,
+   "faction": "jin",
+   "title": "北府軍の将"
+  },
+  {
+   "person": "zhuge_changmin",
+   "year": 400,
+   "faction": "jin",
+   "title": "北府軍の将"
+  },
+  {
+   "person": "meng_chang",
+   "year": 400,
+   "faction": "jin",
+   "title": "青州主簿"
+  },
+  {
+   "person": "liu_muzhi",
+   "year": 404,
+   "follow": [
+    "liu_yu_song"
+   ],
+   "faction": "jin",
+   "title": "劉裕の主簿",
+   "note": "404年、桓玄打倒の挙兵ののち劉裕に招かれる"
+  },
+  {
+   "person": "wang_zhene",
+   "year": 404,
+   "follow": [
+    "liu_yu_song"
+   ],
+   "faction": "jin",
+   "title": "参軍"
+  },
+  {
+   "person": "tan_daoji",
+   "year": 404,
+   "follow": [
+    "liu_yu_song"
+   ],
+   "faction": "jin",
+   "title": "参軍"
+  },
+  {
+   "person": "zhu_lingshi",
+   "year": 404,
+   "follow": [
+    "liu_yu_song"
+   ],
+   "faction": "jin",
+   "title": "参軍"
+  },
+  {
+   "person": "zhu_chaoshi",
+   "year": 404,
+   "follow": [
+    "liu_yu_song"
+   ],
+   "faction": "jin",
+   "title": "参軍"
+  },
+  {
+   "person": "hu_fan",
+   "year": 404,
+   "follow": [
+    "liu_yu_song"
+   ],
+   "faction": "jin",
+   "title": "参軍"
+  },
+  {
+   "person": "ding_wu",
+   "year": 404,
+   "follow": [
+    "liu_yu_song"
+   ],
+   "faction": "jin",
+   "title": "劉裕の側近"
+  },
+  {
+   "person": "xu_xianzhi",
+   "year": 404,
+   "follow": [
+    "liu_yu_song"
+   ],
+   "faction": "jin",
+   "title": "参軍"
+  },
+  {
+   "person": "fu_liang",
+   "year": 404,
+   "follow": [
+    "liu_yu_song"
+   ],
+   "faction": "jin",
+   "title": "参軍"
+  },
+  {
+   "person": "xie_yu",
+   "year": 404,
+   "faction": "jin",
+   "title": "尚書"
+  },
+  {
+   "person": "sima_xiuzhi",
+   "year": 404,
+   "faction": "jin",
+   "title": "晋の宗室"
+  },
+  {
+   "person": "lu_xun",
+   "year": 404,
+   "faction": "jin",
+   "title": "広州刺史",
+   "city": "panyu",
+   "note": "404年、東晋は広州を占めた盧循を刺史に任じた"
+  },
+  {
+   "person": "xu_daofu",
+   "year": 404,
+   "follow": [
+    "lu_xun"
+   ],
+   "faction": "jin",
+   "title": "始興相",
+   "city": "shian"
+  },
+  {
+   "person": "qiao_zong",
+   "year": 404,
+   "faction": "jin",
+   "title": "益州の参軍",
+   "city": "chengdu"
+  },
+  {
+   "person": "qiao_daofu",
+   "year": 404,
+   "follow": [
+    "qiao_zong"
+   ],
+   "faction": "jin",
+   "title": "譙縦の一族"
+  },
+  {
+   "person": "zhang_que",
+   "year": 405,
+   "follow": [
+    "liu_yu_song"
+   ],
+   "title": "劉裕の夫人"
+  },
+  {
+   "person": "hu_daoan",
+   "year": 405,
+   "follow": [
+    "liu_yu_song"
+   ],
+   "title": "劉裕の側室"
+  },
+  {
+   "person": "wang_zhongde",
+   "year": 405,
+   "follow": [
+    "liu_yu_song"
+   ],
+   "faction": "jin",
+   "title": "参軍"
+  },
+  {
+   "person": "shen_tianzi",
+   "year": 405,
+   "follow": [
+    "liu_yu_song"
+   ],
+   "faction": "jin",
+   "title": "参軍"
+  },
+  {
+   "person": "shen_linzi",
+   "year": 405,
+   "follow": [
+    "liu_yu_song"
+   ],
+   "faction": "jin",
+   "title": "参軍"
+  },
+  {
+   "person": "fu_hongzhi",
+   "year": 405,
+   "follow": [
+    "liu_yu_song"
+   ],
+   "faction": "jin",
+   "title": "参軍"
+  },
+  {
+   "person": "mao_dezu",
+   "year": 405,
+   "follow": [
+    "liu_yu_song"
+   ],
+   "faction": "jin",
+   "title": "参軍"
+  },
+  {
+   "person": "xie_hui",
+   "year": 410,
+   "follow": [
+    "liu_yu_song"
+   ],
+   "faction": "jin",
+   "title": "太尉参軍"
+  },
+  {
+   "person": "yao_xing",
+   "year": 384,
+   "follow": [
+    "yao_chang"
+   ],
+   "title": "姚萇の長子"
+  },
+  {
+   "person": "yao_shao",
+   "year": 384,
+   "follow": [
+    "yao_chang",
+    "yao_xing"
+   ],
+   "title": "姚萇の子"
+  },
+  {
+   "person": "yao_zan",
+   "year": 395,
+   "follow": [
+    "yao_xing"
+   ],
+   "title": "将軍"
+  },
+  {
+   "person": "yao_bi",
+   "year": 400,
+   "follow": [
+    "yao_xing"
+   ],
+   "title": "姚興の子"
+  },
+  {
+   "person": "yao_hui",
+   "year": 400,
+   "follow": [
+    "yao_xing"
+   ],
+   "title": "将軍"
+  },
+  {
+   "person": "yao_yi",
+   "year": 400,
+   "follow": [
+    "yao_xing"
+   ],
+   "title": "姚興の子"
+  },
+  {
+   "person": "yao_guang",
+   "year": 400,
+   "follow": [
+    "yao_xing"
+   ],
+   "title": "姚興の子"
+  },
+  {
+   "person": "yao_nan",
+   "year": 400,
+   "follow": [
+    "yao_xing"
+   ],
+   "title": "将軍"
+  },
+  {
+   "person": "yao_qiang",
+   "year": 400,
+   "follow": [
+    "yao_xing"
+   ],
+   "title": "将軍"
+  },
+  {
+   "person": "yin_zhao",
+   "year": 400,
+   "follow": [
+    "yao_xing"
+   ],
+   "title": "尚書"
+  },
+  {
+   "person": "helian_bobo",
+   "year": 391,
+   "follow": [
+    "yao_xing",
+    "yao_chang"
+   ],
+   "title": "亡命した鉄弗部の王子",
+   "note": "391年、父 劉衛辰が北魏に滅ぼされ、後秦の側へ逃れた"
+  },
+  {
+   "person": "wang_maide",
+   "year": 407,
+   "follow": [
+    "helian_bobo"
+   ],
+   "title": "軍師"
+  },
+  {
+   "person": "helian_gui",
+   "year": 407,
+   "follow": [
+    "helian_bobo"
+   ],
+   "title": "赫連勃勃の子"
+  },
+  {
+   "person": "murong_zhen",
+   "year": 398,
+   "follow": [
+    "murong_de"
+   ],
+   "title": "将軍"
+  },
+  {
+   "person": "murong_zhong",
+   "year": 398,
+   "follow": [
+    "murong_de"
+   ],
+   "title": "将軍"
+  },
+  {
+   "person": "duan_hui",
+   "year": 398,
+   "follow": [
+    "murong_de"
+   ],
+   "title": "尚書"
+  },
+  {
+   "person": "han_fan",
+   "year": 398,
+   "follow": [
+    "murong_de"
+   ],
+   "title": "尚書"
+  },
+  {
+   "person": "gongsun_wulou",
+   "year": 400,
+   "follow": [
+    "murong_de"
+   ],
+   "title": "将軍"
+  },
+  {
+   "person": "murong_chao",
+   "year": 405,
+   "follow": [
+    "murong_de"
+   ],
+   "title": "慕容徳の甥",
+   "note": "405年、長安から広固へ逃れてきて後継に立てられた"
+  },
+  {
+   "person": "zhangsun_song",
+   "year": 386,
+   "follow": [
+    "tuoba_gui"
+   ],
+   "title": "南部大人"
+  },
+  {
+   "person": "shusun_jian",
+   "year": 386,
+   "follow": [
+    "tuoba_gui"
+   ],
+   "title": "将軍"
+  },
+  {
+   "person": "xi_jin",
+   "year": 386,
+   "follow": [
+    "tuoba_gui"
+   ],
+   "title": "将軍"
+  },
+  {
+   "person": "cui_hao",
+   "year": 400,
+   "follow": [
+    "tuoba_gui",
+    "tuoba_si"
+   ],
+   "title": "博士"
+  },
+  {
+   "person": "gao_yun",
+   "year": 397,
+   "follow": [
+    "murong_bao",
+    "murong_sheng",
+    "murong_xi",
+    "murong_chui"
+   ],
+   "title": "侍御郎"
+  },
+  {
+   "person": "feng_ba",
+   "year": 397,
+   "follow": [
+    "murong_bao",
+    "murong_sheng",
+    "murong_xi",
+    "murong_chui"
+   ],
+   "title": "中衛将軍"
+  },
+  {
+   "person": "qifu_qiangui",
+   "year": 385,
+   "follow": [
+    "qifu_guoren"
+   ],
+   "title": "乞伏国仁の弟"
+  },
+  {
+   "person": "qifu_chipan",
+   "year": 400,
+   "follow": [
+    "qifu_qiangui"
+   ],
+   "title": "乞伏乾帰の子"
+  },
+  {
+   "person": "juqu_mengxun",
+   "year": 386,
+   "follow": [
+    "lv_guang"
+   ],
+   "title": "盧水胡の酋長"
+  },
+  {
+   "person": "juqu_mujian",
+   "year": 410,
+   "follow": [
+    "juqu_mengxun"
+   ],
+   "title": "沮渠蒙遜の子"
+  },
+  {
+   "person": "li_gao",
+   "year": 386,
+   "follow": [
+    "lv_guang"
+   ],
+   "title": "効穀県令"
+  },
+  {
+   "person": "li_xin",
+   "year": 400,
+   "follow": [
+    "li_gao"
+   ],
+   "title": "李暠の子"
+  },
+  {
+   "person": "tufa_rutan",
+   "year": 386,
+   "follow": [
+    "lv_guang"
+   ],
+   "title": "河西鮮卑の首長"
+  }
+ ],
+ "_noteDebuts": "debuts:途中から登場する史実の大人の人物(tools/liuyu/debuts.py が書く)。開始の年より後の登場だけ使う。ゆかりの人物がいなければ登場しない。"
 }

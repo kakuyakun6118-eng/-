@@ -23,6 +23,8 @@ import s319 from "./scenarios/s319.json";
 import s329 from "./scenarios/s329.json";
 import s357 from "./scenarios/s357.json";
 import s383 from "./scenarios/s383.json";
+import s409 from "./scenarios/s409.json";
+import s416 from "./scenarios/s416.json";
 import s317Armies from "./scenarios/s317.armies.json";
 import s317Persons from "./scenarios/s317.persons.json";
 import unitTypeList from "./rules/unitTypes.json";
@@ -78,6 +80,8 @@ const scenarioFiles: Record<string, ScenarioFile> = {
   s329: s329 as unknown as ScenarioFile,
   s357: s357 as unknown as ScenarioFile,
   s383: s383 as unknown as ScenarioFile,
+  s409: s409 as unknown as ScenarioFile,
+  s416: s416 as unknown as ScenarioFile,
 };
 /** 人物の台帳:317年の人物と、ほかの年代だけに出る人物 */
 const personLedger = new Map<string, Person>();

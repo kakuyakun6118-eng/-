@@ -29,7 +29,7 @@ const path = require('path');
   await p.screenshot({ path: out + '/ui-2-menu.png' });
   await p.evaluate(() => document.querySelector('#scenarios-open').click()); await p.waitForTimeout(400); await p.screenshot({ path: out + '/ui-3-scenarios.png' });
   const cards = await p.evaluate(() => [...document.querySelectorAll('.scenario-card')].map(c => ({ id: c.dataset.id, year: c.querySelector('.scenario-year').textContent, facts: c.querySelectorAll('dd').length, seal: c.querySelector('.seal').textContent })));
-  if (cards.length !== 8 || cards.some(c => c.facts !== 2) || cards.map(c => parseInt(c.year)).join() !== [...cards].map(c => parseInt(c.year)).sort((a, b) => a - b).join()) problems.push('シナリオの札: ' + JSON.stringify(cards));
+  if (cards.length !== 10 ||  /* 劉裕の北伐の409年・416年を足して10枚 */ cards.some(c => c.facts !== 2) || cards.map(c => parseInt(c.year)).join() !== [...cards].map(c => parseInt(c.year)).sort((a, b) => a - b).join()) problems.push('シナリオの札: ' + JSON.stringify(cards));
   await p.evaluate(() => { document.querySelector('.scenarios-close').click(); document.querySelector('#persons-open').click(); document.querySelector('.person-row[data-id="shi_le"]').click(); }); await p.waitForTimeout(400); await p.screenshot({ path: out + '/ui-4-persons.png' });
   await p.evaluate(() => { document.querySelector('.persons-close').click(); document.querySelector('#diplomacy-open').click(); }); await p.waitForTimeout(400); await p.screenshot({ path: out + '/ui-5-diplomacy.png' });
   const faces = await p.evaluate(() => ({ diplomacy: document.querySelectorAll('.diplomacy-face').length, rows: document.querySelectorAll('.diplomacy-row').length }));

@@ -28,6 +28,9 @@ interface FamilyFile {
   depositions: { faction: string; by: string; victim: string; replacement: string; year: number; note: string }[];
 }
 
+/** 途中から登場する史実の人物(family.json の debuts) */
+interface Debut { person: string; year: number; follow?: string[]; faction?: string; title?: string; city?: string; note?: string }
+
 export type DeathCause = "illness" | "old_age" | "battle" | "execution" | "assassination" | "suicide" | "unknown";
 export const CAUSE_LABEL: Record<DeathCause, string> = { illness: "病死", old_age: "老衰", battle: "戦死", execution: "処刑", assassination: "暗殺", suicide: "自害", unknown: "不明" };
 type DeathRecord = { cause: DeathCause; basis: string; by?: string; note?: string; month?: number };
@@ -42,7 +45,7 @@ const EDU_STATS: Record<EduPolicy, (typeof STAT_KEYS)[number][]> = { war: ["war"
 const FAMILY = familyData as unknown as FamilyFile;
 
 export interface CourtCounts {
-  births: number; historicBirths: number; primaries: number; concubines: number; successions: number;
+  births: number; historicBirths: number; debuts?: number; primaries: number; concubines: number; successions: number;
   disputes: number; civilWars: number; crowns: number; heirChanges: number; deaths: number; usurpations: number;
   regents: number; personalRule: number; depositions: number; eduGain: number; violentDeaths: number;
 }
@@ -838,6 +841,7 @@ export class Court {
     this.depositions(year);
     this.educate();
     this.historicBirths(year, month);
+    this.historicDebuts(year);
     this.births(year);
     this.applyGrowth();
     for (const f of scenario.factions) {
@@ -973,6 +977,46 @@ export class Court {
       this.counts.births++;
       this.note(parent.factionId, `${parent.name}の子 ${p.name}が生まれる(史実)`);
       if (parent.role === "ruler") this.c.addNews(`${scenario.factions.find((x) => x.id === parent.factionId)?.name}の${parent.name}に、${p.name}が生まれました(史実の人物)`);
+    }
+  }
+
+  /**
+   * 途中から登場する史実の大人の人物(family.json の debuts)。
+   * 早い年代から始めたとき、劉裕などが史実で世に出た年に、ゆかりの人物の勢力へ加わる。
+   * ゆかりの人物が死んだ・滅んだ勢力にいるなど、歴史が変わっていれば登場しない(無理に史実へ戻さない)。
+   */
+  private historicDebuts(year: number): void {
+    const list = (familyData as unknown as { debuts?: Debut[] }).debuts ?? [];
+    for (const d of list) {
+      if (d.year <= scenario.year || d.year > year || persons.some((p) => p.id === d.person)) continue;
+      const base = ledgerPerson(d.person);
+      if (!base || (base.died !== null && base.died <= year) || (base.born !== null && year - base.born < 15)) continue;
+      const live = (f: string | undefined) => !!f && scenario.factions.some((x) => x.id === f && !x.fallen && !x.passive);
+      const host = (d.follow ?? []).map((id) => persons.find((p) => p.id === id)).find((p) => p && this.c.personStatus(p.id) !== "dead" && !this.c.spoils.custodyOf(p.id) && live(p.factionId));
+      const fid = host?.factionId ?? (live(d.faction) ? d.faction : undefined);
+      if (!fid) continue;
+      // 1年たっても条件が整わなければ、その人物は登場しない(何十年も遅れて出てこないように)
+      if (year > d.year + 1) continue;
+      const city = d.city && scenario.cityOwners[d.city] === fid ? d.city : host?.residence ?? this.c.capitalCityOf(fid)?.id;
+      const p: Person = { ...base, factionId: fid, role: base.role === "ruler" ? "general" : base.role, residence: city, title: d.title ?? base.title };
+      persons.push(p);
+      this.added.push(p);
+      const L = this.c.loyalty;
+      L.fame[p.id] = 25;
+      L.loyalty[p.id] = 75;
+      this.snapshot(p);
+      this.counts.debuts = (this.counts.debuts ?? 0) + 1;
+      // 史実の婚姻:相手がすでにゲームにいれば結ぶ
+      for (const [h, w, kind] of FAMILY.marriages) {
+        if (h !== p.id && w !== p.id) continue;
+        const other = h === p.id ? w : h;
+        if (!persons.some((x) => x.id === other) || this.c.personStatus(other) === "dead") continue;
+        if (this.c.diplo.marriages.some((m) => m.husband === h && m.wife === w)) continue;
+        this.c.diplo.marriages.push({ husband: h, wife: w, kind, historic: true, day: Math.floor(this.c.day) });
+      }
+      const fname = scenario.factions.find((x) => x.id === fid)?.name ?? "";
+      this.note(fid, `${p.name}が${fname}に加わる(史実の人物の登場${d.note ? `:${d.note}` : ""})`);
+      if (p.id === "liu_yu_song") this.c.addNews(`${fname}に、北府軍の劉裕が現れました(史実の人物の登場)`);
     }
   }
 

@@ -1,0 +1,856 @@
+{
+ "id": "s416",
+ "year": 416,
+ "startMonth": 6,
+ "name": "劉裕の北伐 ― 長安奪還",
+ "summary": "416年夏。後秦の姚興が没し、姚泓が継いだが、一族の争いと夏の侵攻で国は揺れていた。劉裕は好機と見て、水陸の大軍で洛陽・長安を目指す。",
+ "scenarioNote": "開始は416年6月(ゲーム上の設定)。史実では劉裕は8月に建康を発ち、王鎮悪・檀道済が淮水・淝水から許昌・洛陽へ、沈林子が汴水を、王仲徳が黄河の水軍を、沈田子・傅弘之が武関道を進んだ。開始時の軍団の位置は、その出発点に近い場所に置いた(ゲーム上の推定)。南燕(410年)・譙蜀(413年)・南涼(414年)はすでに滅んでいる。統万城(413年築城)は朔方の位置に置く。人物の生死・所属は『晋書』『宋書』『魏書』『資治通鑑』の通説により、不確かなところはゲーム上の推定。",
+ "factions": [
+  {
+   "id": "jin",
+   "name": "東晋",
+   "people": "漢",
+   "ruler": "司馬徳宗(安帝)",
+   "color": "#3c86c9"
+  },
+  {
+   "id": "houqin",
+   "name": "後秦",
+   "people": "羌",
+   "ruler": "姚泓",
+   "color": "#6b8f2f"
+  },
+  {
+   "id": "beiwei",
+   "name": "北魏",
+   "people": "鮮卑",
+   "ruler": "拓跋嗣(明元帝)",
+   "color": "#5a4a8a"
+  },
+  {
+   "id": "xia",
+   "name": "夏",
+   "people": "匈奴",
+   "ruler": "赫連勃勃",
+   "color": "#8a2f2f"
+  },
+  {
+   "id": "beiyan",
+   "name": "北燕",
+   "people": "漢",
+   "ruler": "馮跋",
+   "color": "#c27a2c"
+  },
+  {
+   "id": "xiqin",
+   "name": "西秦",
+   "people": "鮮卑",
+   "ruler": "乞伏熾磐",
+   "color": "#2f8a7a"
+  },
+  {
+   "id": "beiliang",
+   "name": "北涼",
+   "people": "盧水胡",
+   "ruler": "沮渠蒙遜",
+   "color": "#4a6a9a"
+  },
+  {
+   "id": "xiliang",
+   "name": "西涼",
+   "people": "漢",
+   "ruler": "李暠",
+   "color": "#9a5a7a"
+  },
+  {
+   "id": "chouchi",
+   "name": "仇池",
+   "people": "氐",
+   "ruler": "楊盛",
+   "color": "#7a6a4a"
+  },
+  {
+   "id": "tuyuhun",
+   "name": "吐谷渾",
+   "people": "鮮卑",
+   "ruler": "樹洛干",
+   "color": "#904581"
+  },
+  {
+   "id": "goguryeo",
+   "name": "高句麗",
+   "people": "高句麗",
+   "ruler": "長寿王",
+   "color": "#3a7a9a"
+  },
+  {
+   "id": "baekje",
+   "name": "百済",
+   "people": "百済",
+   "ruler": "腆支王",
+   "color": "#9a7a3a"
+  },
+  {
+   "id": "silla",
+   "name": "新羅",
+   "people": "新羅",
+   "ruler": "実聖尼師今",
+   "color": "#7a9a6a"
+  },
+  {
+   "id": "shanshan",
+   "name": "鄯善",
+   "people": "鄯善",
+   "ruler": "鄯善王(名は伝わらない)",
+   "color": "#b08a3e"
+  },
+  {
+   "id": "yutian",
+   "name": "于闐",
+   "people": "于闐",
+   "ruler": "于闐王(名は伝わらない)",
+   "color": "#7a9a3a"
+  },
+  {
+   "id": "shule",
+   "name": "疏勒",
+   "people": "疏勒",
+   "ruler": "疏勒王(名は伝わらない)",
+   "color": "#a86a3a"
+  },
+  {
+   "id": "qiuci",
+   "name": "亀茲",
+   "people": "亀茲",
+   "ruler": "亀茲王(名は伝わらない)",
+   "color": "#c0603a"
+  },
+  {
+   "id": "yanqi",
+   "name": "焉耆",
+   "people": "焉耆",
+   "ruler": "焉耆王(名は伝わらない)",
+   "color": "#8a6aa8"
+  },
+  {
+   "id": "jushi",
+   "name": "車師前部",
+   "people": "車師前部",
+   "ruler": "車師前部王(名は伝わらない)",
+   "color": "#6a8aa8"
+  }
+ ],
+ "uncertainOwners": [
+  "runan",
+  "qiao",
+  "wan",
+  "junyi",
+  "xuchang",
+  "xingyang",
+  "yewang",
+  "lishi",
+  "lingzhi",
+  "zimeng",
+  "hanzhong",
+  "gaonu",
+  "gaochang",
+  "yiwu",
+  "shanggui"
+ ],
+ "ownerNote": "淮北・河南・遼西・河西の境目の都市は、この年の持ち主が史料で確かめにくい(ゲーム上の推定)。漢中は仇池の楊盛からの回復を推定。",
+ "cityNames": {
+  "jicheng": {
+   "name": "龍城",
+   "reading": "りゅうじょう"
+  },
+  "shuofang": {
+   "name": "統万",
+   "reading": "とうまん"
+  }
+ },
+ "relations": {
+  "houqin|jin": "war",
+  "houqin|xia": "war",
+  "beiliang|xiqin": "war",
+  "beiliang|xiliang": "war"
+ },
+ "relationNote": "東晋は後秦と開戦(北伐の決定)。夏は後秦と、西秦は北涼と、北涼は西涼と戦争中。北魏は後秦と婚姻で結ぶ(415年)。そのほかは diplomacyStart.json に書く。",
+ "governors": {
+  "chengdu": "zhu_lingshi",
+  "luoyang": "yao_guang",
+  "xuchang": "yao_zan",
+  "ye": "shusun_jian",
+  "dunhuang": "li_xin",
+  "chouchi": "yang_sheng",
+  "tuyuhunting": "shuluogan",
+  "wandu": "jangsu",
+  "hanseong": "jeonji",
+  "geumseong": "silseong"
+ },
+ "governorNote": "太守・守将は史料で確かめられる者を優先し、それ以外は経歴から推し量った(ゲーム上の推定)。",
+ "armies": [
+  {
+   "id": "army_liu_yu",
+   "name": "劉裕の本軍",
+   "factionId": "jin",
+   "commanderId": "liu_yu_song",
+   "lon": 117.2,
+   "lat": 34.26,
+   "facing": 0,
+   "troops": {
+    "infantry": 25000,
+    "cavalry": 2000,
+    "archer": 8000
+   },
+   "morale": 88,
+   "fatigue": 10,
+   "food": 60
+  },
+  {
+   "id": "army_wang_zhene",
+   "name": "王鎮悪・檀道済の前鋒",
+   "factionId": "jin",
+   "commanderId": "wang_zhene",
+   "lon": 116.78,
+   "lat": 32.87,
+   "facing": 0,
+   "troops": {
+    "infantry": 12000,
+    "cavalry": 1000,
+    "archer": 4000
+   },
+   "morale": 84,
+   "fatigue": 10,
+   "food": 55
+  },
+  {
+   "id": "army_tan_daoji",
+   "name": "檀道済の軍",
+   "factionId": "jin",
+   "commanderId": "tan_daoji",
+   "lon": 114.35,
+   "lat": 33.0,
+   "facing": 0,
+   "troops": {
+    "infantry": 9000,
+    "cavalry": 800,
+    "archer": 3000
+   },
+   "morale": 82,
+   "fatigue": 10,
+   "food": 55
+  },
+  {
+   "id": "army_shen_linzi",
+   "name": "沈林子の汴水の軍",
+   "factionId": "jin",
+   "commanderId": "shen_linzi",
+   "lon": 116.8,
+   "lat": 34.26,
+   "facing": 0,
+   "troops": {
+    "infantry": 6000,
+    "cavalry": 300,
+    "archer": 2000
+   },
+   "morale": 80,
+   "fatigue": 10,
+   "food": 50
+  },
+  {
+   "id": "army_wang_zhongde",
+   "name": "王仲徳の黄河の水軍",
+   "factionId": "jin",
+   "commanderId": "wang_zhongde",
+   "lon": 119.02,
+   "lat": 33.6,
+   "facing": 0,
+   "troops": {
+    "infantry": 8000,
+    "cavalry": 200,
+    "archer": 3000
+   },
+   "morale": 80,
+   "fatigue": 10,
+   "food": 50
+  },
+  {
+   "id": "army_shen_tianzi",
+   "name": "沈田子の武関道の軍",
+   "factionId": "jin",
+   "commanderId": "shen_tianzi",
+   "lon": 112.14,
+   "lat": 32.02,
+   "facing": 0,
+   "troops": {
+    "infantry": 4000,
+    "cavalry": 500,
+    "archer": 1500
+   },
+   "morale": 84,
+   "fatigue": 10,
+   "food": 50
+  },
+  {
+   "id": "army_liu_daolian",
+   "name": "劉道憐の荊州軍",
+   "factionId": "jin",
+   "commanderId": "liu_daolian",
+   "lon": 112.2,
+   "lat": 30.35,
+   "facing": 0,
+   "troops": {
+    "infantry": 8000,
+    "cavalry": 500,
+    "archer": 3000
+   },
+   "morale": 70,
+   "fatigue": 10,
+   "food": 50
+  },
+  {
+   "id": "army_yao_hong",
+   "name": "姚泓の本軍",
+   "factionId": "houqin",
+   "commanderId": "yao_hong",
+   "lon": 108.87,
+   "lat": 34.31,
+   "facing": 0,
+   "troops": {
+    "infantry": 20000,
+    "cavalry": 12000,
+    "archer": 6000
+   },
+   "morale": 66,
+   "fatigue": 10,
+   "food": 50
+  },
+  {
+   "id": "army_yao_shao",
+   "name": "姚紹の軍",
+   "factionId": "houqin",
+   "commanderId": "yao_shao",
+   "lon": 109.87,
+   "lat": 34.51,
+   "facing": 0,
+   "troops": {
+    "infantry": 10000,
+    "cavalry": 8000,
+    "archer": 3000
+   },
+   "morale": 72,
+   "fatigue": 10,
+   "food": 50
+  },
+  {
+   "id": "army_yao_yi",
+   "name": "姚懿の蒲坂の軍",
+   "factionId": "houqin",
+   "commanderId": "yao_yi",
+   "lon": 110.42,
+   "lat": 34.9,
+   "facing": 0,
+   "troops": {
+    "infantry": 8000,
+    "cavalry": 6000,
+    "archer": 2000
+   },
+   "morale": 62,
+   "fatigue": 10,
+   "food": 50
+  },
+  {
+   "id": "army_yao_hui",
+   "name": "姚恢の安定の軍",
+   "factionId": "houqin",
+   "commanderId": "yao_hui",
+   "lon": 107.4,
+   "lat": 35.3,
+   "facing": 0,
+   "troops": {
+    "infantry": 8000,
+    "cavalry": 8000,
+    "archer": 2000
+   },
+   "morale": 64,
+   "fatigue": 10,
+   "food": 50
+  },
+  {
+   "id": "army_helian_bobo",
+   "name": "赫連勃勃の騎兵",
+   "factionId": "xia",
+   "commanderId": "helian_bobo",
+   "lon": 108.3,
+   "lat": 36.0,
+   "facing": 0,
+   "troops": {
+    "infantry": 6000,
+    "cavalry": 25000,
+    "archer": 3000
+   },
+   "morale": 86,
+   "fatigue": 10,
+   "food": 50
+  },
+  {
+   "id": "army_tuoba_si",
+   "name": "拓跋嗣の本軍",
+   "factionId": "beiwei",
+   "commanderId": "tuoba_si",
+   "lon": 113.3,
+   "lat": 40.08,
+   "facing": 0,
+   "troops": {
+    "infantry": 15000,
+    "cavalry": 25000,
+    "archer": 5000
+   },
+   "morale": 75,
+   "fatigue": 10,
+   "food": 50
+  },
+  {
+   "id": "army_zhangsun_song",
+   "name": "長孫嵩の河北の軍",
+   "factionId": "beiwei",
+   "commanderId": "zhangsun_song",
+   "lon": 114.35,
+   "lat": 36.33,
+   "facing": 0,
+   "troops": {
+    "infantry": 10000,
+    "cavalry": 15000,
+    "archer": 3000
+   },
+   "morale": 75,
+   "fatigue": 10,
+   "food": 50
+  },
+  {
+   "id": "army_feng_ba",
+   "name": "馮跋の軍",
+   "factionId": "beiyan",
+   "commanderId": "feng_ba",
+   "lon": 121.0,
+   "lat": 41.6,
+   "facing": 0,
+   "troops": {
+    "infantry": 8000,
+    "cavalry": 8000,
+    "archer": 2000
+   },
+   "morale": 75,
+   "fatigue": 10,
+   "food": 50
+  },
+  {
+   "id": "army_qifu",
+   "name": "乞伏熾磐の軍",
+   "factionId": "xiqin",
+   "commanderId": "qifu_chipan",
+   "lon": 103.8,
+   "lat": 36.06,
+   "facing": 0,
+   "troops": {
+    "infantry": 6000,
+    "cavalry": 10000,
+    "archer": 1500
+   },
+   "morale": 75,
+   "fatigue": 10,
+   "food": 50
+  },
+  {
+   "id": "army_juqu",
+   "name": "沮渠蒙遜の軍",
+   "factionId": "beiliang",
+   "commanderId": "juqu_mengxun",
+   "lon": 102.63,
+   "lat": 37.93,
+   "facing": 0,
+   "troops": {
+    "infantry": 7000,
+    "cavalry": 12000,
+    "archer": 1500
+   },
+   "morale": 75,
+   "fatigue": 10,
+   "food": 50
+  },
+  {
+   "id": "army_li_gao",
+   "name": "李暠の軍",
+   "factionId": "xiliang",
+   "commanderId": "li_gao",
+   "lon": 98.5,
+   "lat": 39.75,
+   "facing": 0,
+   "troops": {
+    "infantry": 6000,
+    "cavalry": 5000,
+    "archer": 1000
+   },
+   "morale": 75,
+   "fatigue": 10,
+   "food": 50
+  }
+ ],
+ "roster": {
+  "sima_dezong": {
+   "factionId": "jin",
+   "role": "ruler",
+   "title": "安帝",
+   "cityId": "jiankang"
+  },
+  "sima_dewen": {
+   "factionId": "jin",
+   "title": "琅邪王(北伐に同行を願い出る)",
+   "cityId": "jiankang"
+  },
+  "liu_yu_song": {
+   "factionId": "jin",
+   "title": "太尉・中書監・都督中外諸軍事"
+  },
+  "liu_muzhi": {
+   "factionId": "jin",
+   "title": "尚書左僕射(建康の留守)",
+   "cityId": "jiankang"
+  },
+  "liu_daolian": {
+   "factionId": "jin",
+   "title": "荊州刺史"
+  },
+  "wang_zhene": {
+   "factionId": "jin",
+   "title": "寧朔将軍(前鋒)"
+  },
+  "tan_daoji": {
+   "factionId": "jin",
+   "title": "冠軍将軍(前鋒)"
+  },
+  "shen_tianzi": {
+   "factionId": "jin",
+   "title": "建武将軍(武関道)"
+  },
+  "shen_linzi": {
+   "factionId": "jin",
+   "title": "寧朔将軍(汴水)"
+  },
+  "zhu_lingshi": {
+   "factionId": "jin",
+   "title": "益州刺史",
+   "cityId": "chengdu"
+  },
+  "zhu_chaoshi": {
+   "factionId": "jin",
+   "title": "寧遠将軍"
+  },
+  "hu_fan": {
+   "factionId": "jin",
+   "title": "参軍"
+  },
+  "ding_wu": {
+   "factionId": "jin",
+   "title": "劉裕の側近"
+  },
+  "wang_zhongde": {
+   "factionId": "jin",
+   "title": "冀州刺史(黄河の水軍)"
+  },
+  "fu_hongzhi": {
+   "factionId": "jin",
+   "title": "振武将軍(武関道・推定)"
+  },
+  "mao_dezu": {
+   "factionId": "jin",
+   "title": "参軍(推定)"
+  },
+  "xie_hui": {
+   "factionId": "jin",
+   "title": "太尉参軍"
+  },
+  "xu_xianzhi": {
+   "factionId": "jin",
+   "title": "太尉左司馬",
+   "cityId": "jiankang"
+  },
+  "fu_liang": {
+   "factionId": "jin",
+   "title": "中書侍郎(推定)",
+   "cityId": "jiankang"
+  },
+  "zhang_que": {
+   "factionId": "jin",
+   "title": "劉裕の夫人",
+   "cityId": "jiankang"
+  },
+  "yao_hong": {
+   "factionId": "houqin",
+   "role": "ruler",
+   "title": "後秦の皇帝(416年2月に即位)",
+   "cityId": "changan"
+  },
+  "yao_shao": {
+   "factionId": "houqin",
+   "title": "東平公・太宰",
+   "cityId": "changan"
+  },
+  "yao_hui": {
+   "factionId": "houqin",
+   "title": "征北将軍・安定の守将"
+  },
+  "yao_yi": {
+   "factionId": "houqin",
+   "title": "并州牧(蒲坂)"
+  },
+  "yao_guang": {
+   "factionId": "houqin",
+   "title": "征南将軍・洛陽の守将",
+   "cityId": "luoyang"
+  },
+  "yao_zan": {
+   "factionId": "houqin",
+   "title": "征東将軍(推定)",
+   "cityId": "xuchang"
+  },
+  "yao_nan": {
+   "factionId": "houqin",
+   "title": "将軍",
+   "cityId": "changan"
+  },
+  "yao_qiang": {
+   "factionId": "houqin",
+   "title": "将軍",
+   "cityId": "changan"
+  },
+  "yin_zhao": {
+   "factionId": "houqin",
+   "title": "尚書",
+   "cityId": "changan"
+  },
+  "sima_xiuzhi": {
+   "factionId": "houqin",
+   "title": "晋から亡命した宗室(415年)",
+   "cityId": "changan"
+  },
+  "tuoba_si": {
+   "factionId": "beiwei",
+   "role": "ruler",
+   "title": "北魏の皇帝(明元帝)",
+   "cityId": "pingcheng"
+  },
+  "zhangsun_song": {
+   "factionId": "beiwei",
+   "title": "南平公・司徒"
+  },
+  "shusun_jian": {
+   "factionId": "beiwei",
+   "title": "相州刺史(推定)",
+   "cityId": "ye"
+  },
+  "xi_jin": {
+   "factionId": "beiwei",
+   "title": "将軍"
+  },
+  "cui_hao": {
+   "factionId": "beiwei",
+   "title": "博士祭酒",
+   "cityId": "pingcheng"
+  },
+  "helian_bobo": {
+   "factionId": "xia",
+   "role": "ruler",
+   "title": "大夏の天王・大単于",
+   "cityId": "shuofang"
+  },
+  "helian_gui": {
+   "factionId": "xia",
+   "title": "太子",
+   "cityId": "shuofang"
+  },
+  "wang_maide": {
+   "factionId": "xia",
+   "title": "軍師"
+  },
+  "feng_ba": {
+   "factionId": "beiyan",
+   "role": "ruler",
+   "title": "北燕の天王"
+  },
+  "qifu_chipan": {
+   "factionId": "xiqin",
+   "role": "ruler",
+   "title": "河南王・秦王"
+  },
+  "juqu_mengxun": {
+   "factionId": "beiliang",
+   "role": "ruler",
+   "title": "河西王"
+  },
+  "juqu_mujian": {
+   "factionId": "beiliang",
+   "title": "沮渠蒙遜の子",
+   "cityId": "guzang"
+  },
+  "li_gao": {
+   "factionId": "xiliang",
+   "role": "ruler",
+   "title": "涼公"
+  },
+  "li_xin": {
+   "factionId": "xiliang",
+   "title": "世子",
+   "cityId": "dunhuang"
+  },
+  "yang_sheng": {
+   "factionId": "chouchi",
+   "role": "ruler",
+   "title": "仇池公",
+   "cityId": "chouchi"
+  },
+  "shuluogan": {
+   "factionId": "tuyuhun",
+   "role": "ruler",
+   "title": "吐谷渾の王",
+   "cityId": "tuyuhunting"
+  },
+  "jangsu": {
+   "factionId": "goguryeo",
+   "role": "ruler",
+   "title": "高句麗王(長寿王)",
+   "cityId": "wandu"
+  },
+  "jeonji": {
+   "factionId": "baekje",
+   "role": "ruler",
+   "title": "百済王",
+   "cityId": "hanseong"
+  },
+  "silseong": {
+   "factionId": "silla",
+   "role": "ruler",
+   "title": "新羅王",
+   "cityId": "geumseong"
+  },
+  "shanshan_wang": {
+   "factionId": "shanshan",
+   "role": "ruler"
+  },
+  "yutian_wang": {
+   "factionId": "yutian",
+   "role": "ruler"
+  },
+  "shule_wang": {
+   "factionId": "shule",
+   "role": "ruler"
+  },
+  "qiuci_wang": {
+   "factionId": "qiuci",
+   "role": "ruler"
+  },
+  "yanqi_wang": {
+   "factionId": "yanqi",
+   "role": "ruler"
+  },
+  "jushi_wang": {
+   "factionId": "jushi",
+   "role": "ruler"
+  }
+ },
+ "cityOwners": {
+  "jiankang": "jin",
+  "jingkou": "jin",
+  "wu": "jin",
+  "kuaiji": "jin",
+  "yuzhang": "jin",
+  "xunyang": "jin",
+  "wuchang": "jin",
+  "jiangling": "jin",
+  "changsha": "jin",
+  "panyu": "jin",
+  "shian": "jin",
+  "longbian": "jin",
+  "jianning": "jin",
+  "yongan": "jin",
+  "xiangyang": "jin",
+  "shangyong": "jin",
+  "wan": "jin",
+  "hefei": "jin",
+  "shouchun": "jin",
+  "huaiyin": "jin",
+  "xiapi": "jin",
+  "pengcheng": "jin",
+  "qiao": "jin",
+  "runan": "jin",
+  "guanggu": "jin",
+  "donglai": "jin",
+  "chengdu": "jin",
+  "baxi": "jin",
+  "jiangzhou": "jin",
+  "hanzhong": "jin",
+  "changan": "houqin",
+  "luoyang": "houqin",
+  "fengyi": "houqin",
+  "chencang": "houqin",
+  "anding": "houqin",
+  "puban": "houqin",
+  "hongnong": "houqin",
+  "xingyang": "houqin",
+  "xuchang": "houqin",
+  "junyi": "houqin",
+  "shanggui": "houqin",
+  "pingyang": "houqin",
+  "pingcheng": "beiwei",
+  "shengle": "beiwei",
+  "yanmen": "beiwei",
+  "daijun": "beiwei",
+  "jinyang": "beiwei",
+  "shangdang": "beiwei",
+  "lishi": "beiwei",
+  "ye": "beiwei",
+  "xiangguo": "beiwei",
+  "zhongshan": "beiwei",
+  "xindu": "beiwei",
+  "ji": "beiwei",
+  "yanci": "beiwei",
+  "yewang": "beiwei",
+  "jicheng": "beiyan",
+  "tuhe": "beiyan",
+  "lingzhi": "beiyan",
+  "zimeng": "beiyan",
+  "shuofang": "xia",
+  "gaonu": "xia",
+  "jincheng": "xiqin",
+  "longxi": "xiqin",
+  "xiping": "xiqin",
+  "zhangye": "beiliang",
+  "guzang": "beiliang",
+  "jiuquan": "xiliang",
+  "dunhuang": "xiliang",
+  "gaochang": "xiliang",
+  "yiwu": "xiliang",
+  "chouchi": "chouchi",
+  "tuyuhunting": "tuyuhun",
+  "wandu": "goguryeo",
+  "pyongyang": "goguryeo",
+  "xiangping": "goguryeo",
+  "xuantu": "goguryeo",
+  "hanseong": "baekje",
+  "geumseong": "silla",
+  "shanshan": "shanshan",
+  "qiemo": "shanshan",
+  "jingjue": "shanshan",
+  "loulan": "shanshan",
+  "yutian": "yutian",
+  "shache": "shule",
+  "shule": "shule",
+  "qiuci": "qiuci",
+  "gumo": "qiuci",
+  "wensu": "qiuci",
+  "yanqi": "yanqi",
+  "weili": "yanqi",
+  "jiaohe": "jushi",
+  "jushihou": "jushi"
+ }
+}

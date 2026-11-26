@@ -1,4 +1,4 @@
-// シナリオの検査:目録の8本、収録済みシナリオのデータの整合、各シナリオの起動・進行・セーブ、選択画面
+// シナリオの検査:目録の10本(劉裕の北伐の409年・416年を足して、8本から10本に増やした)、収録済みシナリオのデータの整合、各シナリオの起動・進行・セーブ、選択画面
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
@@ -7,7 +7,7 @@ const read = (f) => JSON.parse(fs.readFileSync(path.join(root, f), 'utf8'));
 (async () => {
   const problems = [];
   const catalog = read('scenarios/catalog.json').scenarios;
-  if (catalog.length !== 8) problems.push('目録が8本でない');
+  if (catalog.length !== 10) problems.push('目録が10本でない'); // 劉裕の北伐の追加で、8本から10本へ
   const ledger = new Map();
   for (const p of [...read('scenarios/s317.persons.json').persons, ...read('scenarios/persons.extra.json').persons]) { if (ledger.has(p.id)) problems.push('台帳のID重複: ' + p.id); ledger.set(p.id, p); }
   const cities = read('regions/north-china/cities.json'); const passes = read('regions/north-china/passes.json').passes;
@@ -90,7 +90,7 @@ const read = (f) => JSON.parse(fs.readFileSync(path.join(root, f), 'utf8'));
   const guard = await page.evaluate((other) => { const g = window.__goko; let msg = ''; try { g.applySave(JSON.parse(other)); } catch (x) { msg = String(x.message); } return { title: document.querySelector('.scenario').textContent, crossLoad: msg.slice(0, 60) }; }, saves[ready[0].id]);
   console.log('ガード:', JSON.stringify(guard));
   if (!guard.title.includes('317')) problems.push('存在しない・準備中のシナリオが始まってしまった');
-  if (ready.length !== 8) problems.push('遊べるシナリオが8本でない: ' + ready.length);
+  if (ready.length !== 10) problems.push('遊べるシナリオが10本でない: ' + ready.length); // 劉裕の北伐の追加で、8本から10本へ
   if (!guard.crossLoad.includes('別のシナリオ')) problems.push('別のシナリオのセーブを断らなかった');
   await b.close();
   if (problems.length) { console.log('問題:', problems); process.exit(1); }
