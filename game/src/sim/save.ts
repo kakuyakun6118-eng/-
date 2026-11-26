@@ -160,6 +160,8 @@ export interface DynastySave {
   rulers: Record<string, string>;
   /** 君主の交代で直した国号(Version 42) */
   names?: Record<string, string>;
+  /** 禅譲・建国で改めた旗の色(劉裕の北伐の追加) */
+  colors?: Record<string, string>;
   gameOver?: boolean;
   /** 滅亡のとき、後継国家が受け継げずに散逸した金の合計 */
   scattered?: number;

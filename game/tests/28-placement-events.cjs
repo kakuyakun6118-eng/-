@@ -69,7 +69,8 @@ const path = require('path');
     const conds = [...document.querySelectorAll('#events .ev-conds li')].map(li => li.textContent);
     const btn = document.querySelector('#events .ev-fire'); return { rows, counts, conds, disabled: btn.disabled, why: document.querySelector('#events .ev-why')?.textContent }; });
   await p.screenshot({ path: out + '/pc-history-events.png' });
-  check('7 57件すべてを一覧表示でき、絞り込み(10種)が働く', r7.rows === 57 && r7.counts.all === 57 && Object.keys(r7.counts).length === 10 && r7.counts.military + r7.counts.politics + r7.counts.diplomacy + r7.counts.founding >= 57 && r7.counts.diplomacy >= 3 && r7.counts.mine < 57, r7.counts);
+  // 劉裕の北伐で13件を足し、57件から70件になった(数を70に直した)
+  check('7 70件(57件+劉裕の北伐13件)すべてを一覧表示でき、絞り込み(10種)が働く', r7.rows === 70 && r7.counts.all === 70 && Object.keys(r7.counts).length === 10 && r7.counts.military + r7.counts.politics + r7.counts.diplomacy + r7.counts.founding >= 70 && r7.counts.diplomacy >= 3 && r7.counts.mine < 70, r7.counts);
   check('8 淝水の戦いの発動条件が、満たしているか・理由とともに分かる', r7.conds.length >= 6 && r7.conds.some(t => /前秦/.test(t)) && r7.conds.some(t => /東晋/.test(t)) && r7.conds.some(t => /軍団/.test(t)) && r7.conds.some(t => /まだ発生していない/.test(t)), r7.conds);
   check('9 条件未達のイベントは発動できない(通常・史実重視では史実の年月より前は不可)', r7.disabled && /年月/.test(r7.why ?? ''), { why: r7.why });
   const r10 = await p.evaluate(async () => { const g = window.__goko, c = g.campaign, h = c.history; document.querySelector('#events .events-close').click();

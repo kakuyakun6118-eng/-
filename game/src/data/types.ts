@@ -336,6 +336,8 @@ export interface BattleTactics {
   /** 混乱の大きさ(0〜1。大きいほど崩れやすい) */
   panicRisk?: number;
   notes?: string[];
+  /** 特別な陣形(劉裕の北伐の却月陣など):その側の歩兵・弓兵が、はじめからこの陣形を組む */
+  formation?: { side: "attacker" | "defender"; id: "queyue" };
 }
 
 
@@ -473,6 +475,8 @@ export interface Scenario {
   summary: string;
   /** 年代によって違う都市名(都市ID → その年代の名前と読み) */
   cityNames?: Record<string, { name: string; reading: string }>;
+  /** 年代によって違う都市の格・守り・守備兵(劉裕の北伐の追加:416年の統万城など)。書いた項目だけ都市データを上書きする */
+  cityOverrides?: Record<string, { level?: 1 | 2 | 3 | 4; defense?: number; garrison?: number; note?: string }>;
   /** このシナリオの説明(簡略化した点、推定で置いた点) */
   scenarioNote?: string;
   factions: Faction[];

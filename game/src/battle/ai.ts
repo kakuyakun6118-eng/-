@@ -119,7 +119,7 @@ export class BattleAi {
       }
 
       if (cls.category === "cavalry") {
-        if (p.formations && u.formation !== "wedge" && u.engaged.length === 0) sim.setFormation(u.id, "wedge");
+        if (p.formations && u.formation !== "wedge" && u.formation !== "queyue" && u.engaged.length === 0) sim.setFormation(u.id, "wedge");
         if (this.posture === "defend" && dist > 70) continue; // 守るときは、敵が近づくまで温存する
         const target = this.pickCavalryTarget(sim, u, foes);
         if (!target) continue;
@@ -129,7 +129,7 @@ export class BattleAi {
       }
 
       // 歩兵:槍兵は、敵の騎兵が迫ったら方陣を組んで備える
-      if (p.formations && u.classId === "spearmen") {
+      if (p.formations && u.classId === "spearmen" && u.formation !== "queyue") {
         const threat = foeCavalry.some((c) => Math.hypot(c.x - u.x, c.z - u.z) < 42);
         const want = threat ? "square" : "line";
         if (u.formation !== want && (u.engaged.length === 0 || threat)) sim.setFormation(u.id, want);

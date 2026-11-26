@@ -142,6 +142,9 @@ const clamp = (v: number, lo = -1, hi = 1): number => Math.max(lo, Math.min(hi, 
 const posture_hint = (p: { diplomacy: number; caution: number }): boolean => p.diplomacy + p.caution > 0.6;
 const TERRAIN_DIFFICULTY: Record<string, number> = { highMountain: 1.8, mountain: 1.45, desert: 1.3, hill: 1.15, forest: 1.1, crossing: 1.2, river: 1.1 };
 
+/** 関中の都市(夏の赫連勃勃が狙う。劉裕の北伐の追加) */
+const GUANZHONG = ["changan", "fengyi", "anding", "chencang", "shanggui", "puban", "hongnong", "gaonu"];
+
 export class StrategyAi {
   ops: Operation[] = [];
   stats: Record<string, AiStats> = {};
@@ -569,7 +572,8 @@ export class StrategyAi {
         .filter((x) => this.interestIn(f, x.g.id) >= 0.3)
         // 西域の小国は、遠い中国本土の国には仕掛けない
         .filter((x) => !(mine.every((m) => m.lon < 96) && this.citiesOf(x.g.id).every((t) => t.lon >= 96)))
-        .sort((a, b) => a.pw / (power + 1) + a.near / 1000 - (b.pw / (power + 1) + b.near / 1000));
+        // 好機(劉裕の北伐の追加):君主の死・内紛で揺れる国、手薄な関中を持つ国を、先に選ぶ
+        .sort((a, b) => a.pw / (power + 1) + a.near / 1000 - this.warOpportunity(f, a.g.id) - (b.pw / (power + 1) + b.near / 1000 - this.warOpportunity(f, b.g.id)));
       const t = cands[0];
       const odds = p.aggression * (1 + pers.aggr) * (1 + 0.5 * pers.unify);
       if (t && chance(`${day}|${f}|declare|${t.g.id}`) < odds) {
@@ -852,6 +856,12 @@ export class StrategyAi {
     if (stage) {
       for (const s of all.filter((x) => distanceKm(x.army, stage) < 800).sort((x, y) => totalTroops(y.army) - totalTroops(x.army)).slice(0, 2)) {
         if (s.status === "fighting" || this.opOf(s.army.id)) continue;
+        // すでに戦場へ向かっている(事件の印がある)軍団や、集結先より戦場に近い軍団は、後ろへ呼び戻さない
+        // (劉裕の北伐の追加:臨朐へ進んだ軍団が、集結のために下邳へ戻されていた)
+        if (this.c.history?.taggedArmy(s.army.id) || distanceKm(s.army, stage.place) < distanceKm(stage, stage.place) - 20) {
+          staged.add(s);
+          continue;
+        }
         staged.add(s);
         if (distanceKm(s.army, stage) > 80 && s.status !== "marching") this.goTo(s, stage.lon, stage.lat);
       }
@@ -1073,6 +1083,50 @@ export class StrategyAi {
     this.planAttack(a.factionId, s, p, this.factionPersonality(a.factionId), "invade", mine, enemyCities, []);
   }
 
+  /**
+   * 好機の見極め(劉裕の北伐の追加)。目標の価値にかける倍率と、その理由。
+   * ・北伐の雄(劉裕など)のいる国:相手の国の君主が代わったばかり・安定が低い・君主が幼い・史実の後継争い(後秦)があれば、その国を狙う。
+   *   北方の統一を目指すと決めていれば(事件の選択)、北の都市をさらに重んじる。
+   * ・赫連勃勃の夏:関中の都市の持ち主が、遠い国(首都から700km超)か、守りが手薄(守備兵6,000未満)で、劉裕が近くにいなければ狙う。
+   */
+  opportunity(f: string, owner: string, city: City, s: ArmyState): { mult: number; why: string } {
+    let mult = 1;
+    const why: string[] = [];
+    if (!owner) return { mult, why: "" };
+    const mine = persons.filter((p) => p.factionId === f && this.c.personStatus(p.id) === "active");
+    const hero = mine.some((p) => p.traits?.includes("北伐の雄")) || !!persons.find((p) => p.id === s.army.commanderId)?.traits?.includes("北伐の雄");
+    if (hero) {
+      const st = this.c.court.stability[owner] ?? 60;
+      const r = this.c.rulerOf(owner);
+      if (st < 40) { mult *= 1.4; why.push(`${this.name(owner)}は国内が揺れている(安定${Math.round(st)})`); }
+      if (r && this.c.court.isMinor(r)) { mult *= 1.2; why.push(`${this.name(owner)}の君主が幼い`); }
+      if (this.c.history?.flags.houqin_weak && persons.some((p) => p.factionId === owner && /^姚/.test(p.name) && p.role === "ruler")) { mult *= 1.5; why.push("後秦は姚興の死で揺れている"); }
+      if (this.c.history?.flags.liuyu_unify && city.lat > 33.5) { mult *= 1.3; why.push("北方の統一を目指す"); }
+    }
+    const xia = persons.find((p) => p.id === "helian_bobo" && p.factionId === f && p.role === "ruler" && this.c.personStatus(p.id) === "active");
+    if (xia && GUANZHONG.includes(city.id)) {
+      const oc = this.capitalOf(owner);
+      const far = !oc || distanceKm(oc, city) > 700;
+      const weak = this.c.cityState(city).garrison < 6000;
+      const liuNear = this.c.armies.some((x) => x.army.commanderId === "liu_yu_song" && x.army.factionId === owner && distanceKm(x.army, city) < 300);
+      if ((far || weak) && !liuNear) { mult *= far ? 1.8 : 1.4; why.push(`関中の${city.name}は${far ? "持ち主の都から遠い" : "守りが手薄"}`); }
+    }
+    return { mult, why: why.join("・") };
+  }
+
+  /** 宣戦の相手を選ぶときの好機の重み(0〜0.6。劉裕の北伐の追加。opportunity と同じ考え方) */
+  warOpportunity(f: string, g: string): number {
+    const cities = this.citiesOf(g);
+    if (!cities.length) return 0;
+    let best = 0;
+    for (const k of cities.slice(0, 12)) {
+      const probe = this.c.armies.find((x) => x.army.factionId === f);
+      if (!probe) break;
+      best = Math.max(best, this.opportunity(f, g, k, probe).mult);
+    }
+    return Math.min(0.6, (best - 1) * 0.5);
+  }
+
   private ready(s: ArmyState): boolean {
     return s.army.food >= 20 && s.army.morale >= 55 && s.army.fatigue <= 60;
   }
@@ -1187,6 +1241,9 @@ export class StrategyAi {
       }
       // 反乱で生まれた勢力(自国から独立した勢力など)は、早めに討つ
       if (/_n\d+$/.test(owner ?? "")) value *= 1.5;
+      // 好機(劉裕の北伐の追加):北伐の雄は、君主の死・内紛で揺れる国を狙う。夏は、手薄な関中を狙う
+      const opp = this.opportunity(f, owner ?? "", city, s);
+      value *= opp.mult;
       // 戦後に保てるか:自国の都市から近いほどよい
       const sustain = 1 / (1 + nearestMine / 300);
       // 自国の守りの手薄さ:首都を守る軍団がこれだけなら、首都から遠い目標は控える
@@ -1202,7 +1259,7 @@ export class StrategyAi {
       const intr = this.interest(f, city);
       if (intr < 0.25 && (ratio < 3 || value < 200)) { reject("戦略的な関心の外(遠く、得るものが少ない)"); continue; }
       const score = (value * Math.min(ratio, 3) * sustain * exposure * reserve * (0.3 + 0.7 * intr)) / (days + 5) / difficulty;
-      const why = `${city.name}(${this.name(owner)})の守りが${ratio >= 2.5 ? "薄い" : "崩せる"}ため攻撃目標に設定(勝算${ratio.toFixed(1)}倍・到着約${Math.round(days)}日${partner ? `・${partner.army.name}と共同` : ""}${relief > 0 ? "・援軍の見込みあり" : ""})`;
+      const why = `${city.name}(${this.name(owner)})の守りが${ratio >= 2.5 ? "薄い" : "崩せる"}ため攻撃目標に設定(${opp.why ? `${opp.why}・` : ""}勝算${ratio.toFixed(1)}倍・到着約${Math.round(days)}日${partner ? `・${partner.army.name}と共同` : ""}${relief > 0 ? "・援軍の見込みあり" : ""})`;
       const cand: Cand = { city, score, ratio, days, need: defense * attackRatio, why, partner, partner2, value: Math.round(value), foodNeed: Math.round(foodNeed), nearestMine: Math.round(nearestMine) };
       cands.push(cand);
       if (!best || score > best.score) best = cand;
@@ -1474,9 +1531,28 @@ export class StrategyAi {
       this.note(f, `${e.location.name}を攻め落とした`);
       const op = this.opOf(e.attackerArmyId);
       if (op) this.endOp(op);
-    } else if (r.winner === "defender") {
-      const op = this.opOf(e.attackerArmyId);
+      // 落とした城に兵を残す(劉裕の北伐の追加):北伐の雄の軍は、自国の都市から250km以上離れた城を落としたとき、
+      // 軍団の兵の15%(最大4,000)を守備兵として残す(落とした城がすぐ奪い返されないように)
       const s = this.c.stateOf(e.attackerArmyId);
+      const city = e.defenderCityId ? this.c.cities.find((k) => k.id === e.defenderCityId) : undefined;
+      if (s && city && persons.find((p) => p.id === s.army.commanderId)?.traits?.includes("北伐の雄")) {
+        const others = this.citiesOf(f).filter((k) => k.id !== city.id && k.kind !== "pass");
+        const far = !others.length || Math.min(...others.map((k) => distanceKm(k, city))) > 250;
+        const n = Math.min(4000, Math.floor(totalTroops(s.army) * 0.15));
+        if (far && n >= 500) {
+          const ratio = n / Math.max(1, totalTroops(s.army));
+          for (const k of ["infantry", "cavalry", "archer"] as const) s.army.troops[k] -= Math.floor(s.army.troops[k] * ratio);
+          const cs = this.c.cityState(city);
+          this.c.cityStates[city.id] = { ...cs, garrison: cs.garrison + n };
+          this.note(f, `${city.name}に${n}人を残して守らせる(本国から遠いため)`);
+        }
+      }
+    } else if (r.winner === "defender") {
+      let op = this.opOf(e.attackerArmyId);
+      const s = this.c.stateOf(e.attackerArmyId);
+      // 歴史の事件の攻城戦(広固・長安など)は、AIの作戦を持たない。力攻めに失敗しても兵と兵糧が十分なら、
+      // AIの攻城と同じく包囲(兵糧攻め)に移れるよう、ここで攻撃の作戦を持たせる(劉裕の北伐の追加。広固は8か月の包囲で落ちた)
+      if (!op && s && e.histId && e.battleType === "siege_battle" && e.defenderCityId) op = this.addOp(f, s, "attack", { targetCityId: e.defenderCityId, reason: "歴史の事件の攻城を続ける", arrived: true, status: "arrived", troops0: Math.round(totalTroops(s.army) / 0.9) });
       // 攻城に失敗しても、兵が6割以上残り、兵糧に余裕があれば、攻め方を変えて包囲(兵糧攻め)に移る(1つの作戦で1度だけ)
       const city = e.defenderCityId ? this.c.cities.find((k) => k.id === e.defenderCityId) : undefined;
       if (op && s && city && e.battleType === "siege_battle" && !op.blockaded && op.status !== "retreating" && totalTroops(s.army) >= op.troops0 * 0.6 && (s.supplied || s.army.food >= 60)) {

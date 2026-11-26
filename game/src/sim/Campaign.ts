@@ -80,6 +80,8 @@ export interface CampaignListener {
   onDayChanged(day: number): void;
   /** 首都が変わった(遷都・建国) */
   onCapitalChanged?(factionId: string, cityId: string): void;
+  /** 国号・旗の色が変わった(禅譲・建国) */
+  onFactionChanged?(factionId: string): void;
   /** 歴史の事件の結果、戦略マップが変わった(Version 41) */
   onEventChanges?(eventId: string, diff: import("./eventDiff").EventDiff): void;
   /** 軍団が壊滅して、地図から消えた */
@@ -698,6 +700,45 @@ export class Campaign {
     return s;
   }
 
+  /**
+   * 軍団を分ける(劉裕の北伐の事件で使う):その場に、兵の ratio の割合を持つ新しい軍団を作る。
+   * 瞬間移動はしない(同じ位置のすぐ隣に置く)。兵糧・士気・疲れは元の軍団と同じ。
+   */
+  detachArmy(armyId: string, ratio: number, commanderId?: string, name?: string): ArmyState | string {
+    const src = this.stateOf(armyId);
+    if (!src || src.status === "fighting") return "分けられる軍団がありません";
+    const r = Math.max(0.05, Math.min(0.9, ratio));
+    const take: Troops = { infantry: Math.floor(src.army.troops.infantry * r), cavalry: Math.floor(src.army.troops.cavalry * r), archer: Math.floor(src.army.troops.archer * r) };
+    if (take.infantry + take.cavalry + take.archer < 1000) return "分けるには兵が少なすぎます";
+    for (const k of ["infantry", "cavalry", "archer"] as const) src.army.troops[k] -= take[k];
+    const pick = personById(commanderId);
+    const commander = pick && pick.factionId === src.army.factionId && !this.court?.isMinor(pick) && this.postOf(pick.id)?.kind !== "army" ? pick : undefined;
+    if (commander) this.vacatePosts(commander.id);
+    const id = `army_n${this.nextArmyId++}`;
+    const army: Army = {
+      id, name: name ?? (commander ? `${commander.name}軍` : `${src.army.name}の別働隊`), factionId: src.army.factionId, commanderId: commander?.id ?? "",
+      lon: src.army.lon + 0.08, lat: src.army.lat + 0.05, facing: src.army.facing,
+      troops: take, morale: src.army.morale, fatigue: src.army.fatigue, food: src.army.food, originCityId: src.army.originCityId,
+    };
+    const s: ArmyState = { army, status: "camping", route: null, progress: 0, supplied: src.supplied, ignore: new Set<string>(), targetCityId: null };
+    this.armies.push(s);
+    this.listener.onArmyAdded(s);
+    return s;
+  }
+
+  /** 国号と旗の色を改める(禅譲・建国。セーブに残す) */
+  renameState(factionId: string, name: string, color?: string): void {
+    const f = scenario.factions.find((x) => x.id === factionId);
+    if (!f) return;
+    f.name = name;
+    (this.dynasty.names ??= {})[f.id] = name;
+    if (color) {
+      f.color = color;
+      (this.dynasty.colors ??= {})[f.id] = color;
+    }
+    this.listener.onFactionChanged?.(factionId);
+  }
+
   /** 軍団を解散して、いちばん近い自国の都市の守備兵に戻す(財政難のときの再編) */
   disbandArmy(armyId: string): string | null {
     const s = this.stateOf(armyId);
@@ -1297,6 +1338,8 @@ export class Campaign {
     if ((kind === "highMountain" || kind === "mountain") && cav > 0.5) k *= 0.8;
     if ((kind === "desert" || kind === "grassland") && cav > 0.5) k *= 1.1;
     if (kind === "desert") k *= 0.85;
+    // 特性「水陸並進」(劉裕など):水運と陸路を合わせて進むので、行軍が速い(+12%。劉裕の北伐の追加)
+    if (personById(s.army.commanderId)?.traits?.includes("水陸並進")) k *= 1.12;
     // 大軍団(Version 51):2万人を超えると、道が混み、行軍が遅くなる。統率の高い指揮官ほど、遅れは小さい。
     // 山地では、さらに遅い(狭い道を長い列で進む)
     const n = total;
@@ -1329,10 +1372,12 @@ export class Campaign {
   }
 
   private nearFriendlyCity(s: ArmyState): boolean {
+    // 特性「水陸並進」(劉裕など):川の水運で兵糧を運ぶので、補給の届く範囲が2倍(劉裕の北伐の追加)
+    const range = personById(s.army.commanderId)?.traits?.includes("水陸並進") ? SUPPLY_RANGE_KM * 2 : SUPPLY_RANGE_KM;
     // 自国の都市のほか、同盟国・従属国・宗主国のオアシスでも、水と兵糧を得られる
     return this.cities.some((c) => {
       const o = scenario.cityOwners[c.id];
-      if (distanceKm(c, s.army) > SUPPLY_RANGE_KM || !o) return false;
+      if (distanceKm(c, s.army) > range || !o) return false;
       if (o === s.army.factionId) return true;
       return !!c.oasis && ["alliance", "vassal"].includes(this.relationOf(o, s.army.factionId));
     });
@@ -1790,6 +1835,7 @@ export class Campaign {
   private readonly initialRoles = new Map(persons.map((p) => [p.id, p.role]));
   private readonly initialRulers = new Map(scenario.factions.map((f) => [f.id, f.ruler]));
   private readonly initialNames = new Map(scenario.factions.map((f) => [f.id, f.name]));
+  private readonly initialColors = new Map(scenario.factions.map((f) => [f.id, f.color]));
 
   /** 国号の中の君主の名(「漢(劉淵)」の「劉淵」)を、新しい君主の名に直す(Version 42。セーブに残す) */
   private renameForRuler(f: Faction, oldName: string, newName: string): void {
@@ -1892,6 +1938,8 @@ export class Campaign {
     pr += this.economy.talentBonus(holder);
     // 忠臣(忠誠85以上)は、さらに応じにくい
     if (loyal >= 85) pr *= 0.5;
+    // 特性「開国の英傑」(劉裕など):自ら天下を目指す人物は、捕らえた国に仕えにくい(劉裕の北伐の追加)
+    if (p.traits?.includes("開国の英傑")) pr *= 0.35;
     return Math.max(0.02, Math.min(0.85, pr));
   }
 
@@ -2326,6 +2374,7 @@ export class Campaign {
     for (const f of scenario.factions) {
       f.ruler = this.initialRulers.get(f.id) ?? f.ruler;
       f.name = this.initialNames.get(f.id) ?? f.name;
+      f.color = this.initialColors.get(f.id) ?? f.color;
       delete f.fallen;
     }
     this.dynasty = { added: [], fallen: {}, roles: {}, rulers: {} };
@@ -2343,7 +2392,11 @@ export class Campaign {
       const f = scenario.factions.find((y) => y.id === id);
       if (f) f.name = nm;
     }
-    this.dynasty = { added: d.added.map((f) => ({ ...f })), fallen: { ...d.fallen }, roles: { ...d.roles }, rulers: { ...d.rulers }, names: { ...(d.names ?? {}) } };
+    for (const [id, col] of Object.entries(d.colors ?? {})) {
+      const f = scenario.factions.find((y) => y.id === id);
+      if (f) f.color = col;
+    }
+    this.dynasty = { added: d.added.map((f) => ({ ...f })), fallen: { ...d.fallen }, roles: { ...d.roles }, rulers: { ...d.rulers }, names: { ...(d.names ?? {}) }, colors: { ...(d.colors ?? {}) } };
   }
 
   /** 君主の役を戻す(spoils が人物の所属を戻したあとに呼ぶ) */

@@ -30,7 +30,10 @@ function runOne(t) {
     const child = spawn('node', [path.join(__dirname, t), dist], { stdio: ['ignore', 'pipe', 'pipe'] });
     child.stdout.on('data', (d) => { text += d; });
     child.stderr.on('data', (d) => { text += d; });
-    const timer = setTimeout(() => { text += '\n(時間切れ:600秒)'; child.kill('SIGKILL'); }, 600000);
+    // 時間の上限:ふつうは600秒。長い年月を進めるテストは、ファイルの先頭に「// 時間の上限:1500秒」のように書けば延ばせる(劉裕の北伐の長期テスト)
+    const head = fs.readFileSync(path.join(__dirname, t), 'utf8').split('\n').slice(0, 5).join('\n');
+    const limit = Number((/時間の上限:(\d+)秒/.exec(head) ?? [])[1] ?? 600);
+    const timer = setTimeout(() => { text += `\n(時間切れ:${limit}秒)`; child.kill('SIGKILL'); }, limit * 1000);
     child.on('close', (code) => {
       clearTimeout(timer);
       fs.writeFileSync(path.join(out, t.replace('.cjs', '.log')), text);

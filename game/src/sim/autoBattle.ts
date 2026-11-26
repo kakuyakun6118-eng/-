@@ -38,6 +38,56 @@ export function sideStrength(side: BattleSide, terrain: TerrainKind, siege: bool
   return base * (0.55 + side.morale / 220) * (1 - side.fatigue / 250) * (1 + lead);
 }
 
+/**
+ * 指揮官の特性による強さの倍率(劉裕の北伐の追加)。
+ * 北府軍:歩兵の多い軍ほど強い(歩兵の割合×8%)。北伐の雄:攻める側で+8%(城攻めは+12%)。百戦錬磨:+4%。
+ */
+export function traitMult(side: BattleSide, attacking: boolean, siege: boolean): { mult: number; notes: string[] } {
+  const c = side.commander;
+  const tr = c?.traits ?? [];
+  let mult = 1;
+  const notes: string[] = [];
+  const n = side.troops.infantry + side.troops.cavalry + side.troops.archer || 1;
+  if (tr.includes("北府軍")) {
+    const m = 1 + 0.08 * (side.troops.infantry / n);
+    mult *= m;
+    notes.push(`${c!.name}の北府軍(歩兵の精鋭 ×${m.toFixed(2)})`);
+  }
+  if (tr.includes("北伐の雄") && attacking) {
+    const m = siege ? 1.12 : 1.08;
+    mult *= m;
+    notes.push(`${c!.name}は北伐の雄(攻める側 ×${m.toFixed(2)})`);
+  }
+  if (tr.includes("百戦錬磨")) {
+    mult *= 1.04;
+    notes.push(`${c!.name}は百戦錬磨(×1.04)`);
+  }
+  return { mult, notes };
+}
+
+/**
+ * 却月陣(劉裕の北伐の特別な陣形)の倍率。
+ * ・陣の側:騎兵の多い敵ほど効き(敵の騎兵の割合×1.2)、弓兵(大弩)が多いほど効く(自軍の弓兵の割合×0.6)。動けない陣なので基本で-25%。
+ * ・敵の側:戦車の壁に突撃を止められ、騎兵は平地の突撃の利を失う(騎兵の強さを、平地の1.5から0.6へ)。
+ * 歩兵の多い敵にはほとんど効かず、騎兵の数が何倍も多ければ、陣があっても敗れる(負ける条件)。
+ */
+export function queyueMult(setup: BattleSetup): { side: "attacker" | "defender"; mult: number; foeMult: number; note: string } | null {
+  const f = setup.tactics?.formation;
+  if (!f || f.id !== "queyue" || setup.battleType === "siege_battle") return null;
+  const me = f.side === "attacker" ? setup.attacker : setup.defender;
+  const foe = f.side === "attacker" ? setup.defender : setup.attacker;
+  const fn = foe.troops.infantry + foe.troops.cavalry + foe.troops.archer || 1;
+  const mn = me.troops.infantry + me.troops.cavalry + me.troops.archer || 1;
+  const cav = foe.troops.cavalry / fn;
+  const arch = me.troops.archer / mn;
+  const mult = Math.max(0.6, 1 - 0.25 + 1.2 * cav + 0.6 * arch);
+  // 敵の騎兵は、突撃の利を失う(地形による騎兵の倍率を 0.6 に置き換えた強さとの比)
+  const cavNow = OPEN.includes(setup.terrain) ? 1.5 : ROUGH.includes(setup.terrain) ? 0.8 : 1.1;
+  const raw = (cf: number): number => foe.troops.infantry + foe.troops.cavalry * cf + foe.troops.archer * 0.9;
+  const foeMult = raw(0.6) / Math.max(1, raw(cavNow));
+  return { side: f.side, mult, foeMult, note: `却月陣(敵の騎兵${Math.round(cav * 100)}%・自軍の弩${Math.round(arch * 100)}%で 陣の側×${mult.toFixed(2)}、敵の騎兵は突撃の利を失い 敵×${foeMult.toFixed(2)}。河を背にするため、敗れれば損害が大きい)` };
+}
+
 function total(t: Record<UnitTypeId, number>): number {
   return t.infantry + t.cavalry + t.archer;
 }
@@ -50,7 +100,9 @@ function sideResult(side: BattleSide, lossRate: number, won: boolean, draw: bool
   let commander: CommanderFate = "healthy";
   if (side.commander) {
     const r = rand();
-    if (lostSide) commander = r < 0.05 ? "killed" : r < (holdsCity ? 0.4 : 0.12) ? "captured" : r < 0.3 ? "wounded" : "healthy";
+    // 特性「百戦錬磨」(劉裕など):負けても、討たれる・捕らわれる見込みが4割になる(劉裕の北伐の追加)
+    const t = side.commander.traits?.includes("百戦錬磨") ? 0.4 : 1;
+    if (lostSide) commander = r < 0.05 * t ? "killed" : r < (holdsCity ? 0.4 : 0.12) * t ? "captured" : r < 0.3 ? "wounded" : "healthy";
     else if (r < 0.04) commander = "wounded";
   }
   return {
@@ -86,6 +138,19 @@ export function estimateWinRate(setup: BattleSetup): { attacker: number; defende
   const factors: string[] = [];
   const fort = setup.defender.fortification;
   const tac = setup.tactics;
+  {
+    const ta = traitMult(setup.attacker, true, siege);
+    const td = traitMult(setup.defender, false, siege);
+    a *= ta.mult;
+    d *= td.mult;
+    factors.push(...ta.notes, ...td.notes);
+    const q = queyueMult(setup);
+    if (q) {
+      if (q.side === "attacker") { a *= q.mult; d *= q.foeMult; }
+      else { d *= q.mult; a *= q.foeMult; }
+      factors.push(q.note);
+    }
+  }
   if (tac) {
     a *= tac.attacker ?? 1;
     d *= tac.defender ?? 1;
@@ -130,6 +195,13 @@ export function autoResolve(setup: BattleSetup): BattleResult {
   let a = sideStrength(setup.attacker, setup.terrain, siege) * (0.85 + rand() * 0.3);
   let d = sideStrength(setup.defender, setup.terrain, siege);
   const t = setup.tactics;
+  a *= traitMult(setup.attacker, true, siege).mult;
+  d *= traitMult(setup.defender, false, siege).mult;
+  const q = queyueMult(setup);
+  if (q) {
+    if (q.side === "attacker") { a *= q.mult; d *= q.foeMult; }
+    else { d *= q.mult; a *= q.foeMult; }
+  }
   if (siege && fort) {
     d *= wallBonus(fort.defense);
   } else if (!(t?.noRiverBonus && (setup.terrain === "river" || setup.terrain === "crossing" || setup.terrain === "greatRiver"))) {
@@ -158,8 +230,10 @@ export function autoResolve(setup: BattleSetup): BattleResult {
   const attackerWon = !draw && ratio > 1;
   const loserRate = clamp(0.2 + 0.15 * (adv - 1), 0.2, 0.85);
   const winnerRate = clamp(0.14 / adv, 0.03, 0.14);
-  const attacker = sideResult(setup.attacker, draw ? 0.12 : attackerWon ? winnerRate : loserRate, attackerWon, draw, rand, false);
-  const defender = sideResult(setup.defender, draw ? 0.12 : attackerWon ? loserRate : winnerRate, !draw && !attackerWon, draw, rand, false);
+  // 却月陣:河を背にしているので、敗れた陣は河に追い落とされ、損害が大きい(+15%)
+  const backWater = (sd: "attacker" | "defender"): number => (q && q.side === sd ? 0.15 : 0);
+  const attacker = sideResult(setup.attacker, draw ? 0.12 : attackerWon ? winnerRate : Math.min(0.95, loserRate + backWater("attacker")), attackerWon, draw, rand, false);
+  const defender = sideResult(setup.defender, draw ? 0.12 : attackerWon ? Math.min(0.95, loserRate + backWater("defender")) : winnerRate, !draw && !attackerWon, draw, rand, false);
   return {
     battleId: setup.battleId,
     winner: draw ? "draw" : attackerWon ? "attacker" : "defender",

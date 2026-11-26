@@ -55,7 +55,9 @@ NEW = {
  'lu_xun': D('suicide', note='411年、交州で敗れて自害した'), 'xu_daofu': D('battle', note='411年、始興で敗死した'),
  'cui_hao': D('execution', note='450年、国史の筆禍で処刑された'), 'tuoba_tao': D('assassination', note='452年、宦官の宗愛に殺された'),
  'juqu_mujian': D('execution', note='447年、北魏に殺された'),
+ 'sima_dezong': D('assassination', by='liu_yu_song', note='419年1月(義熙14年12月)、劉裕の命を受けた王韶之らに縊殺された。君主のあいだは、この死はゲームでは起きない(劉裕の国の臣下になったときだけ)'),
+ 'sima_dewen': D('assassination', by='liu_yu_song', note='421年、禅譲ののち零陵王に落とされ、劉裕の命で殺された'),
 }
-for k, v in NEW.items(): d['deaths'].setdefault(k, v)
+for k, v in NEW.items(): d['deaths'][k] = v
 json.dump(d, open(P, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 print('deaths', len(NEW))

@@ -21,7 +21,7 @@ def army(id, name, fac, cmd, at, inf, cav, arc, morale=75, food=50, dlon=0.0, dl
     return {'id': id, 'name': name, 'factionId': fac, 'commanderId': cmd, 'lon': round(c['lon'] + dlon, 2), 'lat': round(c['lat'] + dlat, 2), 'facing': 0,
             'troops': {'infantry': inf, 'cavalry': cav, 'archer': arc}, 'morale': morale, 'fatigue': 10, 'food': food}
 
-def build(sid, year, month, name, summary, note, factions, owners, uncertain, ownerNote, relations, relationNote, roster, governors, armies, cityNames):
+def build(sid, year, month, name, summary, note, factions, owners, uncertain, ownerNote, relations, relationNote, roster, governors, armies, cityNames, overrides=None):
     # 西域
     for fid, (nm, col, ruler, cities) in WEST.items():
         factions.append({'id': fid, 'name': nm, 'people': nm, 'ruler': LED[ruler]['name'], 'color': col})
@@ -51,7 +51,7 @@ def build(sid, year, month, name, summary, note, factions, owners, uncertain, ow
     for pid, r in roster.items():
         assert r['factionId'] in fids, (pid, r)
     return {'id': sid, 'year': year, 'startMonth': month, 'name': name, 'summary': summary, 'scenarioNote': note, 'factions': factions,
-            'uncertainOwners': uncertain, 'ownerNote': ownerNote, 'cityNames': cityNames, 'relations': relations, 'relationNote': relationNote,
+            'uncertainOwners': uncertain, 'ownerNote': ownerNote, 'cityNames': cityNames, **({'cityOverrides': overrides} if overrides else {}), 'relations': relations, 'relationNote': relationNote,
             'governors': governors, 'governorNote': '太守・守将は史料で確かめられる者を優先し、それ以外は経歴から推し量った(ゲーム上の推定)。', 'armies': armies, 'roster': roster, 'cityOwners': owners}
 
 def own(d, fid, cities):
@@ -190,7 +190,8 @@ def s409():
         army('army_gongsun_wulou', '公孫五楼の軍', 'nanyan', 'gongsun_wulou', 'guanggu', 8000, 4000, 2000, morale=68),
         army('army_yao_xing', '姚興の本軍', 'houqin', 'yao_xing', 'changan', 25000, 15000, 8000),
         army('army_yao_bi', '姚弼の安定軍', 'houqin', 'yao_bi', 'anding', 8000, 8000, 2000),
-        army('army_helian_bobo', '赫連勃勃の騎兵', 'xia', 'helian_bobo', 'shuofang', 4000, 20000, 2000, morale=82),
+        army('army_helian_bobo', '赫連勃勃の騎兵', 'xia', 'helian_bobo', 'shuofang', 5000, 28000, 3000, morale=88),
+        army('army_wang_maide', '王買徳の軍', 'xia', 'wang_maide', 'gaonu', 3000, 10000, 1000, morale=80),
         army('army_tuoba_gui', '拓跋珪の本軍', 'beiwei', 'tuoba_gui', 'pingcheng', 15000, 30000, 5000),
         army('army_xi_jin', '奚斤の軍', 'beiwei', 'xi_jin', 'ye', 8000, 10000, 2000),
         army('army_feng_ba', '馮跋の軍', 'beiyan', 'feng_ba', 'jicheng', 8000, 8000, 2000),
@@ -207,7 +208,10 @@ def s409():
         F, o, ['runan', 'qiao', 'wan', 'junyi', 'xuchang', 'yewang', 'lishi', 'lingzhi', 'zimeng', 'hanzhong', 'gaonu', 'gaochang', 'yiwu', 'jincheng', 'longxi'],
         '淮北・河南・遼西・河西の境目の都市は、この年の持ち主が史料で確かめにくい(ゲーム上の推定)。朔方は赫連勃勃の根拠地(統万城の築城は413年)。',
         rel, '東晋と南燕は開戦(劉裕の出陣)。夏は後秦と、北涼は南涼と、東晋は譙蜀と戦争中。そのほかの関係は diplomacyStart.json に書く。',
-        R, G, A, {'jicheng': {'name': '龍城', 'reading': 'りゅうじょう'}})
+        R, G, A, {'jicheng': {'name': '龍城', 'reading': 'りゅうじょう'}},
+        {'shuofang': {'garrison': 8000, 'note': '赫連勃勃の根拠地(高平・朔方の一帯)。守備兵はゲーム上の推定'},
+         'guanggu': {'level': 3, 'defense': 92, 'garrison': 12000, 'note': '広固は険しい岩山の上の城で、劉裕の包囲に8か月耐えた(数値はゲーム上の推定)'},
+         'jicheng': {'garrison': 7000, 'note': '北燕の都 龍城(守備兵はゲーム上の推定)'}})
 
 # ================= 416年 =================
 def s416():
@@ -314,7 +318,8 @@ def s416():
         army('army_yao_yi', '姚懿の蒲坂の軍', 'houqin', 'yao_yi', 'puban', 8000, 6000, 2000, morale=62),
         army('army_yao_guang', '姚洸の洛陽の軍', 'houqin', 'yao_guang', 'luoyang', 6000, 2000, 2000, morale=58),
         army('army_yao_hui', '姚恢の安定の軍', 'houqin', 'yao_hui', 'anding', 8000, 8000, 2000, morale=64),
-        army('army_helian_bobo', '赫連勃勃の騎兵', 'xia', 'helian_bobo', 'gaonu', 6000, 25000, 3000, morale=86, dlon=-1.2, dlat=-0.6),
+        army('army_helian_bobo', '赫連勃勃の騎兵', 'xia', 'helian_bobo', 'gaonu', 8000, 30000, 3000, morale=88, dlon=-1.2, dlat=-0.6),
+        army('army_wang_maide', '王買徳の軍', 'xia', 'wang_maide', 'shuofang', 3000, 10000, 1000, morale=80),
         army('army_tuoba_si', '拓跋嗣の本軍', 'beiwei', 'tuoba_si', 'pingcheng', 15000, 25000, 5000),
         army('army_zhangsun_song', '長孫嵩の河北の軍', 'beiwei', 'zhangsun_song', 'ye', 10000, 15000, 3000),
         army('army_feng_ba', '馮跋の軍', 'beiyan', 'feng_ba', 'jicheng', 8000, 8000, 2000),
@@ -329,7 +334,9 @@ def s416():
         F, o, ['runan', 'qiao', 'wan', 'junyi', 'xuchang', 'xingyang', 'yewang', 'lishi', 'lingzhi', 'zimeng', 'hanzhong', 'gaonu', 'gaochang', 'yiwu', 'shanggui'],
         '淮北・河南・遼西・河西の境目の都市は、この年の持ち主が史料で確かめにくい(ゲーム上の推定)。漢中は仇池の楊盛からの回復を推定。',
         rel, '東晋は後秦と開戦(北伐の決定)。夏は後秦と、西秦は北涼と、北涼は西涼と戦争中。北魏は後秦と婚姻で結ぶ(415年)。そのほかは diplomacyStart.json に書く。',
-        R, G, A, {'jicheng': {'name': '龍城', 'reading': 'りゅうじょう'}, 'shuofang': {'name': '統万', 'reading': 'とうまん'}})
+        R, G, A, {'jicheng': {'name': '龍城', 'reading': 'りゅうじょう'}, 'shuofang': {'name': '統万', 'reading': 'とうまん'}},
+        {'shuofang': {'level': 3, 'defense': 95, 'garrison': 15000, 'note': '統万城は蒸した土でつき固めた堅城(413年築城。『晋書』赫連勃勃載記)。数値はゲーム上の推定'},
+         'jicheng': {'garrison': 7000, 'note': '北燕の都 龍城(守備兵はゲーム上の推定)'}})
 
 for s in (s409(), s416()):
     json.dump(s, open(f"{SC}/{s['id']}.json", 'w', encoding='utf-8'), ensure_ascii=False, indent=1)

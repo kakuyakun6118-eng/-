@@ -168,6 +168,18 @@
    "reading": "とうまん"
   }
  },
+ "cityOverrides": {
+  "shuofang": {
+   "level": 3,
+   "defense": 95,
+   "garrison": 15000,
+   "note": "統万城は蒸した土でつき固めた堅城(413年築城。『晋書』赫連勃勃載記)。数値はゲーム上の推定"
+  },
+  "jicheng": {
+   "garrison": 7000,
+   "note": "北燕の都 龍城(守備兵はゲーム上の推定)"
+  }
+ },
  "relations": {
   "houqin|jin": "war",
   "houqin|xia": "war",
@@ -385,11 +397,28 @@
    "lat": 36.0,
    "facing": 0,
    "troops": {
-    "infantry": 6000,
-    "cavalry": 25000,
+    "infantry": 8000,
+    "cavalry": 30000,
     "archer": 3000
    },
-   "morale": 86,
+   "morale": 88,
+   "fatigue": 10,
+   "food": 50
+  },
+  {
+   "id": "army_wang_maide",
+   "name": "王買徳の軍",
+   "factionId": "xia",
+   "commanderId": "wang_maide",
+   "lon": 108.6,
+   "lat": 38.3,
+   "facing": 0,
+   "troops": {
+    "infantry": 3000,
+    "cavalry": 10000,
+    "archer": 1000
+   },
+   "morale": 80,
    "fatigue": 10,
    "food": 50
   },

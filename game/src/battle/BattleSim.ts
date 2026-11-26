@@ -56,6 +56,9 @@ export class BattleSim {
   /** 突撃の衝撃を最後に与えた時刻(同じ相手に、触れるたびに何度も衝撃が入らないようにする) */
   private readonly lastImpact = new Map<string, number>();
 
+  /** 却月陣を敷いた側(なければ null) */
+  readonly queyueSide: SideId | null = null;
+
   constructor(
     readonly setup: BattleSetup, deployment: Deployment, readonly field: FieldMap,
     /** プレイヤーが指揮する側。もう一方は自動で動く */
@@ -72,6 +75,22 @@ export class BattleSim {
       return { leadership: c?.leadership ?? 45, valor: c?.war ?? 45, intelligence: c?.intelligence ?? 45, active: true };
     };
     this.commanders = { attacker: commander("attacker"), defender: commander("defender") };
+    // 特別な陣形(劉裕の北伐の却月陣):その側の歩兵・弓兵は、はじめから陣を組む。河を背にするので士気が少し高い
+    this.queyueSide = setup.tactics?.formation?.id === "queyue" ? setup.tactics.formation.side : null;
+    if (this.queyueSide) for (const u of deployment.units) {
+      if (u.side !== this.queyueSide || u.isCommand || unitClasses[u.classId].category === "cavalry" || unitClasses[u.classId].engine) continue;
+      setFormation(u, "queyue", deployment.menPerFigure);
+      u.morale = Math.min(100, u.morale + 8);
+      u.baseMorale = Math.min(100, u.baseMorale + 8);
+    }
+    // 特性「北府軍」(劉裕など):北府の精鋭の歩兵は、崩れにくい(士気+6)
+    for (const sd of ["attacker", "defender"] as const) {
+      if (!(sd === "attacker" ? setup.attacker : setup.defender).commander?.traits?.includes("北府軍")) continue;
+      for (const u of deployment.units) if (u.side === sd && unitClasses[u.classId].category === "infantry") {
+        u.morale = Math.min(100, u.morale + 6);
+        u.baseMorale = Math.min(100, u.baseMorale + 6);
+      }
+    }
     this.initialMen = { attacker: this.menOf("attacker", false), defender: this.menOf("defender", false) };
     // 最初の配置が水や急斜面にかかった部隊は、近くの乾いた通れる場所へずらす(自軍の後方を優先して探す)
     for (const u of this.units) {
@@ -630,6 +649,8 @@ export class BattleSim {
     if (this.field.inForest(target.x, target.z)) hit *= 0.55; // 森は矢を防ぐ
     if (target.engaged.length > 0) hit *= 0.5;
     hit *= formations[target.formation].missile; // 密集した陣形ほど、矢を受けやすい
+    // 却月陣の大弩:陣の中から撃つ弩は、押し寄せる騎兵によく当たる(朱超石の大弩)
+    if (u.side === this.queyueSide && u.formation === "queyue" && tcls.category === "cavalry") hit *= 1.45;
     if (target.elevation > 0) hit *= 0.4; // 胸壁に守られた敵には、当たりにくい
     // 城壁をはさんで地上どうしで撃ち合っても、壁にさえぎられてほとんど当たらない
     if (this.siege && u.elevation === 0 && target.elevation === 0 && this.siege.inside(u.x, u.z) !== this.siege.inside(target.x, target.z)) hit *= 0.1;
@@ -707,6 +728,8 @@ export class BattleSim {
   /** 部隊が崩れて敗走する。近くの味方も動揺する */
   private rout(u: BattleUnit): void {
     u.state = "routing";
+    // 却月陣は河を背にしている:陣が崩れると、逃げ場がなく河に追い落とされる(負ける条件)
+    if (u.side === this.queyueSide && u.formation === "queyue") u.men = Math.max(0, Math.round(u.men * 0.75));
     u.order = { kind: "hold" };
     this.fx.push({ kind: "rout", unitId: u.id });
     if (unitClasses[u.classId].engine) return; // 攻城兵器の持ち場が崩れても、周りの部隊は動揺しない

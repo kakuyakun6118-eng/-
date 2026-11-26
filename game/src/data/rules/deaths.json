@@ -631,12 +631,14 @@
   "sima_dezong": {
    "cause": "assassination",
    "basis": "史実確認済み",
-   "note": "419年、劉裕の命で殺された"
+   "by": "liu_yu_song",
+   "note": "419年1月(義熙14年12月)、劉裕の命を受けた王韶之らに縊殺された。君主のあいだは、この死はゲームでは起きない(劉裕の国の臣下になったときだけ)"
   },
   "sima_dewen": {
    "cause": "assassination",
    "basis": "史実確認済み",
-   "note": "421年、劉裕の命で殺された"
+   "by": "liu_yu_song",
+   "note": "421年、禅譲ののち零陵王に落とされ、劉裕の命で殺された"
   },
   "liu_he": {
    "cause": "assassination",

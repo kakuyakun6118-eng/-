@@ -185,6 +185,22 @@
    "reading": "りゅうじょう"
   }
  },
+ "cityOverrides": {
+  "shuofang": {
+   "garrison": 8000,
+   "note": "赫連勃勃の根拠地(高平・朔方の一帯)。守備兵はゲーム上の推定"
+  },
+  "guanggu": {
+   "level": 3,
+   "defense": 92,
+   "garrison": 12000,
+   "note": "広固は険しい岩山の上の城で、劉裕の包囲に8か月耐えた(数値はゲーム上の推定)"
+  },
+  "jicheng": {
+   "garrison": 7000,
+   "note": "北燕の都 龍城(守備兵はゲーム上の推定)"
+  }
+ },
  "relations": {
   "jin|nanyan": "war",
   "houqin|xia": "war",
@@ -310,11 +326,28 @@
    "lat": 38.3,
    "facing": 0,
    "troops": {
-    "infantry": 4000,
-    "cavalry": 20000,
-    "archer": 2000
+    "infantry": 5000,
+    "cavalry": 28000,
+    "archer": 3000
    },
-   "morale": 82,
+   "morale": 88,
+   "fatigue": 10,
+   "food": 50
+  },
+  {
+   "id": "army_wang_maide",
+   "name": "王買徳の軍",
+   "factionId": "xia",
+   "commanderId": "wang_maide",
+   "lon": 109.5,
+   "lat": 36.6,
+   "facing": 0,
+   "troops": {
+    "infantry": 3000,
+    "cavalry": 10000,
+    "archer": 1000
+   },
+   "morale": 80,
    "fatigue": 10,
    "food": 50
   },

@@ -270,6 +270,11 @@ export class Game {
       onCityCaptured: (cityId, factionId) => this.setCityOwner(cityId, factionId),
       onFactionFallen: (info) => this.onFactionFallen(info),
       onCapitalChanged: () => (this.capitalsStale = true),
+      // 国号・旗の色が変わった(劉宋の建国など):その国の都市の印と領土の色を塗り直す
+      onFactionChanged: (fid) => {
+        for (const [cid, f] of Object.entries(scenario.cityOwners)) if (f === fid) this.setCityOwner(cid, fid);
+        this.refreshPosts();
+      },
       // 歴史の事件で変わった所を、地図の上でしばらく光らせる(得たものは金、失ったもの・戦いは朱)
       onEventChanges: (_id, diff) => {
         for (const ch of diff.changes) {

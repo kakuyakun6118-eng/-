@@ -1,5 +1,6 @@
 // 会戦に関する計算。戦闘イベントから、会戦準備画面や3D戦闘に渡す「会戦の設定」を組み立てる。
 // ここは計算だけで、画面のことは知らない。
+import specialBattles from "../data/rules/specialBattles.json";
 import { commandSpan, garrisonTroops } from "./garrison";
 import { affinity } from "./loyalty";
 import { reliefArrivalSeconds, reliefMorale } from "./relief";
@@ -203,17 +204,36 @@ export function createBattleSetup(
     for (const k of ["infantry", "cavalry", "archer"] as const) side.troops[k] += a.troops[k];
     (side.supporters ??= []).push({ armyId: a.id, name: a.name, factionId: a.factionId, troops: n, efficiency: sup.efficiency });
   }
+  // 特殊会戦(劉裕の北伐):歴史の事件の会戦なら、士気・作戦の倍率・説明を重ねる(勝敗は決めない)
+  const sp = event.histId ? (specialBattles.battles as Record<string, SpecialBattle>)[event.histId] : undefined;
+  let tactics = event.tactics;
+  let terrain = event.terrain;
+  if (sp) {
+    if (sp.attackerMorale) att.morale = Math.max(5, Math.min(100, att.morale + sp.attackerMorale));
+    if (sp.defenderMorale) defender.morale = Math.max(5, Math.min(100, defender.morale + sp.defenderMorale));
+    if (sp.terrain && event.battleType === "field_battle") terrain = sp.terrain;
+    tactics = { ...(tactics ?? {}), notes: [`特殊会戦「${sp.name}」:${sp.note}`, ...(tactics?.notes ?? [])] };
+    if (sp.attackerMult) tactics.attacker = (tactics.attacker ?? 1) * sp.attackerMult;
+    if (sp.defenderMult) tactics.defender = (tactics.defender ?? 1) * sp.defenderMult;
+  }
   return {
     battleId: event.battleId,
     battleType: event.battleType,
-    name: battleName(event, cities),
+    name: sp ? sp.name : battleName(event, cities),
     location: { ...event.location },
-    terrain: event.terrain,
+    terrain,
     createdAt: { ...event.createdAt },
     attacker: att,
     defender,
-    tactics: event.tactics,
+    tactics,
   };
+}
+
+/** 特殊会戦の設定(src/data/rules/specialBattles.json) */
+interface SpecialBattle { name: string; kind: string; note: string; terrain?: TerrainKind; attackerMorale?: number; defenderMorale?: number; attackerMult?: number; defenderMult?: number; sources?: string[] }
+/** 歴史の事件のIDから、特殊会戦の名前と説明(画面用) */
+export function specialBattleOf(histId: string | undefined): SpecialBattle | undefined {
+  return histId ? (specialBattles.battles as Record<string, SpecialBattle>)[histId] : undefined;
 }
 
 /** 両軍を比べる項目の1行 */

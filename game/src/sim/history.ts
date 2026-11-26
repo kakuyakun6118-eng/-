@@ -9,6 +9,7 @@ import type { ArmyState, Campaign } from "./Campaign";
 import { distanceKm } from "./pathfinding";
 import { chance } from "./spoils";
 import { EXTRA_EVENTS } from "./historyEvents2";
+import { LIUYU_EVENTS } from "./historyLiuYu";
 import { diffSnapshots, snapshot, type EventDiff } from "./eventDiff";
 
 /** 歴史の会戦・攻城戦を、その場で始めてよい距離(これより遠い軍団は、戦場まで進軍させる) */
@@ -185,7 +186,7 @@ export class HistorySystem {
   timeline: TimelineEntry[] = [];
   /** プレイヤーに見せる順番待ち(decide:選択、news:結果の知らせ、branch:分岐の説明) */
   queue: { id: string; mode: "decide" | "news" | "branch" }[] = [];
-  readonly defs: HistEventDef[] = [...EVENTS, ...EXTRA_EVENTS].sort((a, b) => a.year * 12 + a.month - (b.year * 12 + b.month));
+  readonly defs: HistEventDef[] = [...EVENTS, ...EXTRA_EVENTS, ...LIUYU_EVENTS].sort((a, b) => a.year * 12 + a.month - (b.year * 12 + b.month));
   /** 進軍中の歴史の会戦の目印(出会ったとき・城に着いたときの戦いに、事件のIDを付ける) */
   tags: { a: string; b?: string; city?: string; histId: string; until: number; tactics?: BattleEvent["tactics"] }[] = [];
   /** イベント前の準備行動の記録(集結・兵糧・援軍・防備・偵察) */
@@ -232,7 +233,7 @@ export class HistorySystem {
    * 会戦の事件の前の半年:関係する国のAIは、戦争を止めずに準備をする。
    * 主力の集結先(戦場にいちばん近い自国の都市)を返す。ほかの軍団は、ふだんどおり戦う。
    */
-  stagingFor(f: string): { city: string; lon: number; lat: number; eventId: string } | undefined {
+  stagingFor(f: string): { city: string; lon: number; lat: number; eventId: string; place: { lon: number; lat: number } } | undefined {
     const { year, month } = this.c.calendar();
     const now = year * 12 + month;
     for (const d of this.defs) {
@@ -243,7 +244,7 @@ export class HistorySystem {
       const roles = d.roles(this.ctx());
       if (!d.battle.some((r) => roles[r] === f)) continue;
       const city = this.c.cities.filter((x) => x.kind !== "pass" && owner(x.id) === f).sort((a, b) => distanceKm(a, d.place) - distanceKm(b, d.place))[0];
-      if (city && distanceKm(city, d.place) < 700) return { city: city.id, lon: city.lon, lat: city.lat, eventId: d.id };
+      if (city && distanceKm(city, d.place) < 700) return { city: city.id, lon: city.lon, lat: city.lat, eventId: d.id, place: { lon: d.place.lon, lat: d.place.lat } };
     }
     return undefined;
   }

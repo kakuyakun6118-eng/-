@@ -122,7 +122,9 @@ export class BattleScreen {
         // 押すたびに、横陣 → 縦陣 → 方陣 → 楔形陣 と切り替える
         const first = this.selected();
         if (!first) return;
-        const next = FORMATION_ORDER[(FORMATION_ORDER.indexOf(first.formation) + 1) % FORMATION_ORDER.length];
+        // 却月陣は、事件で指定された側(劉裕の北伐)の歩兵・弓兵だけが組める
+        const order: FormationId[] = this.sim.queyueSide === first.side && unitClasses[first.classId].category !== "cavalry" ? [...FORMATION_ORDER, "queyue"] : FORMATION_ORDER;
+        const next = order[(order.indexOf(first.formation) + 1) % order.length];
         for (const u of this.selectedUnits()) this.sim.setFormation(u.id, next);
         this.hud.toast(`${formations[next].name}:${formations[next].note}`);
         this.refreshHud();

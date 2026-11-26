@@ -125,6 +125,13 @@ export const scenario: Scenario = built.scenario;
 for (const c of northChina.cities) {
   const alt = scenario.cityNames?.[c.id];
   if (alt) Object.assign(c, alt);
+  // 年代によって違う格・守り・守備兵(書いた項目だけ)
+  const ov = scenario.cityOverrides?.[c.id];
+  if (ov) {
+    if (ov.level !== undefined) c.level = ov.level;
+    if (ov.defense !== undefined) c.defense = ov.defense;
+    if (ov.garrison !== undefined) c.garrison = ov.garrison;
+  }
 }
 
 /** 別のシナリオに切り替える(ページを読み込み直して、その年代で始める) */
