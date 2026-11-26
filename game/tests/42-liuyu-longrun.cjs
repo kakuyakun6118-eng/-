@@ -23,7 +23,8 @@ const path = require('path');
         for (const m of g.cities.markers) if ((m.faction?.id ?? undefined) !== (owners[m.city.id] ?? undefined)) bad.owners.push(`地図と持ち主の不一致:${m.city.name}`);
         for (const s of c.armies) { const t = s.army.troops; const n = t.infantry + t.cavalry + t.archer; if (!(n >= 0) || n > 250000 || [t.infantry, t.cavalry, t.archer, s.army.food, s.army.morale].some(v => !Number.isFinite(v) || v < 0)) bad.troops.push(`${s.army.name}:${n}`); }
         for (const k of c.cities) { const st = c.cityState(k); if (!Number.isFinite(st.garrison) || st.garrison < 0 || st.garrison > 400000) bad.troops.push(`${k.name}の守備兵:${st.garrison}`); }
-        for (const [f, s] of Object.entries(c.factionStates)) if (!Number.isFinite(s.gold) || !Number.isFinite(s.grain) || s.gold < 0 || s.grain < 0 || s.gold > 5e6 || s.grain > 5e6) bad.money.push(`${f}:${Math.round(s.gold)}/${Math.round(s.grain)}`);
+        // 財政:金はゲームの決まりで借金(マイナス)になりうる(下限は毎月の支出の3倍。未払いの罰がある)。その下限を割る・数でない・極端に大きいものを異常とする
+        for (const [f, s] of Object.entries(c.factionStates)) { const floor = -4.5 * (c.economy.report(f)?.expense?.total ?? 0) - 100; /* 下限は月ごとの支出で決まり、都市を失うと支出が減るので、1.5倍の幅を見る */ if (!Number.isFinite(s.gold) || !Number.isFinite(s.grain) || s.gold < floor || s.grain < 0 || s.gold > 5e6 || s.grain > 5e6) bad.money.push(`${f}:${Math.round(s.gold)}/${Math.round(s.grain)}(下限${Math.round(floor)})`); }
         for (const k of Object.keys(bad)) if (Array.isArray(bad[k]) && bad[k].length > 30) bad[k].length = 30; };
       window.__run = (days) => { const h = c.history; const d0 = c.day; let n = 0; let lastYear = c.calendar().year;
         while (c.day - d0 < days && n++ < 9000000) {

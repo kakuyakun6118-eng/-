@@ -507,9 +507,10 @@ export const LIUYU_EVENTS: HistEventDef[] = [
     history: "416年2月、姚興が没し、姚泓が即位した。姚弼は姚興の最期に死を賜った。一族の姚懿・姚恢はのちに背き、後秦は内から弱った。劉裕はこれを北伐の好機と見た。",
     sources: ["『晋書』姚興載記・姚泓載記", "『資治通鑑』巻117"],
     cond: "後秦があり、姚興が亡くなっている(君主の死は宮廷の仕組みで決まる)",
-    roles: (x) => ({ f: pick(x.c, "houqin") ?? factionOfPersons(x.c, ["yao_hong", "yao_xing", "yao_shao"]) }),
+    // 姚氏が君主の国だけ(姚氏の人物がほかの国に仕えているだけなら、この事件は起きない)
+    roles: (x) => ({ f: pick(x.c, "houqin") ?? factionOfPersons(x.c, ["yao_hong", "yao_xing", "yao_shao", "yao_bi"], true) }),
     ready: (x, r) => {
-      if (!r.f) return "後秦がない";
+      if (!r.f) return "後秦(姚氏の国)がない";
       if (x.c.personStatus("yao_xing") !== "dead" && P("yao_xing")) return "姚興はまだ生きている(後継争いは起きていない)";
       return true;
     },
@@ -645,10 +646,11 @@ export const LIUYU_EVENTS: HistEventDef[] = [
     background: "洛陽は西晋の旧都。永嘉の乱(311年)ののち、晋の手を離れて久しい。北伐の軍は洛陽の城下に迫っている。",
     history: "416年10月、後秦の姚洸は援軍が来ないまま洛陽を明け渡した。晋は百年ぶりに旧都を取り戻し、劉裕は晋の陵墓を修めさせた。",
     sources: ["『宋書』武帝紀中・檀道済伝", "『資治通鑑』巻117"],
-    cond: "劉裕の国が、攻城戦などで実際に洛陽を得ている",
+    cond: "第二次北伐が起き、劉裕の国が攻城戦などで実際に洛陽を得ている",
     roles: (x) => ({ f: liuYuOf(x.c) }),
     ready: (x, r) => {
       if (!r.f) return absent(x.c, "liu_yu_song");
+      if (!H(x).flag("beifa416")) return "第二次北伐が起きていない(洛陽を取り戻す遠征がなかった)";
       if (owner("luoyang") !== r.f) return `洛陽はまだ${name(owner("luoyang"))}のもの(北伐の軍は洛陽を得ていない)`;
       return true;
     },
@@ -672,7 +674,7 @@ export const LIUYU_EVENTS: HistEventDef[] = [
           if (/晋|漢/.test(g.people) || /涼/.test(g.name)) x.c.diplo.addAmity(f, g.id, 10);
           else if (g.id === weiOf(x.c) || g.id === houqinOf(x.c)) x.c.diplo.addAmity(f, g.id, -10);
         }
-        return "晋は百年ぶりに洛陽を取り戻し、陵墓を修めた。劉裕の威信は大いに上がった";
+        return `${name(f)}は旧都の洛陽を取り戻し、晋の陵墓を修めた。劉裕の威信は大いに上がった`;
       }
       if (p.f === "rest") {
         for (const s of near) {
@@ -861,13 +863,14 @@ export const LIUYU_EVENTS: HistEventDef[] = [
     background: "建康で政務と兵站を一手に担っていた劉穆之が没した。劉裕は長安で、関中に留まって北方を平定するか、建康へ帰るかを迫られている。",
     history: "417年11月、劉穆之が没した。劉裕は12歳の子 劉義真を長安に残し、王鎮悪・沈田子らに守らせて建康へ帰った。",
     sources: ["『宋書』武帝紀中・劉穆之伝", "『資治通鑑』巻118"],
-    cond: "劉穆之が亡くなっていて、劉裕が生きていて、劉裕の軍団が建康から500km以上離れている",
+    cond: "劉穆之が亡くなっていて、劉裕が生きていて、劉裕の軍団が自国の都から500km以上離れている",
     roles: (x) => ({ f: liuYuOf(x.c) }),
     ready: (x, r) => {
       if (!r.f) return absent(x.c, "liu_yu_song");
       if (P("liu_muzhi") && x.c.personStatus("liu_muzhi") !== "dead") return "劉穆之はまだ生きている";
       const a = liuArmy(x, r.f);
-      if (!a || a.army.commanderId !== "liu_yu_song" || distanceKm(a.army, JIANKANG) < 500) return "劉裕は遠征に出ていない(建康から500km以内にいる)";
+      const cap = x.c.capitalCityOf(r.f);
+      if (!a || !cap || a.army.commanderId !== "liu_yu_song" || distanceKm(a.army, cap) < 500) return `劉裕は遠征に出ていない(都の${cap?.name ?? ""}から500km以内にいる)`;
       return true;
     },
     choices: {
@@ -900,8 +903,9 @@ export const LIUYU_EVENTS: HistEventDef[] = [
       if (!a) return "劉裕は建康へ帰った";
       const rest = x.c.detachArmy(a.army.id, 0.4, ["wang_zhene", "shen_tianzi", "fu_hongzhi", "mao_dezu", "zhu_lingshi"].find((id) => inF(x.c, id, f) && x.c.postOf(id)?.kind !== "army"), "関中の守備軍");
       if (owner("changan") === f && P("liu_yizhen") && alive(x.c, "liu_yizhen")) P("liu_yizhen")!.residence = "changan";
-      const back = march(x, a, JIANKANG);
-      return `劉裕は${typeof rest === "string" ? "" : "軍の4割を関中に残し、"}建康へ帰った${back ? "" : "(帰る道がなく、留まった)"}`;
+      const home = x.c.capitalCityOf(f);
+      const back = home ? march(x, a, home) : false;
+      return `劉裕は${typeof rest === "string" ? "" : "軍の4割を関中に残し、"}${home?.name ?? "都"}へ帰った${back ? "" : "(帰る道がなく、留まった)"}`;
     },
   },
 
@@ -916,6 +920,7 @@ export const LIUYU_EVENTS: HistEventDef[] = [
     battle: ["xia", "jin"],
     roles: (x) => ({ jin: owner("changan") && owner("changan") === liuYuOf(x.c) ? owner("changan") : undefined, xia: xiaOf(x.c) }),
     ready: (x, r) => {
+      if (!H(x).flag("beifa416")) return "第二次北伐が起きていない(関中は北伐で得たものではない)";
       if (!r.jin) return "長安は劉裕の国のものではない";
       if (!r.xia) return "夏がない";
       const ly = x.c.armies.find((s) => s.army.commanderId === "liu_yu_song");
