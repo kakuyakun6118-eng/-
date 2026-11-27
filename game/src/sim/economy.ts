@@ -232,11 +232,13 @@ export class Economy {
       const rep = this.report(f.id);
       st.gold += rep.net;
       // 兵糧は、2年分(毎月の収穫の24倍)を超えると傷んで減る
-      st.grain = Math.max(0, Math.min(Math.max(2000, rep.income.grain * 24), st.grain + rep.netGrain));
+      // 開始時の蓄えをシナリオで決めた勢力(仮想シナリオの楚)は、蔵の上限・蓄えの目減りの基準を、その量より下げない
+      const start = scenario.startTreasury?.[f.id];
+      st.grain = Math.max(0, Math.min(Math.max(2000, rep.income.grain * 24, start?.grain ?? 0), st.grain + rep.netGrain));
       st.gold = Math.max(-rep.expense.total * 3, st.gold);
       // 蓄えが収入の3年分(最低3,000)を超えると、超えた分の4%が毎月失われる(管理の費用・横領・散財)。
       // 都市を失った国が、昔の蓄えをいつまでも抱え込まないように
-      const hoard = Math.max(3000, rep.income.total * 36);
+      const hoard = Math.max(3000, rep.income.total * 36, start?.gold ?? 0);
       if (st.gold > hoard) st.gold -= (st.gold - hoard) * 0.04;
       const h = (this.history[f.id] ??= []);
       h.push({ day, gold: Math.round(st.gold), net: rep.net });

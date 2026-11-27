@@ -40,7 +40,8 @@
     "s357": "jiankang",
     "s383": "jiankang",
     "s409": "jiankang",
-    "s416": "jiankang"
+    "s416": "jiankang",
+    "s304v": "changan"
    }
   },
   {
@@ -59,7 +60,8 @@
    "equip": true,
    "holdings": {
     "s300": "luoyang",
-    "s304": "luoyang"
+    "s304": "luoyang",
+    "s304v": "luoyang"
    }
   },
   {
@@ -83,7 +85,8 @@
     "s311": "jiankang",
     "s317": "jiankang",
     "s319": "jiankang",
-    "s329": "jiankang"
+    "s329": "jiankang",
+    "s304v": "xiapi"
    }
   },
   {
@@ -142,7 +145,8 @@
    "equip": true,
    "holdings": {
     "s300": "luoyang",
-    "s304": "luoyang"
+    "s304": "luoyang",
+    "s304v": "luoyang"
    }
   },
   {
@@ -160,7 +164,8 @@
    "equip": false,
    "holdings": {
     "s300": "luoyang",
-    "s304": "luoyang"
+    "s304": "luoyang",
+    "s304v": "luoyang"
    }
   },
   {
@@ -231,7 +236,8 @@
     "s357": "ji",
     "s383": "ji",
     "s409": "ji",
-    "s416": "ji"
+    "s416": "ji",
+    "s304v": "jicheng"
    }
   },
   {
@@ -258,7 +264,8 @@
     "s357": "chengdu",
     "s383": "chengdu",
     "s409": "chengdu",
-    "s416": "chengdu"
+    "s416": "chengdu",
+    "s304v": "chengdu"
    }
   },
   {
@@ -285,7 +292,8 @@
     "s357": "guzang",
     "s383": "dunhuang",
     "s409": "dunhuang",
-    "s416": "dunhuang"
+    "s416": "dunhuang",
+    "s304v": "guzang"
    }
   },
   {
@@ -312,7 +320,8 @@
     "s357": "dunhuang",
     "s383": "dunhuang",
     "s409": "dunhuang",
-    "s416": "dunhuang"
+    "s416": "dunhuang",
+    "s304v": "dunhuang"
    }
   },
   {
@@ -340,7 +349,8 @@
     "s357": "ye",
     "s383": "ye",
     "s409": "ye",
-    "s416": "ye"
+    "s416": "ye",
+    "s304v": "ye"
    }
   },
   {
@@ -706,7 +716,8 @@
     "s317": "guzang",
     "s319": "guzang",
     "s329": "guzang",
-    "s357": "guzang"
+    "s357": "guzang",
+    "s304v": "guzang"
    }
   },
   {
@@ -734,7 +745,8 @@
     "s357": "wandu",
     "s383": "wandu",
     "s409": "wandu",
-    "s416": "wandu"
+    "s416": "wandu",
+    "s304v": "wandu"
    }
   },
   {
@@ -761,7 +773,8 @@
     "s357": "hanseong",
     "s383": "hanseong",
     "s409": "hanseong",
-    "s416": "hanseong"
+    "s416": "hanseong",
+    "s304v": "hanseong"
    }
   },
   {
@@ -788,7 +801,8 @@
     "s357": "geumseong",
     "s383": "geumseong",
     "s409": "geumseong",
-    "s416": "geumseong"
+    "s416": "geumseong",
+    "s304v": "geumseong"
    }
   },
   {
@@ -813,7 +827,8 @@
     "s317": "shengle",
     "s319": "shengle",
     "s329": "shengle",
-    "s357": "shengle"
+    "s357": "shengle",
+    "s304v": "shengle"
    }
   },
   {

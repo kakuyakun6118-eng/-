@@ -1105,6 +1105,128 @@
     "certainty": "確認",
     "note": "姑臧(412年に遷都)"
    }
+  },
+  "s304v": {
+   "shanshan": {
+    "city": "shanshan",
+    "certainty": "確認",
+    "note": "扜泥城(『漢書』西域伝)"
+   },
+   "yutian": {
+    "city": "yutian",
+    "certainty": "確認",
+    "note": "西城"
+   },
+   "shule": {
+    "city": "shule",
+    "certainty": "確認",
+    "note": "疏勒城"
+   },
+   "qiuci": {
+    "city": "qiuci",
+    "certainty": "確認",
+    "note": "延城"
+   },
+   "yanqi": {
+    "city": "yanqi",
+    "certainty": "確認",
+    "note": "員渠城"
+   },
+   "jushi": {
+    "city": "jiaohe",
+    "certainty": "確認",
+    "note": "交河城"
+   },
+   "silla": {
+    "city": "geumseong",
+    "certainty": "確認",
+    "note": "金城(慶州)"
+   },
+   "baekje": {
+    "city": "hanseong",
+    "certainty": "推定",
+    "note": "漢城(慰礼城)"
+   },
+   "chouchi": {
+    "city": "chouchi",
+    "certainty": "確認",
+    "note": "仇池山"
+   },
+   "yuwen": {
+    "city": "zimeng",
+    "certainty": "推定",
+    "note": "紫蒙川"
+   },
+   "tuyuhun": {
+    "city": "tuyuhunting",
+    "certainty": "推定",
+    "note": "吐谷渾の王帳(暫定の首都)"
+   },
+   "tiefu": {
+    "city": "shuofang",
+    "certainty": "推定",
+    "note": "朔方(暫定の首都)"
+   },
+   "jin": {
+    "city": "changan",
+    "certainty": "確認",
+    "note": "304年11月、恵帝は河間王 司馬顒のいる長安へ移された"
+   },
+   "yue": {
+    "city": "xiapi",
+    "certainty": "推定",
+    "note": "東海王 司馬越の本拠(東海国)に近い下邳"
+   },
+   "wang_jun": {
+    "city": "ji",
+    "certainty": "確認",
+    "note": "薊(幽州)"
+   },
+   "han_zhao": {
+    "city": "lishi",
+    "certainty": "確認",
+    "note": "左国城(離石)"
+   },
+   "chenghan": {
+    "city": "chengdu",
+    "certainty": "確認",
+    "note": "成都"
+   },
+   "qianliang": {
+    "city": "guzang",
+    "certainty": "確認",
+    "note": "姑臧"
+   },
+   "dai": {
+    "city": "shengle",
+    "certainty": "推定",
+    "note": "盛楽"
+   },
+   "murong": {
+    "city": "jicheng",
+    "certainty": "確認",
+    "note": "大棘城"
+   },
+   "duan": {
+    "city": "lingzhi",
+    "certainty": "推定",
+    "note": "令支"
+   },
+   "goguryeo": {
+    "city": "wandu",
+    "certainty": "推定",
+    "note": "丸都"
+   },
+   "tribes": {
+    "city": "shuofang",
+    "certainty": "推定",
+    "note": "暫定の首都"
+   },
+   "chu": {
+    "city": "xiangyang",
+    "certainty": "架空",
+    "note": "襄陽(仮想シナリオの楚の都)"
+   }
   }
  }
 }

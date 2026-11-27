@@ -4444,3 +4444,9 @@ select:focus-visible {
   .p2-focus { top: 44px; height: auto; }
 }
 .p2-stage.p2-talking + #palace-hud .ph-hint { display: none; }
+
+/* 仮想シナリオ(炎漢再興):選択画面の区分の見出しと、100を超える能力値の棒 */
+.scenario-group { grid-column: 1 / -1; margin: 10px 2px 2px; font-size: 15px; color: var(--ink, #3a2a1a); border-bottom: 1px solid rgba(120, 60, 30, 0.35); }
+.scenario-group small { margin-left: 8px; font-size: 11px; font-weight: normal; opacity: 0.75; }
+.scenario-card[data-category="virtual"] { border-color: #c8322a; }
+.person-stats b.over100 { background: linear-gradient(90deg, #c8322a, #e8b23a); }

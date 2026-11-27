@@ -232,6 +232,10 @@ export interface Person {
   certainty?: "史実確認済み" | "推定" | "伝承" | "不明";
   /** 別の表記(サンスクリット名など) */
   altName?: string;
+  /** 性格(仮想シナリオの架空の人物など。画面に出す) */
+  personality?: string;
+  /** 仮想シナリオの架空の人物のとき true(能力値は120まで) */
+  virtual?: boolean;
 }
 
 /** 以前の名前(武将)。同じものを指す */
@@ -254,6 +258,8 @@ export interface Army {
   lat: number;
   /** 向き(度)。0 = 北、90 = 東、180 = 南、270 = 西 */
   facing: number;
+  /** 水軍(仮想シナリオの荊州水軍など):川の上を速く進み、川の戦いに強い */
+  naval?: boolean;
   /** 兵種ごとの兵力 */
   troops: Record<UnitTypeId, number>;
   /** 士気・疲労(0〜100)と、食糧の備蓄(日数) */
@@ -477,6 +483,14 @@ export interface Scenario {
   cityNames?: Record<string, { name: string; reading: string }>;
   /** 年代によって違う都市の格・守り・守備兵(劉裕の北伐の追加:416年の統万城など)。書いた項目だけ都市データを上書きする */
   cityOverrides?: Record<string, { level?: 1 | 2 | 3 | 4; defense?: number; garrison?: number; note?: string }>;
+  /** 仮想シナリオ(史実のシナリオとは別の区分) */
+  virtual?: boolean;
+  /** 能力値の上限(仮想シナリオだけ120。省くと100) */
+  statCap?: number;
+  /** このシナリオだけに置く都市(仮想シナリオの新野など。ほかのシナリオの地図には出ない) */
+  extraCities?: City[];
+  /** 開始時の金・兵糧を決めた勢力(書かれていない勢力は、これまでどおり収入の3か月分) */
+  startTreasury?: Record<string, { gold: number; grain: number }>;
   /** このシナリオの説明(簡略化した点、推定で置いた点) */
   scenarioNote?: string;
   factions: Faction[];
@@ -517,6 +531,8 @@ export interface ScenarioEntry {
   figures?: string[];
   /** ready = 遊べる / planned = 準備中(未実装) */
   status: "ready" | "planned";
+  /** virtual = 仮想シナリオ(選択画面で別の区分に並べる)。省くと史実のシナリオ */
+  category?: "virtual";
 }
 
 /** シナリオごとの名簿の1人分。人物の台帳(生没年・能力・経歴)に、その年代の所属と官職を重ねる */

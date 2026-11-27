@@ -1,7 +1,7 @@
 import { scenario, scenarioCatalog, switchScenario } from "../data";
 
 /**
- * シナリオの選択画面。目録の8本を並べ、遊べるもの(ready)だけにボタンを出す。
+ * シナリオの選択画面。目録の史実のシナリオを年の順に並べ、仮想シナリオは別の区分にまとめる。遊べるもの(ready)だけにボタンを出す。
  * 準備中のものは押せず、「準備中(未実装)」と表示する。
  */
 export class ScenarioScreen {
@@ -9,8 +9,19 @@ export class ScenarioScreen {
   constructor(private readonly root: HTMLElement, private readonly onClosed: () => void = () => {}) {
     (root.querySelector(".scenarios-close") as HTMLElement).addEventListener("click", () => this.close());
     const list = root.querySelector(".scenarios-list") as HTMLElement;
-    list.replaceChildren(
-      ...scenarioCatalog.map((e) => {
+    // 史実のシナリオを年の順に並べ、そのあとに「仮想シナリオ」の区分を置く
+    const heading = (text: string, note: string): HTMLElement => {
+      const h = document.createElement("h3");
+      h.className = "scenario-group";
+      h.textContent = text;
+      const small = document.createElement("small");
+      small.textContent = note;
+      h.append(small);
+      return h;
+    };
+    const historic = scenarioCatalog.filter((e) => e.category !== "virtual");
+    const virtual = scenarioCatalog.filter((e) => e.category === "virtual");
+    const cards = (entries: typeof scenarioCatalog) => entries.map((e) => {
         const card = document.createElement("div");
         card.className = "scenario-card";
         card.dataset.id = e.id;
@@ -46,9 +57,15 @@ export class ScenarioScreen {
           action.textContent = "準備中(未実装)";
           action.disabled = true;
         }
+        if (e.category === "virtual") card.dataset.category = "virtual";
         card.append(seal, year, title, summary, facts, action);
         return card;
-      }),
+      });
+    list.replaceChildren(
+      ...(virtual.length ? [heading("史実のシナリオ", "史料にもとづく年代")] : []),
+      ...cards(historic),
+      ...(virtual.length ? [heading("仮想シナリオ", "ゲームの創作。架空の人物が登場し、能力値の上限は120")] : []),
+      ...cards(virtual),
     );
   }
 

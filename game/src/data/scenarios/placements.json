@@ -57,6 +57,14 @@
   "s383": {
    "xie_an": { "kind": "court", "at": "jiankang", "certainty": "確認", "source": "『晋書』謝安伝", "note": "征討大都督として建康で指揮" },
    "tuoba_gui": { "kind": "city", "at": "shengle", "certainty": "推定", "source": "『魏書』太祖紀", "note": "代の滅亡(376年)の後、独孤部の劉庫仁のもとで育つ。盛楽の近くと推定" }
+  },
+  "s304v": {
+   "liu_yuan": { "kind": "city", "at": "lishi", "certainty": "確認", "source": "『晋書』劉元海載記", "note": "左国城(離石)で大単于、ついで漢王を称する" },
+   "liu_cong": { "kind": "city", "at": "lishi", "certainty": "推定", "source": "『晋書』劉聡載記", "note": "父の劉淵とともに左国城へ" },
+   "sima_rui": { "kind": "city", "at": "xiapi", "certainty": "推定", "source": "『晋書』元帝紀", "note": "蕩陰の戦いのあと鄴を脱し、東の琅邪国へ帰る。下邳に置く(推定)" },
+   "wang_dao": { "kind": "city", "at": "xiapi", "certainty": "推定", "source": "『晋書』王導伝", "note": "琅邪王 司馬睿の参謀として従う" },
+   "zu_ti": { "kind": "court", "at": "luoyang", "certainty": "推定", "source": "『晋書』祖逖伝", "note": "恵帝の北征に従ったのち洛陽に戻る(推定)" },
+   "murong_hui": { "kind": "city", "at": "jicheng", "certainty": "確認", "source": "『晋書』慕容廆載記" }
   }
  }
 }

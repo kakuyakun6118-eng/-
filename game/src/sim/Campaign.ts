@@ -143,6 +143,9 @@ export class Campaign {
     for (const f of scenario.factions) {
       const r = this.economy.report(f.id);
       this.factionStates[f.id] = { gold: r.income.total * 3, grain: r.income.grain * 3 };
+      // シナリオで開始時の蓄えが決められた勢力(仮想シナリオの楚:金200,000・兵糧1,000,000)
+      const t = scenario.startTreasury?.[f.id];
+      if (t) this.factionStates[f.id] = { gold: t.gold, grain: t.grain };
     }
     this.diplo = new Diplomacy(this);
     this.court = new Court(this);

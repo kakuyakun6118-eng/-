@@ -4,7 +4,7 @@
 import familyData from "../data/rules/family.json";
 import successionRules from "../data/rules/succession.json";
 import deathData from "../data/rules/deaths.json";
-import { ledgerPerson, persons, scenario } from "../data";
+import { ledgerPerson, persons, scenario, statCap } from "../data";
 import type { Person } from "../data/types";
 import type { Campaign } from "./Campaign";
 import type { Marriage } from "./diplomacy";
@@ -328,7 +328,8 @@ export class Court {
       if (!p || a === null) continue;
       const g = this.growth(a);
       const e = this.edu[id]?.gain ?? {};
-      for (const k of STAT_KEYS) p[k] = Math.max(1, Math.min(100, Math.round((b[k] + (e[k] ?? 0)) * g)));
+      // 上限はシナリオの上限(仮想シナリオは120)。もとの値が上限より高くても切り捨てない
+      for (const k of STAT_KEYS) p[k] = Math.max(1, Math.min(Math.max(statCap(), b[k]), Math.round((b[k] + (e[k] ?? 0)) * g)));
     }
   }
 

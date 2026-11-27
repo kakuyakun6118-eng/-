@@ -15,6 +15,7 @@ import portraitManifest from "./portraits.manifest.json";
 import inlinePortraits from "./portraitsInline";
 import catalog from "./scenarios/catalog.json";
 import extraPersons from "./scenarios/persons.extra.json";
+import virtualPersons from "./scenarios/persons.virtual.json";
 import s300 from "./scenarios/s300.json";
 import s304 from "./scenarios/s304.json";
 import s311 from "./scenarios/s311.json";
@@ -25,6 +26,7 @@ import s357 from "./scenarios/s357.json";
 import s383 from "./scenarios/s383.json";
 import s409 from "./scenarios/s409.json";
 import s416 from "./scenarios/s416.json";
+import s304v from "./scenarios/s304v.json";
 import s317Armies from "./scenarios/s317.armies.json";
 import s317Persons from "./scenarios/s317.persons.json";
 import unitTypeList from "./rules/unitTypes.json";
@@ -82,14 +84,16 @@ const scenarioFiles: Record<string, ScenarioFile> = {
   s383: s383 as unknown as ScenarioFile,
   s409: s409 as unknown as ScenarioFile,
   s416: s416 as unknown as ScenarioFile,
+  s304v: s304v as unknown as ScenarioFile,
 };
 /** 人物の台帳:317年の人物と、ほかの年代だけに出る人物 */
 const personLedger = new Map<string, Person>();
-for (const p of [...(s317Persons.persons as Person[]), ...(extraPersons.persons as unknown as Person[])]) personLedger.set(p.id, p);
+// 仮想シナリオの架空の人物(persons.virtual.json)も台帳に入れる。名簿に書いたシナリオにだけ出る
+for (const p of [...(s317Persons.persons as Person[]), ...(extraPersons.persons as unknown as Person[]), ...(virtualPersons.persons as unknown as Person[])]) personLedger.set(p.id, p);
 
 /** いま選ばれているシナリオのID。ページのアドレスの「#s=s311」から読む(無ければ317年) */
 function chosenScenarioId(): string {
-  const m = typeof location === "undefined" ? null : /[#&]s=(s\d+)/.exec(location.hash);
+  const m = typeof location === "undefined" ? null : /[#&]s=(s\d+v?)/.exec(location.hash);
   const id = m ? m[1] : "s317";
   const entry = scenarioCatalog.find((e) => e.id === id);
   return entry && entry.status === "ready" && scenarioFiles[id] ? id : "s317";
@@ -97,6 +101,8 @@ function chosenScenarioId(): string {
 
 /** シナリオのファイルから、ゲームが使う形(シナリオ・人物・軍団)を作る */
 function buildScenario(file: ScenarioFile): { scenario: Scenario; persons: Person[]; armies: Army[] } {
+  // このシナリオだけの都市(仮想シナリオの新野など)を、地図の都市に加える
+  for (const c of file.extraCities ?? []) if (!northChina.cities.some((x) => x.id === c.id)) northChina.cities.push({ ...c });
   const cityOwners: Record<string, string> = {};
   if (file.defaultOwner) for (const c of northChina.cities) cityOwners[c.id] = file.defaultOwner;
   Object.assign(cityOwners, file.cityOwners);
@@ -132,6 +138,11 @@ for (const c of northChina.cities) {
     if (ov.defense !== undefined) c.defense = ov.defense;
     if (ov.garrison !== undefined) c.garrison = ov.garrison;
   }
+}
+
+/** 能力値の上限(仮想シナリオだけ120。史実のシナリオは100) */
+export function statCap(): number {
+  return scenario.statCap ?? 100;
 }
 
 /** 別のシナリオに切り替える(ページを読み込み直して、その年代で始める) */

@@ -218,7 +218,9 @@ export class PersonScreen {
       ...STATS.map(([key, label]) => {
         const row = document.createElement("div");
         const value = p[key] as number;
-        row.innerHTML = `<span>${label}</span><i><b style="width:${value}%"></b></i><em>${value}</em>`;
+        // 仮想シナリオの能力値は120まで:棒は120を満たしたときに端まで届く。100を超えた分は色を変える(値は切り捨てない)
+        const cap = Math.max(100, scenario.statCap ?? 100);
+        row.innerHTML = `<span>${label}</span><i><b style="width:${Math.min(100, (value / cap) * 100)}%"${value > 100 ? ' class="over100"' : ""}></b></i><em>${value}</em>`;
         return row;
       }),
     );
@@ -251,7 +253,7 @@ export class PersonScreen {
       p.residence ? `滞在:${campaign.cities.find((c) => c.id === p.residence)?.name ?? ""}` : "",
       items.length ? `装備:${items.join("・")}` : "",
     ].filter(Boolean).join("・");
-    this.q(".person-bio").textContent = (extra ? `【${extra}】` : "") + p.bio;
+    this.q(".person-bio").textContent = (extra ? `【${extra}】` : "") + p.bio + (p.personality ? ` 性格:${p.personality}。` : "") + (p.virtual && p.traits.length ? ` 特殊能力:${p.traits.join("・")}。` : "");
     const uncertain = this.q(".person-uncertain");
     uncertain.textContent = p.note ? `注記:${p.note}` : "";
     uncertain.hidden = !p.note;

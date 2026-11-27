@@ -2,7 +2,7 @@
 // 事件は、乱数だけでは起こさない。人物の気持ち・立場・皇帝の行い・国の様子が「条件」を満たしたときに起こり得る。
 // 選んだ結果は、宮の中の気持ちだけでなく、国の安定度・臣下の忠誠・国庫・官職・後継の能力に反映する。
 // 皇后の廃立は、婚姻の記録(正室→側室)と後宮の身分だけを変える。人物・婚姻・子・家系図は消さない。
-import { persons, scenario } from "../data";
+import { persons, scenario, statCap } from "../data";
 import type { Person } from "../data/types";
 import type { Campaign } from "./Campaign";
 import { surnameOf } from "./loyalty";
@@ -426,7 +426,7 @@ export class PalaceAffairs {
       case "heirEdu": {
         const heir = this.person(inc.persons[0]);
         if (!heir) { res = "後継者が、もういない"; break; }
-        const up = (k: "intelligence" | "politics" | "war" | "leadership" | "charisma", d: number): void => { heir[k] = Math.min(100, heir[k] + d); eff.push(`${heir.name}の${({ intelligence: "知力", politics: "政治", war: "武力", leadership: "統率", charisma: "魅力" } as const)[k]}+${d}`); };
+        const up = (k: "intelligence" | "politics" | "war" | "leadership" | "charisma", d: number): void => { heir[k] = Math.min(Math.max(statCap(), heir[k]), heir[k] + d); eff.push(`${heir.name}の${({ intelligence: "知力", politics: "政治", war: "武力", leadership: "統率", charisma: "魅力" } as const)[k]}+${d}`); };
         if (choice === "scholar") { up("intelligence", 3); up("politics", 2); mood(A, -8); stab(1); res = `${heir.name}は儒学を学び始めた。母は少し不満そうだ`; }
         else if (choice === "martial") { up("war", 3); up("leadership", 2); mood(A, 12); A!.trust = clamp(A!.trust + 5); stab(-1); res = `${heir.name}は武芸を学び始めた。母は喜び、重臣は渋い顔をしている`; }
         else if (choice === "both") { if (!pay(80)) return "国庫の金が足りません(金80)"; up("intelligence", 2); up("war", 2); mood(A, 4); res = `${heir.name}は文武の両方を学ぶことになった`; }

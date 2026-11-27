@@ -7,16 +7,19 @@ const read = (f) => JSON.parse(fs.readFileSync(path.join(root, f), 'utf8'));
 (async () => {
   const problems = [];
   const catalog = read('scenarios/catalog.json').scenarios;
-  if (catalog.length !== 10) problems.push('目録が10本でない'); // 劉裕の北伐の追加で、8本から10本へ
+  if (catalog.length !== 11) problems.push('目録が11本でない'); // 劉裕の北伐の追加で8本から10本へ、仮想シナリオ(炎漢再興)の追加で11本へ
   const ledger = new Map();
-  for (const p of [...read('scenarios/s317.persons.json').persons, ...read('scenarios/persons.extra.json').persons]) { if (ledger.has(p.id)) problems.push('台帳のID重複: ' + p.id); ledger.set(p.id, p); }
-  const cities = read('regions/north-china/cities.json'); const passes = read('regions/north-china/passes.json').passes;
-  const cityIds = new Set(cities.map(c => c.id)); const passIds = new Set(passes.map(p => p.id));
+  // 仮想シナリオの架空の人物(persons.virtual.json)も台帳に含める(炎漢再興の追加)
+  for (const p of [...read('scenarios/s317.persons.json').persons, ...read('scenarios/persons.extra.json').persons, ...read('scenarios/persons.virtual.json').persons]) { if (ledger.has(p.id)) problems.push('台帳のID重複: ' + p.id); ledger.set(p.id, p); }
+  const baseCities = read('regions/north-china/cities.json'); const passes = read('regions/north-china/passes.json').passes;
+  const passIds = new Set(passes.map(p => p.id));
   const ready = catalog.filter(e => e.status === 'ready');
   for (const e of ready) {
     const file = path.join(root, 'scenarios', e.id + '.json');
     if (!fs.existsSync(file)) { problems.push('ready なのにファイルが無い: ' + e.id); continue; }
-    const s = read('scenarios/' + e.id + '.json'); const tag = `[${e.year}年] `;
+    const s = read('scenarios/' + e.id + '.json'); const tag = `[${e.year}年${s.virtual ? '・仮想' : ''}] `;
+    // このシナリオだけの都市(仮想シナリオの新野)を加える
+    const cities = [...baseCities, ...(s.extraCities ?? [])]; const cityIds = new Set(cities.map(c => c.id));
     if (s.year !== e.year) problems.push(tag + '年が目録と違う');
     const factions = new Map(s.factions.map(f => [f.id, f]));
     const owners = {}; for (const c of cities) owners[c.id] = s.cityOwners[c.id] ?? s.defaultOwner;
@@ -90,7 +93,7 @@ const read = (f) => JSON.parse(fs.readFileSync(path.join(root, f), 'utf8'));
   const guard = await page.evaluate((other) => { const g = window.__goko; let msg = ''; try { g.applySave(JSON.parse(other)); } catch (x) { msg = String(x.message); } return { title: document.querySelector('.scenario').textContent, crossLoad: msg.slice(0, 60) }; }, saves[ready[0].id]);
   console.log('ガード:', JSON.stringify(guard));
   if (!guard.title.includes('317')) problems.push('存在しない・準備中のシナリオが始まってしまった');
-  if (ready.length !== 10) problems.push('遊べるシナリオが10本でない: ' + ready.length); // 劉裕の北伐の追加で、8本から10本へ
+  if (ready.length !== 11) problems.push('遊べるシナリオが11本でない: ' + ready.length); // 劉裕の北伐で10本、仮想シナリオで11本へ
   if (!guard.crossLoad.includes('別のシナリオ')) problems.push('別のシナリオのセーブを断らなかった');
   await b.close();
   if (problems.length) { console.log('問題:', problems); process.exit(1); }

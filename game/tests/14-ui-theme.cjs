@@ -28,8 +28,10 @@ const path = require('path');
   await p.evaluate(() => { const c = [...document.querySelectorAll('.difficulty-card')].find(x => x.dataset.value === 'hard'); c.click(); }); await p.waitForTimeout(300);
   await p.screenshot({ path: out + '/ui-2-menu.png' });
   await p.evaluate(() => document.querySelector('#scenarios-open').click()); await p.waitForTimeout(400); await p.screenshot({ path: out + '/ui-3-scenarios.png' });
-  const cards = await p.evaluate(() => [...document.querySelectorAll('.scenario-card')].map(c => ({ id: c.dataset.id, year: c.querySelector('.scenario-year').textContent, facts: c.querySelectorAll('dd').length, seal: c.querySelector('.seal').textContent })));
-  if (cards.length !== 10 ||  /* 劉裕の北伐の409年・416年を足して10枚 */ cards.some(c => c.facts !== 2) || cards.map(c => parseInt(c.year)).join() !== [...cards].map(c => parseInt(c.year)).sort((a, b) => a - b).join()) problems.push('シナリオの札: ' + JSON.stringify(cards));
+  const cards = await p.evaluate(() => [...document.querySelectorAll('.scenario-card')].map(c => ({ id: c.dataset.id, year: c.querySelector('.scenario-year').textContent, facts: c.querySelectorAll('dd').length, seal: c.querySelector('.seal').textContent, virtual: c.dataset.category === 'virtual' })));
+  // 仮想シナリオ(炎漢再興)を足して11枚。年の順に並ぶかは、史実のシナリオだけで調べる(仮想シナリオは「仮想シナリオ」の区分にまとめて後ろに置く)
+  const hist = cards.filter(c => !c.virtual); const groups = await p.evaluate(() => [...document.querySelectorAll('.scenario-group')].map(h => h.textContent));
+  if (cards.length !== 11 || cards.filter(c => c.virtual).length !== 1 || !groups.some(t => t.startsWith('仮想シナリオ')) || cards.some(c => c.facts !== 2) || hist.map(c => parseInt(c.year)).join() !== [...hist].map(c => parseInt(c.year)).sort((a, b) => a - b).join() || !cards[cards.length - 1].virtual) problems.push('シナリオの札: ' + JSON.stringify({ cards, groups }));
   await p.evaluate(() => { document.querySelector('.scenarios-close').click(); document.querySelector('#persons-open').click(); document.querySelector('.person-row[data-id="shi_le"]').click(); }); await p.waitForTimeout(400); await p.screenshot({ path: out + '/ui-4-persons.png' });
   await p.evaluate(() => { document.querySelector('.persons-close').click(); document.querySelector('#diplomacy-open').click(); }); await p.waitForTimeout(400); await p.screenshot({ path: out + '/ui-5-diplomacy.png' });
   const faces = await p.evaluate(() => ({ diplomacy: document.querySelectorAll('.diplomacy-face').length, rows: document.querySelectorAll('.diplomacy-row').length }));
