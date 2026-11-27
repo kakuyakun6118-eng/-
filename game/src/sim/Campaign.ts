@@ -1,6 +1,6 @@
 // ゲームの進行を計算する。日付を進め、軍団の行軍・食糧・疲労・士気・敵との接触を扱う。
 // ここは計算だけで、3D表示のことは知らない。変化があったら、登録された関数で知らせる。
-import { armyUpkeepMult, factionTraitEffects, governorMult, orderMult, prob, sumOf, LIMITS } from "./virtualTraits";
+import { armyUpkeepMult, factionMult, factionTraitEffects, governorMult, orderMult, prob, sumOf, LIMITS } from "./virtualTraits";
 import { cityLevelOf, persons, personById, resolveCityLayout, scenario, totalTroops } from "../data";
 import successionRules from "../data/rules/succession.json";
 import relationRules from "../data/rules/diplomacyStart.json";
@@ -630,8 +630,10 @@ export class Campaign {
     if (n < 100) return `人口に対して兵が多すぎて、新しくは集まりません(人口${e.pop.toLocaleString("ja-JP")}人では、募兵できるのは守備兵が${popCap.toLocaleString("ja-JP")}人になるまで。帰城した兵は、これを超えて駐屯できます)`;
     const gov = persons.find((p) => p.id === (this.cityStates[city.id]?.governorId ?? city.governorId) && p.factionId === owner);
     const skill = gov ? (gov.leadership + gov.politics) / 200 : 0.4;
-    const cost = (n / 100) * strategyRules.costs.goldPer100Troops * (1.15 - skill * 0.3);
-    const grain = (n / 100) * 2;
+    // 徴兵の効率(仮想シナリオ:漢の正統・皇帝の特性):同じ金・兵糧で多くの兵が集まる(上限1.6倍)
+    const cx = scenario.virtual ? factionMult(factionTraitEffects(owner, Math.floor(this.day), (pid) => this.personStatus(pid)), "conscript", 1, LIMITS.conscript) : 1;
+    const cost = (n / 100) * strategyRules.costs.goldPer100Troops * (1.15 - skill * 0.3) / cx;
+    const grain = (n / 100) * 2 / cx;
     if (st.gold < cost) return `金が足りません(必要 ${Math.ceil(cost)})`;
     if (st.grain < grain) return `兵糧が足りません(必要 ${Math.ceil(grain)})`;
     st.gold -= cost;
@@ -2815,7 +2817,7 @@ export class Campaign {
           Math.max(result.siege.wallDamage, result.siege.gateDamage), Math.floor(this.day), (id) => this.personStatus(id), (id) => this.presentAt(id, city.id));
         this.cityStates[city.id] = state;
         this.listener.onCityCaptured(city.id, event.attackerFactionId);
-        if (scenario.virtual) this.court.noteBattle(event.attackerFactionId, event.defenderFactionId, true);
+        if (scenario.virtual) this.court.noteBattle(event.attackerFactionId, event.defenderFactionId, true, city);
         this.handleCapture(pc);
         if (cap) this.capitalAftermath(def, event.battleId);
       } else if (attacker) {
@@ -2853,6 +2855,8 @@ export class Campaign {
     const a = s.army;
     // 不敗の軍略(仮想シナリオ):兵糧の消費と疲れの増え方を半分にする(この日の増減に倍率をかける)
     const up = armyUpkeepMult(personById(a.commanderId));
+    // 国の全軍の兵糧の消費(仮想シナリオ:漢の正統・皇帝の特性)。指揮官の能力と合わせて、下限0.25倍
+    if (scenario.virtual) up.food = Math.max(0.25, up.food * factionMult(factionTraitEffects(a.factionId, Math.floor(this.day), (pid) => this.personStatus(pid)), "armyFood", LIMITS.armyFood, 1));
     const food0 = a.food;
     const fat0 = a.fatigue;
     s.supplied = this.nearFriendlyCity(s);

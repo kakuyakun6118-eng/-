@@ -2,7 +2,7 @@
 // - 相性:史料にある関係は relations.json の値。ほかは、2人のIDから決まる固定の値(同じ一族・同じ民族なら少し高い)。
 // - 忠誠度:君主への忠誠(0〜100)。毎月、目安の値に少しずつ近づき、出来事で上下する。
 // - 名声:人物の評判(0〜100)。戦い・攻略・外交・建国で上下する。君主の威信(勢力の値)とは別に持つ。
-import { factionTraitEffects, LIMITS, prob, prodOf, sumOf } from "./virtualTraits";
+import { factionMult, factionTraitEffects, LIMITS, prob, prodOf, sumOf } from "./virtualTraits";
 import { distanceKm } from "./pathfinding";
 import { initialCityOwners, persons, scenario } from "../data";
 import rel from "../data/rules/relations.json";
@@ -437,6 +437,8 @@ export class LoyaltySystem {
     if (army && army.army.troops.infantry + army.army.troops.cavalry + army.army.troops.archer >= 8000) pr *= 1.3;
     pr *= 1 - (r?.charisma ?? 60) / 220;
     pr *= this.crisisOf(p.factionId).factor;
+    // 反乱の起こりやすさ(仮想シナリオ:漢の正統-50%・守成の徳など。下限0.2倍)
+    if (scenario.virtual) pr *= factionMult(factionTraitEffects(p.factionId, Math.floor(this.c.day)), "rebellion", LIMITS.rebellion, 1);
     // プレイヤーの国の中でだけ、難易度に応じて起こりやすくする(易しい1倍・普通1.5倍・難しい2.5倍・最高難度3.5倍)
     if (p.factionId === this.c.playerFactionId) pr *= ({ easy: 1, normal: 1.5, hard: 2.5, veryHard: 3.5 } as Record<string, number>)[this.c.difficulty] ?? 1.5;
     return Math.max(0, Math.min(0.5, pr));

@@ -1,7 +1,7 @@
 // 国家の財政・官職・募兵・内政。
 // 毎月:都市の商業・農業・人口の税・交易から収入を得て、軍団・守備兵・俸禄・官僚機構・都市・宮廷・遠征の費用を払う。
 // 赤字が続くと、俸禄の未払い(忠誠の低下)→ 兵糧不足(士気の低下)→ 兵の逃亡、と段階的に悪くなる。1か月の赤字では国は崩れない。
-import { factionTraitEffects, governorMult, incomeMult, orderMult } from "./virtualTraits";
+import { factionMult, factionTraitEffects, governorMult, incomeMult, LIMITS, orderMult } from "./virtualTraits";
 import { cityLevelOf, persons, scenario, totalTroops } from "../data";
 import offices from "../data/rules/offices.json";
 import type { City, CityState, Person } from "../data/types";
@@ -273,7 +273,9 @@ export class Economy {
       const owner = scenario.cityOwners[city.id];
       const fed = (this.c.factionStates[owner]?.grain ?? 1) > 0;
       const cap = (city.population ?? cityLevelOf(city) * 20000) * 1.4;
-      st.pop = Math.round(Math.min(cap, e.pop * (fed ? 1.002 : 0.996)));
+      // 人口の増え方(仮想シナリオ:盛世創造・中興之主など。上限1.6倍)
+      const pg = scenario.virtual && fed ? factionMult(factionTraitEffects(owner ?? "", Math.floor(this.c.day)), "pop", 1, LIMITS.pop) : 1;
+      st.pop = Math.round(Math.min(cap, e.pop * (fed ? 1 + 0.002 * pg : 0.996)));
       // 過密(Version 51):守備兵の固定の上限は撤廃した。かわりに、人口の6%を超える兵がいる都市では、
       // 兵舎や水が足りず、治安と繁栄(衛生)が少しずつ下がる(1か月に治安は最大-3、繁栄は最大-1.5。極端にはしない)。
       // 兵糧が尽きた国では、超えた分の5%が毎月逃げる(脱走)。兵糧があれば、兵は減らない

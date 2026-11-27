@@ -1,8 +1,9 @@
 // 皇室・王族:家系(父・母・配偶者・子女・兄弟)、正室と側室、子女の誕生と成長、後継者(皇太子)、
 // 君主の死と皇位継承、継承争いと内乱、皇帝即位、宮廷政治(安定度・外戚・廃立・簒奪)、寿命による死。
 // 血縁はすべて人物IDで記録する。史料にある親子・兄弟・婚姻は family.json、ゲーム内で生まれた人物は架空として区別する。
-import { effectsOf, factionTraitEffects, prodOf } from "./virtualTraits";
+import { effectsOf, factionFlat, factionMult, factionTraitEffects, LIMITS, prodOf, setLegitimacyHook } from "./virtualTraits";
 import familyData from "../data/rules/family.json";
+import hanDynastyData from "../data/rules/hanDynasty.json";
 import successionRules from "../data/rules/succession.json";
 import deathData from "../data/rules/deaths.json";
 import { ledgerPerson, persons, scenario, statCap } from "../data";
@@ -124,11 +125,49 @@ export interface EmperorRecord {
   posthumous: string | null;
   stabilityEnd: number | null;
   founder: boolean;
+  // ---- Version 67(前の版のセーブには無い) ----
+  /** 皇帝の型・個人の固有特性・漢の正統の保有・即位時の能力値 */
+  type?: string;
+  typeLabel?: string;
+  traits?: string[];
+  legit?: boolean;
+  stats?: string;
+  /** 治世の国家目標(1つ目が主な目標。毎月、国の情勢で見直す) */
+  goals?: string[];
+  /** 即位時と終わりの人口・金・兵力 */
+  popStart?: number;
+  popEnd?: number | null;
+  goldStart?: number;
+  goldEnd?: number | null;
+  troopsStart?: number;
+  troopsEnd?: number | null;
+  /** 征服した都市・属国にした国・主な遠征 */
+  conquered?: string[];
+  vassalsStart?: string[];
+  vassalized?: string[];
+  expeditions?: Record<string, number>;
+  /** 治世の総合評価(0〜100)と、その言葉 */
+  score?: number | null;
+  grade?: string | null;
+}
+/** 皇帝の型(hanDynasty.json) */
+export const HAN_TYPES = (hanDynastyData as unknown as { types: Record<string, { label: string; traits: string[]; goals: string[] }> }).types;
+const HAN_FIXED = (hanDynastyData as unknown as { fixed: Record<string, { type: string; label: string; add: string[] }> }).fixed;
+/** 遠征の地域(征服した都市の場所) */
+export function regionOf(c: { id: string; lon: number; lat: number }): string | null {
+  if (["wandu", "pyongyang", "hanseong", "geumseong"].includes(c.id)) return "朝鮮半島";
+  if (c.lon < 96) return "西域";
+  if (c.lat >= 41) return "北方";
+  if (c.lat < 25) return "南方";
+  return null;
 }
 /** 元号(初代は建武。そのあとは順に) */
 export const ERA_NAMES = ["建武", "永平", "章和", "元康", "太和", "永昌", "嘉平", "正始", "景元", "泰始", "咸寧", "太康", "元熙", "承平", "景和", "延興", "昭明", "鳳翔", "天統", "神鼎", "寧康", "太元", "隆安", "義寧", "天和", "嘉禾", "黄龍", "赤烏", "神鳳", "永安", "甘露", "宝鼎", "鳳凰", "天紀", "太初", "延昌", "熙平", "神亀", "正光", "孝昌"];
 
 export interface CourtSave {
+  /** 歴代皇帝の型と固有特性(Version 67。セーブ・ロードで変わらないよう残す) */
+  emperorTraits?: Record<string, string[]>;
+  emperorTypes?: Record<string, string>;
   /** 歴代皇帝の記録と、皇統の称号・戦績の集計(仮想シナリオ。Version 65) */
   emperors?: EmperorRecord[];
   titles?: Record<string, string>;
@@ -181,6 +220,8 @@ export class Court {
   }
 
   constructor(private readonly c: Campaign) {
+    // 漢の正統(Version 67):劉皓と直系の子孫が、漢の正式な皇帝として在位しているときだけ
+    setLegitimacyHook((f) => this.isLegitEmperor(f));
     this.init();
   }
 
@@ -190,8 +231,13 @@ export class Court {
   titles: Record<string, string> = {};
   /** 勢力ごとの戦績の集計(会戦の勝ち負け・城の攻略と喪失) */
   tally: Record<string, { wins: number; losses: number; captures: number; lost: number }> = {};
+  /** 皇帝の固有特性(即位のときに決めたもの)と型 */
+  emperorTraits: Record<string, string[]> = {};
+  emperorTypes: Record<string, string> = {};
 
   private init(): void {
+    this.emperorTraits = {};
+    this.emperorTypes = {};
     this.removeAdded();
     this.emperors = [];
     this.titles = {};
@@ -871,6 +917,8 @@ export class Court {
     // 皇統継承(仮想シナリオの特殊能力):継承争いが起きず、宮廷の揺れが半分
     const smooth = effectsOf(next).some((x) => x.e.succession);
     if (smooth) risk.value = 0;
+    // 反乱の起こりやすさ(仮想シナリオ:漢の正統など)は、継承争いにもかかる
+    if (scenario.virtual) risk.value *= factionMult(factionTraitEffects(f, Math.floor(this.c.day)), "rebellion", LIMITS.rebellion, 1);
     this.addStability(f, smooth ? -5 : -10);
     this.note(f, `${old.name}の死去により、${next.name}が即位(${order[0].reason})`);
     // 皇位を争う者:成人の王族。いなければ、軍団を持ち、名声が高く忠誠の低い権臣
@@ -996,6 +1044,7 @@ export class Court {
     this.births(year);
     this.applyGrowth();
     this.dynastyWatch();
+    this.monthlyTraitFlats();
     for (const f of scenario.factions) {
       if (f.passive || f.fallen) continue;
       const r = this.c.rulerOf(f.id);
@@ -1589,7 +1638,9 @@ export class Court {
       for (const k of stats) {
         const q = t ? Math.max(0, Math.min(1.2, (t[k] - 40) / 50)) * (0.6 + affinity(p, t).value / 250) * (1 + (L.fame[t.id] ?? 0) / 300) : 0.25;
         // 宣帝の血統(仮想シナリオ):帝王教育の伸びは2倍の速さ。能力はシナリオの上限(120)まで
-        const step = (e.policy === "balanced" ? 0.04 : 0.12) * q * (scenario.virtual && p.bloodline === "xuandi" ? 2 : 1);
+        // 漢の正統(+50%)・太学振興など:皇族の伸びの倍率(上限2.5倍)
+        const gx = scenario.virtual && p.bloodline === "xuandi" ? factionMult(factionTraitEffects(p.factionId, Math.floor(this.c.day)), "growth", 1, LIMITS.growth) : 1;
+        const step = (e.policy === "balanced" ? 0.04 : 0.12) * q * (scenario.virtual && p.bloodline === "xuandi" ? 2 : 1) * gx;
         const cur = e.gain[k] ?? 0;
         const room = Math.min(15 - cur, statCap() - (this.base[p.id][k] + cur));
         if (room <= 0) continue;
@@ -1676,7 +1727,7 @@ export class Court {
 
   // ---------------- 保存 ----------------
   serialize(): CourtSave {
-    return JSON.parse(JSON.stringify({ emperors: this.emperors, titles: this.titles, tally: this.tally, heirs: this.heirs, stability: this.stability, ranks: this.ranks, added: this.added, parents: this.parents, base: this.base, lifespan: this.lifespan, assumedBorn: this.assumedBorn, log: this.log, counts: this.counts, nextId: this.nextId, regents: this.regents, causes: this.causes, edu: this.edu })) as CourtSave;
+    return JSON.parse(JSON.stringify({ emperors: this.emperors, titles: this.titles, tally: this.tally, emperorTraits: this.emperorTraits, emperorTypes: this.emperorTypes, heirs: this.heirs, stability: this.stability, ranks: this.ranks, added: this.added, parents: this.parents, base: this.base, lifespan: this.lifespan, assumedBorn: this.assumedBorn, log: this.log, counts: this.counts, nextId: this.nextId, regents: this.regents, causes: this.causes, edu: this.edu })) as CourtSave;
   }
 
   /** 戻す。ゲームの中で加わった人物を、いったん外してから入れ直す(spoils・忠誠より前に呼ぶ) */
@@ -1713,6 +1764,10 @@ export class Court {
     this.titles = { ...(save.titles ?? {}) };
     this.tally = JSON.parse(JSON.stringify(save.tally ?? {}));
     for (const [id, t] of Object.entries(this.titles)) { const p = persons.find((x) => x.id === id); if (p) p.title = t; }
+    // 皇帝の固有特性(Version 67):即位のときに決めた特性に戻す(ロードで変わらない)
+    this.emperorTraits = JSON.parse(JSON.stringify(save.emperorTraits ?? {}));
+    this.emperorTypes = { ...(save.emperorTypes ?? {}) };
+    for (const [id, t] of Object.entries(this.emperorTraits)) { const p = persons.find((x) => x.id === id); if (p) p.traits = [...t]; }
     this.applyGrowth();
   }
 
@@ -1725,8 +1780,17 @@ export class Court {
   }
 
   /** 会戦・攻城の結果を数える(在位中の戦績に使う) */
-  noteBattle(win: string | null, lose: string | null, captured: boolean): void {
+  noteBattle(win: string | null, lose: string | null, captured: boolean, city?: { id: string; name: string; lon: number; lat: number }): void {
     const t = (f: string) => (this.tally[f] ??= { wins: 0, losses: 0, captures: 0, lost: 0 });
+    // 在位中の皇帝の征服した都市と、遠征の地域
+    if (captured && win && city) {
+      const r = this.openReign(win);
+      if (r) {
+        (r.conquered ??= []).length < 80 && r.conquered.push(city.name);
+        const region = regionOf(city);
+        if (region) { r.expeditions ??= {}; r.expeditions[region] = (r.expeditions[region] ?? 0) + 1; }
+      }
+    }
     // 会戦は勝ち負けを、攻城(城の攻略)は攻略と喪失を数える(二重には数えない)
     if (win) { if (captured) t(win).captures++; else t(win).wins++; }
     if (lose) { if (captured) t(lose).lost++; else t(lose).losses++; }
@@ -1757,7 +1821,20 @@ export class Court {
       citiesStart: this.citiesOf(f), citiesEnd: null, wins: -t.wins, losses: -t.losses, captures: -t.captures, lost: -t.lost, achievements: [],
       empress: this.primaryOf(p.id)?.name ?? null, heir: this.heirOf(f)?.name ?? null, successor: null, templeName: null, posthumous: null, stabilityEnd: null, founder,
     };
+    // Version 67:皇帝の型・個人の固有特性(3〜5)・漢の正統・即位時の国力
+    const pick = this.assignEmperorTraits(f, p);
+    rec.type = pick.type;
+    rec.typeLabel = pick.label;
+    rec.traits = [...(p.traits ?? [])];
+    rec.stats = [p.leadership, p.war, p.intelligence, p.politics, p.charisma].join("/");
+    const pw = this.powerOf(f);
+    rec.popStart = pw.pop; rec.goldStart = pw.gold; rec.troopsStart = pw.troops;
+    rec.vassalsStart = Object.entries(this.c.diplo.overlord).filter(([, o]) => o === f).map(([v]) => v);
+    rec.conquered = [];
+    rec.expeditions = {};
     this.emperors.push(rec);
+    rec.legit = this.isLegitEmperor(f);
+    rec.goals = this.nationalGoals(f, rec);
     this.setTitle(p.id, "漢皇帝");
     this.note(f, `${p.name}が漢の第${gen}代皇帝に即位(元号 ${era})`);
     return rec;
@@ -1777,6 +1854,12 @@ export class Court {
     const p = persons.find((x) => x.id === rec.personId);
     if (p && this.c.personStatus(p.id) === "dead") rec.died = this.year();
     const delta = rec.citiesEnd - rec.citiesStart;
+    // Version 67:人口・財政・兵力の増減、属国にした国、総合評価
+    const pw = this.powerOf(f);
+    rec.popEnd = pw.pop; rec.goldEnd = pw.gold; rec.troopsEnd = pw.troops;
+    rec.vassalized = Object.entries(this.c.diplo.overlord).filter(([v, o]) => o === f && !(rec.vassalsStart ?? []).includes(v)).map(([v]) => scenario.factions.find((g) => g.id === v)?.name ?? v);
+    rec.score = this.reignScore(rec);
+    rec.grade = rec.score >= 80 ? "名君" : rec.score >= 65 ? "賢君" : rec.score >= 45 ? "守成の君" : rec.score >= 30 ? "凡君" : "暗君";
     const reign = rec.endYear - rec.accYear;
     if (rec.wins) rec.achievements.push(`会戦${rec.wins}勝${rec.losses}敗`);
     if (rec.captures) rec.achievements.push(`城の攻略${rec.captures}`);
@@ -1819,6 +1902,140 @@ export class Court {
     this.note(f, `${rec.name}の治世が終わる(${reason})。${rec.templeName ? `廟号 ${rec.templeName}・` : ""}諡号 ${rec.posthumous}`);
   }
 
+  // ---------------- Version 67:漢の正統・皇帝の型と固有特性・国家目標 ----------------
+  /** 劉皓、または劉皓の直系の子孫(父をたどって劉皓に着く) */
+  descendsFromHao(id: string): boolean {
+    let cur: string | undefined = id;
+    for (let n = 0; cur && n < 60; n++) {
+      if (cur === "vh_liu_hao") return true;
+      cur = this.fatherOf(cur);
+    }
+    return false;
+  }
+
+  /** 漢の正式な皇帝が在位しているか(漢の正統):皇帝の位・劉皓の直系・漢の皇帝の記録がある国 */
+  isLegitEmperor(f: string): boolean {
+    if (!scenario.virtual || this.rankOf(f) !== "emperor") return false;
+    const r = this.c.rulerOf(f);
+    if (!r || r.bloodline !== "xuandi" || !this.descendsFromHao(r.id) || this.c.spoils.custodyOf(r.id)) return false;
+    return this.emperors.some((x) => x.factionId === f);
+  }
+
+  /** 国の人口・金・兵力(軍団と守備兵) */
+  powerOf(f: string): { pop: number; gold: number; troops: number } {
+    let pop = 0, troops = 0;
+    for (const k of this.c.cities) {
+      if (scenario.cityOwners[k.id] !== f) continue;
+      const st = this.c.cityStates[k.id];
+      pop += st?.pop ?? k.population ?? 0;
+      troops += st?.garrison ?? 0;
+    }
+    for (const s of this.c.armies) if (s.army.factionId === f) troops += s.army.troops.infantry + s.army.troops.cavalry + s.army.troops.archer;
+    return { pop: Math.round(pop), gold: Math.round(this.c.factionStates[f]?.gold ?? 0), troops: Math.round(troops) };
+  }
+
+  /**
+   * 即位のときに、皇帝の型と個人の固有特性(原則3〜5)を決める。決まった皇族(劉皓・劉承・劉威・劉睿・劉弘)は台帳どおり。
+   * 自動で生まれた皇族は、能力・性格・教育・経歴(失地・国の大きさ)と、すでに持つ特性から型を選び、型の特性を足す。
+   * 決めた特性はセーブに残し、ロードで変わらない
+   */
+  assignEmperorTraits(f: string, p: Person): { type: string; label: string } {
+    if (this.emperorTypes[p.id] && this.emperorTraits[p.id]) {
+      p.traits = [...this.emperorTraits[p.id]];
+      const t0 = this.emperorTypes[p.id];
+      return { type: t0, label: HAN_FIXED[p.id]?.label ?? HAN_TYPES[t0]?.label ?? "" };
+    }
+    const fixed = HAN_FIXED[p.id];
+    let type: string;
+    if (fixed) type = fixed.type;
+    else {
+      const [L, W, I, Pl, C] = [p.leadership, p.war, p.intelligence, p.politics, p.charisma];
+      const has = (...t: string[]) => (p.traits ?? []).some((x) => t.includes(x)) ? 30 : 0;
+      const peak = Math.max(this.citiesOf(f), ...this.emperors.filter((r) => r.factionId === f).map((r) => Math.max(r.citiesStart, r.citiesEnd ?? 0)));
+      const lost = peak > 0 ? (peak - this.citiesOf(f)) / peak : 0;
+      const share = this.citiesOf(f) / Math.max(1, this.c.cities.filter((k) => k.kind !== "pass").length);
+      const e = this.edu[p.id]?.policy;
+      const sc: Record<string, number> = {
+        覇王型: L + W - 0.4 * (Pl + C) + has("武神", "破軍", "覇王の威", "天下布武") + (e === "command" ? 10 : 0),
+        武帝型: 0.9 * (L + W) - 0.3 * (I + Pl) + has("遠征無双", "武帝の軍制", "精兵養成") + (e === "war" ? 10 : 0),
+        仁君型: 0.9 * (C + Pl) - 0.3 * W + has("仁政", "万民帰心", "慈愛の治", "人心掌握"),
+        明君型: 2 * Math.min(L, W, I, Pl, C) - 20 + has("帝王之器", "文武双全", "文武隆盛", "盛世創造") + (e === "balanced" ? 10 : 0),
+        賢帝型: 0.9 * (C + I) - 0.3 * W + has("求賢令", "太学振興", "王佐之才"),
+        智帝型: 1.6 * I - 0.2 * W + has("神算鬼謀", "外交無双", "合従連衡") + (e === "study" ? 10 : 0),
+        富国型: 1.6 * Pl - 0.2 * W + has("富国強兵", "通商振興", "屯田の制") + (e === "politics" ? 10 : 0),
+        中興型: 0.6 * (L + Pl) + lost * 300 + ((this.stability[f] ?? 60) < 40 ? 40 : 0) + has("中興之主", "失地回復"),
+        守成型: 0.6 * (Pl + I) + (share > 0.45 ? 40 : 0) + has("守成の徳", "辺境鎮撫"),
+      };
+      for (const k of Object.keys(sc)) sc[k] += (chance(`${p.id}|etype|${k}`) - 0.5) * 16; // 同じ能力でも少しずつ違う
+      type = Object.entries(sc).sort((a, b) => b[1] - a[1])[0][0];
+    }
+    const info = HAN_TYPES[type];
+    const traits = [...(p.traits ?? [])];
+    const total = p.leadership + p.war + p.intelligence + p.politics + p.charisma;
+    const target = fixed ? 5 : Math.min(5, 3 + (total >= 520 ? 1 : 0) + (total >= 570 ? 1 : 0));
+    const addOne = (t: string): void => { if (!traits.includes(t) && traits.length < (p.id === "vh_liu_hao" ? 99 : 5)) traits.push(t); };
+    for (const t of fixed?.add ?? []) addOne(t);
+    if (!fixed) {
+      // 型の特性を1つは必ず持つ。そのあと、目標の数まで型の候補から足す
+      if (!traits.some((t) => info.traits.includes(t))) { if (traits.length >= 5) traits.pop(); addOne(info.traits[Math.floor(chance(`${p.id}|tt0`) * info.traits.length)]); }
+      for (const t of info.traits) { if (traits.length >= target) break; addOne(t); }
+    }
+    p.traits = traits;
+    this.emperorTraits[p.id] = [...traits];
+    this.emperorTypes[p.id] = type;
+    return { type, label: fixed?.label ?? info.label };
+  }
+
+  /**
+   * 治世の国家目標:皇帝の型の目標を、国の情勢で並べ直す。都市を大きく失っていれば失地回復、中国本土を統一していれば
+   * 西域遠征・シルクロード・周辺の属国化を先にする(国家AIを止めない)
+   */
+  nationalGoals(f: string, rec: EmperorRecord): string[] {
+    const base = [...(HAN_TYPES[rec.type ?? ""]?.goals ?? ["中国統一", "経済・人口の発展", "国境防衛"])];
+    const peak = Math.max(...this.emperors.filter((r) => r.factionId === f).map((r) => Math.max(r.citiesStart, r.citiesEnd ?? 0)), this.citiesOf(f));
+    const now = this.citiesOf(f);
+    const unified = !!this.c.history?.flags.vh_unified || this.coreShare(f) >= 0.8;
+    let g = base;
+    if (peak >= 5 && now < peak * 0.8) g = ["失地回復", ...g.filter((x) => x !== "失地回復")];
+    if (unified) {
+      g = g.map((x) => (x === "中国統一" ? "西域遠征" : x));
+      for (const x of ["シルクロードの支配", "周辺勢力の属国化"]) if (!g.includes(x)) g.push(x);
+    }
+    return [...new Set(g)].slice(0, 4);
+  }
+
+  /** 中国本土の都市のうち、その国のものの割合 */
+  coreShare(f: string): number {
+    const ex = new Set(["wandu", "pyongyang", "hanseong", "geumseong", "tuyuhunting"]);
+    const core = this.c.cities.filter((k) => k.kind !== "pass" && k.lon >= 96 && !ex.has(k.id));
+    return core.length ? core.filter((k) => scenario.cityOwners[k.id] === f).length / core.length : 0;
+  }
+
+  /** 治世の総合評価(0〜100):領土・戦績・皇室の安定・人口・財政・兵力の増減 */
+  reignScore(r: EmperorRecord): number {
+    const d = (r.citiesEnd ?? r.citiesStart) - r.citiesStart;
+    const rate = (a?: number, b?: number | null) => (a && b !== null && b !== undefined ? (b - a) / Math.max(1, a) : 0);
+    let v = 50 + Math.max(-30, Math.min(25, d * 1.5)) + Math.max(-10, Math.min(10, (r.wins - r.losses) * 0.4)) + ((r.stabilityEnd ?? 60) - 60) / 4;
+    v += Math.max(-8, Math.min(8, rate(r.popStart, r.popEnd) * 40)) + Math.max(-5, Math.min(5, rate(r.goldStart, r.goldEnd) * 5)) + Math.max(-6, Math.min(6, rate(r.troopsStart, r.troopsEnd) * 10));
+    v += Math.min(6, (r.vassalized?.length ?? 0) * 2) + (r.achievements.includes("天下統一") ? 10 : 0);
+    if ((r.citiesEnd ?? 1) === 0) v = Math.min(v, 10);
+    return Math.round(Math.max(0, Math.min(100, v)));
+  }
+
+  /** 毎月:国の効果の「毎月の忠誠・治安」(漢の正統+2など)を加える。家臣の忠誠は100、治安は100まで */
+  private monthlyTraitFlats(): void {
+    if (!scenario.virtual) return;
+    const day = Math.floor(this.c.day);
+    const L = this.c.loyalty;
+    for (const g of scenario.factions) {
+      if (g.fallen || g.passive) continue;
+      const list = factionTraitEffects(g.id, day, (id) => this.c.personStatus(id));
+      const lm = factionFlat(list, "loyaltyMonthly"), om = factionFlat(list, "orderMonthly");
+      if (lm > 0 && L) for (const p of persons) if (p.factionId === g.id && p.role !== "ruler" && L.loyalty[p.id] !== undefined && this.c.personStatus(p.id) === "active") L.loyalty[p.id] = Math.min(100, L.loyalty[p.id] + lm);
+      if (om > 0) for (const k of this.c.cities) { const st = this.c.cityStates[k.id]; if (scenario.cityOwners[k.id] === g.id && st?.order !== undefined) st.order = Math.min(100, st.order + om); }
+    }
+  }
+
   /**
    * 毎月:漢の皇帝の代替わりを記録する(仮想シナリオ)。在位中の皇帝が君主でなくなったら在位を閉じ、
    * 漢(皇帝の位)のまま新しい君主が立っていれば、次の代の在位を始める。国が滅びたら閉じる
@@ -1838,6 +2055,8 @@ export class Court {
       const f = rec.factionId;
       const fac = scenario.factions.find((x) => x.id === f);
       const cur = this.c.rulerOf(f);
+      // 国家目標は、国の情勢(統一したか・都市を失ったか)で毎月見直す
+      if (cur?.id === rec.personId) { rec.goals = this.nationalGoals(f, rec); rec.legit = this.isLegitEmperor(f); }
       const flag = this.c.history?.flags.vh_unified;
       // 天下統一は、成しとげた代(フラグが立ったときに在位していた皇帝)だけに記す
       if (flag === f && !this.emperors.some((r) => r.factionId === f && r.achievements.includes("天下統一"))) rec.achievements.push("天下統一");
