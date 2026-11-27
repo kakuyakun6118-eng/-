@@ -554,6 +554,41 @@ export class StrategyAi {
       this.c.addNews(`${this.name(f)}が属国の${vn}を併合しました`);
     }
 
+    // 漢室再興(仮想シナリオ):劉皓の国は、漢の二つの都(洛陽・長安)を持つ国を討つ。その国が自国の属国なら、併合する
+    if (scenario.virtual && this.c.rulerOf(f)?.id === "vh_liu_hao") {
+      for (const id of ["luoyang", "changan"]) {
+        const o = scenario.cityOwners[id];
+        if (!o || o === f || !this.isLive(o)) continue;
+        if (this.c.diplo.overlord[o] === f) {
+          const on = this.name(o);
+          this.c.annex(o, f);
+          this.note(f, `漢の都(${this.c.cities.find((k) => k.id === id)?.name})を持つ属国の${on}を併合した(漢室再興)`);
+          this.c.addNews(`${this.name(f)}が、漢の都を持つ属国の${on}を併合しました`);
+          continue;
+        }
+        const rel = this.c.relationOf(f, o);
+        if (rel === "war" || rel === "alliance" || this.c.relationAge(f, o) < 180) continue;
+        if (power >= this.strengthOf(o) * 1.2) {
+          const r = this.c.diplo.act(f, o, "war");
+          if (r.ok) {
+            this.st(f).wars++;
+            this.note(f, `漢の都(${this.c.cities.find((k) => k.id === id)?.name})を取り戻すため、${this.name(o)}に宣戦(漢室再興)`);
+          }
+        }
+      }
+      // 天下統一:漢の二つの都を持ち、戦争の相手がいないときは、中国本土で隣り合う最も強い国に宣戦する(属国・同盟国は除く。国力1.1倍以上のとき)
+      const both = ["luoyang", "changan"].every((id) => scenario.cityOwners[id] === f);
+      const atWarCore = scenario.factions.some((g) => g.id !== f && this.isLive(g.id) && this.c.atWar(f, g.id) && this.citiesOf(g.id).some((k) => k.lon >= 100));
+      if (both && !atWarCore) {
+        const rival = scenario.factions.filter((g) => g.id !== f && !g.passive && this.isLive(g.id) && this.c.diplo.overlord[g.id] !== f && !["alliance", "vassal", "war"].includes(this.c.relationOf(f, g.id))
+          && this.c.relationAge(f, g.id) >= 180 && this.c.diplo.neighbors(f, g.id) && this.citiesOf(g.id).some((k) => k.lon >= 100))
+          .sort((a, b) => this.strengthOf(b.id) - this.strengthOf(a.id))[0];
+        if (rival && power >= this.strengthOf(rival.id) * 1.1 && this.c.diplo.act(f, rival.id, "war").ok) {
+          this.st(f).wars++;
+          this.note(f, `天下統一のため、${rival.name}に宣戦(漢の都はすでに手中にある)`);
+        }
+      }
+    }
     // 宣戦:拡大・統一の方針で、戦う相手がいないか少ないとき、弱い隣国を選ぶ(同盟・不可侵・従属の相手は除く)
     const wars = enemies.length;
     if ((posture === "expand" || posture === "unify" || (posture === "invade" && wars === 0)) && wars < (posture === "unify" ? 2 : 1) && cap) {
@@ -1102,6 +1137,11 @@ export class StrategyAi {
       if (r && this.c.court.isMinor(r)) { mult *= 1.2; why.push(`${this.name(owner)}の君主が幼い`); }
       if (this.c.history?.flags.houqin_weak && persons.some((p) => p.factionId === owner && /^姚/.test(p.name) && p.role === "ruler")) { mult *= 1.5; why.push("後秦は姚興の死で揺れている"); }
       if (this.c.history?.flags.liuyu_unify && city.lat > 33.5) { mult *= 1.3; why.push("北方の統一を目指す"); }
+    }
+    // 仮想シナリオ(炎漢再興):劉皓の国は、漢の二つの都(洛陽・長安)を重んじ、ほかの国の都もやや重んじる(漢室再興)
+    if (scenario.virtual && persons.some((p) => p.id === "vh_liu_hao" && p.factionId === f && p.role === "ruler")) {
+      if (city.id === "luoyang" || city.id === "changan") { mult *= 2.2; why.push("漢の都を取り戻す"); }
+      else if (this.c.isCapital?.(city.id)) { mult *= 1.3; why.push("天下統一のため敵の都を狙う"); }
     }
     const xia = persons.find((p) => p.id === "helian_bobo" && p.factionId === f && p.role === "ruler" && this.c.personStatus(p.id) === "active");
     if (xia && GUANZHONG.includes(city.id)) {

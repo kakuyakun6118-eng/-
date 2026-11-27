@@ -1399,7 +1399,9 @@ export class Court {
       }
       // 皇帝即位(史実の即位年を過ぎていれば、なりやすい)
       const chk = this.crownCheck(f.id);
-      if (chk.ok && rnd("crown") < ((FAMILY.historicCrown[f.id] ?? 9999) <= this.year() ? 0.6 : 0.15)) this.crown(f.id);
+      // 仮想シナリオ:劉皓の国は、宮廷のAIでは皇帝を称さない(「大漢皇帝即位」の事件で、国号を漢と改めて即位する)
+      const hao = scenario.virtual && r.id === "vh_liu_hao";
+      if (!hao && chk.ok && rnd("crown") < ((FAMILY.historicCrown[f.id] ?? 9999) <= this.year() ? 0.6 : 0.15)) this.crown(f.id);
       // 不安定な宮廷を慰撫する(金を配る)
       if ((this.stability[f.id] ?? 60) < 35 && purse.gold > 2000) {
         purse.gold -= 1000;

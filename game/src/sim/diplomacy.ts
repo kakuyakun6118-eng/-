@@ -546,6 +546,39 @@ export class Diplomacy {
    * 同盟国が劣勢なら援軍を送り、ときに婚姻同盟を結ぶ。財政難のときは贈答をしない。
    * 同盟は1国につき2つまでとし、条件の合わない同盟は結ばない。
    */
+  /**
+   * 仮想シナリオの覇者への対応(3か月に1度)。覇者 = 全体の国力の35%以上を持つ国。
+   * ・隣り合う、国力が覇者の1/6未満の国:12%の見込みで臣従する(降伏。君主は残る)
+   * ・それ以外で覇者と隣り合う国:覇者と同盟していなければ、覇者と隣り合うほかの国と対抗の同盟を結ぶ(同盟は2つまで)
+   * 何かをしたら true(その国の、この回のほかの外交はしない)
+   */
+  private virtualHegemon(me: string, alive: typeof scenario.factions, myPower: number, envoy: string | undefined, rnd: (s: string) => number): boolean {
+    const total = alive.reduce((s, g) => s + this.power(g.id), 0);
+    const hg = alive.find((g) => g.id !== me && this.power(g.id) >= total * 0.35);
+    if (!hg || !this.neighbors(me, hg.id) || ["alliance", "vassal"].includes(this.c.relationOf(me, hg.id))) return false;
+    // 漢の都(洛陽・長安)を持つ国は、劉皓の国には降らない(都を明け渡すことになるため。戦うか、ほかの国と結ぶ)
+    const holdsHanCapital = ["luoyang", "changan"].some((id) => scenario.cityOwners[id] === me);
+    if (myPower < this.power(hg.id) / 6 && !holdsHanCapital && rnd("vh_submit") < 0.12) {
+      this.overlord[me] = hg.id;
+      this.c.setRelation(me, hg.id, "vassal");
+      this.counts.vassals++;
+      this.log(me, hg.id, `${scenario.factions.find((g) => g.id === me)?.name}が大国の${hg.name}に降る`);
+      this.c.addNews(`${scenario.factions.find((g) => g.id === me)?.name}が、${hg.name}の強大さを見て臣従しました`);
+      return true;
+    }
+    const allies = alive.filter((g) => this.c.relationOf(me, g.id) === "alliance").length;
+    if (allies >= 2 || rnd("vh_coal") > 0.4) return false;
+    const cand = alive.filter((g) => g.id !== me && g.id !== hg.id && g.id !== this.c.playerFactionId && this.neighbors(g.id, hg.id) && !["war", "vassal", "alliance"].includes(this.c.relationOf(me, g.id)) && this.c.relationOf(g.id, hg.id) !== "alliance" && this.c.relationOf(g.id, hg.id) !== "vassal")
+      .sort((a, b) => this.power(b.id) - this.power(a.id))[0];
+    if (!cand) return false;
+    const r = this.act(me, cand.id, "alliance", { envoyId: envoy });
+    if (r.ok) {
+      this.log(me, cand.id, `${hg.name}に対抗する連合`);
+      this.c.addNews(`${scenario.factions.find((g) => g.id === me)?.name}と${cand.name}が、${hg.name}に対抗する同盟を結びました(対抗連合)`);
+    }
+    return r.ok;
+  }
+
   aiQuarter(aggression: number, warRatio: number): void {
     const day = Math.floor(this.c.day);
     const alive = scenario.factions.filter((f) => !f.passive && !f.fallen && this.c.cities.some((x) => scenario.cityOwners[x.id] === f.id));
@@ -575,6 +608,8 @@ export class Diplomacy {
           this.c.addNews(`${f.name}が${big.name}に臣従しました(自治は保つ)`);
         }
       }
+      // 仮想シナリオ:天下の4割近い国力を持つ大国(覇者)に対し、小国は降るか、ほかの国と対抗の同盟を結ぶ
+      if (scenario.virtual && this.virtualHegemon(me, alive, myPower, envoy, rnd)) continue;
       // 1) 劣勢の戦争は、停戦か和平を求める
       const threat = this.threatOf(me);
       if (threat && this.power(threat) > myPower * 1.6 && Math.min(this.c.relationAge(me, threat), day) >= 360) {

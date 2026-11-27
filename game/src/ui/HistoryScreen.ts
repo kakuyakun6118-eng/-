@@ -4,7 +4,7 @@
 import { CHANGE_LABEL } from "../sim/eventDiff";
 import { persons, scenario } from "../data";
 import type { Campaign } from "../sim/Campaign";
-import { KIND_LABEL, STATUS_LABEL, type HistEventDef } from "../sim/history";
+import { KIND_LABEL, STATUS_LABEL, VIRTUAL_KIND_LABEL, type HistEventDef } from "../sim/history";
 import { fillPortrait } from "./portrait";
 
 export interface HistoryActions {
@@ -100,7 +100,7 @@ export class HistoryEventScreen {
         b.type = "button";
         b.dataset.kind = ch.kind;
         b.dataset.id = ch.id;
-        b.append(el("span", "hist-kind", KIND_LABEL[ch.kind]), el("b", "", ch.label), el("small", "", ch.desc), el("em", "", `予想される影響:${ch.preview}`));
+        b.append(el("span", "hist-kind", (d.virtual ? VIRTUAL_KIND_LABEL : KIND_LABEL)[ch.kind]), el("b", "", ch.label), el("small", "", ch.desc), el("em", "", `予想される影響:${ch.preview}`));
         b.addEventListener("click", () => {
           const text = h.choose(d.id, ch.id);
           this.actions.onChanged();

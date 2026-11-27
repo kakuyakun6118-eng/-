@@ -10,6 +10,7 @@ import { distanceKm } from "./pathfinding";
 import { chance } from "./spoils";
 import { EXTRA_EVENTS } from "./historyEvents2";
 import { LIUYU_EVENTS } from "./historyLiuYu";
+import { VIRTUAL_EVENTS } from "./historyVirtual";
 import { diffSnapshots, snapshot, type EventDiff } from "./eventDiff";
 
 /** 歴史の会戦・攻城戦を、その場で始めてよい距離(これより遠い軍団は、戦場まで進軍させる) */
@@ -157,7 +158,20 @@ export interface HistEventDef {
    * 後継者と残る都市があれば国は続く(なければ滅びる)。首都でない都市でも、この決まりで君主の捕縛を扱う
    */
   fallRule?: { capture: "ifPresent"; survive: boolean };
+  /** この事件が起こるシナリオ(省くと、すべてのシナリオ)。仮想シナリオの事件は、そのシナリオだけ */
+  scenarios?: string[];
+  /**
+   * 条件で起こる事件(仮想シナリオ):決まった年月ではなく、領土・威信・人物の生存・軍事力・外交の条件(ready)がそろった月に起こる。
+   * そろわないあいだは「未発生」のまま待つ(分岐にしない)。year・month は、この年月より前には起こらないという下限
+   */
+  conditional?: boolean;
+  /** 仮想シナリオの事件(選択肢の種類の名前を「王道・堅実・大胆」で出す) */
+  virtual?: boolean;
+  /** 条件で起こる事件で、この選択なら「未発生」に戻して、1年たったあと条件がそろえば、また起こす(即位を見送るなど) */
+  rearm?: (picks: Record<string, string>) => boolean;
 }
+/** 仮想シナリオの事件の選択肢の種類の名前 */
+export const VIRTUAL_KIND_LABEL: Record<ChoiceKind, string> = { historic: "王道", alt: "堅実", bold: "大胆" };
 
 // ---------------- 勢力の見つけ方 ----------------
 export const live = (c: Campaign, f: string | undefined): boolean => !!f && !scenario.factions.find((x) => x.id === f)?.fallen && c.cities.some((x) => scenario.cityOwners[x.id] === f);
@@ -186,7 +200,7 @@ export class HistorySystem {
   timeline: TimelineEntry[] = [];
   /** プレイヤーに見せる順番待ち(decide:選択、news:結果の知らせ、branch:分岐の説明) */
   queue: { id: string; mode: "decide" | "news" | "branch" }[] = [];
-  readonly defs: HistEventDef[] = [...EVENTS, ...EXTRA_EVENTS, ...LIUYU_EVENTS].sort((a, b) => a.year * 12 + a.month - (b.year * 12 + b.month));
+  readonly defs: HistEventDef[] = [...EVENTS, ...EXTRA_EVENTS, ...LIUYU_EVENTS, ...VIRTUAL_EVENTS].filter((d) => !d.scenarios || d.scenarios.includes(scenario.id)).sort((a, b) => a.year * 12 + a.month - (b.year * 12 + b.month));
   /** 進軍中の歴史の会戦の目印(出会ったとき・城に着いたときの戦いに、事件のIDを付ける) */
   tags: { a: string; b?: string; city?: string; histId: string; until: number; tactics?: BattleEvent["tactics"] }[] = [];
   /** イベント前の準備行動の記録(集結・兵糧・援軍・防備・偵察) */
@@ -372,7 +386,7 @@ export class HistorySystem {
     this.prep = {};
     const startM = scenario.startMonth ?? 3;
     for (const d of this.defs) {
-      const past = d.year < scenario.year || (d.year === scenario.year && d.month < startM);
+      const past = !d.conditional && (d.year < scenario.year || (d.year === scenario.year && d.month < startM));
       this.records[d.id] = { status: past ? "past" : "pending", picks: {} };
       if (past) this.timeline.push({ day: -1, date: `${d.year}年${d.month}月`, kind: "past", text: `${d.name}(開始前の史実):${d.history}`, eventId: d.id });
     }
@@ -410,6 +424,14 @@ export class HistorySystem {
       const rec = this.records[d.id];
       if (rec.status !== "pending") continue;
       if (year < d.year || (year === d.year && month < d.month)) continue;
+      // 条件で起こる事件:条件がそろった月にだけ起こす(そろわなければ待つ。分岐にはしない)
+      if (d.conditional) {
+        // 見送った事件(rearm)は、1年たつまで、また起こさない
+        if (rec.day !== undefined && Math.floor(this.c.day) - rec.day < 360) continue;
+        const x = this.ctx();
+        const roles = d.roles(x);
+        if (d.done?.(x, roles) || d.ready(x, roles) !== true) continue;
+      }
       this.trigger(d);
     }
   }
@@ -495,6 +517,7 @@ export class HistorySystem {
     // 事件の会戦・攻城戦を始められなかった(軍団がない等)なら、史実どおりには起きていない(Version 42)
     const historic = !this.notDone && Object.entries(picks).every(([role, id]) => d.choices[role].find((ch) => ch.id === id)?.kind === "historic");
     rec.status = historic ? "occurred" : "branched";
+    if (d.conditional && d.rearm?.(picks)) rec.status = "pending";
     rec.historic = historic;
     // 会戦がその場で決着した場合は、onBattle が書いた結果を後ろにつなぐ
     rec.result = rec.result ? `${text}${rec.result}` : text;
@@ -527,8 +550,9 @@ export class HistorySystem {
     const now = year * 12 + month;
     const hist = d.year * 12 + d.month;
     const mode = c.historyMode;
-    // 1) 時期
-    if (now >= hist) out.push({ label: `史実の年月(${d.year}年${d.month}月)に達している`, ok: true });
+    // 1) 時期(条件で起こる事件は、年月ではなく条件で決まる)
+    if (d.conditional) out.push({ label: `年月ではなく条件で起こる事件(${d.year}年${d.month}月以降)`, ok: now >= hist, why: now >= hist ? undefined : `${d.year}年${d.month}月より前には起こらない` });
+    else if (now >= hist) out.push({ label: `史実の年月(${d.year}年${d.month}月)に達している`, ok: true });
     else if (mode === "free") {
       const early = hist - now <= 15 * 12;
       out.push({ label: `自由歴史:史実(${d.year}年${d.month}月)より早い発動(15年前まで)`, ok: early, why: early ? undefined : `史実の年月まで${Math.ceil((hist - now) / 12)}年あり、早すぎる` });
@@ -692,7 +716,7 @@ export class HistorySystem {
       const { year, month } = this.c.calendar();
       for (const d of this.defs) {
         const r = this.records[d.id];
-        if (r.status === "pending" && d.year * 12 + d.month < year * 12 + month) {
+        if (r.status === "pending" && !d.conditional && d.year * 12 + d.month < year * 12 + month) {
           r.status = "past";
           this.timeline.push({ day: -1, date: `${d.year}年${d.month}月`, kind: "past", text: `${d.name}(古いセーブのため記録なし):${d.history}`, eventId: d.id });
         }
