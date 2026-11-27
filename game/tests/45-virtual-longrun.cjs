@@ -26,7 +26,9 @@ const path = require('path');
         const h = c.history; for (const id of ['vh_emperor', 'vh_unify']) if (!window.__first[id] && ['occurred', 'branched'].includes(h.records[id]?.status) && h.records[id].date) window.__first[id] = h.records[id].date;
         for (const k of Object.keys(bad)) if (Array.isArray(bad[k]) && bad[k].length > 30) bad[k].length = 30; };
       window.__run = (days) => { const h = c.history; const d0 = c.day; let n = 0; let ly = c.calendar().year; while (c.day - d0 < days && n++ < 9e6) {
-        if (c.gameOver) { const nx = D.scenario.factions.filter(f => !f.fallen && c.cities.some(k => D.scenario.cityOwners[k.id] === f.id))[0]; if (!nx) break; c.gameOver = false; g.changeSettings({ playerFactionId: nx.id }); }
+        // Version 67:プレイヤーの国が滅んだとき、次のプレイヤーの国に楚(漢)を選ばない。楚を選ぶと楚のAIが止まり、
+        // 楚がそのまま何十年も動かなくなっていた(Version 64 の「漢の滅亡」の調査で分かった、テストの作りの問題。docs/v67-collapse-investigation.md)
+        if (c.gameOver) { const nx = D.scenario.factions.filter(f => !f.fallen && f.id !== 'chu' && c.cities.some(k => D.scenario.cityOwners[k.id] === f.id))[0]; if (!nx) break; c.gameOver = false; g.changeSettings({ playerFactionId: nx.id }); }
         const aw = h.awaiting; if (aw) { const ro = aw.roles(h.ctx()); const role = Object.keys(aw.choices).find(k => ro[k] === c.playerFactionId) ?? Object.keys(aw.choices).find(k => ro[k]); h.choose(aw.id, h.aiPick(aw, ro, role)); }
         h.queue = h.queue.filter(q => q.mode === 'decide');
         if (c.speed === 0) { for (const ev of c.events.filter(e => e.status === 'pending')) { const st = window.__gokoSetup(ev); if (st) c.applyBattleResult(window.__gokoAuto(st)); else c.setEventStatus(ev.battleId, 'cancelled'); } for (const s of c.armies) if (s.status === 'fighting' && !c.openEventOfArmy(s.army.id)) s.status = 'camping'; if (c.spoils.pending) c.resolveCapture('preserve', true); c.speed = 8; }
