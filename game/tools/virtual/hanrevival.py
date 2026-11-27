@@ -10,6 +10,8 @@ def save(p, d): json.dump(d, open(p, 'w', encoding='utf-8'), ensure_ascii=False,
 SID, BASE, Y = 's304v', 's304', 304
 CHU = ['xiangyang', 'jiangling', 'wan', 'wuchang', 'xinye']
 V = '仮想(ゲームの創作)'
+# 宣帝の血統(劉氏三代と、劉皓の子孫)
+XUANDI = {'vh_liu_xiong', 'vh_liu_hao_f', 'vh_liu_hao', 'vh_liu_cheng', 'vh_liu_wei', 'vh_liu_rui', 'vh_liu_ying', 'vh_liu_hong'}
 
 def P(id, name, reading, age_or_born, L, W, I, Po, C, traits, unit, bio, personality, title, gender=None, people='漢', born=None, died=None):
     b = born if born else Y - age_or_born
@@ -17,6 +19,7 @@ def P(id, name, reading, age_or_born, L, W, I, Po, C, traits, unit, bio, persona
          'leadership': L, 'war': W, 'intelligence': I, 'politics': Po, 'charisma': C, 'traits': traits, 'favoredUnit': unit,
          'bio': bio, 'personality': personality, 'people': people, 'fictional': True, 'virtual': True, 'note': '仮想シナリオ「炎漢再興」の架空の人物(史実の同名の人物とは別)'}
     if gender: o['gender'] = gender
+    if id in XUANDI: o['bloodline'] = 'xuandi'
     return o
 
 PERSONS = [
@@ -49,6 +52,14 @@ PERSONS = [
  P('vh_su_wan', '蘇婉', 'そえん', 25, 78, 60, 112, 110, 115, ['仁医'], None, '襄陽の医家の娘。戦で傷ついた兵を数多く救い、楚の民政にも加わる。', '優しく芯が強い', '太医令', gender='female'),
  P('vh_shen_yuehua', '沈月華', 'しんげっか', 23, 95, 96, 108, 98, 110, ['月華の弩'], 'archer', '呉興の武門の娘。弩の名手として神弩軍を率いる。', '凛として誇り高い', '神弩軍の将', gender='female'),
  P('vh_gu_qinglan', '顧清蘭', 'こせいらん', 27, 80, 65, 108, 115, 108, ['清廉の政'], None, '呉郡顧氏の娘。清廉な政治で知られ、楚の財政と法令を整える。', '理知的で公平', '尚書左丞', gender='female'),
+ # ---- Version 65:皇族(劉皓の妻と子孫)。能力値は成人時の目標(年少のあいだは成長の計算で小さく出る) ----
+ P('vh_xie_rong', '謝蓉', 'しゃよう', 0, 72, 45, 108, 104, 112, ['賢后'], None, '陳郡謝氏の娘と伝えられる(架空)。劉皓の正室で、楚王后。聡明で、劉皓の留守には襄陽の内政を支えた。', '穏やかで芯が強い', '楚王后', gender='female', born=282),
+ P('vh_liu_cheng', '劉承', 'りゅうしょう', 0, 115, 108, 116, 118, 119, ['帝王之器', '仁政', '皇統継承'], 'infantry', '劉皓と謝蓉の嫡長子。幼いころから帝王の教育を受け、文武に秀でる万能の後継者に育つ(架空)。', '温厚で思慮深い', '世子', born=300),
+ P('vh_liu_wei', '劉威', 'りゅうい', 0, 118, 120, 96, 85, 108, ['武神', '破軍', '遠征無双'], 'cavalry', '劉皓の次男。父ゆずりの武勇で、長じて漢軍随一の猛将となる(架空)。', '豪快で一本気', '', born=302),
+ P('vh_liu_rui', '劉睿', 'りゅうえい', 0, 103, 82, 120, 119, 110, ['神算鬼謀', '王佐之才', '富国強兵'], None, '劉皓の三男。祖父 劉浩の才を受け継ぎ、知略と政治で兄たちを支える(架空)。305年に生まれるのは、両親がそろい夫婦であるときだけ。', '冷静で緻密', '', born=305),
+ P('vh_liu_ying', '劉瑛', 'りゅうえい(女)', 0, 98, 80, 115, 114, 120, ['才色兼備', '外交無双', '人心掌握'], None, '劉皓の長女。才知と美しさで知られ、外交の場で諸国の王を感服させる(架空)。307年に生まれるのは、両親がそろい夫婦であるときだけ。', '明るく聡明', '', gender='female', born=307),
+ P('vh_liu_hong', '劉弘', 'りゅうこう(皇孫)', 0, 118, 112, 118, 118, 120, ['中興之主', '文武双全', '盛世創造'], 'cavalry', '劉承と韓瑤の嫡長子。劉皓の面影を最も強く受け継ぐ皇孫(架空)。320年に生まれるのは、劉承と韓瑤がともに生き、夫婦になっているときだけ。史実の劉弘(荊州刺史)とは別の人物。', '快活で度量が大きい', '', born=320),
+ P('vh_han_yao', '韓瑤', 'かんよう', 0, 70, 50, 100, 98, 108, ['賢后'], None, '韓玄策の娘(架空)。のちに劉承の正室となる。', '控えめで聡い', '', gender='female', born=302),
 ]
 save(os.path.join(SC, 'persons.virtual.json'), {'note': '仮想シナリオ(炎漢再興)の架空の人物。史実の人物の台帳(s317.persons・persons.extra)とは別に管理する。能力値は仮想シナリオに限り120まで。', 'persons': PERSONS})
 
@@ -74,8 +85,9 @@ if 'tao_kan' in roster: roster['tao_kan'] = {**roster['tao_kan'], 'cityId': 'cha
 home = {'vh_liu_hao': 'xiangyang', 'vh_liu_hao_f': 'xiangyang', 'vh_liu_xiong': 'xiangyang', 'vh_huo_lie': 'xiangyang', 'vh_han_xuance': 'wan', 'vh_pei_xuan': 'xiangyang', 'vh_chen_xu': 'jiangling',
         'vh_yang_hu': 'wan', 'vh_zhuge_xiang': 'jiangling', 'vh_zhao_lingyun': 'xiangyang', 'vh_wei_tian': 'wan', 'vh_murong_qian': 'wan', 'vh_ma_xuan': 'xiangyang', 'vh_zhou_jing': 'wuchang',
         'vh_xu_wenyuan': 'jiangling', 'vh_wang_mingde': 'xinye', 'vh_xun_jingming': 'xiangyang', 'vh_xie_xuanzhi': 'xiangyang', 'vh_lu_cheng': 'wuchang', 'vh_qin_wu': 'wan', 'vh_su_wan': 'xiangyang',
-        'vh_shen_yuehua': 'jiangling', 'vh_gu_qinglan': 'xiangyang'}
-for p in PERSONS:
+        'vh_shen_yuehua': 'jiangling', 'vh_gu_qinglan': 'xiangyang', 'vh_xie_rong': 'xiangyang'}
+# 名簿に入れるのは開始時に12歳以上の人だけ(劉承・劉威・韓瑤は、開始時に親のもとへ自動で加わる。劉睿・劉瑛・劉弘は条件がそろえば生まれる)
+for p in [q for q in PERSONS if q['id'] in home]:
     roster[p['id']] = {'factionId': 'chu', 'cityId': home[p['id']], **({'role': 'ruler'} if p['id'] == 'vh_liu_hao' else {})}
 CITY = {c['id']: c for c in load(os.path.join(ROOT, 'src/data/regions/north-china/cities.json'))}
 CITY['xinye'] = s['extraCities'][0]
@@ -103,7 +115,7 @@ s['startTreasury'] = {'chu': {'gold': 200000, 'grain': 1000000}}
 # 検査:人物の死者・重複・太守と指揮官の兼任
 cmd = {a['commanderId'] for a in s['armies']}
 assert not (cmd & set(s['governors'].values())), cmd & set(s['governors'].values())
-assert len([1 for p in PERSONS]) == 23
+assert len([1 for p in PERSONS if p['id'] in home]) == 24  # 武将23人+楚王后
 save(os.path.join(SC, f'{SID}.json'), s)
 
 # ---- 首都・外交・家系・宝物・配置・目録(s304 を写して、楚を足す) ----
@@ -126,6 +138,15 @@ d['parents']['vh_liu_hao'] = {'father': 'vh_liu_hao_f', 'note': '仮想シナリ
 d['parents']['vh_liu_hao_f'] = {'father': 'vh_liu_xiong', 'note': '仮想シナリオの架空の家系'}
 d['heirs'][SID] = {**copy.deepcopy(d['heirs'].get(BASE, {}))}
 d['ranks'][SID] = {**copy.deepcopy(d['ranks'].get(BASE, {})), 'chu': 'king'}
+for c, fam in {'vh_liu_cheng': ('vh_liu_hao', 'vh_xie_rong', False), 'vh_liu_wei': ('vh_liu_hao', 'vh_xie_rong', False), 'vh_liu_rui': ('vh_liu_hao', 'vh_xie_rong', True),
+               'vh_liu_ying': ('vh_liu_hao', 'vh_xie_rong', True), 'vh_liu_hong': ('vh_liu_cheng', 'vh_han_yao', True), 'vh_han_yao': ('vh_han_xuance', None, False)}.items():
+    e = {'father': fam[0], 'note': '仮想シナリオの架空の家系'}
+    if fam[1]: e['mother'] = fam[1]
+    if fam[2]: e['conditional'] = True
+    d['parents'][c] = e
+d['marriages'] = [m for m in d['marriages'] if not (m[0] == 'vh_liu_hao' and m[1] == 'vh_xie_rong')] + [['vh_liu_hao', 'vh_xie_rong', 'primary', '仮想シナリオ:劉皓の正室(楚王后)']]
+d['plannedMarriages'] = [{'husband': 'vh_liu_cheng', 'wife': 'vh_han_yao', 'kind': 'primary', 'minAge': 16, 'scenarios': ['s304v'], 'note': '仮想シナリオ:劉承と韓瑤は、ともに16歳になり生きていれば夫婦になる(劉弘の両親)'}]
+d['_noteConditional'] = 'parents の conditional:その年に両親が生きて夫婦であるときだけ生まれる子(仮想シナリオの劉睿・劉瑛・劉弘)。2年遅れまで待ち、条件がそろわなければ生まれない。'
 d['_noteVirtual'] = '仮想シナリオ(s304v):劉雄→劉浩→劉皓の三代は架空の家系。史実の人物とは別のID(vh_)で管理する。'
 save(p, d)
 p = os.path.join(ROOT, 'src/data/treasures/treasures.json'); d = load(p)

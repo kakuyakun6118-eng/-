@@ -236,6 +236,8 @@ export interface Person {
   personality?: string;
   /** 仮想シナリオの架空の人物のとき true(能力値は120まで) */
   virtual?: boolean;
+  /** 血統(仮想シナリオの「宣帝の血統」= xuandi。劉皓の直系の子孫に受け継がれる) */
+  bloodline?: string;
 }
 
 /** 以前の名前(武将)。同じものを指す */

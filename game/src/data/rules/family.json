@@ -484,6 +484,38 @@
   "vh_liu_hao_f": {
    "father": "vh_liu_xiong",
    "note": "仮想シナリオの架空の家系"
+  },
+  "vh_liu_cheng": {
+   "father": "vh_liu_hao",
+   "note": "仮想シナリオの架空の家系",
+   "mother": "vh_xie_rong"
+  },
+  "vh_liu_wei": {
+   "father": "vh_liu_hao",
+   "note": "仮想シナリオの架空の家系",
+   "mother": "vh_xie_rong"
+  },
+  "vh_liu_rui": {
+   "father": "vh_liu_hao",
+   "note": "仮想シナリオの架空の家系",
+   "mother": "vh_xie_rong",
+   "conditional": true
+  },
+  "vh_liu_ying": {
+   "father": "vh_liu_hao",
+   "note": "仮想シナリオの架空の家系",
+   "mother": "vh_xie_rong",
+   "conditional": true
+  },
+  "vh_liu_hong": {
+   "father": "vh_liu_cheng",
+   "note": "仮想シナリオの架空の家系",
+   "mother": "vh_han_yao",
+   "conditional": true
+  },
+  "vh_han_yao": {
+   "father": "vh_han_xuance",
+   "note": "仮想シナリオの架空の家系"
   }
  },
  "siblings": [
@@ -611,6 +643,12 @@
    "hu_daoan",
    "secondary",
    "劉義隆の母"
+  ],
+  [
+   "vh_liu_hao",
+   "vh_xie_rong",
+   "primary",
+   "仮想シナリオ:劉皓の正室(楚王后)"
   ]
  ],
  "heirs": {
@@ -1624,5 +1662,18 @@
   }
  ],
  "_noteDebuts": "debuts:途中から登場する史実の大人の人物(tools/liuyu/debuts.py が書く)。開始の年より後の登場だけ使う。ゆかりの人物がいなければ登場しない。",
- "_noteVirtual": "仮想シナリオ(s304v):劉雄→劉浩→劉皓の三代は架空の家系。史実の人物とは別のID(vh_)で管理する。"
+ "_noteVirtual": "仮想シナリオ(s304v):劉雄→劉浩→劉皓の三代は架空の家系。史実の人物とは別のID(vh_)で管理する。",
+ "plannedMarriages": [
+  {
+   "husband": "vh_liu_cheng",
+   "wife": "vh_han_yao",
+   "kind": "primary",
+   "minAge": 16,
+   "scenarios": [
+    "s304v"
+   ],
+   "note": "仮想シナリオ:劉承と韓瑤は、ともに16歳になり生きていれば夫婦になる(劉弘の両親)"
+  }
+ ],
+ "_noteConditional": "parents の conditional:その年に両親が生きて夫婦であるときだけ生まれる子(仮想シナリオの劉睿・劉瑛・劉弘)。2年遅れまで待ち、条件がそろわなければ生まれない。"
 }

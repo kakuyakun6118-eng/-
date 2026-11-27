@@ -977,6 +977,10 @@
   "vh_gu_qinglan": {
    "factionId": "chu",
    "cityId": "xiangyang"
+  },
+  "vh_xie_rong": {
+   "factionId": "chu",
+   "cityId": "xiangyang"
   }
  },
  "virtual": true,

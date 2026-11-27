@@ -13,7 +13,9 @@ const path = require('path');
 
   // ---------- 1. シナリオ・人物・血縁 ----------
   const r1 = await p.evaluate(() => { const g = window.__goko, c = g.campaign, D = window.__gokoData;
-    const chu = D.persons.filter(x => x.factionId === 'chu'); const P = (id) => D.persons.find(x => x.id === id);
+    // Version 65:皇族(楚王后 謝蓉・劉承・劉威・韓瑤)も楚にいる。「武将23人」は、開始時の武将(劉氏三代と家臣20人)で数える
+    const ROYAL = ['vh_xie_rong', 'vh_liu_cheng', 'vh_liu_wei', 'vh_liu_rui', 'vh_liu_ying', 'vh_liu_hong', 'vh_han_yao'];
+    const chu = D.persons.filter(x => x.factionId === 'chu' && !ROYAL.includes(x.id)); const P = (id) => D.persons.find(x => x.id === id);
     const st = (id) => { const x = P(id); return [x.leadership, x.war, x.intelligence, x.politics, x.charisma].join('/'); };
     const arm = c.armies.filter(s => s.army.factionId === 'chu');
     const chuCities = c.cities.filter(k => D.scenario.cityOwners[k.id] === 'chu');

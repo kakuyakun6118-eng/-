@@ -9,10 +9,10 @@ export interface TraitEffect {
   label: string;
   battle?: number; attack?: number; defend?: number; morale?: number; cavalry?: number; infantry?: number; archer?: number; siege?: number; naval?: number;
   march?: number; food?: number; fatigue?: number; income?: number; grain?: number; cityIncome?: number; order?: number; recruit?: number; plot?: number; plotResist?: number;
-  loyalty?: number; volunteer?: boolean; amity?: number; affection?: number; heal?: number; cityDefense?: number;
+  loyalty?: number; volunteer?: boolean; amity?: number; affection?: number; heal?: number; cityDefense?: number; succession?: boolean;
 }
 const TRAITS = (rules as unknown as { traits: Record<string, TraitEffect> }).traits;
-export const LIMITS = (rules as unknown as { limits: { battle: number; income: number; order: number; recruitMax: number; plotMax: number; amity: number; affection: number } }).limits;
+export const LIMITS = (rules as unknown as { limits: { battle: number; income: number; order: number; recruitMax: number; plotMax: number; amity: number; affection: number; loyalty: number } }).limits;
 
 /** その人物の特殊能力(効果表にあるものだけ) */
 export function effectsOf(p: Person | null | undefined, scope?: TraitEffect["scope"]): { name: string; e: TraitEffect }[] {
@@ -107,7 +107,7 @@ export function orderMult(list: TraitEffect[]): number {
   return Math.min(LIMITS.order, m);
 }
 /** 加える値(登用の見込み・忠誠)、倍率(調略・友好度・負傷) */
-export const sumOf = (list: TraitEffect[], k: "recruit" | "loyalty"): number => list.reduce((s, e) => s + (e[k] ?? 0), 0);
+export const sumOf = (list: TraitEffect[], k: "recruit" | "loyalty"): number => Math.min(k === "loyalty" ? LIMITS.loyalty : 1, list.reduce((s, e) => s + (e[k] ?? 0), 0));
 export const prodOf = (list: TraitEffect[], k: "plot" | "plotResist" | "amity" | "heal"): number => list.reduce((s, e) => s * (e[k] ?? 1), 1);
 /** 本人の効果(絶世の英姿:友好度・後宮の好感度) */
 export function personMult(p: Person | null | undefined, k: "amity" | "affection"): number {

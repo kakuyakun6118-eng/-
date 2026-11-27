@@ -1,7 +1,7 @@
 // 皇室・王族:家系(父・母・配偶者・子女・兄弟)、正室と側室、子女の誕生と成長、後継者(皇太子)、
 // 君主の死と皇位継承、継承争いと内乱、皇帝即位、宮廷政治(安定度・外戚・廃立・簒奪)、寿命による死。
 // 血縁はすべて人物IDで記録する。史料にある親子・兄弟・婚姻は family.json、ゲーム内で生まれた人物は架空として区別する。
-import { factionTraitEffects, prodOf } from "./virtualTraits";
+import { effectsOf, factionTraitEffects, prodOf } from "./virtualTraits";
 import familyData from "../data/rules/family.json";
 import successionRules from "../data/rules/succession.json";
 import deathData from "../data/rules/deaths.json";
@@ -18,7 +18,9 @@ type Stats = { leadership: number; war: number; intelligence: number; politics: 
 const STAT_KEYS = ["leadership", "war", "intelligence", "politics", "charisma"] as const;
 
 interface FamilyFile {
-  parents: Record<string, { father?: string; mother?: string; note?: string; adopted?: boolean }>;
+  parents: Record<string, { father?: string; mother?: string; note?: string; adopted?: boolean; conditional?: boolean }>;
+  /** 決まった夫婦(仮想シナリオの劉承と韓瑤など):ともに生きて minAge 歳になれば結ばれる */
+  plannedMarriages?: { husband: string; wife: string; kind: "primary" | "secondary"; minAge: number; scenarios?: string[]; note?: string }[];
   siblings: string[][];
   marriages: [string, string, "primary" | "secondary", string][];
   heirs: Record<string, Record<string, string>>;
@@ -129,6 +131,8 @@ export class Court {
       if (p && p.factionId === fid) this.heirs[fid] = pid;
     }
     for (const p of persons) this.snapshot(p);
+    // 仮想シナリオ:開始時から、子の能力を年齢に合わせて出す(劉承・劉威など。成人時の値が記録されているため)
+    if (scenario.virtual) this.applyGrowth();
   }
 
   /**
@@ -156,7 +160,7 @@ export class Court {
       }
     }
     for (const [child, fam] of Object.entries(FAMILY.parents)) {
-      if (persons.some((p) => p.id === child)) continue;
+      if (fam.conditional || persons.some((p) => p.id === child)) continue;
       const base = ledgerPerson(child);
       if (!base || base.born === null || base.born > scenario.year || scenario.year - base.born > 20 || (base.died !== null && base.died < scenario.year)) continue;
       const parent = [fam.father, fam.mother].map((id) => persons.find((p) => p.id === id)).find((p) => !!p);
@@ -401,6 +405,12 @@ export class Court {
   successionOrder(f: string, exclude?: string): { p: Person; reason: string; score: number }[] {
     const ruler = this.c.rulerOf(f);
     const rid = exclude ?? ruler?.id;
+    // 仮想シナリオの劉氏の皇統(宣帝の血統):決まった順位で継ぐ。劉氏の皇族がいる限り、家臣は継がない
+    const old = rid ? persons.find((p) => p.id === rid) : undefined;
+    if (scenario.virtual && old?.bloodline === "xuandi") {
+      const d = this.dynasticOrder(f, old);
+      if (d.length) return d;
+    }
     const out: { p: Person; reason: string; score: number }[] = [];
     for (const p of persons) {
       if (p.factionId !== f || p.id === rid || p.gender === "female" || this.c.personStatus(p.id) !== "active" || this.c.spoils.custodyOf(p.id)) continue;
@@ -444,6 +454,48 @@ export class Court {
       }
       out.push({ p, reason, score });
     }
+    return out.sort((a, b) => b.score - a.score);
+  }
+
+  /**
+   * 皇統の継承順位(仮想シナリオの劉氏。楚王の時代も同じ):
+   * 1 指名された皇太子・世子 → 2 嫡長子(正室の子の長子) → 3 ほかの実子 → 4 孫・曾孫など直系の子孫 → 5 兄弟とその子
+   * → 6 父・祖父など存命の皇族 → 7 そのほかの劉氏の一族。幼い後継者も順位どおり継ぐ(摂政が政治と軍事を代わる)。
+   * 女性・亡くなった人・捕らわれた人・ほかの国にいる人は継がない。劉氏の皇族がひとりもいなければ空(ふつうの継承の順に戻る)
+   */
+  dynasticOrder(f: string, old: Person): { p: Person; reason: string; score: number }[] {
+    const ok = (p: Person): boolean => p.factionId === f && p.id !== old.id && p.gender !== "female" && this.c.personStatus(p.id) === "active" && !this.c.spoils.custodyOf(p.id);
+    const out: { p: Person; reason: string; score: number }[] = [];
+    const seen = new Set<string>();
+    const add = (p: Person, reason: string, score: number): void => {
+      if (seen.has(p.id) || !ok(p)) return;
+      seen.add(p.id);
+      out.push({ p, reason: reason + (this.isMinor(p) ? "・幼少(摂政が補佐)" : ""), score });
+    };
+    const byBirth = (xs: Person[]): Person[] => [...xs].sort((a, b) => (a.born ?? 9999) - (b.born ?? 9999));
+    const heir = this.heirs[f] ? persons.find((p) => p.id === this.heirs[f]) : undefined;
+    if (heir) add(heir, "指名された皇太子・世子", 1000);
+    const sons = byBirth(this.childrenOf(old.id).filter((p) => p.gender !== "female"));
+    const primaryWife = this.primaryOf(old.id)?.id;
+    const legit = sons.filter((s) => this.motherOf(s.id) === primaryWife || (!this.motherOf(s.id) && !s.fictional));
+    if (legit[0]) add(legit[0], "嫡長子", 900);
+    sons.forEach((s, i) => add(s, "実子", 800 - i));
+    // 直系の子孫(孫・曾孫):亡くなった息子の系統も含め、生まれの早い系統から
+    let gen = sons;
+    for (let depth = 2; depth <= 4; depth++) {
+      const next = byBirth(gen.flatMap((s) => this.childrenOf(s.id).filter((p) => p.gender !== "female")));
+      next.forEach((g, i) => add(g, depth === 2 ? "孫" : depth === 3 ? "曾孫" : "玄孫", 700 - depth * 20 - i));
+      gen = next;
+      if (!gen.length) break;
+    }
+    const bros = byBirth(this.siblingsOf(old.id).filter((p) => p.gender !== "female"));
+    bros.forEach((b, i) => add(b, "兄弟", 600 - i));
+    bros.forEach((b) => byBirth(this.childrenOf(b.id).filter((p) => p.gender !== "female")).forEach((n, i) => add(n, "甥", 560 - i)));
+    for (let a = this.fatherOf(old.id), d = 1; a && d <= 3; a = this.fatherOf(a), d++) {
+      const anc = persons.find((p) => p.id === a);
+      if (anc) add(anc, d === 1 ? "父" : d === 2 ? "祖父" : "曾祖父", 500 - d);
+    }
+    for (const p of persons) if (p.bloodline === "xuandi" || ((this.bloodDistance(p.id, old.id) ?? 99) <= 6 && surnameOf(p) === surnameOf(old))) add(p, "劉氏の一族", 400 - (this.bloodDistance(p.id, old.id) ?? 6) * 10);
     return out.sort((a, b) => b.score - a.score);
   }
 
@@ -726,7 +778,10 @@ export class Court {
     this.counts.successions++;
     delete this.heirs[f];
     const risk = this.disputeRisk(f, next, order);
-    this.addStability(f, -10);
+    // 皇統継承(仮想シナリオの特殊能力):継承争いが起きず、宮廷の揺れが半分
+    const smooth = effectsOf(next).some((x) => x.e.succession);
+    if (smooth) risk.value = 0;
+    this.addStability(f, smooth ? -5 : -10);
     this.note(f, `${old.name}の死去により、${next.name}が即位(${order[0].reason})`);
     // 皇位を争う者:成人の王族。いなければ、軍団を持ち、名声が高く忠誠の低い権臣
     const L = this.c.loyalty;
@@ -844,6 +899,9 @@ export class Court {
     this.depositions(year);
     this.educate();
     this.historicBirths(year, month);
+    this.plannedMarriages(year);
+    if (month === 2) this.royalMarriages(year);
+    this.royalBirths(year, month);
     this.historicDebuts(year);
     this.births(year);
     this.applyGrowth();
@@ -964,7 +1022,8 @@ export class Court {
   private historicBirths(year: number, month: number): void {
     if (month !== 1 + (year % 6)) return;
     for (const [child, fam] of Object.entries(FAMILY.parents)) {
-      if (persons.some((p) => p.id === child)) continue;
+      // 条件つきの子(仮想シナリオの皇族)は royalBirths で扱う(二重に生まれないように)
+      if (fam.conditional || persons.some((p) => p.id === child)) continue;
       const base = ledgerPerson(child);
       if (!base || base.born === null || base.born > year || base.born <= scenario.year) continue;
       const parent = [fam.father, fam.mother].map((id) => persons.find((p) => p.id === id)).find((p) => p && this.c.personStatus(p.id) !== "dead" && !scenario.factions.find((x) => x.id === p.factionId)?.fallen);
@@ -1020,6 +1079,90 @@ export class Court {
       const fname = scenario.factions.find((x) => x.id === fid)?.name ?? "";
       this.note(fid, `${p.name}が${fname}に加わる(史実の人物の登場${d.note ? `:${d.note}` : ""})`);
       if (p.id === "liu_yu_song") this.c.addNews(`${fname}に、北府軍の劉裕が現れました(史実の人物の登場)`);
+    }
+  }
+
+  /** 決まった夫婦(family.json の plannedMarriages):ともに生きて、捕らわれておらず、決まった年齢になれば結ばれる */
+  private plannedMarriages(year: number): void {
+    for (const m of FAMILY.plannedMarriages ?? []) {
+      if (m.scenarios && !m.scenarios.includes(scenario.id)) continue;
+      const h = persons.find((p) => p.id === m.husband);
+      const w = persons.find((p) => p.id === m.wife);
+      if (!h || !w || !this.alive(h.id) || !this.alive(w.id) || this.c.spoils.custodyOf(h.id) || this.c.spoils.custodyOf(w.id)) continue;
+      if (this.c.diplo.marriages.some((x) => x.husband === h.id && x.wife === w.id)) continue;
+      if ((this.age(h) ?? 0) < m.minAge || (this.age(w) ?? 0) < m.minAge) continue;
+      // ほかの人の正室になっている女性は、奪わない
+      if (this.c.diplo.marriages.some((x) => x.wife === w.id && x.husband !== h.id && this.alive(x.husband))) continue;
+      if (w.factionId !== h.factionId) this.c.spoils.setFaction(w.id, h.factionId);
+      this.c.diplo.marriages.push({ husband: h.id, wife: w.id, kind: m.kind, historic: true, day: Math.floor(this.c.day) });
+      this.counts.primaries++;
+      this.note(h.factionId, `${h.name}と${w.name}が夫婦となる${m.note ? `(${m.note})` : ""}`);
+      void year;
+    }
+  }
+
+  /**
+   * 皇族の婚姻(仮想シナリオの宣帝の血統):18〜45歳で正室のいない劉氏の男子は、年に4割の見込みで名家の娘(架空)を正室に迎える。
+   * これまでのAIは君主の婚姻だけを扱っていたため、皇子の系統が途絶えないように加えた(子は既存の出生の仕組みで生まれる)
+   */
+  private royalMarriages(year: number): void {
+    if (!scenario.virtual) return;
+    const clans = ["王", "謝", "庾", "荀", "鄭", "崔", "盧", "楊", "韋", "裴", "陳", "顧"];
+    for (const p of persons) {
+      if (p.bloodline !== "xuandi" || p.gender === "female" || !this.alive(p.id) || this.c.spoils.custodyOf(p.id)) continue;
+      const a = this.age(p) ?? 0;
+      if (a < 18 || a > 45 || this.primaryOf(p.id)) continue;
+      if (FAMILY.plannedMarriages?.some((m) => m.husband === p.id && persons.some((w) => w.id === m.wife && this.alive(w.id)))) continue;
+      const f = scenario.factions.find((x) => x.id === p.factionId);
+      if (!f || f.fallen || f.passive) continue;
+      const day = Math.floor(this.c.day);
+      if (chance(`${day}|${p.id}|rmar`) >= 0.4) continue;
+      const sur = clans[Math.floor(chance(`${day}|${p.id}|clan`) * clans.length)];
+      const used = new Set(persons.map((x) => x.name));
+      let name = "";
+      for (let i = 0; i < GIRL.length && !name; i++) {
+        const n = sur + GIRL[(Math.floor(chance(`${day}|${p.id}|wnm`) * GIRL.length) + i) % GIRL.length];
+        if (!used.has(n)) name = n;
+      }
+      const st = (k: string): number => 55 + Math.floor(chance(`${day}|${p.id}|w${k}`) * 40);
+      const w = this.newPerson({
+        name: name || `${sur}氏`, gender: "female", born: year - Math.max(16, a - 2 - Math.floor(chance(`${day}|${p.id}|wa`) * 4)), factionId: p.factionId, role: "minister", people: "漢", seed: `${day}|${p.id}|wife`,
+        bio: `${sur}氏の名家の娘。${p.name}の正室となる。${FICTION_NOTE}`, title: `${p.name}の妃`, stats: { leadership: st("l"), war: st("w") - 20, intelligence: st("i"), politics: st("p"), charisma: st("c") }, residence: p.residence,
+      });
+      this.c.diplo.marriages.push({ husband: p.id, wife: w.id, kind: "primary", historic: false, day });
+      this.counts.primaries++;
+      this.note(p.factionId, `${p.name}が${w.name}を正室に迎える(皇族の婚姻)`);
+    }
+  }
+
+  /**
+   * 条件つきの子(family.json の parents の conditional。仮想シナリオの劉睿・劉瑛・劉弘):
+   * 生まれる年から2年のうちに、両親がともに生きて捕らわれておらず、夫婦であり、母が15〜42歳のときだけ生まれる。
+   * 条件がそろわなければ生まれない(無理に誕生させない)。生まれた年は、実際に生まれた年にする
+   */
+  private royalBirths(year: number, month: number): void {
+    for (const [child, fam] of Object.entries(FAMILY.parents)) {
+      if (!fam.conditional || persons.some((p) => p.id === child)) continue;
+      const base = ledgerPerson(child);
+      if (!base || base.born === null || year < base.born || year > base.born + 2 || base.born <= scenario.year) continue;
+      if (month !== 1 + ((year + child.length) % 6)) continue;
+      const fa = persons.find((p) => p.id === fam.father);
+      const mo = persons.find((p) => p.id === fam.mother);
+      if (!fa || !mo || !this.alive(fa.id) || !this.alive(mo.id) || this.c.spoils.custodyOf(fa.id) || this.c.spoils.custodyOf(mo.id)) continue;
+      if (!this.c.diplo.marriages.some((m) => m.husband === fa.id && m.wife === mo.id)) continue;
+      const ma = this.age(mo) ?? 25;
+      if (ma < 15 || ma > 42) continue;
+      const p: Person = { ...base, born: year, factionId: fa.factionId, role: base.role === "ruler" ? "general" : base.role, residence: fa.residence, title: "" };
+      persons.push(p);
+      this.added.push(p);
+      this.c.loyalty.fame[p.id] = 10;
+      this.c.loyalty.loyalty[p.id] = 85;
+      this.snapshot(p);
+      this.applyGrowth();
+      this.counts.historicBirths++;
+      this.counts.births++;
+      this.note(fa.factionId, `${fa.name}と${mo.name}に${p.gender === "female" ? "女子" : "男子"} ${p.name}が生まれる(宣帝の血統)`);
+      this.c.addNews(`${scenario.factions.find((x) => x.id === fa.factionId)?.name}の${fa.name}に、${p.name}が生まれました`);
     }
   }
 
