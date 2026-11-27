@@ -4457,3 +4457,5 @@ select:focus-visible {
 .court-emperors th, .court-emperors td { border: 1px solid rgba(200, 170, 110, 0.35); padding: 3px 5px; vertical-align: middle; white-space: nowrap; }
 .court-emperors th { background: rgba(179, 32, 27, 0.25); }
 .court-emperor-face { width: 32px; height: 40px; object-fit: cover; border-radius: 3px; }
+.court-emperor-detail { border: 1px solid rgba(200, 170, 110, 0.4); border-radius: 6px; padding: 6px 10px; margin: 6px 0; font-size: 12px; }
+.court-emperor-detail ul { margin: 4px 0; padding-left: 18px; }

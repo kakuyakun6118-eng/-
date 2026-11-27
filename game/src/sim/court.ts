@@ -168,6 +168,7 @@ export interface CourtSave {
   /** 歴代皇帝の型と固有特性(Version 67。セーブ・ロードで変わらないよう残す) */
   emperorTraits?: Record<string, string[]>;
   emperorTypes?: Record<string, string>;
+  lostCities?: Record<string, string[]>;
   /** 歴代皇帝の記録と、皇統の称号・戦績の集計(仮想シナリオ。Version 65) */
   emperors?: EmperorRecord[];
   titles?: Record<string, string>;
@@ -234,8 +235,11 @@ export class Court {
   /** 皇帝の固有特性(即位のときに決めたもの)と型 */
   emperorTraits: Record<string, string[]> = {};
   emperorTypes: Record<string, string> = {};
+  /** 国ごとの、奪われた都市(取り戻したら消す) */
+  lostCities: Record<string, string[]> = {};
 
   private init(): void {
+    this.lostCities = {};
     this.emperorTraits = {};
     this.emperorTypes = {};
     this.removeAdded();
@@ -1727,7 +1731,7 @@ export class Court {
 
   // ---------------- 保存 ----------------
   serialize(): CourtSave {
-    return JSON.parse(JSON.stringify({ emperors: this.emperors, titles: this.titles, tally: this.tally, emperorTraits: this.emperorTraits, emperorTypes: this.emperorTypes, heirs: this.heirs, stability: this.stability, ranks: this.ranks, added: this.added, parents: this.parents, base: this.base, lifespan: this.lifespan, assumedBorn: this.assumedBorn, log: this.log, counts: this.counts, nextId: this.nextId, regents: this.regents, causes: this.causes, edu: this.edu })) as CourtSave;
+    return JSON.parse(JSON.stringify({ emperors: this.emperors, titles: this.titles, tally: this.tally, emperorTraits: this.emperorTraits, emperorTypes: this.emperorTypes, lostCities: this.lostCities, heirs: this.heirs, stability: this.stability, ranks: this.ranks, added: this.added, parents: this.parents, base: this.base, lifespan: this.lifespan, assumedBorn: this.assumedBorn, log: this.log, counts: this.counts, nextId: this.nextId, regents: this.regents, causes: this.causes, edu: this.edu })) as CourtSave;
   }
 
   /** 戻す。ゲームの中で加わった人物を、いったん外してから入れ直す(spoils・忠誠より前に呼ぶ) */
@@ -1767,6 +1771,7 @@ export class Court {
     // 皇帝の固有特性(Version 67):即位のときに決めた特性に戻す(ロードで変わらない)
     this.emperorTraits = JSON.parse(JSON.stringify(save.emperorTraits ?? {}));
     this.emperorTypes = { ...(save.emperorTypes ?? {}) };
+    this.lostCities = JSON.parse(JSON.stringify(save.lostCities ?? {}));
     for (const [id, t] of Object.entries(this.emperorTraits)) { const p = persons.find((x) => x.id === id); if (p) p.traits = [...t]; }
     this.applyGrowth();
   }
@@ -1783,6 +1788,9 @@ export class Court {
   noteBattle(win: string | null, lose: string | null, captured: boolean, city?: { id: string; name: string; lon: number; lat: number }): void {
     const t = (f: string) => (this.tally[f] ??= { wins: 0, losses: 0, captures: 0, lost: 0 });
     // 在位中の皇帝の征服した都市と、遠征の地域
+    // 失った都市(漢の国家目標「失地回復」に使う。最大40)
+    if (captured && lose && city) { const l = (this.lostCities[lose] ??= []); if (!l.includes(city.id)) { l.push(city.id); if (l.length > 40) l.shift(); } }
+    if (captured && win && city) { const l = this.lostCities[win]; if (l?.includes(city.id)) l.splice(l.indexOf(city.id), 1); }
     if (captured && win && city) {
       const r = this.openReign(win);
       if (r) {

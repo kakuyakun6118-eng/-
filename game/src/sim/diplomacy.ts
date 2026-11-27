@@ -646,7 +646,8 @@ export class Diplomacy {
         }
       }
       // 5) 宣戦:兵力で大きく上回る隣国に(同盟・不可侵・従属の相手には、まずしない)
-      const wars = alive.filter((g) => this.c.atWar(me, g.id)).length;
+      // 仮想シナリオ(Version 67):届かない相手(隣り合わない国)との戦争は、宣戦の枠に数えない
+      const wars = alive.filter((g) => this.c.atWar(me, g.id) && (!scenario.virtual || this.neighbors(me, g.id))).length;
       if (wars <= 1) {
         for (const g of alive) {
           if (g.id === me || ["war", "alliance", "nonaggression", "vassal"].includes(this.c.relationOf(me, g.id)) || this.c.relationAge(me, g.id) < 720) continue;

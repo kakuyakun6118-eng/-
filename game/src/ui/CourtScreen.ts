@@ -4,7 +4,8 @@ import { factionById, persons, scenario } from "../data";
 import type { Person } from "../data/types";
 import type { Campaign } from "../sim/Campaign";
 import { fillPortrait } from "./portrait";
-import { CAUSE_LABEL, EDU_LABEL, type EduPolicy } from "../sim/court";
+import { CAUSE_LABEL, EDU_LABEL, type EduPolicy, type EmperorRecord } from "../sim/court";
+import { factionFlat, factionMult, factionTraitEffects, HAN_LEGITIMACY, incomeMult, LIMITS, prodOf, sumOf, TRAITS } from "../sim/virtualTraits";
 
 export interface CourtActions {
   campaign: () => Campaign;
@@ -16,6 +17,8 @@ export class CourtScreen {
   private faction: string | null = null;
   private focus: string | null = null;
   private selected: string | null = null;
+  /** 歴代皇帝一覧で詳しく見る代 */
+  private emperorDetail: number | null = null;
   private message = "";
 
   constructor(private readonly root: HTMLElement, private readonly actions: CourtActions) {
@@ -200,22 +203,33 @@ export class CourtScreen {
         for (const x of cells) { const d = this.el(th ? "th" : "td"); if (typeof x === "string") d.textContent = x; else d.append(x); r.append(d); }
         return r;
       };
-      tb.append(tr(["代", "肖像", "名", "廟号", "諡号", "元号", "生没", "即位・在位", "領土(即位→終わり)", "主な戦い", "内政・外交", "皇后", "皇太子", "後継"], true));
+      tb.append(tr(["代", "肖像", "名", "廟号・諡号", "元号", "生没", "即位・在位", "型", "能力", "固有特性", "漢の正統", "国家目標", "領土", "人口", "財政(金)", "兵力", "征服・遠征", "属国化", "内政・外交", "評価", "皇后・皇太子・後継"], true));
+      const num = (v: number) => (Math.abs(v) >= 10000 ? `${Math.round(v / 1000)}千` : `${Math.round(v)}`);
+      const chg = (a?: number, b?: number | null) => (a === undefined ? "—" : `${num(a)}→${b === null || b === undefined ? "(在位中)" : num(b)}`);
       for (const r of reigns) {
         const p = persons.find((x) => x.id === r.personId);
         const img = this.el("img", "court-emperor-face");
         img.alt = r.name;
         if (p) fillPortrait(img, p);
         const yrs = (r.endYear ?? ct.year()) - r.accYear;
-        const war = [`会戦${r.wins + (r.endYear === null ? ct.tally[f]?.wins ?? 0 : 0)}勝${r.losses + (r.endYear === null ? ct.tally[f]?.losses ?? 0 : 0)}敗`, `攻略${r.captures + (r.endYear === null ? ct.tally[f]?.captures ?? 0 : 0)}`].join("・");
-        const civ = r.achievements.filter((a) => !/^会戦|^城の攻略|^領土/.test(a)).join("・") || (r.endYear === null ? "在位中" : "—");
-        tb.append(tr([`${r.gen}`, img, r.name, r.templeName ?? (r.endYear === null ? "(在位中)" : "なし"), r.posthumous ?? (r.endYear === null ? "(在位中)" : "—"), r.era,
-          `${r.born ?? "?"}〜${r.died ?? (r.endYear === null ? "" : "?")}`, `${r.accYear}年・${yrs}年${r.endReason ? `(${r.endReason})` : "(在位中)"}`,
-          `${r.citiesStart}→${r.citiesEnd ?? "(在位中)"}都市`, war, civ, r.empress ?? "なし", r.heir ?? "なし", r.successor ?? (r.endYear === null ? "—" : "なし")]));
+        const open = r.endYear === null;
+        const war = [`会戦${r.wins + (open ? ct.tally[f]?.wins ?? 0 : 0)}勝${r.losses + (open ? ct.tally[f]?.losses ?? 0 : 0)}敗`, `攻略${r.captures + (open ? ct.tally[f]?.captures ?? 0 : 0)}`].join("・");
+        const exp = Object.entries(r.expeditions ?? {}).map(([k, n]) => `${k}${n}`).join("・");
+        const civ = r.achievements.filter((x) => !/^会戦|^城の攻略|^領土/.test(x)).join("・") || (open ? "在位中" : "—");
+        const pw = open ? ct.powerOf(f) : null;
+        const name = this.button(r.name, () => { this.emperorDetail = this.emperorDetail === r.gen ? null : r.gen; this.render(); }, "court-link");
+        tb.append(tr([`${r.gen}`, img, name, open ? "(在位中)" : `${r.templeName ?? ""}${r.templeName ? "・" : ""}${r.posthumous ?? "—"}`, r.era,
+          `${r.born ?? "?"}〜${r.died ?? (open ? "" : "?")}`, `${r.accYear}年・${yrs}年${r.endReason ? `(${r.endReason})` : "(在位中)"}`,
+          r.type ?? "—", r.stats ?? "—", (r.traits ?? []).join("・") || "—", r.legit === undefined ? "—" : r.legit ? "あり" : "なし", (r.goals ?? []).join("・") || "—",
+          `${r.citiesStart}→${r.citiesEnd ?? (open ? `${this.cityCount(c, f)}(在位中)` : "?")}`, chg(r.popStart, open ? pw!.pop : r.popEnd), chg(r.goldStart, open ? pw!.gold : r.goldEnd), chg(r.troopsStart, open ? pw!.troops : r.troopsEnd),
+          `${war}${(r.conquered ?? []).length ? `・征服${r.conquered!.length}都市` : ""}${exp ? `・遠征(${exp})` : ""}`, (r.vassalized ?? []).join("・") || "—", civ,
+          r.score === null || r.score === undefined ? (open ? "(在位中)" : "—") : `${r.grade}(${r.score})`, `皇后 ${r.empress ?? "なし"}・皇太子 ${r.heir ?? "なし"}・後継 ${r.successor ?? (open ? "—" : "なし")}`]));
       }
       const wrap = this.el("div", "court-emperors-wrap");
       wrap.append(tb);
-      mid.append(wrap, this.el("p", "court-note", "廟号・諡号は、治世が終わったときに、実際の在位・戦績・領土の増減で決まります(初代の劉皓は太祖・宣武皇帝)。即位の前に亡くなった人は載りません。"));
+      const sel = reigns.find((r) => r.gen === this.emperorDetail);
+      if (sel) mid.append(this.emperorPanel(c, f, sel));
+      mid.append(wrap, this.el("p", "court-note", "名前を押すと、その皇帝の固有特性の説明と、実際の補正の値が出ます。廟号・諡号は、治世が終わったときに、実際の在位・戦績・領土の増減で決まります(初代の劉皓は太祖・宣武皇帝)。即位の前に亡くなった人は載りません。"));
     }
 
     // ---- 右:後継順位・選んだ人物・出来事 ----
@@ -242,6 +256,30 @@ export class CourtScreen {
     if (!log.children.length) log.append(this.el("li", "", "まだありません"));
     right.append(log);
     body.replaceChildren(left, mid, right);
+  }
+
+  private cityCount(c: Campaign, f: string): number {
+    return c.cities.filter((k) => k.kind !== "pass" && scenario.cityOwners[k.id] === f).length;
+  }
+
+  /** 歴代皇帝の詳細:固有特性の説明・漢の正統・国の補正の実際の値(在位中なら、いまの値) */
+  private emperorPanel(c: Campaign, f: string, r: EmperorRecord): HTMLElement {
+    const box = this.el("div", "court-emperor-detail");
+    box.append(this.el("h4", "", `第${r.gen}代 ${r.name}(${r.type ?? "型なし"}${r.typeLabel ? `・${r.typeLabel}` : ""})`));
+    const ul = this.el("ul");
+    for (const t of r.traits ?? []) ul.append(this.el("li", "", `${t}:${TRAITS[t]?.label ?? "(効果表にない)"}`));
+    ul.append(this.el("li", "", `${HAN_LEGITIMACY}:${r.legit ? "あり" : "なし"}。${TRAITS[HAN_LEGITIMACY]?.label ?? ""}`));
+    box.append(ul);
+    if (r.endYear === null) {
+      const list = factionTraitEffects(f, Math.floor(c.day), (id) => c.personStatus(id));
+      const inc = incomeMult(list);
+      const v = [`全軍の戦闘力×${factionMult(list, "armyBattle", 1, LIMITS.battle).toFixed(2)}`, `登用+${Math.round(sumOf(list, "recruit") * 100)}`, `忠誠 毎月+${factionFlat(list, "loyaltyMonthly")}`, `治安 毎月+${factionFlat(list, "orderMonthly")}`,
+        `金の収入×${inc.gold.toFixed(2)}`, `兵糧の収入×${inc.grain.toFixed(2)}`, `徴兵の効率×${factionMult(list, "conscript", 1, LIMITS.conscript).toFixed(2)}`, `兵糧の消費×${factionMult(list, "armyFood", LIMITS.armyFood, 1).toFixed(2)}`,
+        `外交×${prodOf(list, "amity").toFixed(2)}`, `皇族の伸び×${factionMult(list, "growth", 1, LIMITS.growth).toFixed(2)}`, `反乱×${factionMult(list, "rebellion", LIMITS.rebellion, 1).toFixed(2)}`, `人口の増え方×${factionMult(list, "pop", 1, LIMITS.pop).toFixed(2)}`];
+      box.append(this.el("p", "", `いまの国の補正(重なりは上限つき):${v.join("・")}`));
+    } else box.append(this.el("p", "", "在位を終えているため、国への補正は止まっています。"));
+    box.append(this.el("p", "", `国家目標:${(r.goals ?? []).join("・") || "—"}。征服した都市:${(r.conquered ?? []).slice(0, 20).join("・") || "なし"}`));
+    return box;
   }
 
   /** 選んだ人物:年齢・血縁・役目・能力・忠誠 */

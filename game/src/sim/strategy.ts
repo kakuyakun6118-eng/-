@@ -12,6 +12,25 @@ import { distanceKm } from "./pathfinding";
 import { cityEcon } from "./economy";
 import { affinity } from "./loyalty";
 import { chance } from "./spoils";
+import { HAN_TYPES } from "./court";
+import hanDynastyData from "../data/rules/hanDynasty.json";
+import { aiBias, factionTraitEffects } from "./virtualTraits";
+
+/** 皇帝の型ごとの戦略AIの性格(仮想シナリオの漢。Version 67) */
+const TYPE_PERSONALITY: Record<string, Omit<Personality, "label">> = {
+  覇王型: { aggr: 0.7, caution: 0.1, logistics: 0.5, mobility: 0.6, diplomacy: 0.1, unify: 0.9 },
+  武帝型: { aggr: 0.6, caution: 0.2, logistics: 0.6, mobility: 0.5, diplomacy: 0.1, unify: 0.7 },
+  仁君型: { aggr: 0.15, caution: 0.5, logistics: 0.5, mobility: 0.2, diplomacy: 0.45, unify: 0.45 },
+  明君型: { aggr: 0.4, caution: 0.3, logistics: 0.6, mobility: 0.4, diplomacy: 0.3, unify: 0.8 },
+  賢帝型: { aggr: 0.25, caution: 0.4, logistics: 0.5, mobility: 0.3, diplomacy: 0.4, unify: 0.55 },
+  智帝型: { aggr: 0.3, caution: 0.5, logistics: 0.5, mobility: 0.4, diplomacy: 0.55, unify: 0.6 },
+  富国型: { aggr: 0.25, caution: 0.4, logistics: 0.7, mobility: 0.3, diplomacy: 0.4, unify: 0.5 },
+  中興型: { aggr: 0.55, caution: 0.2, logistics: 0.5, mobility: 0.5, diplomacy: 0.2, unify: 0.8 },
+  守成型: { aggr: 0.2, caution: 0.6, logistics: 0.6, mobility: 0.3, diplomacy: 0.4, unify: 0.45 },
+};
+const HAN_FIXED_TYPE = (hanDynastyData as unknown as { fixed: Record<string, { type: string }> }).fixed;
+/** 拡大・征服の国家目標(これがあれば、戦争がなくても外へ出る) */
+const EXPAND_GOALS = ["中国統一", "失地回復", "西域遠征", "シルクロードの支配", "軍事力の強化"];
 
 export type StrategyProfile = (typeof rules.profiles)["normal"];
 export const strategyRules = rules;
@@ -397,9 +416,61 @@ export class StrategyAi {
   }
 
   /** 国家の性格:君主に、重臣(王猛など、表にある文官・軍師)の考えを少し混ぜる */
+  /** 仮想シナリオの漢:宣帝の血統の君主の国なら、その皇帝の型(即位前の劉皓などは台帳の型) */
+  hanType(f: string): string | null {
+    if (!scenario.virtual) return null;
+    const r = this.c.rulerOf(f);
+    if (!r || r.bloodline !== "xuandi") return null;
+    return this.c.court.emperorTypes[r.id] ?? HAN_FIXED_TYPE[r.id]?.type ?? "明君型";
+  }
+
+  /** 仮想シナリオの漢:いまの皇帝の国家目標(即位前は型の目標) */
+  hanGoals(f: string): string[] {
+    const t = this.hanType(f);
+    if (!t) return [];
+    const r = this.c.rulerOf(f);
+    const rec = this.c.court.openReign(f);
+    if (rec && rec.personId === r?.id && rec.goals?.length) return rec.goals;
+    return HAN_TYPES[t]?.goals ?? [];
+  }
+
+  /** 仮想シナリオの漢:その国が国家目標の地域(西域・シルクロード・失った都市)にあるか */
+  goalRegion(f: string, g: string): boolean {
+    const goals = this.hanGoals(f);
+    if (!goals.length) return false;
+    const theirs = this.citiesOf(g);
+    // 西域・シルクロードは、中国本土の6割以上を持つか、天下統一のあとだけ(建国期の無謀な遠征を避ける)
+    const west = (goals.includes("西域遠征") || goals.includes("シルクロードの支配")) && (this.c.court.coreShare(f) >= 0.6 || this.c.history?.flags.vh_unified === f);
+    if (west && theirs.some((k) => k.lon < 101)) return true;
+    if (goals.includes("失地回復") && theirs.some((k) => this.c.court.lostCities[f]?.includes(k.id))) return true;
+    return false;
+  }
+
+  /** 実際に戦える相手か:国境を接するか、都市が届く距離にある(海の向こう・遠くの1都市の国との「届かない戦争」を除く) */
+  reachable(f: string, g: string, p: StrategyProfile): boolean {
+    if (this.c.diplo.neighbors(f, g)) return true;
+    const mine = this.citiesOf(f), theirs = this.citiesOf(g);
+    if (!mine.length || !theirs.length) return false;
+    let d = Infinity;
+    for (const a of mine) for (const b of theirs) d = Math.min(d, distanceKm(a, b));
+    return d < p.reachKm * 2.4;
+  }
+
   factionPersonality(f: string): Personality {
     const ruler = this.c.rulerOf(f);
     const base = { ...this.personalityOf(ruler) };
+    // 仮想シナリオの漢(宣帝の血統の君主):能力値からではなく、皇帝の型と固有特性から性格を決める(Version 67)。
+    // 能力値から決めると、能力の高い君主ほど「外交型」になり、戦争のないときに拡大も軍備もしなくなっていた(Version 64 の滅亡の原因)
+    // 即位の前(楚王の時代)は、これまでどおり能力値から決める(型の性格は、建国期には無謀な多方面の戦争を招いた)。
+    // 漢の皇帝になってからは、型と能力値を半分ずつ合わせ、固有特性の傾き(ai)を足す
+    const ht = this.hanType(f);
+    if (ht && this.c.court.openReign(f)?.personId === ruler?.id) {
+      const t = TYPE_PERSONALITY[ht] ?? TYPE_PERSONALITY["明君型"];
+      const b = aiBias(factionTraitEffects(f, Math.floor(this.c.day)));
+      const clamp1 = (x: number) => Math.max(-1, Math.min(1, x));
+      const mix = (k: "aggr" | "caution" | "logistics" | "mobility" | "diplomacy" | "unify") => (t[k] + base[k]) / 2;
+      return { aggr: clamp1(mix("aggr") + b.aggr * 0.5), caution: mix("caution"), logistics: mix("logistics"), mobility: mix("mobility"), diplomacy: clamp1(mix("diplomacy") + b.diplomacy * 0.5), unify: clamp1(mix("unify") + b.unify * 0.5), label: `${ht}(${ruler?.name ?? ""})` };
+    }
     const table = rules.personalities.people as Record<string, Personality>;
     const adviser = persons.find((p) => p.factionId === f && p.id !== ruler?.id && (p.role === "minister" || p.role === "strategist") && table[p.id] && this.c.personStatus(p.id) === "active");
     if (adviser) {
@@ -454,7 +525,15 @@ export class StrategyAi {
     const rep = this.c.economy.report(f);
     const purse = this.c.factionStates[f] ?? { gold: 0, grain: 0 };
     // 戦争の相手は、生きている国だけ(都市を失った国との戦争は、数えない。これが300年開始の膠着の原因だった)
-    const enemies = scenario.factions.filter((g) => g.id !== f && this.c.atWar(f, g.id) && this.isLive(g.id));
+    const allEnemies = scenario.factions.filter((g) => g.id !== f && this.c.atWar(f, g.id) && this.isLive(g.id));
+    // 仮想シナリオ(Version 67):届かない戦争は、方針と宣戦の枠に数えない。2年以上続けば和平を申し入れる
+    const enemies = scenario.virtual ? allEnemies.filter((g) => this.reachable(f, g.id, p)) : allEnemies;
+    if (scenario.virtual) for (const g of allEnemies) {
+      if (enemies.includes(g) || Math.min(this.c.relationAge(f, g.id), day) < 720 || chance(`${day}|${f}|${g.id}|farpeace`) > 0.3) continue;
+      if (g.id === this.c.playerFactionId) { this.c.propose(f, "peace"); continue; }
+      const r = this.c.diplo.act(f, g.id, chance(`${day}|${f}|${g.id}|farcf`) < 0.5 ? "ceasefire" : "peace");
+      this.note(f, `届かない${this.name(g.id)}との戦争をやめる(${r.ok ? "和平・停戦" : "断られた"})`);
+    }
     const enemyPower = enemies.reduce((s, g) => s + this.strengthOf(g.id), 0);
     const cap = this.capitalOf(f);
     // 国境の脅威:自国の都市に近い敵の軍団の力
@@ -531,6 +610,29 @@ export class StrategyAi {
       posture = "develop";
       reason = "戦争がなく、内政で国力を蓄える";
     }
+    // 仮想シナリオの漢:国家目標で方針を決め直す(戦争がなく、財政・兵糧・国内が落ち着いていれば、拡大の目標のある皇帝は外へ出る)
+    const goals = this.hanGoals(f);
+    if (goals.length && !enemies.length && !broke && !hungry && stability >= 25 && (posture === "diplomacy" || posture === "develop")) {
+      const g = goals.find((x) => EXPAND_GOALS.includes(x));
+      if (g) {
+        posture = share > 0.3 || g === "中国統一" ? "unify" : "expand";
+        reason = `国家目標「${g}」のため、勢力を広げる(皇帝の型:${pers.label})`;
+      } else if (posture === "diplomacy") {
+        posture = "develop";
+        reason = `国家目標「${goals[0]}」のため、内を固める(皇帝の型:${pers.label})`;
+      }
+    }
+    if (goals.includes("軍事力の強化") && !broke && rep.net > 0) this.buildUp[f] = true;
+    // 周辺勢力の属国化:3か月に1度、国力が4分の1に満たない隣国に、従属を求める
+    if (goals.includes("周辺勢力の属国化") && day % 90 < 30 && !broke) {
+      const weak = scenario.factions.filter((g) => !g.fallen && !g.passive && g.id !== f && g.id !== this.c.playerFactionId && this.isLive(g.id) && this.c.diplo.neighbors(f, g.id) && this.c.diplo.overlord[g.id] !== f
+        && !["war", "alliance", "vassal"].includes(this.c.relationOf(f, g.id)) && this.strengthOf(g.id) * 4 < power).sort((a, b) => this.strengthOf(a.id) - this.strengthOf(b.id))[0];
+      if (weak && chance(`${day}|${f}|${weak.id}|goalvassal`) < 0.5) {
+        const r = this.c.diplo.act(f, weak.id, "vassal");
+        this.st(f).vassalDemands++;
+        this.note(f, `国家目標「周辺勢力の属国化」:${weak.name}に従属を求める(${r.ok ? "受け入れ" : "拒否"})`);
+      }
+    }
     const prev = this.posture[f];
     if (!prev || prev.posture !== posture) {
       if (prev) this.st(f).postureChanges++;
@@ -554,8 +656,28 @@ export class StrategyAi {
       this.c.addNews(`${this.name(f)}が属国の${vn}を併合しました`);
     }
 
+    // 仮想シナリオの漢(Version 67):国家目標「西域遠征」「シルクロードの支配」の皇帝は、10年以上従えた西域の弱い属国を、直轄の地にする
+    // (統一のあとも国家AIが止まらないように。西域の属国は、ふつうは自治を保つ)
+    {
+      const hg = this.hanGoals(f);
+      if ((hg.includes("西域遠征") || hg.includes("シルクロードの支配")) && this.c.court.coreShare(f) >= 0.6) {
+        for (const [v, o] of Object.entries(this.c.diplo.overlord)) {
+          if (o !== f || v === this.c.playerFactionId || !this.isLive(v)) continue;
+          if (!this.citiesOf(v).every((k) => k.lon < 101)) continue;
+          if (this.c.relationAge(f, v) < 3600 || this.strengthOf(v) > power * 0.1) continue;
+          const silk = this.citiesOf(v).some((k) => this.c.trade.market(k) > 0) && hg.includes("シルクロードの支配");
+          if (chance(`${day}|${f}|${v}|westannex`) > (silk ? 0.05 : 0.03)) continue;
+          const vn = this.name(v);
+          this.c.annex(v, f);
+          this.st(f).annexed++;
+          this.note(f, `国家目標「${silk ? "シルクロードの支配" : "西域遠征"}」:長く従えた${vn}を直轄の地にした`);
+          this.c.addNews(`${this.name(f)}が、西域の属国の${vn}を直轄の地にしました`);
+          break;
+        }
+      }
+    }
     // 漢室再興(仮想シナリオ):劉皓の国は、漢の二つの都(洛陽・長安)を持つ国を討つ。その国が自国の属国なら、併合する
-    if (scenario.virtual && this.c.rulerOf(f)?.id === "vh_liu_hao") {
+    if (scenario.virtual && this.hanType(f)) {
       for (const id of ["luoyang", "changan"]) {
         const o = scenario.cityOwners[id];
         if (!o || o === f || !this.isLive(o)) continue;
@@ -602,13 +724,13 @@ export class StrategyAi {
           const near = theirs.length ? Math.min(...theirs.map((t) => Math.min(...mine.map((m) => distanceKm(m, t))))) : 9999;
           return { g, pw: this.strengthOf(g.id), near, cities: theirs.length };
         })
-        .filter((x) => x.cities > 0 && x.near < p.reachKm * (posture === "unify" ? 2 : 1.2) && power >= x.pw * ratioNeed)
-        // 戦略的な関心の外の国には、宣戦しない(Version 42:本拠から遠い飛び地のそばの小国など)
-        .filter((x) => this.interestIn(f, x.g.id) >= 0.3)
+        .filter((x) => x.cities > 0 && x.near < p.reachKm * (posture === "unify" ? 2 : 1.2) * (this.goalRegion(f, x.g.id) ? 1.8 : 1) && power >= x.pw * ratioNeed * (this.goalRegion(f, x.g.id) ? 1.4 : 1))
+        // 戦略的な関心の外の国には、宣戦しない(Version 42:本拠から遠い飛び地のそばの小国など)。漢の国家目標の地域(西域・失った都市)は、関心が薄くても候補にする
+        .filter((x) => this.interestIn(f, x.g.id) >= (this.goalRegion(f, x.g.id) ? 0.08 : 0.3))
         // 西域の小国は、遠い中国本土の国には仕掛けない
         .filter((x) => !(mine.every((m) => m.lon < 96) && this.citiesOf(x.g.id).every((t) => t.lon >= 96)))
         // 好機(劉裕の北伐の追加):君主の死・内紛で揺れる国、手薄な関中を持つ国を、先に選ぶ
-        .sort((a, b) => a.pw / (power + 1) + a.near / 1000 - this.warOpportunity(f, a.g.id) - (b.pw / (power + 1) + b.near / 1000 - this.warOpportunity(f, b.g.id)));
+        .sort((a, b) => a.pw / (power + 1) + a.near / 1000 - this.warOpportunity(f, a.g.id) - (this.goalRegion(f, a.g.id) ? 0.35 : 0) - (b.pw / (power + 1) + b.near / 1000 - this.warOpportunity(f, b.g.id) - (this.goalRegion(f, b.g.id) ? 0.35 : 0)));
       const t = cands[0];
       const odds = p.aggression * (1 + pers.aggr) * (1 + 0.5 * pers.unify);
       if (t && chance(`${day}|${f}|declare|${t.g.id}`) < odds) {
@@ -647,7 +769,8 @@ export class StrategyAi {
     const atWar = enemies.length > 0;
     // 募兵:戦争中か、拡大・統一の方針で、蓄えに余裕があるとき。敵に近い都市から、守備兵を上限の6割まで
     let recruited = 0;
-    const wantsArmy = atWar || posture === "expand" || posture === "unify" || posture === "defend";
+    const hgo = this.hanGoals(factionId);
+    const wantsArmy = atWar || posture === "expand" || posture === "unify" || posture === "defend" || hgo.includes("軍事力の強化") || hgo.includes("国境防衛");
     if (wantsArmy && spare > 0 && rep.net > -rep.expense.total * 0.15 && purse.grain > rep.expense.grain * 2) {
       for (const city of [...mine].sort((a, b) => front(a) - front(b))) {
         const build = this.buildUp[factionId];
@@ -658,9 +781,10 @@ export class StrategyAi {
       }
     }
     // 内政:さらに余裕があれば都市を開発する(内政重視の方針なら1都市多く)
-    const extra = posture === "develop" || posture === "diplomacy" ? 1 : 0;
+    const extra = (posture === "develop" || posture === "diplomacy" ? 1 : 0) + (hgo.includes("経済・人口の発展") || hgo.includes("首都・主要都市の発展") ? 1 : 0);
     const projects = Math.min(4, (purse.gold - reserve > 3000 ? 3 : purse.gold - reserve > 1200 ? 2 : purse.gold - reserve > 400 ? 1 : 0) + (purse.gold - reserve > 400 ? extra : 0));
-    const ready = [...mine].filter((c) => c.kind !== "pass").sort((a, b) => (b.economy ?? 0) + (b.food ?? 0) - ((a.economy ?? 0) + (a.food ?? 0)))
+    const capId = hgo.includes("首都・主要都市の発展") ? this.capitalOf(factionId)?.id : undefined;
+    const ready = [...mine].filter((c) => c.kind !== "pass").sort((a, b) => (b.id === capId ? 1e6 : 0) + (b.economy ?? 0) + (b.food ?? 0) - ((a.id === capId ? 1e6 : 0) + (a.economy ?? 0) + (a.food ?? 0)))
       .filter((c) => { const st = this.c.cityStates[c.id]; return st?.devDay === undefined || Math.floor(this.c.day) - st.devDay >= 60; });
     for (const target of ready.slice(0, projects)) {
       const st = this.c.cityState(target);
@@ -1139,9 +1263,14 @@ export class StrategyAi {
       if (this.c.history?.flags.liuyu_unify && city.lat > 33.5) { mult *= 1.3; why.push("北方の統一を目指す"); }
     }
     // 仮想シナリオ(炎漢再興):劉皓の国は、漢の二つの都(洛陽・長安)を重んじ、ほかの国の都もやや重んじる(漢室再興)
-    if (scenario.virtual && persons.some((p) => p.id === "vh_liu_hao" && p.factionId === f && p.role === "ruler")) {
+    if (scenario.virtual && this.hanType(f)) {
       if (city.id === "luoyang" || city.id === "changan") { mult *= 2.2; why.push("漢の都を取り戻す"); }
       else if (this.c.isCapital?.(city.id)) { mult *= 1.3; why.push("天下統一のため敵の都を狙う"); }
+      // 国家目標(Version 67):失った都市・西域・シルクロード・北方や朝鮮半島
+      const goals = this.hanGoals(f);
+      if (goals.includes("失地回復") && this.c.court.lostCities[f]?.includes(city.id)) { mult *= 1.8; why.push("国家目標:失地回復"); }
+      if ((goals.includes("西域遠征") || goals.includes("シルクロードの支配")) && city.lon < 101 && (this.c.court.coreShare(f) >= 0.6 || this.c.history?.flags.vh_unified === f)) { mult *= goals.includes("シルクロードの支配") && this.c.trade.market(city) > 0 ? 1.6 : 1.4; why.push(goals.includes("西域遠征") ? "国家目標:西域遠征" : "国家目標:シルクロードの支配"); }
+      if (goals.includes("中国統一") && city.lon >= 96) { mult *= 1.2; why.push("国家目標:中国統一"); }
     }
     const xia = persons.find((p) => p.id === "helian_bobo" && p.factionId === f && p.role === "ruler" && this.c.personStatus(p.id) === "active");
     if (xia && GUANZHONG.includes(city.id)) {
@@ -1415,7 +1544,9 @@ export class StrategyAi {
     if (this.c.diplo.overlord[f] || mine.every((k) => k.lon < 96) || !mine.some((k) => k.lon < 101)) return;
     if (this.expeditions[f]) return;
     if (!(posture === "expand" || posture === "invade" || posture === "unify" || (posture === "develop" && rich))) return;
-    if (chance(`${day}|${f}|west`) > 0.35 + 0.3 * pers.unify + 0.2 * pers.aggr) return;
+    const hg = this.hanGoals(f);
+    const westGoal = (hg.includes("西域遠征") || hg.includes("シルクロードの支配")) && (this.c.court.coreShare(f) >= 0.6 || this.c.history?.flags.vh_unified === f);
+    if (chance(`${day}|${f}|west`) > 0.35 + 0.3 * pers.unify + 0.2 * pers.aggr + (westGoal ? 0.3 : 0)) return;
     const bases = this.westBases(f);
     if (!bases.length) return;
     type W = { g: string; city: City; gate: City; gap: number; trade: number; pw: number; score: number; foodNeed: number };
