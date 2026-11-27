@@ -2,6 +2,7 @@
 // - 相性:史料にある関係は relations.json の値。ほかは、2人のIDから決まる固定の値(同じ一族・同じ民族なら少し高い)。
 // - 忠誠度:君主への忠誠(0〜100)。毎月、目安の値に少しずつ近づき、出来事で上下する。
 // - 名声:人物の評判(0〜100)。戦い・攻略・外交・建国で上下する。君主の威信(勢力の値)とは別に持つ。
+import { factionTraitEffects, LIMITS, prob, prodOf, sumOf } from "./virtualTraits";
 import { distanceKm } from "./pathfinding";
 import { initialCityOwners, persons, scenario } from "../data";
 import rel from "../data/rules/relations.json";
@@ -121,6 +122,12 @@ export class LoyaltySystem {
     if (isKin(p, r)) {
       v += hist ? 5 : 15;
       parts.push("君主の一族");
+    }
+    // 仮想シナリオ:英傑帰心(+15)・三代の柱石(+5)
+    const fxl = sumOf(factionTraitEffects(p.factionId, Math.floor(this.c.day), (id) => this.c.personStatus(id)), "loyalty");
+    if (fxl) {
+      v += fxl;
+      parts.push(`主君の徳(特殊能力 +${fxl})`);
     }
     if ((p.people ?? "漢") === (r.people ?? "漢")) {
       v += 3;
@@ -318,6 +325,31 @@ export class LoyaltySystem {
       this.aiCare(f.id);
     }
     if (this.c.playerFactionId !== null) this.unrest();
+    this.volunteers();
+  }
+
+  /**
+   * 英傑帰心(仮想シナリオ):君主がこの能力を持つ国へ、在野の人物(滅んだ国・動かない勢力にいる人)や、
+   * 戦争中の国で強い不満を抱く将(忠誠25未満。君主・王族を除く)が、自ら仕える。月に1人まで(見込みは在野10%・不満の将3%)
+   */
+  private volunteers(): void {
+    if (!scenario.virtual) return;
+    const day = Math.floor(this.c.day);
+    for (const f of scenario.factions) {
+      if (f.fallen || f.passive) continue;
+      const r = this.ruler(f.id);
+      if (!r || !factionTraitEffects(f.id, day).some((e) => e.volunteer)) continue;
+      const free = (p: Person): boolean => p.role !== "ruler" && this.c.personStatus(p.id) === "active" && !this.c.spoils.custodyOf(p.id) && (!p.born || this.c.calendar().year - p.born >= 16);
+      const roamer = persons.find((p) => free(p) && p.factionId !== f.id && !!scenario.factions.find((g) => g.id === p.factionId && (g.fallen || g.passive)));
+      if (roamer && chance(`${day}|${roamer.id}|vol`) < 0.1) {
+        this.c.spoils.setFaction(roamer.id, f.id);
+        this.rebase(roamer.id, "自ら仕官する(英傑帰心)");
+        this.c.addNews(`在野の${roamer.name}が、${r.name}の徳を慕って${f.name}に仕えました(英傑帰心)`);
+        continue;
+      }
+      const angry = persons.find((p) => free(p) && p.factionId !== f.id && this.c.atWar(f.id, p.factionId) && (this.loyalty[p.id] ?? 100) < 25 && !/王|公主|太子|皇/.test(p.title ?? ""));
+      if (angry && chance(`${day}|${angry.id}|vol2`) < 0.03) this.c.defect(angry.id, f.id, `${r.name}の徳を慕って(英傑帰心)`);
+    }
   }
 
   /** AI君主の人の扱い:褒賞(予算に上限)・空いた都市への任命・捕虜の登用・敵将の調略 */
@@ -352,7 +384,9 @@ export class LoyaltySystem {
         this.lastUnrest["sub|" + factionId] = day;
         purse.gold -= 300;
         const r = this.ruler(factionId);
-        const pr = 0.25 + (r ? (affinity(target, r).value - 50) / 150 : 0) + (30 - this.loyalty[target.id]) / 100;
+        // 仮想シナリオ:神算鬼謀・玄機妙算(調略が強い)/相手の神算鬼謀(調略に強い)。見込みは0〜90%
+        const st = (id: string) => this.c.personStatus(id);
+        const pr = prob((0.25 + (r ? (affinity(target, r).value - 50) / 150 : 0) + (30 - this.loyalty[target.id]) / 100) * prodOf(factionTraitEffects(factionId, day, st), "plot") * prodOf(factionTraitEffects(target.factionId, day, st), "plotResist"), LIMITS.plotMax);
         if (chance(`${day}|${target.id}|sub`) < pr) this.c.defect(target.id, factionId, "調略に応じて");
       }
     }

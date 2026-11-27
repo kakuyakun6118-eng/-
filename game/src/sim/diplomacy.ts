@@ -1,6 +1,7 @@
 // 外交:国どうしの関係・友好度・条約・従属・婚姻同盟・援軍・外交の履歴・AIの外交。
 // 関係:戦争 / 敵対 / 中立 / 友好 / 不可侵 / 同盟 / 従属。戦ってよいのは「戦争」のときだけ。
 // 友好度(-100〜100)は、親善・贈答・婚姻・援軍で上がり、宣戦・裏切りで下がる。
+import { personMult, prodOf, factionTraitEffects, LIMITS } from "./virtualTraits";
 import { persons, scenario, totalTroops } from "../data";
 import type { Person } from "../data/types";
 import type { ArmyState, Campaign } from "./Campaign";
@@ -119,6 +120,12 @@ export class Diplomacy {
   }
 
   addAmity(a: string, b: string, d: number): void {
+    // 仮想シナリオ:絶世の英姿(君主)・弁舌の士(家臣)で、友好度の上がり方が大きくなる(2倍まで。下がり方は変えない)
+    if (d > 0 && scenario.virtual) {
+      const day = Math.floor(this.c.day);
+      const m = (f: string): number => personMult(this.c.rulerOf(f), "amity") * prodOf(factionTraitEffects(f, day), "amity");
+      d *= Math.min(LIMITS.amity, Math.max(m(a), m(b)));
+    }
     this.amity[key(a, b)] = Math.max(-100, Math.min(100, this.amityOf(a, b) + d));
   }
 

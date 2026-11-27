@@ -1,6 +1,7 @@
 // 国家の財政・官職・募兵・内政。
 // 毎月:都市の商業・農業・人口の税・交易から収入を得て、軍団・守備兵・俸禄・官僚機構・都市・宮廷・遠征の費用を払う。
 // 赤字が続くと、俸禄の未払い(忠誠の低下)→ 兵糧不足(士気の低下)→ 兵の逃亡、と段階的に悪くなる。1か月の赤字では国は崩れない。
+import { factionTraitEffects, governorMult, incomeMult, orderMult } from "./virtualTraits";
 import { cityLevelOf, persons, scenario, totalTroops } from "../data";
 import offices from "../data/rules/offices.json";
 import type { City, CityState, Person } from "../data/types";
@@ -155,15 +156,20 @@ export class Economy {
     let garrison = 0;
     let crowded = 0;
     let levels = 0;
+    // 仮想シナリオの特殊能力:君主・家臣の能力による国の収入の倍率(盛世創造など。上限2倍)
+    const fx = incomeMult(factionTraitEffects(factionId, Math.floor(this.c.day), (id) => this.c.personStatus(id)));
     for (const city of mine) {
       const st = this.c.cityState(city);
       const e = cityEcon(city, st);
+      // 太守の能力による都市の収入の倍率(富国の策など)。国の倍率と合わせて2倍まで
+      const govId = st.governorId === null ? undefined : (st.governorId ?? city.governorId);
+      const gm = Math.min(2, fx.gold * (govId ? governorMult(persons.find((p) => p.id === govId)).income : 1));
       const prosperity = (st.prosperity ?? 100) / 100;
       const orderF = 0.6 + e.order / 250;
-      const commerce = (city.economy ?? 0) * (1 + e.commerce / 100) * prosperity * orderF * bonus;
-      const tax = (e.pop / 1000) * 0.6 * (0.5 + e.support / 100) * orderF * (this.systemOf(factionId).id === "steppe" ? 2 : 1);
+      const commerce = (city.economy ?? 0) * (1 + e.commerce / 100) * prosperity * orderF * bonus * gm;
+      const tax = (e.pop / 1000) * 0.6 * (0.5 + e.support / 100) * orderF * (this.systemOf(factionId).id === "steppe" ? 2 : 1) * gm;
       const trade = (city.transport ?? 0) >= 4 ? (city.economy ?? 0) * 0.15 * prosperity : 0;
-      const grain = (city.food ?? 0) * 0.6 * (1 + e.agri / 100) * prosperity;
+      const grain = (city.food ?? 0) * 0.6 * (1 + e.agri / 100) * prosperity * fx.grain;
       inc.commerce += commerce;
       inc.tax += tax;
       inc.trade += trade;
@@ -342,7 +348,8 @@ export class Economy {
       }
       case "order": {
         if (e.order >= 100) return "治安はこれ以上上がりません";
-        const g = Math.round(6 + cha / 10);
+        // 炎漢正統(仮想シナリオ):治安の回復3倍
+        const g = Math.round((6 + cha / 10) * orderMult(factionTraitEffects(scenario.cityOwners[city.id] ?? "", Math.floor(this.c.day))));
         st.order = Math.min(100, e.order + g);
         st.support = Math.min(100, e.support + 3);
         text = `治安 ${e.order}→${st.order}`;

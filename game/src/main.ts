@@ -7,6 +7,7 @@ import { Game } from "./core/Game";
 import { affinity } from "./sim/loyalty";
 import { createBattleSetup } from "./sim/battle";
 import { autoResolve, estimateWinRate } from "./sim/autoBattle";
+import * as virtualTraits from "./sim/virtualTraits";
 import { setGameSeed } from "./sim/spoils";
 import type { BattleEvent } from "./data/types";
 import { credits, persons, scenario } from "./data";
@@ -28,6 +29,8 @@ Game.create(root)
     (window as unknown as { __gokoAuto: unknown }).__gokoAuto = autoResolve;
     // 点検用(劉裕の北伐):勝率の見積もり(却月陣・特性の効き目を確かめる)
     (window as unknown as { __gokoEstimate: unknown }).__gokoEstimate = estimateWinRate;
+    // 点検用(仮想シナリオ):特殊能力の効果の道具
+    (window as unknown as { __gokoVirtual: unknown }).__gokoVirtual = virtualTraits;
     (window as unknown as { __gokoSeed: unknown }).__gokoSeed = setGameSeed;
     (window as unknown as { __gokoArmyOps: unknown }).__gokoArmyOps = armyOpsRules;
     (window as unknown as { __gokoPalace2D: unknown }).__gokoPalace2D = { registerForTest, registered, portraitUrl, CAST };

@@ -449,6 +449,8 @@ export interface BattleSide {
   food: number;
   /** 都市のときだけ入る */
   fortification: Fortification | null;
+  /** 水軍の軍団(川の上の戦いに強い) */
+  naval?: boolean;
   /** 加勢している軍団(兵力はこの陣営の troops に含まれる) */
   supporters?: { armyId: string; name: string; factionId: string; troops: number; efficiency: number; relief?: { by: Record<UnitTypeId, number>; morale: number; arriveSec: number; commander: string | null } }[];
 }

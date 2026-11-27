@@ -1,5 +1,6 @@
 // 自動戦闘:プレイヤーが関わらない戦い(AIどうし)を、3Dの戦闘を開かずに計算で決着させる。
 // 兵力・兵種・地形・士気・疲労・指揮官の能力・城の防御から強さを出し、損害と勝敗を決める。
+import { battleTraitMult, governorMult } from "./virtualTraits";
 import type { BattleResult, CommanderFate, SideResult } from "../battle/types";
 import type { BattleSetup, BattleSide, TerrainKind, UnitTypeId } from "../data/types";
 import { reliefArrivalDays } from "./relief";
@@ -42,7 +43,17 @@ export function sideStrength(side: BattleSide, terrain: TerrainKind, siege: bool
  * 指揮官の特性による強さの倍率(劉裕の北伐の追加)。
  * 北府軍:歩兵の多い軍ほど強い(歩兵の割合×8%)。北伐の雄:攻める側で+8%(城攻めは+12%)。百戦錬磨:+4%。
  */
-export function traitMult(side: BattleSide, attacking: boolean, siege: boolean): { mult: number; notes: string[] } {
+export function traitMult(side: BattleSide, attacking: boolean, siege: boolean, terrain?: TerrainKind): { mult: number; notes: string[] } {
+  // 仮想シナリオの特殊能力(天命覇王・軍神降臨・家臣の能力)と水軍:効果表から(重なりは上限2倍)
+  const v = battleTraitMult(side, attacking, siege, terrain ?? "plain", !!side.naval);
+  const navalM = side.naval && terrain && ["river", "crossing", "greatRiver"].includes(terrain) ? 1.3 : 1;
+  const gov = side.kind === "city" ? governorMult(side.commander).defense : 1;
+  const extra = v.mult * navalM * gov;
+  const extraNotes = [...v.notes, ...(navalM > 1 ? [`${side.name}は水軍(川の上で×1.3)`] : []), ...(gov > 1 ? [`太守${side.commander!.name}の城の守り(×${gov.toFixed(2)})`] : [])];
+  const r = traitMult0(side, attacking, siege);
+  return { mult: r.mult * extra, notes: [...r.notes, ...extraNotes] };
+}
+function traitMult0(side: BattleSide, attacking: boolean, siege: boolean): { mult: number; notes: string[] } {
   const c = side.commander;
   const tr = c?.traits ?? [];
   let mult = 1;
@@ -139,8 +150,8 @@ export function estimateWinRate(setup: BattleSetup): { attacker: number; defende
   const fort = setup.defender.fortification;
   const tac = setup.tactics;
   {
-    const ta = traitMult(setup.attacker, true, siege);
-    const td = traitMult(setup.defender, false, siege);
+    const ta = traitMult(setup.attacker, true, siege, setup.terrain);
+    const td = traitMult(setup.defender, false, siege, setup.terrain);
     a *= ta.mult;
     d *= td.mult;
     factors.push(...ta.notes, ...td.notes);
@@ -195,8 +206,8 @@ export function autoResolve(setup: BattleSetup): BattleResult {
   let a = sideStrength(setup.attacker, setup.terrain, siege) * (0.85 + rand() * 0.3);
   let d = sideStrength(setup.defender, setup.terrain, siege);
   const t = setup.tactics;
-  a *= traitMult(setup.attacker, true, siege).mult;
-  d *= traitMult(setup.defender, false, siege).mult;
+  a *= traitMult(setup.attacker, true, siege, setup.terrain).mult;
+  d *= traitMult(setup.defender, false, siege, setup.terrain).mult;
   const q = queyueMult(setup);
   if (q) {
     if (q.side === "attacker") { a *= q.mult; d *= q.foeMult; }
@@ -259,7 +270,8 @@ function resolveSiege(setup: BattleSetup, a: number, dAll: number, rand: () => n
   for (const r of relief) for (const k of TYPES) garrison.troops[k] = Math.max(0, garrison.troops[k] - r.relief!.by[k]);
   const strOf = (side: BattleSide): number => sideStrength(side, setup.terrain, true);
   const t = setup.tactics;
-  let dGar = strOf(garrison) * wall * (t?.defender ?? 1);
+  // 守将の特性(北伐の雄など)・太守の城の守り(仮想シナリオの水陸の備え)も、守備兵だけの強さに効かせる
+  let dGar = strOf(garrison) * wall * (t?.defender ?? 1) * traitMult(setup.defender, false, true, setup.terrain).mult;
   void dAll;
   dGar = Math.max(1, dGar);
   let ratio = a / dGar;

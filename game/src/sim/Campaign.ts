@@ -1,5 +1,6 @@
 // ゲームの進行を計算する。日付を進め、軍団の行軍・食糧・疲労・士気・敵との接触を扱う。
 // ここは計算だけで、3D表示のことは知らない。変化があったら、登録された関数で知らせる。
+import { armyUpkeepMult, factionTraitEffects, governorMult, orderMult, prob, sumOf, LIMITS } from "./virtualTraits";
 import { cityLevelOf, persons, personById, resolveCityLayout, scenario, totalTroops } from "../data";
 import successionRules from "../data/rules/succession.json";
 import relationRules from "../data/rules/diplomacyStart.json";
@@ -32,6 +33,7 @@ const MIN_SEPARATION = 0.34;
 const CONTACT_RANGE = 0.42;
 /** 味方の都市からこの距離(km)までなら補給を受けられる */
 const SUPPLY_RANGE_KM = 80;
+const owner0 = (cityId: string): string | undefined => scenario.cityOwners[cityId];
 /** 食糧の備蓄の上限(日数) */
 const FOOD_CAP = 90;
 /** 軍団結合で、その場で1つにできる近さ(km。Version 51) */
@@ -1304,7 +1306,10 @@ export class Campaign {
       // 上限を超えているときは、急に下げず、少しずつ下がる
       const toward = (v: number, cap: number, step: number): number => (v > cap ? Math.max(cap, v - step) : Math.min(cap, v + step));
       if (state.prosperity !== undefined) state.prosperity = toward(state.prosperity, 100 - Math.min(30, crowd * 30), 0.05);
-      if (state.order !== undefined) state.order = toward(state.order, 70 - Math.min(25, crowd * 25), 0.1);
+      // 治安の戻り:炎漢正統(3倍)・安民の治(太守。1.5倍)。合わせて3倍まで(仮想シナリオ)
+      const oc = this.cities.find((x) => x.id === id);
+      const om = owner0(id) ? Math.min(LIMITS.order, orderMult(factionTraitEffects(owner0(id)!, Math.floor(this.day), (pid) => this.personStatus(pid))) * (oc ? governorMult(personById(governorIdOf(oc, state) ?? undefined)).order : 1)) : 1;
+      if (state.order !== undefined) state.order = toward(state.order, 70 - Math.min(25, crowd * 25), 0.1 * om);
       state.wallDamage = Math.max(0, state.wallDamage - 0.004);
       state.gateDamage = Math.max(0, state.gateDamage - 0.01);
       // 兵糧が尽きた国の都市では、守備兵の士気は戻らない(Version 51)
@@ -1343,6 +1348,9 @@ export class Campaign {
     if (kind === "desert") k *= 0.85;
     // 特性「水陸並進」(劉裕など):水運と陸路を合わせて進むので、行軍が速い(+12%。劉裕の北伐の追加)
     if (personById(s.army.commanderId)?.traits?.includes("水陸並進")) k *= 1.12;
+    // 仮想シナリオ:西涼の騎など(行軍の倍率)。水軍は川の上を船で速く進む(×1.5)
+    k *= armyUpkeepMult(personById(s.army.commanderId)).march;
+    if (s.army.naval && (kind === "river" || kind === "greatRiver" || kind === "crossing")) k *= 1.5;
     // 大軍団(Version 51):2万人を超えると、道が混み、行軍が遅くなる。統率の高い指揮官ほど、遅れは小さい。
     // 山地では、さらに遅い(狭い道を長い列で進む)
     const n = total;
@@ -1943,6 +1951,9 @@ export class Campaign {
     if (loyal >= 85) pr *= 0.5;
     // 特性「開国の英傑」(劉裕など):自ら天下を目指す人物は、捕らえた国に仕えにくい(劉裕の北伐の追加)
     if (p.traits?.includes("開国の英傑")) pr *= 0.35;
+    // 仮想シナリオ:炎漢正統(+40ポイント)・人物鑑定(+10ポイント)。見込みは0〜95%に収める
+    const bonus = sumOf(factionTraitEffects(holder, day, (id) => this.personStatus(id)), "recruit");
+    if (bonus > 0) return prob(Math.max(0.02, Math.min(0.85, pr)) + bonus, LIMITS.recruitMax);
     return Math.max(0.02, Math.min(0.85, pr));
   }
 
@@ -2837,6 +2848,10 @@ export class Campaign {
   /** 1日ごとの消耗と回復 */
   private dailyUpkeep(s: ArmyState): void {
     const a = s.army;
+    // 不敗の軍略(仮想シナリオ):兵糧の消費と疲れの増え方を半分にする(この日の増減に倍率をかける)
+    const up = armyUpkeepMult(personById(a.commanderId));
+    const food0 = a.food;
+    const fat0 = a.fatigue;
     s.supplied = this.nearFriendlyCity(s);
     const marching = s.status === "marching";
     // 砂漠:水の分も兵糧と同じ「食糧(日数)」でまとめて数える(水を別に数えない)。補給がなければ消費が増え、疲れ、士気が落ちる
@@ -2862,6 +2877,8 @@ export class Campaign {
       // 味方の都市の近くなら補給を受ける。離れていれば、現地調達で消費を半分に抑える
       a.food += s.supplied ? 3 / (1 + big) : -0.5 * (1 + Math.min(1, big * 0.5));
     }
+    if (up.food !== 1 && a.food < food0) a.food = food0 + (a.food - food0) * up.food;
+    if (up.fatigue !== 1 && a.fatigue > fat0) a.fatigue = fat0 + (a.fatigue - fat0) * up.fatigue;
     a.food = Math.max(0, Math.min(FOOD_CAP, a.food));
     a.fatigue = Math.max(0, Math.min(100, a.fatigue));
 

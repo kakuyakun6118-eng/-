@@ -1,5 +1,6 @@
 // 会戦に関する計算。戦闘イベントから、会戦準備画面や3D戦闘に渡す「会戦の設定」を組み立てる。
 // ここは計算だけで、画面のことは知らない。
+import { moraleWithTraits } from "./virtualTraits";
 import specialBattles from "../data/rules/specialBattles.json";
 import { commandSpan, garrisonTroops } from "./garrison";
 import { affinity } from "./loyalty";
@@ -134,10 +135,12 @@ function armySide(role: BattleSide["role"], army: Army): BattleSide {
     synergy,
     troops: { ...army.troops },
     // 大軍団(Version 51):指揮官が動かせる数を超えると、展開に手間取り、士気が少し下がる(最大-10)
-    morale: Math.max(0, Math.min(100, army.morale + factionMoraleBonus(army.factionId) + synergy - spanPenalty(army, commander?.leadership))),
+    // 仮想シナリオの特殊能力(天命覇王):士気の倍率(100を超えない)
+    morale: moraleWithTraits(Math.max(0, Math.min(100, army.morale + factionMoraleBonus(army.factionId) + synergy - spanPenalty(army, commander?.leadership))), commander),
     fatigue: army.fatigue,
     food: army.food,
     fortification: null,
+    ...(army.naval ? { naval: true } : {}),
   };
 }
 

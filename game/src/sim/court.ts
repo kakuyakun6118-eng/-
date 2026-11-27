@@ -1,6 +1,7 @@
 // 皇室・王族:家系(父・母・配偶者・子女・兄弟)、正室と側室、子女の誕生と成長、後継者(皇太子)、
 // 君主の死と皇位継承、継承争いと内乱、皇帝即位、宮廷政治(安定度・外戚・廃立・簒奪)、寿命による死。
 // 血縁はすべて人物IDで記録する。史料にある親子・兄弟・婚姻は family.json、ゲーム内で生まれた人物は架空として区別する。
+import { factionTraitEffects, prodOf } from "./virtualTraits";
 import familyData from "../data/rules/family.json";
 import successionRules from "../data/rules/succession.json";
 import deathData from "../data/rules/deaths.json";
@@ -836,7 +837,8 @@ export class Court {
     const year = this.year();
     const month = this.c.calendar().month;
     // 負傷は、月に3割の見込みで治る(これまでは治らなかった)
-    for (const [id, st] of Object.entries(this.c.personStates)) if (st === "wounded" && chance(`${Math.floor(this.c.day)}|${id}|heal`) < 0.3) delete this.c.personStates[id];
+    // 仁医(仮想シナリオ):その国の負傷者の治る見込みが2倍(90%まで)
+    for (const [id, st] of Object.entries(this.c.personStates)) if (st === "wounded" && chance(`${Math.floor(this.c.day)}|${id}|heal`) < Math.min(0.9, 0.3 * prodOf(factionTraitEffects(persons.find((p) => p.id === id)?.factionId ?? "", Math.floor(this.c.day)), "heal"))) delete this.c.personStates[id];
     this.deaths(year, month);
     this.politicalDeaths(year);
     this.depositions(year);

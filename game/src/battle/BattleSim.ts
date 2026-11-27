@@ -1,5 +1,6 @@
 // 会戦の計算。部隊の移動、接近戦、突撃、射撃、士気、敗走、勝敗の判定を行う。
 // ここは計算だけで、3Dの見た目は知らない。見た目用の出来事(矢の斉射など)は fx にためて渡す。
+import { battleTraitMult } from "../sim/virtualTraits";
 import type { BattleSetup } from "../data/types";
 import { BattleAi, type Difficulty } from "./ai";
 import { FIELD, formations, setFormation, shapeUnit, unitClasses, type Deployment } from "./deploy";
@@ -58,6 +59,8 @@ export class BattleSim {
 
   /** 却月陣を敷いた側(なければ null) */
   readonly queyueSide: SideId | null = null;
+  /** 指揮官の特殊能力(仮想シナリオ)による強さ。与える損害に√倍、受ける損害に1/√倍(合わせて自動の決着と同じ倍率) */
+  readonly power: Record<SideId, number> = { attacker: 1, defender: 1 };
 
   constructor(
     readonly setup: BattleSetup, deployment: Deployment, readonly field: FieldMap,
@@ -75,6 +78,7 @@ export class BattleSim {
       return { leadership: c?.leadership ?? 45, valor: c?.war ?? 45, intelligence: c?.intelligence ?? 45, active: true };
     };
     this.commanders = { attacker: commander("attacker"), defender: commander("defender") };
+    for (const sd of ["attacker", "defender"] as const) this.power[sd] = Math.sqrt(battleTraitMult(sd === "attacker" ? setup.attacker : setup.defender, sd === "attacker", !!siege, setup.terrain, !!(sd === "attacker" ? setup.attacker : setup.defender).naval).mult);
     // 特別な陣形(劉裕の北伐の却月陣):その側の歩兵・弓兵は、はじめから陣を組む。河を背にするので士気が少し高い
     this.queyueSide = setup.tactics?.formation?.id === "queyue" ? setup.tactics.formation.side : null;
     if (this.queyueSide) for (const u of deployment.units) {
@@ -594,6 +598,7 @@ export class BattleSim {
         const smart = this.commanders[e.side];
         if (smart.active && this.flankFactor(u, e) > 1) mult *= 1 - smart.intelligence / 400;
         mult *= formations[u.formation].attack / formations[e.formation].defense;
+        mult *= this.power[u.side] / this.power[e.side]; // 仮想シナリオの特殊能力(天命覇王・軍神降臨など)
         // 城壁をよじ登って戦う側は不利(櫓からなら、ほぼ対等)。城壁の上から迎え撃つ側は有利
         if (e.elevation > 0 && u.elevation === 0) mult *= this.siege ? this.siege.escalade(e) : 0.5;
         if (u.elevation > 0 && e.elevation === 0) mult *= 1.3;
@@ -643,7 +648,7 @@ export class BattleSim {
     const tcls = unitClasses[target.classId];
     const d = Math.hypot(target.x - u.x, target.z - u.z);
     const c = this.commanders[u.side];
-    let hit = cls.missile * MISSILE_RATE * this.condition(u);
+    let hit = cls.missile * MISSILE_RATE * this.condition(u) * (this.power[u.side] / this.power[target.side]);
     hit *= 1 - tcls.armor * (cls.piercing ? 0.45 : 0.85); // 弩は防具を貫きやすい
     hit *= 1 - 0.35 * (d / cls.range); // 遠いほど当たりにくい
     if (this.field.inForest(target.x, target.z)) hit *= 0.55; // 森は矢を防ぐ

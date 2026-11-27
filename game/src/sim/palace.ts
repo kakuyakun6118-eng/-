@@ -7,6 +7,7 @@
 //   地位を使った強制や、断りを無視して進める選択肢は作らない。
 // ・皇帝の近親(娘・姉妹・母など)、ほかの人の妻には、恋愛の選択肢を出さない。
 // ・後宮の女官(架空)は、妃に迎えるまで人物の台帳に入れない(俸禄・忠誠などの計算を変えないため)。
+import { personMult } from "./virtualTraits";
 import { persons, scenario } from "../data";
 import type { Person } from "../data/types";
 import type { Campaign } from "./Campaign";
@@ -419,7 +420,7 @@ export class PalaceSystem {
     this.visitMistress(n);
     n.expr = moodExpr(n.mood, n.jealousy, n.romance);
     const shy = n.temper === "shy" ? 0.6 : n.temper === "cheerful" ? 1.3 : 1;
-    n.intimacy = clamp(n.intimacy + 3 * k * shy);
+    n.intimacy = clamp(n.intimacy + 3 * k * shy * this.charm());
     n.trust = clamp(n.trust + 1.5 * k);
     n.regard = clamp(n.regard + 0.5 * k);
     if (n.romance > 0 || n.bond !== "none") n.romance = clamp(n.romance + 0.5 * k);
@@ -1012,7 +1013,13 @@ export class PalaceSystem {
   }
 
   private bump(n: PalaceNpc, d: Partial<Record<"intimacy" | "trust" | "romance" | "regard" | "mood" | "jealousy", number>>): void {
-    for (const [k, v] of Object.entries(d) as [keyof typeof d, number][]) n[k] = clamp(n[k] + v);
+    // 絶世の英姿(仮想シナリオ):皇帝への好感(親しさ・信頼・想い・敬意)の上がり方が大きい。嫉妬・下がる分は変えない
+    for (const [k, v] of Object.entries(d) as [keyof typeof d, number][]) n[k] = clamp(n[k] + (v > 0 && k !== "jealousy" && k !== "mood" ? v * this.charm() : v));
+  }
+
+  /** 皇帝の魅力による後宮の好感の上がり方の倍率(絶世の英姿。ほかの君主は1) */
+  private charm(): number {
+    return personMult(this.ruler(), "affection");
   }
 
   private spend(gold: number): boolean {
