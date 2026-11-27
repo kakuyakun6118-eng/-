@@ -1,4 +1,5 @@
 // ゲームの起動。
+import { inheritXuandi, LIU_HAO_TRAITS, TYPE_TRAITS } from "./sim/court";
 import { registerForTest, registered, portraitUrl } from "./palace2d/assets";
 import { CAST } from "./palace2d/cast";
 import { armyOpsRules } from "./sim/strategy";
@@ -32,6 +33,8 @@ Game.create(root)
     // 点検用(仮想シナリオ):特殊能力の効果の道具
     (window as unknown as { __gokoVirtual: unknown }).__gokoVirtual = virtualTraits;
     (window as unknown as { __gokoSeed: unknown }).__gokoSeed = setGameSeed;
+    // 点検用(Version 65):宣帝の血統の能力の受け継ぎ
+    (window as unknown as { __gokoBlood: unknown }).__gokoBlood = { inheritXuandi, LIU_HAO_TRAITS, TYPE_TRAITS };
     (window as unknown as { __gokoArmyOps: unknown }).__gokoArmyOps = armyOpsRules;
     (window as unknown as { __gokoPalace2D: unknown }).__gokoPalace2D = { registerForTest, registered, portraitUrl, CAST };
     hint.textContent = "ドラッグで移動・ピンチで拡大縮小・都市や軍団をタップ";

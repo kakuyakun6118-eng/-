@@ -42,7 +42,7 @@ const BLOOD_TYPES = {
   知略: { leadership: 0, war: -8, intelligence: 10, politics: 5, charisma: 0 },
   政治: { leadership: -4, war: -8, intelligence: 4, politics: 10, charisma: 5 },
 } as const;
-const TYPE_TRAITS: Record<keyof typeof BLOOD_TYPES, string[]> = { 万能: ["帝王之器", "文武双全"], 軍事: ["武神", "破軍", "遠征無双"], 知略: ["王佐之才", "神算鬼謀"], 政治: ["仁政", "富国強兵", "人心掌握"] };
+export const TYPE_TRAITS: Record<keyof typeof BLOOD_TYPES, string[]> = { 万能: ["帝王之器", "文武双全"], 軍事: ["武神", "破軍", "遠征無双"], 知略: ["王佐之才", "神算鬼謀"], 政治: ["仁政", "富国強兵", "人心掌握"] };
 
 /**
  * 宣帝の血統の子の能力と特殊能力(仮想シナリオ)。成人時の目標の値を返す(年少のあいだは成長の計算で小さく出る)。
@@ -64,6 +64,9 @@ export function inheritXuandi(f: Person, m: Person, mStat: (k: (typeof STAT_KEYS
   }
   const traits: string[] = [];
   const addT = (t: string): void => { if (!traits.includes(t) && traits.length < 4) traits.push(t); };
+  // 型の能力を先に1つ(上限4つで消えないように)
+  const tt = TYPE_TRAITS[type];
+  addT(tt[Math.floor(chance(seed + "|tt") * tt.length)]);
   if (prodigy) {
     const pool = [...LIU_HAO_TRAITS];
     for (let i = 0; i < 3; i++) addT(pool.splice(Math.floor(chance(`${seed}|pt${i}`) * pool.length), 1)[0]);
@@ -71,8 +74,6 @@ export function inheritXuandi(f: Person, m: Person, mStat: (k: (typeof STAT_KEYS
   // 父母の能力:ふつうは35%、劉皓の固有能力は15%(一部だけ受け継ぐ)。さらに劉皓の固有能力が、どの子にも5%ずつ現れる
   for (const t of [...f.traits, ...m.traits]) if (chance(`${seed}|i${t}`) < (LIU_HAO_TRAITS.includes(t) ? 0.15 : 0.35)) addT(t);
   for (const t of LIU_HAO_TRAITS) if (chance(`${seed}|h${t}`) < 0.05) addT(t);
-  const tt = TYPE_TRAITS[type];
-  addT(tt[Math.floor(chance(seed + "|tt") * tt.length)]);
   return { stats, traits, type, prodigy };
 }
 
@@ -1292,6 +1293,14 @@ export class Court {
         const n = sur + pool[(Math.floor(chance(`${day}|${h.id}|nm`) * pool.length) + i) % pool.length];
         if (!used.has(n)) name = n;
       }
+      // 仮想シナリオの長い王朝:1字の名を使い切ったら、2字の名(弘昭など)にする(番号の付いた名にしない)
+      if (!name && scenario.virtual) {
+        const o = Math.floor(chance(`${day}|${h.id}|nm2`) * pool.length);
+        for (let i = 0; i < pool.length && !name; i++) for (let j = 0; j < pool.length && !name; j++) {
+          const a = pool[(o + i) % pool.length], b = pool[(o + i + j + 1) % pool.length];
+          if (a !== b && !used.has(sur + a + b)) name = sur + a + b;
+        }
+      }
       if (!name) name = `${sur}${pool[0]}${this.nextId}`;
       const avg = (k: (typeof STAT_KEYS)[number]): number => Math.round(Math.max(20, Math.min(95, (h[k] + (this.base[w.id]?.[k] ?? w[k])) / 2 + (chance(`${day}|${name}|${k}`) - 0.5) * 30)));
       let stats = { leadership: avg("leadership"), war: avg("war"), intelligence: avg("intelligence"), politics: avg("politics"), charisma: avg("charisma") };
@@ -1800,8 +1809,10 @@ export class Court {
         : delta >= 5 ? ["明", "章", "宣"]
         : reign >= 10 && rec.stabilityEnd >= 70 ? ["文", "景", "成"]
         : reign >= 10 ? ["章", "和", "順"]
-        : ["安", "恭", "孝"];
-      const c1 = ch.find((x) => !used.has(`孝${x}皇帝`)) ?? ch[0];
+        : ["安", "恭", "順"];
+      // 同じ王朝で同じ諡号を使わない。候補が尽きたら、ほかの諡の字から選ぶ
+      const ALL = ["武", "文", "明", "章", "和", "安", "順", "成", "景", "宣", "昭", "穆", "恭", "簡", "献", "質", "桓", "霊", "沖", "殤", "哀", "愍", "平", "元", "恵", "荘", "粛", "憲", "睿", "烈", "威", "襄", "定", "康", "節", "靖", "徳", "敬", "仁", "懐", "閔", "孺", "献", "僖", "頃", "戴", "懿", "温", "淳", "端"];
+      const c1 = [...ch, ...ALL].find((x) => !used.has(`孝${x}皇帝`)) ?? ch[0];
       rec.posthumous = `孝${c1}皇帝`;
     }
     if (p) this.setTitle(p.id, `漢${rec.templeName ?? ""}${rec.posthumous}`);
@@ -1814,12 +1825,22 @@ export class Court {
    */
   private dynastyWatch(): void {
     if (!scenario.virtual) return;
+    // 記録のない皇帝(Version 64 のセーブで、すでに即位していた場合など):いまの皇帝から記録を始める
+    for (const g of scenario.factions) {
+      if (g.fallen || this.rankOf(g.id) !== "emperor") continue;
+      const r = this.c.rulerOf(g.id);
+      if (!r || r.bloodline !== "xuandi" || this.openReign(g.id)) continue;
+      if (this.emperors.some((x) => x.factionId === g.id && x.personId === r.id)) continue;
+      const rec = this.startReign(g.id, r, !this.emperors.some((x) => x.factionId === g.id));
+      rec.achievements.push("即位の年は前の版のセーブのため不明(読み込んだ年から記録)");
+    }
     for (const rec of this.emperors.filter((r) => r.endYear === null)) {
       const f = rec.factionId;
       const fac = scenario.factions.find((x) => x.id === f);
       const cur = this.c.rulerOf(f);
       const flag = this.c.history?.flags.vh_unified;
-      if (flag === f && !rec.achievements.includes("天下統一")) rec.achievements.push("天下統一");
+      // 天下統一は、成しとげた代(フラグが立ったときに在位していた皇帝)だけに記す
+      if (flag === f && !this.emperors.some((r) => r.factionId === f && r.achievements.includes("天下統一"))) rec.achievements.push("天下統一");
       if (fac && !fac.fallen && cur?.id === rec.personId && this.rankOf(f) === "emperor") continue;
       const p = persons.find((x) => x.id === rec.personId);
       const reason = fac?.fallen ? "国の滅亡" : p && this.c.personStatus(p.id) === "dead" ? "崩御" : this.c.spoils.custodyOf(rec.personId) ? "捕らわれる" : "退位";

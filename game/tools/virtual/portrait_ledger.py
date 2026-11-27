@@ -1,4 +1,4 @@
-"""仮想シナリオ「炎漢再興」の23人の肖像画の制作台帳(docs/virtual-portrait-ledger.xlsx と .md)。
+"""仮想シナリオ「炎漢再興」の肖像画の制作台帳(23人+Version 65 の楚王后・韓瑤。皇族5人は年代別の4枚も)(docs/virtual-portrait-ledger.xlsx と .md)。
 肖像はChatGPT側で作る予定。画像がまだ無い人物は「未制作」(仮の画像を完成扱いにしない)。容姿はすべてゲームの創作。"""
 import json, os
 from openpyxl import Workbook
@@ -31,12 +31,15 @@ L = {
  'vh_su_wan': ('成人の女性。優しく整った顔、澄んだ目', '黒髪を低く結い、簪一本', 'ほっそりとした体', '淡い緑の医家の衣', '薬草の袋', 'やわらかな微笑み', '胸から上・斜め・背景透明'),
  'vh_shen_yuehua': ('成人の女性。凛とした美しい顔、切れ長の目', '高く結った髪に銀の簪', 'すらりとした体', '軽い鎧に紫の戦袍', '月の紋の弩', '誇り高いまなざし', '胸から上・斜め・弩を持つ・背景透明'),
  'vh_gu_qinglan': ('成人の女性。理知的で端正な顔', '整った髷に玉の簪', '細身', '尚書の女官の正装(藍色)', '筆と巻物', '落ち着いた公平な表情', '胸から上・正面・背景透明'),
+ # Version 65:楚王后(劉承・劉威・劉睿・劉瑛の母)と、劉承の妃になりうる韓瑤
+ 'vh_xie_rong': ('成人の女性。気品ある卵形の顔、やわらかな二重の目、すっとした鼻筋。子らに受け継がれる「やさしい目元」', '黒髪を高く結い、金の歩揺', 'すらりとした体', '深紅と金の王后の礼服(即位後は皇后の褘衣)', '鳳凰の簪、玉の耳飾り', '穏やかで聡明な微笑み', '胸から上・正面やや斜め・背景透明'),
+ 'vh_han_yao': ('成人の女性(16歳以上で婚姻)。父 韓玄策に似た面長で凛とした顔、きりっとした眉', '黒髪を結い、銀の簪', '均整のとれた体', '紺と白の衣(皇太子妃になれば緋の礼服)', '小さな玉の佩', '落ち着いた芯の強い表情', '胸から上・斜め・背景透明'),
 }
 ORDER = list(L.keys())
 rows = []
 for i, pid in enumerate(ORDER, 1):
     p = P[pid]; f = L[pid]
-    rows.append([f'VH{i:02d}', pid, p['name'], p['reading'], 304 - p['born'], '最優先(特別に豪華)' if pid == 'vh_liu_hao' else '高' if i <= 3 else '中', *f, '済' if pid in have else '未制作', f'public/portraits/{pid}.webp'])
+    rows.append([f'VH{i:02d}', pid, p['name'], p['reading'], (304 - p['born']) if p['born'] <= 304 else f"未生({p['born']}年生)", '最優先(特別に豪華)' if pid == 'vh_liu_hao' else '高' if i <= 3 else '中', *f, '済' if pid in have else '未制作', f'public/portraits/{pid}.webp'])
 HEAD = ['台帳番号', '人物ID', '氏名', '読み', '年齢(304年)', '優先度', '顔立ち', '髪型', '体格', '衣装', '装飾', '表情', '構図', '状態', '置き場所']
 wb = Workbook(); ws = wb.active; ws.title = '肖像の制作台帳'
 ws.append(HEAD)
@@ -47,15 +50,48 @@ for row in ws.iter_rows(min_row=2):
     for c in row: c.alignment = Alignment(wrap_text=True, vertical='top')
     if row[13].value == '未制作': row[13].fill = PatternFill('solid', fgColor='F4D6CC')
 ws.freeze_panes = 'D2'
+# ---- 皇族5人の年代別(幼年・青年・壮年・老年)----
+# 似せる手がかり:劉皓(切れ長で澄んだ目・通った鼻筋)と謝蓉(やさしい目元・卵形の顔)。劉弘は劉承と韓瑤の子(凛とした眉は韓氏から)
+FAM = {
+ 'vh_liu_cheng': ('長男・皇太子。劉皓の通った鼻筋と切れ長の目、謝蓉の卵形の顔。兄弟でいちばん父に似るが、表情はより穏やか', '帝王の器らしい落ち着き'),
+ 'vh_liu_wei': ('次男。劉皓の切れ長の目と太めの眉、骨太の顎(祖父 劉雄ゆずり)。兄より角ばった顔', '武人らしい烈しさ'),
+ 'vh_liu_rui': ('三男。謝蓉のやさしい目元と細い顎、祖父 劉浩ゆずりの細い目尻。兄弟でいちばん面長', '理知的で静か'),
+ 'vh_liu_ying': ('長女。謝蓉の卵形の顔と目元、劉皓の通った鼻筋', '聡明で華やか'),
+ 'vh_liu_hong': ('劉承の子(皇孫)。劉承・劉皓ゆずりの切れ長の目と鼻筋に、母 韓瑤の凛とした眉', '中興の主らしい明るさ'),
+}
+STAGES = [('幼年', 6, '丸い頬・大きな目。髪は総角(あげまき)に結う', '童子の袍(朱)', '無邪気、または好奇心'),
+          ('青年', 18, '頬が締まり、父祖の面影がはっきりする。髷に小冠', '皇子の礼服(黒と朱)', '若々しい意志'),
+          ('壮年', 40, '顔立ちが完成し、口ひげ(女性は簪を増やす)', '親王・皇帝の正装(即位していれば冕服)', ''),
+          ('老年', 65, '目尻としわ、白髪まじりのひげ・髪(女性は白髪まじりの髷)', '落ち着いた色の礼服', '穏やかな威厳')]
+vrows = []
+for i, (pid, (face, mood)) in enumerate(FAM.items(), 1):
+    p = P[pid]
+    for j, (st, age, look, cloth, ex) in enumerate(STAGES, 1):
+        vrows.append([f'VR{i:02d}-{j}', pid, p['name'], st, f"{age}歳ごろ({p['born'] + age}年)", face, look, cloth, ex or mood, '胸から上・正面やや斜め・背景透明', '未制作', f'public/portraits/{pid}_{["child","youth","prime","old"][j - 1]}.webp'])
+ws3 = wb.create_sheet('皇族5人の年代別')
+H3 = ['台帳番号', '人物ID', '氏名', '年代', '年齢の目安', '顔立ち(先祖に似せる点)', '年代の特徴', '衣装', '表情', '構図', '状態', '置き場所(予定)']
+ws3.append(H3)
+for r in vrows: ws3.append(r)
+for c in ws3[1]: c.font = Font(bold=True, color='FFFFFF'); c.fill = PatternFill('solid', fgColor='8A1F18')
+for col, w in zip('ABCDEFGHIJKL', [10, 16, 8, 7, 16, 50, 36, 28, 18, 26, 9, 36]): ws3.column_dimensions[col].width = w
+for row in ws3.iter_rows(min_row=2):
+    for c in row: c.alignment = Alignment(wrap_text=True, vertical='top')
+    row[10].fill = PatternFill('solid', fgColor='F4D6CC')
+ws3.freeze_panes = 'D2'
 ws2 = wb.create_sheet('説明')
 for line in ['仮想シナリオ「炎漢再興 ― 天命を継ぐ者」の23人の肖像画の制作台帳。人物はすべて架空、容姿はゲームの創作。', '肖像はChatGPT側で制作する予定。「未制作」の人物は、ゲームでは仮のシルエットで表示される(仮の画像を完成扱いにしない)。',
              '劉皓は歴代で最も美しい若き覇王として、特別に豪華な肖像を作る予定(表情3枚+即位後の皇帝の版)。', '画像は public/portraits/<人物ID>.webp(背景透明・胸から上)に置き、npm run build で取り込む。他人の著作物の画像は使わないこと。',
-             f'人数:{len(rows)}人(済 {sum(r[13] == "済" for r in rows)}・未制作 {sum(r[13] == "未制作" for r in rows)})']:
+             f'人数:{len(rows)}人(済 {sum(r[13] == "済" for r in rows)}・未制作 {sum(r[13] == "未制作" for r in rows)})',
+             f'皇族5人の年代別(幼年・青年・壮年・老年):{len(vrows)}枚、すべて未制作。顔はそれぞれ違えつつ、劉皓・謝蓉(劉弘は韓瑤も)に似せる。',
+             'ゲームはいま、1人に1枚の肖像だけを使う。年代別の4枚を年齢で切り替える仕組みは、まだ作っていない(画像ができたら作る)。']:
     ws2.append([line])
 ws2.column_dimensions['A'].width = 110
 wb.save(os.path.join(ROOT, 'docs/virtual-portrait-ledger.xlsx'))
-md = ['# 仮想シナリオ「炎漢再興」:肖像画の制作台帳(23人)', '', '人物はすべて架空、容姿はゲームの創作です。肖像はChatGPT側で制作する予定で、「未制作」の人物はゲームでは仮のシルエットで表示されます(完成扱いにしません)。', '',
+md = [f'# 仮想シナリオ「炎漢再興」:肖像画の制作台帳({len(rows)}人)', '', '人物はすべて架空、容姿はゲームの創作です。肖像はChatGPT側で制作する予定で、「未制作」の人物はゲームでは仮のシルエットで表示されます(完成扱いにしません)。', '',
       '| 番号 | ID | 氏名 | 年齢 | 優先度 | 顔立ち | 髪型 | 体格 | 衣装 | 装飾 | 表情 | 構図 | 状態 |', '|---|---|---|---|---|---|---|---|---|---|---|---|---|']
 for r in rows: md.append('| ' + ' | '.join(str(x) for x in (r[0], r[1], r[2], r[4], r[5], *r[6:14])) + ' |')
+md += ['', '## 皇族5人の年代別(幼年・青年・壮年・老年)', '', '顔はそれぞれ違えつつ、先祖(劉皓・謝蓉。劉弘は韓瑤も)に似せます。すべて未制作です。ゲームはいま1人に1枚だけを使い、年齢で切り替える仕組みはまだありません。', '',
+       '| 番号 | ID | 氏名 | 年代 | 年齢の目安 | 顔立ち(先祖に似せる点) | 年代の特徴 | 衣装 | 表情 | 状態 |', '|---|---|---|---|---|---|---|---|---|---|']
+for r in vrows: md.append('| ' + ' | '.join(str(x) for x in (*r[0:10], r[10])[:9] + (r[10],)) + ' |')
 open(os.path.join(ROOT, 'docs/virtual-portrait-ledger.md'), 'w', encoding='utf-8').write('\n'.join(md) + '\n')
 print(len(rows), 'persons;', sum(r[13] == '未制作' for r in rows), '未制作')
