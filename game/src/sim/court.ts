@@ -94,7 +94,44 @@ export interface CourtCounts {
   disputes: number; civilWars: number; crowns: number; heirChanges: number; deaths: number; usurpations: number;
   regents: number; personalRule: number; depositions: number; eduGain: number; violentDeaths: number;
 }
+/** 歴代皇帝の記録(仮想シナリオの漢)。代替わりごとに1件 */
+export interface EmperorRecord {
+  gen: number;
+  factionId: string;
+  personId: string;
+  name: string;
+  era: string;
+  born: number | null;
+  died: number | null;
+  accYear: number;
+  accDate: string;
+  endYear: number | null;
+  endDate: string | null;
+  /** 崩御・退位・国の滅亡など */
+  endReason: string | null;
+  citiesStart: number;
+  citiesEnd: number | null;
+  wins: number;
+  losses: number;
+  captures: number;
+  lost: number;
+  achievements: string[];
+  empress: string | null;
+  heir: string | null;
+  successor: string | null;
+  templeName: string | null;
+  posthumous: string | null;
+  stabilityEnd: number | null;
+  founder: boolean;
+}
+/** 元号(初代は建武。そのあとは順に) */
+export const ERA_NAMES = ["建武", "永平", "章和", "元康", "太和", "永昌", "嘉平", "正始", "景元", "泰始", "咸寧", "太康", "元熙", "承平", "景和", "延興", "昭明", "鳳翔", "天統", "神鼎", "寧康", "太元", "隆安", "義寧", "天和", "嘉禾", "黄龍", "赤烏", "神鳳", "永安", "甘露", "宝鼎", "鳳凰", "天紀", "太初", "延昌", "熙平", "神亀", "正光", "孝昌"];
+
 export interface CourtSave {
+  /** 歴代皇帝の記録と、皇統の称号・戦績の集計(仮想シナリオ。Version 65) */
+  emperors?: EmperorRecord[];
+  titles?: Record<string, string>;
+  tally?: Record<string, { wins: number; losses: number; captures: number; lost: number }>;
   heirs: Record<string, string>;
   stability: Record<string, number>;
   ranks: Record<string, Rank>;
@@ -146,8 +183,18 @@ export class Court {
     this.init();
   }
 
+  /** 歴代皇帝の記録(仮想シナリオの漢) */
+  emperors: EmperorRecord[] = [];
+  /** 皇統の称号(漢皇帝・太上皇・諡号など。人物の称号はセーブに残らないため、ここに残す) */
+  titles: Record<string, string> = {};
+  /** 勢力ごとの戦績の集計(会戦の勝ち負け・城の攻略と喪失) */
+  tally: Record<string, { wins: number; losses: number; captures: number; lost: number }> = {};
+
   private init(): void {
     this.removeAdded();
+    this.emperors = [];
+    this.titles = {};
+    this.tally = {};
     this.heirs = {};
     this.stability = {};
     this.ranks = {};
@@ -242,7 +289,7 @@ export class Court {
     this.added = [];
   }
 
-  private year(): number {
+  year(): number {
     return this.c.calendar().year;
   }
 
@@ -947,6 +994,7 @@ export class Court {
     this.historicDebuts(year);
     this.births(year);
     this.applyGrowth();
+    this.dynastyWatch();
     for (const f of scenario.factions) {
       if (f.passive || f.fallen) continue;
       const r = this.c.rulerOf(f.id);
@@ -1619,7 +1667,7 @@ export class Court {
 
   // ---------------- 保存 ----------------
   serialize(): CourtSave {
-    return JSON.parse(JSON.stringify({ heirs: this.heirs, stability: this.stability, ranks: this.ranks, added: this.added, parents: this.parents, base: this.base, lifespan: this.lifespan, assumedBorn: this.assumedBorn, log: this.log, counts: this.counts, nextId: this.nextId, regents: this.regents, causes: this.causes, edu: this.edu })) as CourtSave;
+    return JSON.parse(JSON.stringify({ emperors: this.emperors, titles: this.titles, tally: this.tally, heirs: this.heirs, stability: this.stability, ranks: this.ranks, added: this.added, parents: this.parents, base: this.base, lifespan: this.lifespan, assumedBorn: this.assumedBorn, log: this.log, counts: this.counts, nextId: this.nextId, regents: this.regents, causes: this.causes, edu: this.edu })) as CourtSave;
   }
 
   /** 戻す。ゲームの中で加わった人物を、いったん外してから入れ直す(spoils・忠誠より前に呼ぶ) */
@@ -1651,7 +1699,141 @@ export class Court {
     this.regents = { ...(save.regents ?? {}) };
     this.causes = { ...(save.causes ?? {}) };
     this.edu = JSON.parse(JSON.stringify(save.edu ?? {}));
+    // 歴代皇帝の記録と称号(Version 64以前のセーブには無い → 空のまま)
+    this.emperors = JSON.parse(JSON.stringify(save.emperors ?? []));
+    this.titles = { ...(save.titles ?? {}) };
+    this.tally = JSON.parse(JSON.stringify(save.tally ?? {}));
+    for (const [id, t] of Object.entries(this.titles)) { const p = persons.find((x) => x.id === id); if (p) p.title = t; }
     this.applyGrowth();
+  }
+
+  // ---------------- 歴代皇帝(仮想シナリオの漢) ----------------
+  /** 称号を付ける(セーブに残す) */
+  setTitle(id: string, t: string): void {
+    const p = persons.find((x) => x.id === id);
+    if (p) p.title = t;
+    this.titles[id] = t;
+  }
+
+  /** 会戦・攻城の結果を数える(在位中の戦績に使う) */
+  noteBattle(win: string | null, lose: string | null, captured: boolean): void {
+    const t = (f: string) => (this.tally[f] ??= { wins: 0, losses: 0, captures: 0, lost: 0 });
+    // 会戦は勝ち負けを、攻城(城の攻略)は攻略と喪失を数える(二重には数えない)
+    if (win) { if (captured) t(win).captures++; else t(win).wins++; }
+    if (lose) { if (captured) t(lose).lost++; else t(lose).losses++; }
+  }
+
+  private citiesOf(f: string): number {
+    return this.c.cities.filter((k) => k.kind !== "pass" && scenario.cityOwners[k.id] === f).length;
+  }
+
+  /** いま在位中の皇帝の記録 */
+  openReign(f: string): EmperorRecord | undefined {
+    return [...this.emperors].reverse().find((r) => r.factionId === f && r.endYear === null);
+  }
+
+  /** 元号の年(建武3年など) */
+  eraText(f: string): string | null {
+    const r = this.openReign(f);
+    return r ? `${r.era}${this.year() - r.accYear + 1 === 1 ? "元" : this.year() - r.accYear + 1}年` : null;
+  }
+
+  /** 即位を記録する(漢の皇帝として在位を始める)。初代(劉皓)は founder */
+  startReign(f: string, p: Person, founder: boolean): EmperorRecord {
+    const gen = this.emperors.filter((r) => r.factionId === f).length + 1;
+    const era = ERA_NAMES[(gen - 1) % ERA_NAMES.length];
+    const t = this.tally[f] ?? { wins: 0, losses: 0, captures: 0, lost: 0 };
+    const rec: EmperorRecord = {
+      gen, factionId: f, personId: p.id, name: p.name, era, born: p.born, died: null, accYear: this.year(), accDate: this.c.dateText(), endYear: null, endDate: null, endReason: null,
+      citiesStart: this.citiesOf(f), citiesEnd: null, wins: -t.wins, losses: -t.losses, captures: -t.captures, lost: -t.lost, achievements: [],
+      empress: this.primaryOf(p.id)?.name ?? null, heir: this.heirOf(f)?.name ?? null, successor: null, templeName: null, posthumous: null, stabilityEnd: null, founder,
+    };
+    this.emperors.push(rec);
+    this.setTitle(p.id, "漢皇帝");
+    this.note(f, `${p.name}が漢の第${gen}代皇帝に即位(元号 ${era})`);
+    return rec;
+  }
+
+  /** 在位の終わり:戦績をまとめ、廟号・諡号を決めて称号を付ける */
+  endReign(rec: EmperorRecord, reason: string, successor: Person | undefined): void {
+    const f = rec.factionId;
+    const t = this.tally[f] ?? { wins: 0, losses: 0, captures: 0, lost: 0 };
+    rec.wins += t.wins; rec.losses += t.losses; rec.captures += t.captures; rec.lost += t.lost;
+    rec.endYear = this.year();
+    rec.endDate = this.c.dateText();
+    rec.endReason = reason;
+    rec.citiesEnd = this.citiesOf(f);
+    rec.successor = successor?.name ?? null;
+    rec.stabilityEnd = Math.round(this.stability[f] ?? 60);
+    const p = persons.find((x) => x.id === rec.personId);
+    if (p && this.c.personStatus(p.id) === "dead") rec.died = this.year();
+    const delta = rec.citiesEnd - rec.citiesStart;
+    const reign = rec.endYear - rec.accYear;
+    if (rec.wins) rec.achievements.push(`会戦${rec.wins}勝${rec.losses}敗`);
+    if (rec.captures) rec.achievements.push(`城の攻略${rec.captures}`);
+    rec.achievements.push(`領土 ${rec.citiesStart}→${rec.citiesEnd}都市`);
+    const vassals = Object.entries(this.c.diplo.overlord).filter(([, o]) => o === f).length;
+    const allies = scenario.factions.filter((g) => g.id !== f && !g.fallen && this.c.relationOf(f, g.id) === "alliance").length;
+    if (vassals) rec.achievements.push(`属国${vassals}国`);
+    if (allies) rec.achievements.push(`同盟${allies}国`);
+    rec.achievements.push(`皇室の安定${rec.stabilityEnd}`);
+    // 廟号・諡号:初代の劉皓は「太祖・宣武皇帝」。2代目からは治世の実際の成績で決める
+    const used = new Set(this.emperors.filter((r) => r !== rec && r.factionId === f).flatMap((r) => [r.templeName, r.posthumous]).filter(Boolean));
+    const pickName = (list: string[]): string | null => list.find((n) => !used.has(n)) ?? null;
+    const age = p && p.born !== null ? this.year() - p.born : null;
+    if (rec.founder && rec.personId === "vh_liu_hao") {
+      rec.templeName = "太祖";
+      rec.posthumous = "宣武皇帝";
+    } else {
+      const unified = rec.achievements.includes("天下統一");
+      rec.templeName = rec.founder ? "太祖"
+        : unified ? pickName(["世祖", "太宗", "高宗"])
+        : rec.gen === 2 && delta >= 0 && reign >= 5 ? pickName(["太宗", "世宗"])
+        : delta >= 10 || rec.wins >= 25 ? pickName(["世宗", "顕宗", "粛宗"])
+        : delta >= 3 && rec.lost >= 3 ? pickName(["中宗"])
+        : reign >= 15 && rec.stabilityEnd >= 60 ? pickName(["仁宗", "高宗", "孝宗"])
+        : reign >= 8 && delta >= 0 ? pickName(["顕宗", "粛宗", "穆宗", "憲宗"])
+        : null;
+      const ch = age !== null && age < 20 ? ["殤", "沖"]
+        : delta <= -8 ? (rec.citiesEnd === 0 ? ["愍", "哀"] : ["哀", "霊"])
+        : rec.wins >= 20 || rec.captures >= 10 ? ["武", "烈", "威"]
+        : delta >= 5 ? ["明", "章", "宣"]
+        : reign >= 10 && rec.stabilityEnd >= 70 ? ["文", "景", "成"]
+        : reign >= 10 ? ["章", "和", "順"]
+        : ["安", "恭", "孝"];
+      const c1 = ch.find((x) => !used.has(`孝${x}皇帝`)) ?? ch[0];
+      rec.posthumous = `孝${c1}皇帝`;
+    }
+    if (p) this.setTitle(p.id, `漢${rec.templeName ?? ""}${rec.posthumous}`);
+    this.note(f, `${rec.name}の治世が終わる(${reason})。${rec.templeName ? `廟号 ${rec.templeName}・` : ""}諡号 ${rec.posthumous}`);
+  }
+
+  /**
+   * 毎月:漢の皇帝の代替わりを記録する(仮想シナリオ)。在位中の皇帝が君主でなくなったら在位を閉じ、
+   * 漢(皇帝の位)のまま新しい君主が立っていれば、次の代の在位を始める。国が滅びたら閉じる
+   */
+  private dynastyWatch(): void {
+    if (!scenario.virtual) return;
+    for (const rec of this.emperors.filter((r) => r.endYear === null)) {
+      const f = rec.factionId;
+      const fac = scenario.factions.find((x) => x.id === f);
+      const cur = this.c.rulerOf(f);
+      const flag = this.c.history?.flags.vh_unified;
+      if (flag === f && !rec.achievements.includes("天下統一")) rec.achievements.push("天下統一");
+      if (fac && !fac.fallen && cur?.id === rec.personId && this.rankOf(f) === "emperor") continue;
+      const p = persons.find((x) => x.id === rec.personId);
+      const reason = fac?.fallen ? "国の滅亡" : p && this.c.personStatus(p.id) === "dead" ? "崩御" : this.c.spoils.custodyOf(rec.personId) ? "捕らわれる" : "退位";
+      this.endReign(rec, reason, cur && cur.id !== rec.personId ? cur : undefined);
+      if (fac && !fac.fallen && cur && cur.id !== rec.personId && this.rankOf(f) === "emperor") {
+        const nr = this.startReign(f, cur, false);
+        // 新しい皇帝の皇太子:決まっていなければ、継承順位の1位
+        if (!this.heirOf(f)) { const o = this.successionOrder(f)[0]; if (o) this.heirs[f] = o.p.id; }
+        const hr = this.heirOf(f);
+        if (hr) this.setTitle(hr.id, "皇太子");
+        nr.heir = hr?.name ?? null;
+        this.c.addNews(`${fac.name}の第${nr.gen}代皇帝に${cur.name}が即位しました(元号 ${nr.era})`);
+      }
+    }
   }
 }
 

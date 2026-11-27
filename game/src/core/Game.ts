@@ -1676,8 +1676,8 @@ export class Game {
     if (this.campaign.gameOver) return "国が滅びています";
     const ruler = this.campaign.rulerOf(f);
     if (!ruler) return "君主がいません";
-    // 仮想シナリオ(炎漢再興):劉皓の国は、漢の皇帝に即位してから皇帝生活に入れる
-    if (scenario.virtual && ruler.id === "vh_liu_hao" && this.campaign.court.rankOf(f) !== "emperor") return "劉皓が漢の皇帝に即位すると、皇帝生活に入れます(洛陽と長安を得て「大漢皇帝即位」の事件を選ぶ)";
+    // 仮想シナリオ(炎漢再興):劉皓の国(宣帝の血統の君主)は、漢の皇帝に即位してから皇帝生活に入れる
+    if (scenario.virtual && ruler.bloodline === "xuandi" && this.campaign.court.rankOf(f) !== "emperor") return "漢の皇帝に即位すると、皇帝生活に入れます(西晋の滅亡ののち「漢室再興の詔」と「漢皇帝即位」の事件を選ぶ)";
     const P = this.campaign.palace;
     if (P.factionId !== f) {
       // 別の国で入るときは、後宮の名簿を作り直す

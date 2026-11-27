@@ -120,7 +120,9 @@ export class CourtScreen {
     face.alt = ruler.name;
     fillPortrait(face, ruler);
     const info = this.el("div");
-    info.append(this.el("h3", "", `${ct.rankLabel(f)} ${ruler.name}`), this.el("p", "", `${fac.name}・${ct.age(ruler) !== null ? `${ct.age(ruler)}歳` : "年齢不明"}・威信${c.loyalty.prestige(f)}`));
+    // 漢の皇帝(仮想シナリオ)は「漢皇帝・劉皓」と元号を出す
+    const era = ct.eraText(f);
+    info.append(this.el("h3", "", ruler.title === "漢皇帝" ? `漢皇帝・${ruler.name}` : `${ct.rankLabel(f)} ${ruler.name}`), this.el("p", "", `${fac.name}・${ct.age(ruler) !== null ? `${ct.age(ruler)}歳` : "年齢不明"}・威信${c.loyalty.prestige(f)}${era ? `・${era}` : ""}`));
     head.append(face, info);
     left.append(head);
     const stab = Math.round(ct.stability[f] ?? 60);
@@ -188,6 +190,33 @@ export class CourtScreen {
     const grand = ct.childrenOf(focus.id).flatMap((k) => ct.childrenOf(k.id));
     if (grand.length) mid.append(row("孫", grand));
     mid.append(this.el("p", "court-note", "札の印:史=史実の人物・推=推定・伝=伝承・架=架空の人物(ゲームの中で生まれた・迎えた人物)。史料にない親子は書いていません。"));
+    // 歴代皇帝一覧(仮想シナリオの漢)
+    const reigns = ct.emperors.filter((r) => r.factionId === f);
+    if (reigns.length) {
+      mid.append(this.el("h4", "", "歴代皇帝一覧"));
+      const tb = this.el("table", "court-emperors");
+      const tr = (cells: (string | HTMLElement)[], th = false): HTMLElement => {
+        const r = this.el("tr");
+        for (const x of cells) { const d = this.el(th ? "th" : "td"); if (typeof x === "string") d.textContent = x; else d.append(x); r.append(d); }
+        return r;
+      };
+      tb.append(tr(["代", "肖像", "名", "廟号", "諡号", "元号", "生没", "即位・在位", "領土(即位→終わり)", "主な戦い", "内政・外交", "皇后", "皇太子", "後継"], true));
+      for (const r of reigns) {
+        const p = persons.find((x) => x.id === r.personId);
+        const img = this.el("img", "court-emperor-face");
+        img.alt = r.name;
+        if (p) fillPortrait(img, p);
+        const yrs = (r.endYear ?? ct.year()) - r.accYear;
+        const war = [`会戦${r.wins + (r.endYear === null ? ct.tally[f]?.wins ?? 0 : 0)}勝${r.losses + (r.endYear === null ? ct.tally[f]?.losses ?? 0 : 0)}敗`, `攻略${r.captures + (r.endYear === null ? ct.tally[f]?.captures ?? 0 : 0)}`].join("・");
+        const civ = r.achievements.filter((a) => !/^会戦|^城の攻略|^領土/.test(a)).join("・") || (r.endYear === null ? "在位中" : "—");
+        tb.append(tr([`${r.gen}`, img, r.name, r.templeName ?? (r.endYear === null ? "(在位中)" : "なし"), r.posthumous ?? (r.endYear === null ? "(在位中)" : "—"), r.era,
+          `${r.born ?? "?"}〜${r.died ?? (r.endYear === null ? "" : "?")}`, `${r.accYear}年・${yrs}年${r.endReason ? `(${r.endReason})` : "(在位中)"}`,
+          `${r.citiesStart}→${r.citiesEnd ?? "(在位中)"}都市`, war, civ, r.empress ?? "なし", r.heir ?? "なし", r.successor ?? (r.endYear === null ? "—" : "なし")]));
+      }
+      const wrap = this.el("div", "court-emperors-wrap");
+      wrap.append(tb);
+      mid.append(wrap, this.el("p", "court-note", "廟号・諡号は、治世が終わったときに、実際の在位・戦績・領土の増減で決まります(初代の劉皓は太祖・宣武皇帝)。即位の前に亡くなった人は載りません。"));
+    }
 
     // ---- 右:後継順位・選んだ人物・出来事 ----
     const right = this.el("div", "court-col court-right");

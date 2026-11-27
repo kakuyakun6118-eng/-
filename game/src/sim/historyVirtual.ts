@@ -1,4 +1,4 @@
-// 仮想シナリオ「炎漢再興 ― 天命を継ぐ者」の専用の事件(9件)。
+// 仮想シナリオ「炎漢再興 ― 天命を継ぐ者」の専用の事件(10件。Version 65 で「漢室再興の詔」を追加)。
 // 決まった年月ではなく、領土・威信・人物の生存・軍事力・外交の条件がそろった月に起こる(conditional)。
 // 事件の一覧から条件を確かめ、そろっていれば選んで発動できる。軍団は進軍してから戦う(瞬間移動しない)。
 import { persons, scenario } from "../data";
@@ -34,6 +34,28 @@ const march = (c: Campaign, f: string, to: { lon: number; lat: number }, n = 2):
   return k;
 };
 const ok = (cond: boolean, why: string): true | string => (cond ? true : why);
+
+/**
+ * 西晋が続いているか:西晋の朝廷(勢力 jin)が滅びておらず、その君主が司馬氏であること。
+ * 年は決めない(316年に限らない)。滅亡・皇統の断絶(司馬氏でない君主)・禅譲のどれでも「滅びた」とみなす
+ */
+export function westJinAlive(c: Campaign): boolean {
+  const g = scenario.factions.find((y) => y.id === "jin");
+  if (!g || g.fallen || !live(c, "jin")) return false;
+  const r = c.rulerOf("jin");
+  return !!r && r.name.startsWith("司馬");
+}
+/** 西晋の滅び方(記録用) */
+export function westJinEnd(c: Campaign): string {
+  const g = scenario.factions.find((y) => y.id === "jin");
+  if (!g || g.fallen || !live(c, "jin")) return "西晋の朝廷が滅びた";
+  return "司馬氏の皇統が絶えた";
+}
+/** 宣帝の血統の君主(劉皓とその子孫) */
+const lineRuler = (c: Campaign, f: string | undefined) => {
+  const r = f ? c.rulerOf(f) : undefined;
+  return r && r.bloodline === "xuandi" ? r : undefined;
+};
 
 const base = { year: 304, month: 10, scenarios: SC, conditional: true, virtual: true, sources: ["仮想シナリオ(ゲームの創作)"] };
 
@@ -288,43 +310,85 @@ export const VIRTUAL_EVENTS: HistEventDef[] = [
     },
   },
 
-  // ===== 7. 大漢皇帝即位 =====
+  // ===== 7a. 漢室再興の詔(西晋の滅亡) =====
   {
-    ...base, id: "vh_emperor", name: "大漢皇帝即位", importance: "critical", place: LUOYANG,
+    ...base, id: "vh_edict", name: "漢室再興の詔", importance: "critical", place: XIANGYANG,
+    persons: ["vh_liu_hao", "vh_xun_jingming"],
+    background: "司馬氏の晋は滅びた。中原には主がなく、四方の群雄が天命を争っている。",
+    history: "(仮想)楚王は、漢の皇統を継ぐ者として、漢室の再興を天下に告げる。",
+    cond: "西晋が実際に滅びている(朝廷の滅亡・皇統の断絶・禅譲のどれか。年は問わない)。宣帝の血統の君主が楚を治めている",
+    roles: (x) => ({ f: haoOf(x.c) }),
+    done: (x) => !!H(x).flag("vh_edict"),
+    ready: (x, r) => {
+      if (!r.f) return "劉皓の国がない";
+      if (westJinAlive(x.c)) return "西晋がまだ続いている(司馬氏の朝廷がある)";
+      return ok(!!lineRuler(x.c, r.f), "宣帝の血統(劉氏)の君主がいない");
+    },
+    choices: {
+      f: [
+        { id: "proclaim", label: "漢室の再興を天下に告げる", kind: "historic", desc: "晋は滅び、漢の皇統がここにあると示す。", preview: "国の安定+5・君主の名声+10。群臣が即位を勧める(次の事件)" },
+        { id: "mourn", label: "晋の遺民を慰め、民心を集める", kind: "alt", desc: "先に民を安んじる。", preview: "すべての都市の治安+10。群臣が即位を勧める(次の事件)" },
+        { id: "summon", label: "晋の遺臣を招く", kind: "bold", desc: "晋の人材を漢に迎える。", preview: "家臣の忠誠+5・金-10,000。群臣が即位を勧める(次の事件)" },
+      ],
+    },
+    apply: (x, r, p) => {
+      const c = x.c, f = r.f!;
+      const why = westJinEnd(c);
+      H(x).flag("vh_edict", String(c.court.year()));
+      H(x).flag("vh_jin_end", why);
+      const rl = lineRuler(c, f);
+      if (p.f === "mourn") {
+        for (const k of cities(c, f)) c.cityStates[k.id] = { ...c.cityState(k), order: Math.min(100, (c.cityState(k).order ?? 60) + 10) };
+      } else if (p.f === "summon") {
+        H(x).loyaltyAll(f, 5, "晋の遺臣を招く");
+        gold(c, f, -10000);
+      } else {
+        c.court.addStability(f, 5);
+        if (rl) c.loyalty.addFame(rl.id, 10);
+      }
+      c.addNews(`【仮想の歴史】${why}。${name(f)}の${rl?.name ?? "君主"}が漢室再興の詔を発しました`);
+      return `${why}。${rl?.name ?? "君主"}は漢室の再興を天下に告げた`;
+    },
+  },
+
+  // ===== 7b. 漢皇帝即位(群臣の推戴) =====
+  {
+    ...base, id: "vh_emperor", name: "漢皇帝即位", importance: "critical", place: XIANGYANG,
     persons: ["vh_liu_hao", "vh_liu_hao_f", "vh_xun_jingming"],
-    background: "洛陽と長安、漢の二つの都を得た劉皓に、群臣は皇帝への即位を勧める。",
-    history: "(仮想)劉皓が漢の皇帝に即位し、国号を楚から漢に改める。",
-    cond: "劉皓が君主で、洛陽と長安を持ち、国の威信55以上、15都市以上を持つ",
+    background: "西晋が滅び、漢室再興の詔が下った。群臣は楚王に、漢の皇帝への即位を勧める。",
+    history: "(仮想)楚王が漢の皇帝に即位し、国号を楚から漢に改める。元号は建武。",
+    cond: "「漢室再興の詔」のあと、宣帝の血統の君主(劉皓など)が、まだ皇帝でない",
     roles: (x) => ({ f: haoOf(x.c) }),
     done: (x) => x.c.court.rankOf(haoOf(x.c) ?? "") === "emperor" && /漢/.test(name(haoOf(x.c))),
     rearm: (picks) => picks.f === "wait",
     ready: (x, r) => {
       if (!r.f) return "劉皓の国がない";
       const c = x.c;
-      if (!alive(c, "vh_liu_hao") || P("vh_liu_hao")!.role !== "ruler") return "劉皓が君主として健在でない(即位できるのは劉皓だけ)";
-      if (owner("luoyang") !== r.f || owner("changan") !== r.f) return "洛陽と長安の両方を持っていない";
-      const n = cities(c, r.f).length;
-      if (n < 15) return `国力が足りない(${n}都市。15都市以上が必要)`;
-      const pr = prestige(c, r.f);
-      return ok(pr >= 55, `威信が足りない(${Math.round(pr)}。55以上が必要)`);
+      if (westJinAlive(c)) return "西晋がまだ続いている(西晋がある間は、漢の皇帝に即位できない)";
+      if (!H(x).flag("vh_edict")) return "「漢室再興の詔」が、まだ出ていない";
+      if (!lineRuler(c, r.f)) return "宣帝の血統(劉氏)の君主が国を治めていない";
+      return ok(c.court.rankOf(r.f) !== "emperor", "すでに皇帝の位にある");
+    },
+    // AI:国力(都市・安定)を見て決める。ふつうは即位を受ける
+    ai: (x, r) => {
+      const f = r.f;
+      if (!f) return "crown";
+      const n = cities(x.c, f).length;
+      return n >= 3 && x.c.court.stability[f] !== undefined && x.c.court.stability[f] < 15 ? "wait" : n >= 3 ? "crown" : "wait";
     },
     choices: {
       f: [
-        { id: "crown", label: "漢の皇帝に即位する", kind: "historic", desc: "国号を漢と改め、天下に号令する。", preview: "国号「漢」・旗・皇帝の位・官職・皇室を改める。人物・軍団・領土・財政・家系はそのまま。皇帝生活が開ける" },
-        { id: "wait", label: "楚王のまま、天下統一を先にする", kind: "alt", desc: "まだ天下は定まっていない。", preview: "国の安定+5。即位は、天下統一ののちにまた選べる" },
-        { id: "abdication", label: "晋の皇帝から禅譲を受ける形をとる", kind: "bold", desc: "正統の手続きを踏む。", preview: "晋の皇帝を捕らえているか、晋が弱っていれば、禅譲として即位(安定+10)。そうでなければ普通に即位" },
+        { id: "crown", label: "推戴を受け、漢の皇帝に即位する", kind: "historic", desc: "国号を漢と改め、元号を建武とする。", preview: "国号「漢」・旗・皇帝の位・官職・皇室を改め、皇太子を立てる。人物・軍団・領土・財政・家系はそのまま。皇帝生活が開ける" },
+        { id: "wait", label: "即位を延期する", kind: "alt", desc: "まだ天下は定まっていない。", preview: "国の安定+5。1年たてば、また即位を選べる" },
       ],
     },
     apply: (x, r, p) => {
       const c = x.c, f = r.f!;
       if (p.f === "wait") {
         c.court.addStability(f, 5);
-        return "劉皓は楚王のまま、天下の統一を先にした(1年たって条件がそろえば、また即位を選べる)";
+        return "楚王は即位を延期した(1年たてば、また即位を選べる)";
       }
-      const jin = jinOf(c);
-      const jr = jin ? c.rulerOf(jin) : undefined;
-      const formal = p.f === "abdication" && (!!(jr && c.spoils.custodyOf(jr.id)?.holder === f) || !jin || pw(x, jin) < pw(x, f) * 0.25);
-      return crownHan(x, f, formal);
+      return crownHan(x, f, false);
     },
   },
 
@@ -411,7 +475,7 @@ export const VIRTUAL_EVENTS: HistEventDef[] = [
 ];
 
 /** 官職に任命する:定員がいっぱいなら、いまその官職にいる人を外してから任命する */
-function appointTo(c: Campaign, f: string, id: string, office: string): void {
+export function appointTo(c: Campaign, f: string, id: string, office: string): void {
   if (c.economy.officeOf(id)?.id === office) return;
   for (const q of persons) if (q.id !== id && q.factionId === f && c.economy.officeOf(q.id)?.id === office) c.economy.setOffice(q.id, null);
   c.economy.setOffice(id, office);
@@ -428,30 +492,44 @@ function foreign(c: Campaign, f: string): string[] {
  */
 export function crownHan(x: Ctx, f: string, formal: boolean): string {
   const c = x.c;
-  const hao = P("vh_liu_hao");
-  if (!hao || !alive(c, hao.id) || hao.factionId !== f) return "劉皓がいないため、即位できなかった";
+  if (westJinAlive(c)) return "西晋が続いているため、即位できなかった";
+  const ruler = lineRuler(c, f);
+  if (!ruler || !alive(c, ruler.id) || ruler.factionId !== f) return "宣帝の血統の君主がいないため、即位できなかった";
+  const isHao = ruler.id === "vh_liu_hao";
   c.renameState(f, "漢", HAN_COLOR);
   c.court.ranks[f] = "emperor";
   const fac = scenario.factions.find((y) => y.id === f)!;
   fac.title = "皇帝";
-  fac.ruler = hao.name;
-  hao.title = "大漢皇帝";
-  // 皇室:父と祖父を尊び、官職を改める(漢の官制:丞相・大将軍など)
-  if (alive(c, "vh_liu_hao_f")) P("vh_liu_hao_f")!.title = "太上皇";
-  if (alive(c, "vh_liu_xiong")) P("vh_liu_xiong")!.title = "太皇";
+  fac.ruler = ruler.name;
+  // 在位の記録(初代。元号は建武)。称号は「漢皇帝」
+  const rec = c.court.startReign(f, ruler, true);
+  // 皇室:父と祖父を尊ぶ(称号はセーブに残す)
+  const fa = c.court.fatherOf(ruler.id);
+  if (fa && alive(c, fa)) c.court.setTitle(fa, "太上皇");
+  const gf = fa ? c.court.fatherOf(fa) : undefined;
+  if (gf && alive(c, gf)) c.court.setTitle(gf, "太皇");
+  const wife = c.court.primaryOf(ruler.id);
+  if (wife && c.personStatus(wife.id) !== "dead") c.court.setTitle(wife.id, "皇后");
+  // 皇太子:原則として劉承。いなければ継承順位の1位
+  const cheng = P("vh_liu_cheng");
+  if (cheng && alive(c, cheng.id) && cheng.factionId === f && cheng.id !== ruler.id) c.court.designateHeir(f, cheng.id);
+  else if (!c.court.heirOf(f)) { const o = c.court.successionOrder(f)[0]; if (o) c.court.designateHeir(f, o.p.id); }
+  const heir = c.court.heirOf(f);
+  if (heir) c.court.setTitle(heir.id, "皇太子");
+  rec.heir = heir?.name ?? null;
+  rec.empress = wife?.name ?? null;
+  // 官職(漢の官制:尚書令・大将軍・司徒)
   for (const [id, office] of [["vh_xun_jingming", "shangshuling"], ["vh_han_xuance", "dajiangjun"], ["vh_pei_xuan", "situ"]] as const) if (alive(c, id) && P(id)!.factionId === f) appointTo(c, f, id, office);
-  // 外交:晋は漢の正統を認めない。ほかの皇帝の国も認めない。従う国・同盟国は祝う
-  const jin = jinOf(c);
+  // 外交:ほかの皇帝の国(劉淵の漢・東晋など)は認めない。従う国・同盟国は祝う
   for (const g of scenario.factions) {
     if (g.id === f || g.fallen || g.passive) continue;
-    if (g.id === jin || c.court.rankOf(g.id) === "emperor") c.diplo.addAmity(f, g.id, -20);
+    if (c.court.rankOf(g.id) === "emperor") c.diplo.addAmity(f, g.id, -20);
     else if (["alliance", "vassal"].includes(c.relationOf(f, g.id))) c.diplo.addAmity(f, g.id, 15);
   }
-  if (jin && jin !== f && !c.atWar(f, jin)) c.setRelation(f, jin, "war");
-  c.court.addStability(f, formal ? 10 : -5);
-  c.loyalty.addFame(hao.id, 15);
+  c.court.addStability(f, formal ? 10 : 5);
+  c.loyalty.addFame(ruler.id, 15);
   H(x).flag("vh_han", f);
-  H(x).log("crown", `劉皓が漢の皇帝に即位し、国号を楚から漢に改めた${formal ? "(晋の禅譲の形をとる)" : ""}`);
-  c.addNews(`【仮想の歴史】劉皓が大漢皇帝に即位し、国号を「漢」と改めました。皇帝生活の画面に入れます`);
-  return `劉皓が大漢皇帝に即位した${formal ? "(禅譲の形)" : ""}。国号は漢となり、旗・官職・皇室・外交を改めた(人物・軍団・領土・財政・家系はそのまま)`;
+  H(x).log("crown", `${ruler.name}が漢の皇帝に即位し、国号を楚から漢に改めた(元号 ${rec.era})`);
+  c.addNews(`【仮想の歴史】${ruler.name}が漢皇帝に即位し、国号を「漢」、元号を「${rec.era}」と改めました。${heir ? `皇太子は${heir.name}。` : ""}皇帝生活の画面に入れます`);
+  return `${ruler.name}${isHao ? "" : "(劉皓の子孫)"}が漢皇帝に即位した。国号は漢、元号は${rec.era}。${heir ? `皇太子は${heir.name}。` : ""}旗・官職・皇室・外交を改めた(人物・軍団・領土・財政・家系はそのまま)`;
 }

@@ -2755,6 +2755,8 @@ export class Campaign {
     }
     // 大敗(5,000人以上の軍が壊滅・敗走):負けた国の政治が揺らぐ
     const loseFaction = result.winner === "attacker" ? event.defenderFactionId : result.winner === "defender" ? event.attackerFactionId : null;
+    // 戦績の集計(仮想シナリオの歴代皇帝の記録に使う)
+    if (scenario.virtual) this.court.noteBattle(result.winner === "attacker" ? event.attackerFactionId : result.winner === "defender" ? event.defenderFactionId : null, loseFaction, false);
     if (loseFaction && (loseResult.outcome === "annihilated" || loseResult.outcome === "routed") && totalTroops({ troops: loseResult.before } as Army) >= 5000) this.loyalty.noteDefeat(loseFaction);
     if (loseSide && (loseResult.outcome === "annihilated" || loseResult.outcome === "routed")) {
       this.loyalty.addFame(loseSide, -3);
@@ -2813,6 +2815,7 @@ export class Campaign {
           Math.max(result.siege.wallDamage, result.siege.gateDamage), Math.floor(this.day), (id) => this.personStatus(id), (id) => this.presentAt(id, city.id));
         this.cityStates[city.id] = state;
         this.listener.onCityCaptured(city.id, event.attackerFactionId);
+        if (scenario.virtual) this.court.noteBattle(event.attackerFactionId, event.defenderFactionId, true);
         this.handleCapture(pc);
         if (cap) this.capitalAftermath(def, event.battleId);
       } else if (attacker) {

@@ -1,5 +1,5 @@
 // 仮想シナリオ「炎漢再興」:条件で起こる9件の事件(一覧・条件・選択)、楚王の挙兵(進軍。瞬間移動しない)、
-// 大漢皇帝即位(国号・旗・位・官職・皇室・外交を改め、人物・軍団・領土・財政・家系は維持)、皇帝生活との連動、見送りと再発動、
+// 漢室再興の詔・漢皇帝即位(国号・旗・位・官職・皇室・外交を改め、人物・軍団・領土・財政・家系は維持)、皇帝生活との連動、見送りと再発動、
 // 難易度で劉皓の能力が下がらないこと、セーブ互換。
 const { chromium } = require('playwright');
 (async () => {
@@ -18,7 +18,10 @@ const { chromium } = require('playwright');
           for (const s of c.armies) { const l = last.get(s.army.id); if (l && day > l[2]) { const km = Math.hypot((s.army.lon - l[0]) * 92, (s.army.lat - l[1]) * 111) / (day - l[2]); if (km > window.__ly.maxJump) window.__ly.maxJump = km; } if (!l || day > l[2]) last.set(s.army.id, [s.army.lon, s.army.lat, day]);
             if (s.army.factionId === 'chu') { const o = window.__ly.start.get(s.army.id) ?? [s.army.lon, s.army.lat]; window.__ly.start.set(s.army.id, o); window.__ly.maxFrom = Math.max(window.__ly.maxFrom, Math.hypot((s.army.lon - o[0]) * 92, (s.army.lat - o[1]) * 111)); } } } }; });
     return p; };
-  const IDS = ['vh_sandai', 'vh_chuwang', 'vh_yingjie', 'vh_twohan', 'vh_luoyang', 'vh_changan', 'vh_emperor', 'vh_unify', 'vh_wanguo'];
+  // Version 65:「漢室再興の詔」(vh_edict)を加えて10件にした(即位の条件が「洛陽と長安」から「西晋の滅亡」に変わったため)
+  const IDS = ['vh_sandai', 'vh_chuwang', 'vh_yingjie', 'vh_twohan', 'vh_luoyang', 'vh_changan', 'vh_edict', 'vh_emperor', 'vh_unify', 'vh_wanguo'];
+  // 西晋を滅ぼす(テストの準備。年は316年でなく、いまの年)
+  const FALL_JIN = `(() => { const c = window.__goko.campaign; const r = c.rulerOf('jin'); if (r) c.fallFaction('jin', r, 'chu'); })()`;
   let p = await open('s304v');
 
   // ---------- 1. 一覧と条件 ----------
@@ -26,11 +29,12 @@ const { chromium } = require('playwright');
     const st = Object.fromEntries(IDS.map(id => { const d = h.def(id); const s = d ? h.listState(d) : null; return [id, d ? { cond: !!d.conditional, state: s.state, why: s.reasons.slice(0, 1).join('').slice(0, 60) } : null]; }));
     // 一覧の画面に出る
     document.querySelector('#events-open')?.click();
-    const rows = [...document.querySelectorAll('#events [data-id], #events .hist-row')].map(x => x.textContent).filter(t => /三代|楚王|英傑|二つの漢|洛陽奪還|長安入城|大漢皇帝|天下統一|万国来朝/.test(t)).length;
+    const rows = [...document.querySelectorAll('#events [data-id], #events .hist-row')].map(x => x.textContent).filter(t => /三代|楚王|英傑|二つの漢|洛陽奪還|長安入城|漢室再興|漢皇帝|天下統一|万国来朝/.test(t)).length;
     document.querySelector('#events .events-close, #events .close')?.click();
     return { st, rows }; }, IDS);
-  check('1 9件の専用事件が事件の一覧にあり、年月ではなく条件で起こる。開始時は「三代の集結」と「二つの漢」(劉淵の漢が700km以内にある)が条件を満たし、ほかは理由つきで条件未達',
-    IDS.every(id => r1.st[id] && r1.st[id].cond) && r1.st.vh_sandai.state === 'available' && IDS.slice(1).filter(id => id !== 'vh_twohan').every(id => r1.st[id].state === 'unmet') && /洛陽と長安/.test(r1.st.vh_emperor.why) && r1.rows >= 9, r1);
+  // Version 65:即位の条件は「洛陽と長安」から「西晋の滅亡」に変わった(指示)。理由の文も「西晋がまだ続いている」になる
+  check('1 10件の専用事件が事件の一覧にあり、年月ではなく条件で起こる。開始時は「三代の集結」と「二つの漢」(劉淵の漢が700km以内にある)が条件を満たし、ほかは理由つきで条件未達。詔と即位は「西晋がまだ続いている」',
+    IDS.every(id => r1.st[id] && r1.st[id].cond) && r1.st.vh_sandai.state === 'available' && IDS.slice(1).filter(id => id !== 'vh_twohan').every(id => r1.st[id].state === 'unmet') && /西晋/.test(r1.st.vh_emperor.why) && /西晋/.test(r1.st.vh_edict.why) && r1.rows >= 9, r1);
 
   // ---------- 2. 三代の集結 → 楚王の挙兵(プレイヤーが選ぶ)。北上は進軍(瞬間移動しない) ----------
   const r2 = await p.evaluate(() => { const g = window.__goko, c = g.campaign, h = c.history, D = window.__gokoData;
@@ -46,26 +50,33 @@ const { chromium } = require('playwright');
   const r3 = await p.evaluate(() => window.__goko.enterPalace());
   check('3 即位の前は、劉皓の国は皇帝生活に入れない(理由が出る)', typeof r3 === 'string' && /即位/.test(r3), r3);
 
-  // ---------- 4. 大漢皇帝即位 ----------
-  const r4 = await p.evaluate(() => { const g = window.__goko, c = g.campaign, h = c.history, D = window.__gokoData;
-    // 条件を作る:洛陽・長安と、15都市以上を楚のものにする(テストの準備)
+  // ---------- 4. 漢室再興の詔 → 漢皇帝即位 ----------
+  // Version 65:即位は「西晋の滅亡 → 漢室再興の詔 → 群臣の推戴」の順に変わった。称号は「大漢皇帝」から「漢皇帝」へ、元号は建武、皇太子は劉承(指示)
+  const r4 = await p.evaluate((FALL_JIN) => { const g = window.__goko, c = g.campaign, h = c.history, D = window.__gokoData;
+    // 洛陽・長安と、15都市以上を楚のものにしても、西晋があるうちは即位できない
     for (const id of ['luoyang', 'changan', 'fengyi', 'hongnong', 'xuchang', 'xingyang', 'runan', 'shouchun', 'hefei', 'changsha', 'shangyong']) if (D.scenario.cityOwners[id] !== 'chu') { c.transferCity(id, 'chu'); g.setCityOwner(id, 'chu'); }
     c.loyalty.fame.vh_liu_hao = 100;
+    const blocked = h.listState(h.def('vh_emperor'));
+    eval(FALL_JIN);
+    const edictSt = h.listState(h.def('vh_edict'));
+    h.fire('vh_edict'); h.choose('vh_edict', 'proclaim');
     const snap = () => ({ cities: c.cities.filter(k => D.scenario.cityOwners[k.id] === 'chu').length, armies: c.armies.filter(s => s.army.factionId === 'chu').length, troops: c.armies.filter(s => s.army.factionId === 'chu').reduce((n, s) => n + s.army.troops.infantry + s.army.troops.cavalry + s.army.troops.archer, 0),
       gold: Math.round(c.factionStates.chu.gold), grain: Math.round(c.factionStates.chu.grain), persons: D.persons.filter(x => x.factionId === 'chu' && c.personStatus(x.id) !== 'dead').length, family: [c.court.fatherOf('vh_liu_hao'), c.court.fatherOf('vh_liu_hao_f')].join('>') });
     const st = h.listState(h.def('vh_emperor'));
     const before = snap();
     const fired = h.fire('vh_emperor'); const res = h.choose('vh_emperor', 'crown');
     const f = D.scenario.factions.find(x => x.id === 'chu');
-    const out = { can: st.can, why: st.reasons, fired, res: String(res).slice(0, 120), name: f.name, color: f.color, title: f.title, rank: c.court.rankOf('chu'), ruler: c.rulerOf('chu')?.name, haoTitle: D.persons.find(x => x.id === 'vh_liu_hao').title,
-      father: D.persons.find(x => x.id === 'vh_liu_hao_f').title, office: c.economy.officeOf('vh_xun_jingming')?.name, jin: c.relationOf('chu', 'jin'), before, after: snap() };
+    const rec = c.court.emperors[0];
+    const out = { blocked: !blocked.can && /西晋/.test(blocked.reasons.join('')), edict: edictSt.can && h.records.vh_edict.status, can: st.can, why: st.reasons, fired, res: String(res).slice(0, 120), name: f.name, color: f.color, title: f.title, rank: c.court.rankOf('chu'), ruler: c.rulerOf('chu')?.name, haoTitle: D.persons.find(x => x.id === 'vh_liu_hao').title,
+      father: D.persons.find(x => x.id === 'vh_liu_hao_f').title, office: c.economy.officeOf('vh_xun_jingming')?.name, heir: c.court.heirOf('chu')?.name, era: rec?.era, gen: rec?.gen, eraText: c.court.eraText('chu'), before, after: snap() };
     const sv = JSON.parse(JSON.stringify(g.buildSave())); g.applySave(sv);
-    const f2 = D.scenario.factions.find(x => x.id === 'chu'); out.reload = [f2.name, f2.color, c.court.rankOf('chu'), c.rulerOf('chu')?.name];
-    return out; });
-  check('4a 大漢皇帝即位:洛陽・長安・15都市以上・威信の条件がそろうと選べる。国号を楚から「漢」へ、旗・皇帝の位・称号・官職(尚書令)・皇室(太上皇)・外交(晋と戦争)を改める',
-    r4.can && r4.name === '漢' && r4.color === '#b3201b' && r4.rank === 'emperor' && r4.title === '皇帝' && r4.ruler === '劉皓' && r4.haoTitle === '大漢皇帝' && r4.father === '太上皇' && r4.office === '尚書令' && r4.jin === 'war', r4);
+    const f2 = D.scenario.factions.find(x => x.id === 'chu'); out.reload = [f2.name, f2.color, c.court.rankOf('chu'), c.rulerOf('chu')?.name, D.persons.find(x => x.id === 'vh_liu_hao').title, c.court.emperors.length];
+    return out; }, FALL_JIN);
+  // Version 65:晋はもう滅びているので「晋と戦争」は確かめない。代わりに、西晋があるうちは即位できないこと・詔・元号・皇太子を確かめる
+  check('4a 西晋があるうちは洛陽・長安を持っても即位できない。西晋の滅亡(304年)で「漢室再興の詔」→ 即位。国号を楚から「漢」へ、旗・皇帝の位・称号「漢皇帝」・元号「建武」・皇太子 劉承・官職(尚書令)・皇室(太上皇)を改める',
+    r4.blocked && r4.edict === 'occurred' && r4.can && r4.name === '漢' && r4.color === '#b3201b' && r4.rank === 'emperor' && r4.title === '皇帝' && r4.ruler === '劉皓' && r4.haoTitle === '漢皇帝' && r4.father === '太上皇' && r4.office === '尚書令' && r4.era === '建武' && r4.gen === 1 && r4.heir === '劉承' && /^建武元年$/.test(r4.eraText), r4);
   check('4b 即位のあとも、人物・軍団・兵・領土・財政・家系はそのまま。セーブ・ロードで国号・旗・位が残る',
-    JSON.stringify(r4.before) === JSON.stringify(r4.after) && r4.reload.join() === ['漢', '#b3201b', 'emperor', '劉皓'].join(), { before: r4.before, after: r4.after, reload: r4.reload });
+    JSON.stringify(r4.before) === JSON.stringify(r4.after) && r4.reload.join() === ['漢', '#b3201b', 'emperor', '劉皓', '漢皇帝', 1].join(), { before: r4.before, after: r4.after, reload: r4.reload });
 
   // ---------- 5. 皇帝生活の解禁と政治の委任 ----------
   const r5 = await p.evaluate(() => { const g = window.__goko, c = g.campaign, P = c.palace; const err = g.enterPalace(); const ruler = P.ruler();
@@ -77,16 +88,18 @@ const { chromium } = require('playwright');
 
   // ---------- 6. 見送り(楚王のまま)と1年後の再発動 ----------
   p = await open('s304v');
-  const r6 = await p.evaluate(() => { const g = window.__goko, c = g.campaign, h = c.history, D = window.__gokoData; g.changeSettings({ playerFactionId: 'chu', historyMode: 'free' }); c.speed = 0;
+  // Version 65:即位の前に西晋の滅亡と詔が要るので、準備に加えた。選択肢の名前は「即位を延期する」になった(id は同じ wait)
+  const r6 = await p.evaluate((FALL_JIN) => { const g = window.__goko, c = g.campaign, h = c.history, D = window.__gokoData; g.changeSettings({ playerFactionId: 'chu', historyMode: 'free' }); c.speed = 0;
     for (const id of ['luoyang', 'changan', 'fengyi', 'hongnong', 'xuchang', 'xingyang', 'runan', 'shouchun', 'hefei', 'changsha', 'shangyong']) if (D.scenario.cityOwners[id] !== 'chu') { c.transferCity(id, 'chu'); g.setCityOwner(id, 'chu'); }
     c.loyalty.fame.vh_liu_hao = 100;
+    eval(FALL_JIN); h.fire('vh_edict'); h.choose('vh_edict', 'proclaim');
     h.fire('vh_emperor'); h.choose('vh_emperor', 'wait');
     const s1 = h.records.vh_emperor.status, name1 = D.scenario.factions.find(x => x.id === 'chu').name;
     window.__runDays(60, { vh_sandai: 'oath', vh_chuwang: 'east' }); const s2 = h.records.vh_emperor.status;
     window.__runDays(330, { vh_sandai: 'oath', vh_chuwang: 'east', vh_emperor: 'crown', vh_yingjie: 'school' }); const s3 = h.records.vh_emperor.status;
-    return { s1, name1, s2, s3, name3: D.scenario.factions.find(x => x.id === 'chu').name, own: [D.scenario.cityOwners.luoyang, D.scenario.cityOwners.changan] }; });
-  check('6 「楚王のまま」を選ぶと即位は見送られ(国号は楚のまま)、1年のあいだは起きない。1年後に条件がそろっていれば、また選べる',
-    r6.s1 === 'pending' && r6.name1 === '楚' && r6.s2 === 'pending' && (r6.own.every(o => o === 'chu') ? ['occurred', 'awaiting', 'branched'].includes(r6.s3) : true), r6);
+    return { s1, name1, s2, s3, name3: D.scenario.factions.find(x => x.id === 'chu').name, own: [D.scenario.cityOwners.luoyang, D.scenario.cityOwners.changan], ruler: c.rulerOf('chu')?.id }; }, FALL_JIN);
+  check('6 「即位を延期する」を選ぶと即位は見送られ(国号は楚のまま)、1年のあいだは起きない。1年後に条件がそろっていれば、また選べる',
+    r6.s1 === 'pending' && r6.name1 === '楚' && r6.s2 === 'pending' && (r6.ruler === 'vh_liu_hao' ? ['occurred', 'awaiting', 'branched'].includes(r6.s3) : true), r6);
 
   // ---------- 7. 難易度で劉皓の能力は下がらない ----------
   const r7 = await p.evaluate(() => { const g = window.__goko, D = window.__gokoData; const out = {};
