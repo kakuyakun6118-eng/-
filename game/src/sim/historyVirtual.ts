@@ -64,7 +64,7 @@ export const VIRTUAL_EVENTS: HistEventDef[] = [
         return "劉氏三代は漢室再興を誓った";
       }
       if (p.f === "split") {
-        c.economy.setOffice("vh_liu_hao_f", "chengxiang");
+        appointTo(c, f, "vh_liu_hao_f", "chengxiang");
         P("vh_liu_xiong")!.title = "太傅";
         gold(c, f, 5000);
         c.court.addStability(f, 5);
@@ -301,6 +301,7 @@ export const VIRTUAL_EVENTS: HistEventDef[] = [
     ready: (x, r) => {
       if (!r.f) return "劉皓の国がない";
       const c = x.c;
+      if (!alive(c, "vh_liu_hao") || P("vh_liu_hao")!.role !== "ruler") return "劉皓が君主として健在でない(即位できるのは劉皓だけ)";
       if (owner("luoyang") !== r.f || owner("changan") !== r.f) return "洛陽と長安の両方を持っていない";
       const n = cities(c, r.f).length;
       if (n < 15) return `国力が足りない(${n}都市。15都市以上が必要)`;
@@ -409,6 +410,13 @@ export const VIRTUAL_EVENTS: HistEventDef[] = [
   },
 ];
 
+/** 官職に任命する:定員がいっぱいなら、いまその官職にいる人を外してから任命する */
+function appointTo(c: Campaign, f: string, id: string, office: string): void {
+  if (c.economy.officeOf(id)?.id === office) return;
+  for (const q of persons) if (q.id !== id && q.factionId === f && c.economy.officeOf(q.id)?.id === office) c.economy.setOffice(q.id, null);
+  c.economy.setOffice(id, office);
+}
+
 /** 外国(朝鮮半島・西域・吐谷渾など):中国本土の外の都市だけを持つ、戦争していない国 */
 function foreign(c: Campaign, f: string): string[] {
   return scenario.factions.filter((g) => g.id !== f && !g.fallen && !g.passive && !c.atWar(f, g.id) && live(c, g.id) && cities(c, g.id).every((k) => k.lon < 96 || CORE_EXCLUDE.has(k.id))).map((g) => g.id);
@@ -431,7 +439,7 @@ export function crownHan(x: Ctx, f: string, formal: boolean): string {
   // 皇室:父と祖父を尊び、官職を改める(漢の官制:丞相・大将軍など)
   if (alive(c, "vh_liu_hao_f")) P("vh_liu_hao_f")!.title = "太上皇";
   if (alive(c, "vh_liu_xiong")) P("vh_liu_xiong")!.title = "太皇";
-  for (const [id, office] of [["vh_xun_jingming", "shangshuling"], ["vh_han_xuance", "dajiangjun"], ["vh_pei_xuan", "situ"]] as const) if (alive(c, id) && P(id)!.factionId === f) c.economy.setOffice(id, office);
+  for (const [id, office] of [["vh_xun_jingming", "shangshuling"], ["vh_han_xuance", "dajiangjun"], ["vh_pei_xuan", "situ"]] as const) if (alive(c, id) && P(id)!.factionId === f) appointTo(c, f, id, office);
   // 外交:晋は漢の正統を認めない。ほかの皇帝の国も認めない。従う国・同盟国は祝う
   const jin = jinOf(c);
   for (const g of scenario.factions) {

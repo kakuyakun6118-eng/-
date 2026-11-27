@@ -3,3 +3,4 @@ dist
 tools/.cache
 tests/out
 dist-publish
+__pycache__/
