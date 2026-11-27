@@ -34,6 +34,48 @@ interface FamilyFile {
 /** 途中から登場する史実の人物(family.json の debuts) */
 interface Debut { person: string; year: number; follow?: string[]; faction?: string; title?: string; city?: string; note?: string }
 
+/** 劉皓の8つの固有能力(子孫が一部を受け継ぐ) */
+export const LIU_HAO_TRAITS = ["天命覇王", "炎漢正統", "軍神降臨", "神算鬼謀", "盛世創造", "英傑帰心", "不敗の軍略", "絶世の英姿"];
+const BLOOD_TYPES = {
+  万能: { leadership: 3, war: 3, intelligence: 3, politics: 3, charisma: 3 },
+  軍事: { leadership: 8, war: 10, intelligence: -6, politics: -8, charisma: 0 },
+  知略: { leadership: 0, war: -8, intelligence: 10, politics: 5, charisma: 0 },
+  政治: { leadership: -4, war: -8, intelligence: 4, politics: 10, charisma: 5 },
+} as const;
+const TYPE_TRAITS: Record<keyof typeof BLOOD_TYPES, string[]> = { 万能: ["帝王之器", "文武双全"], 軍事: ["武神", "破軍", "遠征無双"], 知略: ["王佐之才", "神算鬼謀"], 政治: ["仁政", "富国強兵", "人心掌握"] };
+
+/**
+ * 宣帝の血統の子の能力と特殊能力(仮想シナリオ)。成人時の目標の値を返す(年少のあいだは成長の計算で小さく出る)。
+ * ・各能力 = 父母の高いほう6割+平均4割に、個人差(±10)と、型(万能・軍事・知略・政治)の得手不得手を加える。40〜120に収める
+ *   → 合計は多くが500前後以上になる(劉皓の子孫は成人時に総合500以上となりやすい)
+ * ・7%の見込みで「天賦の才」:全能力112以上(劉皓に匹敵)で、劉皓の固有能力を3つ受け継ぐ
+ * ・特殊能力:父母の能力をそれぞれ35%(劉皓の固有能力は15%)、劉皓の固有能力が5%ずつ、型の能力を1つ(4つまで)
+ */
+export function inheritXuandi(f: Person, m: Person, mStat: (k: (typeof STAT_KEYS)[number]) => number, seed: string): { stats: Stats; traits: string[]; type: string; prodigy: boolean } {
+  const types = Object.keys(BLOOD_TYPES) as (keyof typeof BLOOD_TYPES)[];
+  const type = types[Math.floor(chance(seed + "|type") * types.length)];
+  const prodigy = chance(seed + "|prodigy") < 0.07;
+  const stats = {} as Stats;
+  for (const k of STAT_KEYS) {
+    const a = f[k], b = mStat(k);
+    let v = 0.6 * Math.max(a, b) + 0.4 * ((a + b) / 2) + (chance(`${seed}|${k}`) - 0.5) * 20 + BLOOD_TYPES[type][k];
+    if (prodigy) v = Math.max(v, 112 + chance(`${seed}|p${k}`) * 8);
+    stats[k] = Math.round(Math.max(40, Math.min(120, v)));
+  }
+  const traits: string[] = [];
+  const addT = (t: string): void => { if (!traits.includes(t) && traits.length < 4) traits.push(t); };
+  if (prodigy) {
+    const pool = [...LIU_HAO_TRAITS];
+    for (let i = 0; i < 3; i++) addT(pool.splice(Math.floor(chance(`${seed}|pt${i}`) * pool.length), 1)[0]);
+  }
+  // 父母の能力:ふつうは35%、劉皓の固有能力は15%(一部だけ受け継ぐ)。さらに劉皓の固有能力が、どの子にも5%ずつ現れる
+  for (const t of [...f.traits, ...m.traits]) if (chance(`${seed}|i${t}`) < (LIU_HAO_TRAITS.includes(t) ? 0.15 : 0.35)) addT(t);
+  for (const t of LIU_HAO_TRAITS) if (chance(`${seed}|h${t}`) < 0.05) addT(t);
+  const tt = TYPE_TRAITS[type];
+  addT(tt[Math.floor(chance(seed + "|tt") * tt.length)]);
+  return { stats, traits, type, prodigy };
+}
+
 export type DeathCause = "illness" | "old_age" | "battle" | "execution" | "assassination" | "suicide" | "unknown";
 export const CAUSE_LABEL: Record<DeathCause, string> = { illness: "病死", old_age: "老衰", battle: "戦死", execution: "処刑", assassination: "暗殺", suicide: "自害", unknown: "不明" };
 type DeathRecord = { cause: DeathCause; basis: string; by?: string; note?: string; month?: number };
@@ -1204,11 +1246,21 @@ export class Court {
       }
       if (!name) name = `${sur}${pool[0]}${this.nextId}`;
       const avg = (k: (typeof STAT_KEYS)[number]): number => Math.round(Math.max(20, Math.min(95, (h[k] + (this.base[w.id]?.[k] ?? w[k])) / 2 + (chance(`${day}|${name}|${k}`) - 0.5) * 30)));
-      const stats = { leadership: avg("leadership"), war: avg("war"), intelligence: avg("intelligence"), politics: avg("politics"), charisma: avg("charisma") };
+      let stats = { leadership: avg("leadership"), war: avg("war"), intelligence: avg("intelligence"), politics: avg("politics"), charisma: avg("charisma") };
+      // 宣帝の血統(仮想シナリオ):父がこの血統なら、子も受け継ぐ。能力と特殊能力を父母から受け継ぐ(成人時の目標の値)
+      const blood = scenario.virtual && h.bloodline === "xuandi" ? inheritXuandi(h, w, (k) => this.base[w.id]?.[k] ?? w[k], `${day}|${name}`) : null;
+      if (blood) stats = blood.stats;
       const child = this.newPerson({
         name, gender: male ? "male" : "female", born: year, factionId: h.factionId, role: male ? "general" : "minister", people: h.people, seed: `${day}|${name}`,
-        bio: `${h.name}と${w.name}の${male ? "子" : "娘"}。${FICTION_NOTE}`, title: "", stats, father: h.id, mother: w.id, residence: h.residence,
+        bio: `${h.name}と${w.name}の${male ? "子" : "娘"}。${blood ? `宣帝の血統(${blood.type}型${blood.prodigy ? "・天賦の才" : ""})。` : ""}${FICTION_NOTE}`, title: "", stats, father: h.id, mother: w.id, residence: h.residence,
       });
+      if (blood) {
+        child.bloodline = "xuandi";
+        child.traits = blood.traits;
+        child.virtual = true;
+        this.lifespan[child.id] = 55 + Math.floor(chance(`${day}|${name}|blife`) * 26);
+        if (blood.prodigy) this.c.addNews(`${h.name}の${male ? "子" : "娘"} ${name}は、劉皓に匹敵する天賦の才を持って生まれました(宣帝の血統)`);
+      }
       this.counts.births++;
       this.note(h.factionId, `${h.name}と${w.name}に${male ? "男子" : "女子"} ${child.name}が生まれる(架空)`);
       if (h.role === "ruler") this.c.addNews(`${scenario.factions.find((x) => x.id === h.factionId)?.name}の${h.name}に、${male ? "男子" : "女子"}${child.name}が生まれました(架空の人物)`);
@@ -1479,9 +1531,10 @@ export class Court {
       const stats = EDU_STATS[e.policy];
       for (const k of stats) {
         const q = t ? Math.max(0, Math.min(1.2, (t[k] - 40) / 50)) * (0.6 + affinity(p, t).value / 250) * (1 + (L.fame[t.id] ?? 0) / 300) : 0.25;
-        const step = (e.policy === "balanced" ? 0.04 : 0.12) * q;
+        // 宣帝の血統(仮想シナリオ):帝王教育の伸びは2倍の速さ。能力はシナリオの上限(120)まで
+        const step = (e.policy === "balanced" ? 0.04 : 0.12) * q * (scenario.virtual && p.bloodline === "xuandi" ? 2 : 1);
         const cur = e.gain[k] ?? 0;
-        const room = Math.min(15 - cur, 100 - (this.base[p.id][k] + cur));
+        const room = Math.min(15 - cur, statCap() - (this.base[p.id][k] + cur));
         if (room <= 0) continue;
         const add = Math.min(room, step);
         e.gain[k] = cur + add;
