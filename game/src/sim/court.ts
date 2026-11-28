@@ -153,6 +153,10 @@ export interface EmperorRecord {
 /** 皇帝の型(hanDynasty.json) */
 export const HAN_TYPES = (hanDynastyData as unknown as { types: Record<string, { label: string; traits: string[]; goals: string[] }> }).types;
 const HAN_FIXED = (hanDynastyData as unknown as { fixed: Record<string, { type: string; label: string; add: string[] }> }).fixed;
+/** 能力値の上限:仮想シナリオの上限120は、仮想の人物と宣帝の血統だけ。ほかの人物(ゲームの中で生まれた史実の家の子など)は100のまま(Version 67) */
+function capOf(p: Person): number {
+  return p.virtual || p.bloodline ? statCap() : Math.min(100, statCap());
+}
 /** 遠征の地域(征服した都市の場所) */
 export function regionOf(c: { id: string; lon: number; lat: number }): string | null {
   if (["wandu", "pyongyang", "hanseong", "geumseong"].includes(c.id)) return "朝鮮半島";
@@ -474,7 +478,7 @@ export class Court {
       const g = this.growth(a);
       const e = this.edu[id]?.gain ?? {};
       // 上限はシナリオの上限(仮想シナリオは120)。もとの値が上限より高くても切り捨てない
-      for (const k of STAT_KEYS) p[k] = Math.max(1, Math.min(Math.max(statCap(), b[k]), Math.round((b[k] + (e[k] ?? 0)) * g)));
+      for (const k of STAT_KEYS) p[k] = Math.max(1, Math.min(Math.max(capOf(p), b[k]), Math.round((b[k] + (e[k] ?? 0)) * g)));
     }
   }
 
@@ -1646,7 +1650,7 @@ export class Court {
         const gx = scenario.virtual && p.bloodline === "xuandi" ? factionMult(factionTraitEffects(p.factionId, Math.floor(this.c.day)), "growth", 1, LIMITS.growth) : 1;
         const step = (e.policy === "balanced" ? 0.04 : 0.12) * q * (scenario.virtual && p.bloodline === "xuandi" ? 2 : 1) * gx;
         const cur = e.gain[k] ?? 0;
-        const room = Math.min(15 - cur, statCap() - (this.base[p.id][k] + cur));
+        const room = Math.min(15 - cur, capOf(p) - (this.base[p.id][k] + cur));
         if (room <= 0) continue;
         const add = Math.min(room, step);
         e.gain[k] = cur + add;

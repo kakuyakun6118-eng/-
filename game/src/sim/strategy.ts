@@ -416,6 +416,9 @@ export class StrategyAi {
   }
 
   /** 国家の性格:君主に、重臣(王猛など、表にある文官・軍師)の考えを少し混ぜる */
+  /** 西域遠征を控える期限(仮想シナリオの漢。失敗が続いたとき) */
+  westPause: Record<string, { until: number; base: number }> = {};
+
   /** 仮想シナリオの漢:宣帝の血統の君主の国なら、その皇帝の型(即位前の劉皓などは台帳の型) */
   hanType(f: string): string | null {
     if (!scenario.virtual) return null;
@@ -1543,6 +1546,13 @@ export class StrategyAi {
     const mine = this.citiesOf(f);
     if (this.c.diplo.overlord[f] || mine.every((k) => k.lon < 96) || !mine.some((k) => k.lon < 101)) return;
     if (this.expeditions[f]) return;
+    // 仮想シナリオの漢(Version 67):西域遠征の失敗が勝ちより3回以上多くなったら、10年は新しい西域遠征をしない(無謀な遠征を繰り返さない)
+    if (scenario.virtual && this.hanType(f)) {
+      const st = this.st(f);
+      const cd = (this.westPause[f] ??= { until: -1, base: 0 });
+      if (day < cd.until) return;
+      if (st.westFailed - st.westWon - cd.base >= 3) { cd.until = day + 3600; cd.base = st.westFailed - st.westWon; this.note(f, "西域遠征の失敗が続いたため、10年のあいだ西域遠征を控える"); return; }
+    }
     if (!(posture === "expand" || posture === "invade" || posture === "unify" || (posture === "develop" && rich))) return;
     const hg = this.hanGoals(f);
     const westGoal = (hg.includes("西域遠征") || hg.includes("シルクロードの支配")) && (this.c.court.coreShare(f) >= 0.6 || this.c.history?.flags.vh_unified === f);
